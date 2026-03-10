@@ -35,17 +35,6 @@ const Index = () => {
         </p>
       </header>
 
-      {/* Saved words card */}
-      {savedCount > 0 && (
-        <button
-          onClick={() => navigate("/saved")}
-          className="w-full mb-6 flex items-center justify-between px-4 py-3 rounded-xl bg-card border border-border/50 hover:border-primary/40 transition-colors"
-        >
-          <span className="font-body text-sm">📌 보관함</span>
-          <span className="text-xs text-muted-foreground font-body">{savedCount}개 단어 →</span>
-        </button>
-      )}
-
       {/* Utilities row */}
       <div className="flex gap-4 mb-6 text-sm">
         <button
@@ -67,6 +56,37 @@ const Index = () => {
         {categories.map((cat) => (
           <CategoryCard key={cat.id} category={cat} onAddWord={handleAddWord} />
         ))}
+
+        {/* Saved words as category-style card */}
+        {savedCount > 0 && (
+          <div className="rounded-lg bg-card p-5 shadow-sm border border-border/50 transition-all active:scale-[0.98]">
+            <div
+              className="cursor-pointer"
+              onClick={() => navigate("/saved")}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-2xl">📌</span>
+                <h2 className="text-lg font-medium font-body">단어보관함</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">{savedCount}개의 단어</p>
+            </div>
+            <div className="mt-3 flex gap-3">
+              <button
+                onClick={() => navigate("/saved")}
+                className="text-sm text-primary font-medium hover:underline underline-offset-4"
+              >
+                학습하기
+              </button>
+              <button
+                onClick={() => navigate("/saved?mode=quiz")}
+                className="text-sm text-primary font-medium hover:underline underline-offset-4"
+                disabled={savedCount < 2}
+              >
+                퀴즈
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {categories.length === 0 && (
