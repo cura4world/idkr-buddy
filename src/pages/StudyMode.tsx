@@ -15,8 +15,17 @@ export default function StudyMode() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isBreathing, setIsBreathing] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
 
   const currentWord: Word | undefined = words[currentIndex];
+  const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
+
+  const handleToggleSave = () => {
+    if (!currentWord) return;
+    const nowSaved = toggleSavedWord(currentWord.id);
+    setSavedIds(getSavedWordIds());
+    toast(nowSaved ? "단어를 보관했습니다 📌" : "보관함에서 제거했습니다");
+  };
 
   useEffect(() => {
     if (isFlipped) {
