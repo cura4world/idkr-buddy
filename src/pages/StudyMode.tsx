@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getCategories, getWordsByCategory, Word } from "@/lib/store";
+import { getCategories, getWordsByCategory, getSavedWordIds, toggleSavedWord, Word } from "@/lib/store";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 
 export default function StudyMode() {
   const { id } = useParams<{ id: string }>();
