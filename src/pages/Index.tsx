@@ -53,10 +53,6 @@ const Index = () => {
 
       {/* Category grid */}
       <div className="space-y-3">
-        {categories.map((cat) => (
-          <CategoryCard key={cat.id} category={cat} onAddWord={handleAddWord} />
-        ))}
-
         {/* Saved words as category-style card */}
         {savedCount > 0 && (
           <div className="rounded-lg bg-card p-5 shadow-sm border border-border/50 transition-all active:scale-[0.98]">
@@ -87,6 +83,10 @@ const Index = () => {
             </div>
           </div>
         )}
+
+        {categories.map((cat) => (
+          <CategoryCard key={cat.id} category={cat} onAddWord={handleAddWord} />
+        ))}
       </div>
 
       {categories.length === 0 && (
