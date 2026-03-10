@@ -22,8 +22,8 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth/],
       },
       manifest: {
-        name: "Kata - 인도네시아어 단어장",
-        short_name: "Kata",
+        name: "Kata kata - 인도네시아어 단어장",
+        short_name: "Kata kata",
         description: "인도네시아어-한국어 단어 학습 앱",
         theme_color: "#F3EFEA",
         background_color: "#F3EFEA",

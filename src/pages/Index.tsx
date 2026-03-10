@@ -25,7 +25,7 @@ const Index = () => {
       {/* Header */}
       <header className="mb-8">
         <h1 className="text-2xl font-semibold font-body tracking-tight">
-          Kata<span className="text-accent">.</span>
+          Kata kata<span className="text-accent">.</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1 font-body">
           인도네시아어 · 한국어 단어장
