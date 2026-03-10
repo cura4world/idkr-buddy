@@ -6,6 +6,7 @@ import Index from "./pages/Index";
 import CategoryDetail from "./pages/CategoryDetail";
 import StudyMode from "./pages/StudyMode";
 import QuizMode from "./pages/QuizMode";
+import SavedStudy from "./pages/SavedStudy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
