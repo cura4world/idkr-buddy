@@ -6,6 +6,7 @@ import Index from "./pages/Index";
 import CategoryDetail from "./pages/CategoryDetail";
 import StudyMode from "./pages/StudyMode";
 import QuizMode from "./pages/QuizMode";
+import SavedStudy from "./pages/SavedStudy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/category/:id" element={<CategoryDetail />} />
           <Route path="/study/:id" element={<StudyMode />} />
           <Route path="/quiz/:id" element={<QuizMode />} />
+          <Route path="/saved" element={<SavedStudy />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getCategories, getWordsByCategory, Word } from "@/lib/store";
+import { getCategories, getWordsByCategory, getSavedWordIds, toggleSavedWord, Word } from "@/lib/store";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 
 export default function StudyMode() {
   const { id } = useParams<{ id: string }>();
@@ -14,8 +15,17 @@ export default function StudyMode() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isBreathing, setIsBreathing] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
 
   const currentWord: Word | undefined = words[currentIndex];
+  const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
+
+  const handleToggleSave = () => {
+    if (!currentWord) return;
+    const nowSaved = toggleSavedWord(currentWord.id);
+    setSavedIds(getSavedWordIds());
+    toast(nowSaved ? "단어를 보관했습니다 📌" : "보관함에서 제거했습니다");
+  };
 
   useEffect(() => {
     if (isFlipped) {
@@ -119,7 +129,21 @@ export default function StudyMode() {
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-8 py-6">
+      {/* Save button */}
+      <div className="flex justify-center py-2">
+        <button
+          onClick={handleToggleSave}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-body transition-colors border ${
+            isSaved
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-foreground border-border/50 hover:border-primary/50"
+          }`}
+        >
+          {isSaved ? "보관됨 ✅" : "단어보관 📌"}
+        </button>
+      </div>
+
+      <div className="flex items-center justify-center gap-8 py-4">
         <button
           onClick={goPrev}
           disabled={currentIndex === 0}

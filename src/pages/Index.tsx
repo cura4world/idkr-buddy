@@ -1,14 +1,17 @@
 import { useState, useCallback } from "react";
-import { getCategories } from "@/lib/store";
+import { useNavigate } from "react-router-dom";
+import { getCategories, getSavedWordIds } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
 import CSVImportDialog from "@/components/CSVImportDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const categories = getCategories();
+  const savedCount = getSavedWordIds().length;
 
   const [addWordOpen, setAddWordOpen] = useState(false);
   const [addWordCat, setAddWordCat] = useState<string | undefined>();
@@ -31,6 +34,17 @@ const Index = () => {
           인도네시아어 · 한국어 단어장
         </p>
       </header>
+
+      {/* Saved words card */}
+      {savedCount > 0 && (
+        <button
+          onClick={() => navigate("/saved")}
+          className="w-full mb-6 flex items-center justify-between px-4 py-3 rounded-xl bg-card border border-border/50 hover:border-primary/40 transition-colors"
+        >
+          <span className="font-body text-sm">📌 보관함</span>
+          <span className="text-xs text-muted-foreground font-body">{savedCount}개 단어 →</span>
+        </button>
+      )}
 
       {/* Utilities row */}
       <div className="flex gap-4 mb-6 text-sm">
