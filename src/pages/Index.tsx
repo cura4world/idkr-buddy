@@ -7,9 +7,11 @@ import CSVImportDialog from "@/components/CSVImportDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const categories = getCategories();
+  const savedCount = getSavedWordIds().length;
 
   const [addWordOpen, setAddWordOpen] = useState(false);
   const [addWordCat, setAddWordCat] = useState<string | undefined>();
