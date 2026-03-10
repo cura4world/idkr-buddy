@@ -16,7 +16,8 @@ interface AddWordDialogProps {
 export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, onAdded }: AddWordDialogProps) {
   const [word, setWord] = useState("");
   const [meaning, setMeaning] = useState("");
-  const [pronunciation, setPronunciation] = useState("");
+  const [example, setExample] = useState("");
+  const [exampleMeaning, setExampleMeaning] = useState("");
   const [categoryId, setCategoryId] = useState(defaultCategoryId || "");
   const categories = getCategories();
 
@@ -26,12 +27,14 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, o
     addWord({
       word: word.trim(),
       meaning: meaning.trim(),
-      pronunciation: pronunciation.trim(),
+      example: example.trim(),
+      exampleMeaning: exampleMeaning.trim(),
       categoryId: categoryId || categories[0]?.id || "",
     });
     setWord("");
     setMeaning("");
-    setPronunciation("");
+    setExample("");
+    setExampleMeaning("");
     onAdded();
     onOpenChange(false);
   };
@@ -63,11 +66,20 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, o
             />
           </div>
           <div>
-            <Label className="font-body text-sm">발음</Label>
+            <Label className="font-body text-sm">예문 (인도네시아어)</Label>
             <Input
-              value={pronunciation}
-              onChange={(e) => setPronunciation(e.target.value)}
-              placeholder="슬라맛 빠기"
+              value={example}
+              onChange={(e) => setExample(e.target.value)}
+              placeholder="Selamat pagi, apa kabar?"
+              className="mt-1 font-word"
+            />
+          </div>
+          <div>
+            <Label className="font-body text-sm">예문 뜻 (한국어)</Label>
+            <Input
+              value={exampleMeaning}
+              onChange={(e) => setExampleMeaning(e.target.value)}
+              placeholder="좋은 아침, 어떻게 지내세요?"
               className="mt-1 font-body"
             />
           </div>

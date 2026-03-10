@@ -44,7 +44,7 @@ export default function CSVImportDialog({ open, onOpenChange, onImported }: CSVI
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground font-body">
-            형식: 단어, 뜻, 발음, 카테고리(선택)
+            형식: 단어, 뜻, 예문, 예문 뜻, 카테고리(선택)
           </p>
           <input
             ref={fileRef}
@@ -63,7 +63,7 @@ export default function CSVImportDialog({ open, onOpenChange, onImported }: CSVI
           <Textarea
             value={csv}
             onChange={(e) => setCsv(e.target.value)}
-            placeholder={"Selamat pagi, 좋은 아침, 슬라맛 빠기, 인사\nTerima kasih, 감사합니다, 뜨리마 까시, 인사"}
+            placeholder={"Selamat pagi, 좋은 아침, Selamat pagi apa kabar?, 좋은 아침 어떻게 지내세요?, 인사"}
             rows={6}
             className="text-sm font-body"
           />
