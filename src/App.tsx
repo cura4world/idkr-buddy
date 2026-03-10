@@ -21,6 +21,7 @@ const App = () => (
           <Route path="/category/:id" element={<CategoryDetail />} />
           <Route path="/study/:id" element={<StudyMode />} />
           <Route path="/quiz/:id" element={<QuizMode />} />
+          <Route path="/saved" element={<SavedStudy />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

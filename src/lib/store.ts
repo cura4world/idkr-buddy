@@ -82,6 +82,38 @@ export function getWordsByCategory(categoryId: string): Word[] {
   return getWords().filter((w) => w.categoryId === categoryId);
 }
 
+const SAVED_KEY = "kata-saved";
+
+export function getSavedWordIds(): string[] {
+  const stored = localStorage.getItem(SAVED_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+export function toggleSavedWord(wordId: string): boolean {
+  const ids = getSavedWordIds();
+  const idx = ids.indexOf(wordId);
+  if (idx >= 0) {
+    ids.splice(idx, 1);
+    localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
+    return false;
+  } else {
+    ids.push(wordId);
+    localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
+    return true;
+  }
+}
+
+export function getSavedWords(): Word[] {
+  const ids = getSavedWordIds();
+  const allWords = getWords();
+  return allWords.filter((w) => ids.includes(w.id));
+}
+
+export function removeSavedWord(wordId: string) {
+  const ids = getSavedWordIds().filter((id) => id !== wordId);
+  localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
+}
+
 export function importWordsFromCSV(csv: string): { imported: number; errors: number } {
   const lines = csv.split("\n").filter((l) => l.trim());
   let imported = 0;
