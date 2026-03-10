@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { getCategories } from "@/lib/store";
+import { useNavigate } from "react-router-dom";
+import { getCategories, getSavedWordIds } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
 import CSVImportDialog from "@/components/CSVImportDialog";
