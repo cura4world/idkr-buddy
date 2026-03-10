@@ -1,0 +1,117 @@
+export interface Word {
+  id: string;
+  word: string; // Indonesian
+  meaning: string; // Korean
+  pronunciation: string;
+  categoryId: string;
+  createdAt: number;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  emoji: string;
+}
+
+const WORDS_KEY = "kata-words";
+const CATEGORIES_KEY = "kata-categories";
+
+const defaultCategories: Category[] = [
+  { id: "greetings", name: "인사", emoji: "👋" },
+  { id: "food", name: "음식", emoji: "🍜" },
+  { id: "numbers", name: "숫자", emoji: "🔢" },
+  { id: "daily", name: "일상", emoji: "☀️" },
+];
+
+const defaultWords: Word[] = [
+  { id: "1", word: "Selamat pagi", meaning: "좋은 아침", pronunciation: "슬라맛 빠기", categoryId: "greetings", createdAt: Date.now() },
+  { id: "2", word: "Terima kasih", meaning: "감사합니다", pronunciation: "뜨리마 까시", categoryId: "greetings", createdAt: Date.now() },
+  { id: "3", word: "Nasi goreng", meaning: "볶음밥", pronunciation: "나시 고렝", categoryId: "food", createdAt: Date.now() },
+  { id: "4", word: "Satu", meaning: "하나 (1)", pronunciation: "사뚜", categoryId: "numbers", createdAt: Date.now() },
+  { id: "5", word: "Dua", meaning: "둘 (2)", pronunciation: "두아", categoryId: "numbers", createdAt: Date.now() },
+  { id: "6", word: "Apa kabar?", meaning: "어떻게 지내세요?", pronunciation: "아빠 까바르", categoryId: "greetings", createdAt: Date.now() },
+  { id: "7", word: "Makan", meaning: "먹다", pronunciation: "마깐", categoryId: "daily", createdAt: Date.now() },
+  { id: "8", word: "Tidur", meaning: "자다", pronunciation: "띠두르", categoryId: "daily", createdAt: Date.now() },
+];
+
+export function getCategories(): Category[] {
+  const stored = localStorage.getItem(CATEGORIES_KEY);
+  if (stored) return JSON.parse(stored);
+  localStorage.setItem(CATEGORIES_KEY, JSON.stringify(defaultCategories));
+  return defaultCategories;
+}
+
+export function saveCategories(categories: Category[]) {
+  localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+}
+
+export function addCategory(name: string, emoji: string): Category {
+  const categories = getCategories();
+  const cat: Category = { id: crypto.randomUUID(), name, emoji };
+  categories.push(cat);
+  saveCategories(categories);
+  return cat;
+}
+
+export function getWords(): Word[] {
+  const stored = localStorage.getItem(WORDS_KEY);
+  if (stored) return JSON.parse(stored);
+  localStorage.setItem(WORDS_KEY, JSON.stringify(defaultWords));
+  return defaultWords;
+}
+
+export function saveWords(words: Word[]) {
+  localStorage.setItem(WORDS_KEY, JSON.stringify(words));
+}
+
+export function addWord(word: Omit<Word, "id" | "createdAt">): Word {
+  const words = getWords();
+  const newWord: Word = { ...word, id: crypto.randomUUID(), createdAt: Date.now() };
+  words.push(newWord);
+  saveWords(words);
+  return newWord;
+}
+
+export function deleteWord(id: string) {
+  const words = getWords().filter((w) => w.id !== id);
+  saveWords(words);
+}
+
+export function getWordsByCategory(categoryId: string): Word[] {
+  return getWords().filter((w) => w.categoryId === categoryId);
+}
+
+export function importWordsFromCSV(csv: string): { imported: number; errors: number } {
+  const lines = csv.split("\n").filter((l) => l.trim());
+  let imported = 0;
+  let errors = 0;
+  const words = getWords();
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Support: word,meaning,pronunciation,categoryId
+    const parts = line.split(",").map((p) => p.trim());
+    if (parts.length >= 3) {
+      const [word, meaning, pronunciation, categoryId] = parts;
+      const categories = getCategories();
+      const catId = categoryId && categories.find((c) => c.id === categoryId || c.name === categoryId)
+        ? (categories.find((c) => c.id === categoryId || c.name === categoryId)!.id)
+        : (categories[0]?.id || "daily");
+
+      words.push({
+        id: crypto.randomUUID(),
+        word,
+        meaning,
+        pronunciation,
+        categoryId: catId,
+        createdAt: Date.now(),
+      });
+      imported++;
+    } else {
+      errors++;
+    }
+  }
+
+  saveWords(words);
+  return { imported, errors };
+}
