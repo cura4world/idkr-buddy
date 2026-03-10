@@ -85,7 +85,7 @@ const Index = () => {
         )}
 
         {categories.map((cat) => (
-          <CategoryCard key={cat.id} category={cat} onAddWord={handleAddWord} />
+          <CategoryCard key={cat.id} category={cat} onAddWord={handleAddWord} onChanged={refresh} />
         ))}
       </div>
 

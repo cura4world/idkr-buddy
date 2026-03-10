@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { addCategory } from "@/lib/store";
+import { useState, useEffect } from "react";
+import { updateCategory } from "@/lib/store";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,10 @@ import { Label } from "@/components/ui/label";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdded: () => void;
+  onUpdated: () => void;
+  categoryId: string;
+  currentName: string;
+  currentEmoji: string;
 }
 
 const emojis = [
@@ -19,16 +22,20 @@ const emojis = [
   "🎓", "💪", "🧠", "🗣️", "✍️", "🛫", "🏖️", "🎉",
 ];
 
-export default function AddCategoryDialog({ open, onOpenChange, onAdded }: Props) {
-  const [name, setName] = useState("");
-  const [emoji, setEmoji] = useState("📚");
+export default function EditCategoryDialog({ open, onOpenChange, onUpdated, categoryId, currentName, currentEmoji }: Props) {
+  const [name, setName] = useState(currentName);
+  const [emoji, setEmoji] = useState(currentEmoji);
+
+  useEffect(() => {
+    setName(currentName);
+    setEmoji(currentEmoji);
+  }, [currentName, currentEmoji]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    addCategory(name.trim(), emoji);
-    setName("");
-    onAdded();
+    updateCategory(categoryId, name.trim(), emoji);
+    onUpdated();
     onOpenChange(false);
   };
 
@@ -36,12 +43,12 @@ export default function AddCategoryDialog({ open, onOpenChange, onAdded }: Props
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm mx-auto bg-card">
         <DialogHeader>
-          <DialogTitle className="font-body">새 카테고리</DialogTitle>
+          <DialogTitle className="font-body">카테고리 수정</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label className="font-body text-sm">이름</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="여행" className="mt-1" autoFocus />
+            <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" autoFocus />
           </div>
           <div>
             <Label className="font-body text-sm">아이콘</Label>
@@ -58,7 +65,7 @@ export default function AddCategoryDialog({ open, onOpenChange, onAdded }: Props
               ))}
             </div>
           </div>
-          <Button type="submit" className="w-full">만들기</Button>
+          <Button type="submit" className="w-full">저장</Button>
         </form>
       </DialogContent>
     </Dialog>
