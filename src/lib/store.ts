@@ -54,6 +54,21 @@ export function addCategory(name: string, emoji: string): Category {
   return cat;
 }
 
+export function updateCategory(id: string, name: string, emoji: string) {
+  const categories = getCategories().map((c) =>
+    c.id === id ? { ...c, name, emoji } : c
+  );
+  saveCategories(categories);
+}
+
+export function deleteCategory(id: string) {
+  const categories = getCategories().filter((c) => c.id !== id);
+  saveCategories(categories);
+  // Also delete words in this category
+  const words = getWords().filter((w) => w.categoryId !== id);
+  saveWords(words);
+}
+
 export function getWords(): Word[] {
   const stored = localStorage.getItem(WORDS_KEY);
   if (stored) return JSON.parse(stored);
