@@ -17,7 +17,6 @@ export default function StudyMode() {
 
   const currentWord: Word | undefined = words[currentIndex];
 
-  // Breathing effect: start after 2 seconds of viewing front
   useEffect(() => {
     if (isFlipped) {
       setIsBreathing(false);
@@ -68,7 +67,6 @@ export default function StudyMode() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
-      {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-4">
         <button onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground">
           <ArrowLeft size={20} />
@@ -79,7 +77,6 @@ export default function StudyMode() {
         <div className="w-5" />
       </div>
 
-      {/* Card area */}
       <div
         className="flex-1 flex items-center justify-center px-6"
         onTouchStart={handleTouchStart}
@@ -90,7 +87,7 @@ export default function StudyMode() {
           onClick={() => setIsFlipped((f) => !f)}
         >
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
-            {/* Front */}
+            {/* Front: word (bold) + example */}
             <div
               className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 ${
                 isBreathing ? "animate-breathe" : ""
@@ -99,23 +96,29 @@ export default function StudyMode() {
               <p className="font-word text-3xl font-semibold text-center leading-relaxed">
                 {currentWord.word}
               </p>
+              {currentWord.example && (
+                <p className="text-base text-muted-foreground font-word mt-4 text-center leading-relaxed">
+                  {currentWord.example}
+                </p>
+              )}
               <p className="text-sm text-muted-foreground/60 mt-6 font-body">탭하여 뒤집기</p>
             </div>
 
-            {/* Back */}
+            {/* Back: meaning (bold) + example_meaning */}
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm">
               <p className="font-body text-2xl font-medium text-center mb-3">
                 {currentWord.meaning}
               </p>
-              {currentWord.pronunciation && (
-                <p className="text-sm text-muted-foreground font-body">[{currentWord.pronunciation}]</p>
+              {currentWord.exampleMeaning && (
+                <p className="text-base text-muted-foreground font-body text-center leading-relaxed">
+                  {currentWord.exampleMeaning}
+                </p>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
       <div className="flex items-center justify-center gap-8 py-6">
         <button
           onClick={goPrev}

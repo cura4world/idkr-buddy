@@ -2,7 +2,8 @@ export interface Word {
   id: string;
   word: string; // Indonesian
   meaning: string; // Korean
-  pronunciation: string;
+  example: string;
+  exampleMeaning: string;
   categoryId: string;
   createdAt: number;
 }
@@ -24,14 +25,14 @@ const defaultCategories: Category[] = [
 ];
 
 const defaultWords: Word[] = [
-  { id: "1", word: "Selamat pagi", meaning: "좋은 아침", pronunciation: "슬라맛 빠기", categoryId: "greetings", createdAt: Date.now() },
-  { id: "2", word: "Terima kasih", meaning: "감사합니다", pronunciation: "뜨리마 까시", categoryId: "greetings", createdAt: Date.now() },
-  { id: "3", word: "Nasi goreng", meaning: "볶음밥", pronunciation: "나시 고렝", categoryId: "food", createdAt: Date.now() },
-  { id: "4", word: "Satu", meaning: "하나 (1)", pronunciation: "사뚜", categoryId: "numbers", createdAt: Date.now() },
-  { id: "5", word: "Dua", meaning: "둘 (2)", pronunciation: "두아", categoryId: "numbers", createdAt: Date.now() },
-  { id: "6", word: "Apa kabar?", meaning: "어떻게 지내세요?", pronunciation: "아빠 까바르", categoryId: "greetings", createdAt: Date.now() },
-  { id: "7", word: "Makan", meaning: "먹다", pronunciation: "마깐", categoryId: "daily", createdAt: Date.now() },
-  { id: "8", word: "Tidur", meaning: "자다", pronunciation: "띠두르", categoryId: "daily", createdAt: Date.now() },
+  { id: "1", word: "Selamat pagi", meaning: "좋은 아침", example: "Selamat pagi, apa kabar?", exampleMeaning: "좋은 아침, 어떻게 지내세요?", categoryId: "greetings", createdAt: Date.now() },
+  { id: "2", word: "Terima kasih", meaning: "감사합니다", example: "Terima kasih banyak.", exampleMeaning: "정말 감사합니다.", categoryId: "greetings", createdAt: Date.now() },
+  { id: "3", word: "Nasi goreng", meaning: "볶음밥", example: "Saya mau nasi goreng.", exampleMeaning: "저는 볶음밥을 원해요.", categoryId: "food", createdAt: Date.now() },
+  { id: "4", word: "Satu", meaning: "하나 (1)", example: "Satu, dua, tiga.", exampleMeaning: "하나, 둘, 셋.", categoryId: "numbers", createdAt: Date.now() },
+  { id: "5", word: "Dua", meaning: "둘 (2)", example: "Saya punya dua kucing.", exampleMeaning: "저는 고양이 두 마리가 있어요.", categoryId: "numbers", createdAt: Date.now() },
+  { id: "6", word: "Apa kabar?", meaning: "어떻게 지내세요?", example: "Halo, apa kabar?", exampleMeaning: "안녕, 어떻게 지내?", categoryId: "greetings", createdAt: Date.now() },
+  { id: "7", word: "Makan", meaning: "먹다", example: "Sudah makan?", exampleMeaning: "밥 먹었어?", categoryId: "daily", createdAt: Date.now() },
+  { id: "8", word: "Tidur", meaning: "자다", example: "Saya mau tidur.", exampleMeaning: "저는 자고 싶어요.", categoryId: "daily", createdAt: Date.now() },
 ];
 
 export function getCategories(): Category[] {
@@ -89,10 +90,10 @@ export function importWordsFromCSV(csv: string): { imported: number; errors: num
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // Support: word,meaning,pronunciation,categoryId
+    // Support: word,meaning,example,example_meaning,categoryId
     const parts = line.split(",").map((p) => p.trim());
-    if (parts.length >= 3) {
-      const [word, meaning, pronunciation, categoryId] = parts;
+    if (parts.length >= 4) {
+      const [word, meaning, example, exampleMeaning, categoryId] = parts;
       const categories = getCategories();
       const catId = categoryId && categories.find((c) => c.id === categoryId || c.name === categoryId)
         ? (categories.find((c) => c.id === categoryId || c.name === categoryId)!.id)
@@ -102,7 +103,8 @@ export function importWordsFromCSV(csv: string): { imported: number; errors: num
         id: crypto.randomUUID(),
         word,
         meaning,
-        pronunciation,
+        example,
+        exampleMeaning,
         categoryId: catId,
         createdAt: Date.now(),
       });

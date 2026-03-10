@@ -86,7 +86,7 @@ export default function QuizMode() {
             <div className="space-y-2">
               {reviewList.map((w) => (
                 <div key={w.id} className="bg-card rounded-lg p-3 border border-border/50">
-                  <p className="font-word text-sm">{w.word}</p>
+                  <p className="font-word text-sm font-medium">{w.word}</p>
                   <p className="text-sm text-muted-foreground font-body">{w.meaning}</p>
                 </div>
               ))}
@@ -126,11 +126,11 @@ export default function QuizMode() {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <div className="mb-10">
-          <p className="font-word text-3xl font-semibold text-center">{currentQ.word.word}</p>
-          {currentQ.word.pronunciation && (
-            <p className="text-sm text-muted-foreground/60 font-body text-center mt-2">
-              [{currentQ.word.pronunciation}]
+        <div className="mb-10 text-center">
+          <p className="font-word text-3xl font-semibold">{currentQ.word.word}</p>
+          {currentQ.word.example && (
+            <p className="text-base text-muted-foreground/60 font-word mt-2">
+              {currentQ.word.example}
             </p>
           )}
         </div>

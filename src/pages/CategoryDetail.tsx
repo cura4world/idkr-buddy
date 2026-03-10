@@ -44,8 +44,8 @@ export default function CategoryDetail() {
             <div className="flex-1 min-w-0">
               <p className="font-word text-base font-medium truncate">{w.word}</p>
               <p className="text-sm text-muted-foreground font-body">{w.meaning}</p>
-              {w.pronunciation && (
-                <p className="text-xs text-muted-foreground/70 font-body mt-0.5">[{w.pronunciation}]</p>
+              {w.example && (
+                <p className="text-xs text-muted-foreground/70 font-word mt-0.5">{w.example}</p>
               )}
             </div>
             <button
