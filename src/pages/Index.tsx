@@ -99,7 +99,6 @@ const Index = () => {
         defaultCategoryId={addWordCat}
         onAdded={refresh}
       />
-      <CSVImportDialog open={csvOpen} onOpenChange={setCsvOpen} onImported={refresh} />
       <AddCategoryDialog open={addCatOpen} onOpenChange={setAddCatOpen} onAdded={refresh} />
     </div>
   );
