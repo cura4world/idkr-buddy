@@ -69,6 +69,22 @@ export function deleteCategory(id: string) {
   saveWords(words);
 }
 
+export function moveCategoryUp(id: string) {
+  const categories = getCategories();
+  const idx = categories.findIndex((c) => c.id === id);
+  if (idx <= 0) return;
+  [categories[idx - 1], categories[idx]] = [categories[idx], categories[idx - 1]];
+  saveCategories(categories);
+}
+
+export function moveCategoryDown(id: string) {
+  const categories = getCategories();
+  const idx = categories.findIndex((c) => c.id === id);
+  if (idx < 0 || idx >= categories.length - 1) return;
+  [categories[idx], categories[idx + 1]] = [categories[idx + 1], categories[idx]];
+  saveCategories(categories);
+}
+
 export function getWords(): Word[] {
   const stored = localStorage.getItem(WORDS_KEY);
   if (stored) return JSON.parse(stored);

@@ -156,6 +156,24 @@ export default function CategoryCard({ category, onAddWord, onChanged, isFirst, 
             style={{ top: touchPos.y, left: Math.min(touchPos.x, window.innerWidth - 200) }}
             onClick={(e) => e.stopPropagation()}
           >
+            {!isFirst && (
+              <button
+                className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                onClick={() => { setContextOpen(false); moveCategoryUp(category.id); onChanged?.(); }}
+              >
+                <ArrowUp className="mr-2 h-4 w-4" />
+                위로 이동
+              </button>
+            )}
+            {!isLast && (
+              <button
+                className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                onClick={() => { setContextOpen(false); moveCategoryDown(category.id); onChanged?.(); }}
+              >
+                <ArrowDown className="mr-2 h-4 w-4" />
+                아래로 이동
+              </button>
+            )}
             <button
               className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
               onClick={() => { setContextOpen(false); setEditOpen(true); }}
