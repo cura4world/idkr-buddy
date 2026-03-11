@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, deleteWord } from "@/lib/store";
 import AddWordDialog from "@/components/AddWordDialog";
+import CSVImportDialog from "@/components/CSVImportDialog";
 import { ArrowLeft, Trash2 } from "lucide-react";
 
 export default function CategoryDetail() {
@@ -10,6 +11,7 @@ export default function CategoryDetail() {
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const [addOpen, setAddOpen] = useState(false);
+  const [csvOpen, setCsvOpen] = useState(false);
 
   const categories = getCategories();
   const category = categories.find((c) => c.id === id);
