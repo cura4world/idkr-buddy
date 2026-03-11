@@ -84,8 +84,8 @@ const Index = () => {
           </div>
         )}
 
-        {categories.map((cat) => (
-          <CategoryCard key={cat.id} category={cat} onAddWord={handleAddWord} onChanged={refresh} />
+        {categories.map((cat, idx) => (
+          <CategoryCard key={cat.id} category={cat} onAddWord={handleAddWord} onChanged={refresh} isFirst={idx === 0} isLast={idx === categories.length - 1} />
         ))}
       </div>
 

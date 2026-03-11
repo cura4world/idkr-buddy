@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Category, getWordsByCategory, deleteCategory } from "@/lib/store";
+import { Category, getWordsByCategory, deleteCategory, moveCategoryUp, moveCategoryDown } from "@/lib/store";
 import { useNavigate } from "react-router-dom";
 import {
   ContextMenu,
@@ -18,15 +18,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import EditCategoryDialog from "@/components/EditCategoryDialog";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 
 interface CategoryCardProps {
   category: Category;
   onAddWord: (categoryId: string) => void;
   onChanged?: () => void;
+  isFirst?: boolean;
+  isLast?: boolean;
 }
 
-export default function CategoryCard({ category, onAddWord, onChanged }: CategoryCardProps) {
+export default function CategoryCard({ category, onAddWord, onChanged, isFirst, isLast }: CategoryCardProps) {
   const navigate = useNavigate();
   const words = getWordsByCategory(category.id);
   const [editOpen, setEditOpen] = useState(false);
@@ -117,6 +119,18 @@ export default function CategoryCard({ category, onAddWord, onChanged }: Categor
           <div>{cardContent}</div>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          {!isFirst && (
+            <ContextMenuItem onClick={() => { moveCategoryUp(category.id); onChanged?.(); }}>
+              <ArrowUp className="mr-2 h-4 w-4" />
+              위로 이동
+            </ContextMenuItem>
+          )}
+          {!isLast && (
+            <ContextMenuItem onClick={() => { moveCategoryDown(category.id); onChanged?.(); }}>
+              <ArrowDown className="mr-2 h-4 w-4" />
+              아래로 이동
+            </ContextMenuItem>
+          )}
           <ContextMenuItem onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
             이름 / 아이콘 변경
@@ -142,6 +156,24 @@ export default function CategoryCard({ category, onAddWord, onChanged }: Categor
             style={{ top: touchPos.y, left: Math.min(touchPos.x, window.innerWidth - 200) }}
             onClick={(e) => e.stopPropagation()}
           >
+            {!isFirst && (
+              <button
+                className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                onClick={() => { setContextOpen(false); moveCategoryUp(category.id); onChanged?.(); }}
+              >
+                <ArrowUp className="mr-2 h-4 w-4" />
+                위로 이동
+              </button>
+            )}
+            {!isLast && (
+              <button
+                className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                onClick={() => { setContextOpen(false); moveCategoryDown(category.id); onChanged?.(); }}
+              >
+                <ArrowDown className="mr-2 h-4 w-4" />
+                아래로 이동
+              </button>
+            )}
             <button
               className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
               onClick={() => { setContextOpen(false); setEditOpen(true); }}
