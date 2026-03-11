@@ -61,18 +61,20 @@ export default function EditCategoryDialog({ open, onOpenChange, onUpdated, cate
           </div>
           <div>
             <Label className="font-body text-sm">아이콘</Label>
-            <div className="flex gap-2 mt-1 flex-wrap">
-              {emojis.map((e) => (
-                <button
-                  key={e}
-                  type="button"
-                  onClick={() => setEmoji(e)}
-                  className={`text-2xl p-1 rounded-md transition-colors ${emoji === e ? "bg-primary/10" : "hover:bg-muted"}`}
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
+            <ScrollArea className="h-40 mt-1 rounded-md border">
+              <div className="flex gap-2 flex-wrap p-2">
+                {emojis.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => setEmoji(e)}
+                    className={`text-2xl p-1 rounded-md transition-colors ${emoji === e ? "bg-primary/10" : "hover:bg-muted"}`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
           <Button type="submit" className="w-full">저장</Button>
         </form>
