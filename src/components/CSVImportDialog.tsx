@@ -9,6 +9,7 @@ interface CSVImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImported: () => void;
+  categoryId?: string;
 }
 
 export default function CSVImportDialog({ open, onOpenChange, onImported }: CSVImportDialogProps) {
