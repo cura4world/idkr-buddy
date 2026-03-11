@@ -28,7 +28,7 @@ interface CategoryCardProps {
   isLast?: boolean;
 }
 
-export default function CategoryCard({ category, onAddWord, onChanged }: CategoryCardProps) {
+export default function CategoryCard({ category, onAddWord, onChanged, isFirst, isLast }: CategoryCardProps) {
   const navigate = useNavigate();
   const words = getWordsByCategory(category.id);
   const [editOpen, setEditOpen] = useState(false);
