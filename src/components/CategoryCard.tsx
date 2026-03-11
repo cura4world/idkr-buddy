@@ -119,6 +119,18 @@ export default function CategoryCard({ category, onAddWord, onChanged, isFirst, 
           <div>{cardContent}</div>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          {!isFirst && (
+            <ContextMenuItem onClick={() => { moveCategoryUp(category.id); onChanged?.(); }}>
+              <ArrowUp className="mr-2 h-4 w-4" />
+              위로 이동
+            </ContextMenuItem>
+          )}
+          {!isLast && (
+            <ContextMenuItem onClick={() => { moveCategoryDown(category.id); onChanged?.(); }}>
+              <ArrowDown className="mr-2 h-4 w-4" />
+              아래로 이동
+            </ContextMenuItem>
+          )}
           <ContextMenuItem onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
             이름 / 아이콘 변경
