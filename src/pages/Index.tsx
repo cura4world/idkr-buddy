@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { getCategories, getSavedWordIds } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
-import CSVImportDialog from "@/components/CSVImportDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 
 const Index = () => {
@@ -15,7 +14,6 @@ const Index = () => {
 
   const [addWordOpen, setAddWordOpen] = useState(false);
   const [addWordCat, setAddWordCat] = useState<string | undefined>();
-  const [csvOpen, setCsvOpen] = useState(false);
   const [addCatOpen, setAddCatOpen] = useState(false);
 
   const handleAddWord = (categoryId: string) => {
