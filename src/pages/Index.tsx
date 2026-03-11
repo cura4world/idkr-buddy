@@ -36,12 +36,6 @@ const Index = () => {
       {/* Utilities row */}
       <div className="flex gap-4 mb-6 text-sm">
         <button
-          onClick={() => setCsvOpen(true)}
-          className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline font-body"
-        >
-          CSV 가져오기
-        </button>
-        <button
           onClick={() => setAddCatOpen(true)}
           className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline font-body"
         >
