@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Category, getWordsByCategory, deleteCategory } from "@/lib/store";
+import { Category, getWordsByCategory, deleteCategory, moveCategoryUp, moveCategoryDown } from "@/lib/store";
 import { useNavigate } from "react-router-dom";
 import {
   ContextMenu,
@@ -18,12 +18,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import EditCategoryDialog from "@/components/EditCategoryDialog";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 
 interface CategoryCardProps {
   category: Category;
   onAddWord: (categoryId: string) => void;
   onChanged?: () => void;
+  isFirst?: boolean;
+  isLast?: boolean;
 }
 
 export default function CategoryCard({ category, onAddWord, onChanged }: CategoryCardProps) {
