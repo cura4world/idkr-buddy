@@ -12,7 +12,7 @@ interface CSVImportDialogProps {
   categoryId?: string;
 }
 
-export default function CSVImportDialog({ open, onOpenChange, onImported }: CSVImportDialogProps) {
+export default function CSVImportDialog({ open, onOpenChange, onImported, categoryId }: CSVImportDialogProps) {
   const [csv, setCsv] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
