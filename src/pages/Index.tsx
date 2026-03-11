@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { getCategories, getSavedWordIds } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
-import CSVImportDialog from "@/components/CSVImportDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 
 const Index = () => {
@@ -15,7 +14,6 @@ const Index = () => {
 
   const [addWordOpen, setAddWordOpen] = useState(false);
   const [addWordCat, setAddWordCat] = useState<string | undefined>();
-  const [csvOpen, setCsvOpen] = useState(false);
   const [addCatOpen, setAddCatOpen] = useState(false);
 
   const handleAddWord = (categoryId: string) => {
@@ -37,12 +35,6 @@ const Index = () => {
 
       {/* Utilities row */}
       <div className="flex gap-4 mb-6 text-sm">
-        <button
-          onClick={() => setCsvOpen(true)}
-          className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline font-body"
-        >
-          CSV 가져오기
-        </button>
         <button
           onClick={() => setAddCatOpen(true)}
           className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline font-body"
@@ -107,7 +99,6 @@ const Index = () => {
         defaultCategoryId={addWordCat}
         onAdded={refresh}
       />
-      <CSVImportDialog open={csvOpen} onOpenChange={setCsvOpen} onImported={refresh} />
       <AddCategoryDialog open={addCatOpen} onOpenChange={setAddCatOpen} onAdded={refresh} />
     </div>
   );

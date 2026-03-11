@@ -9,9 +9,10 @@ interface CSVImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImported: () => void;
+  categoryId?: string;
 }
 
-export default function CSVImportDialog({ open, onOpenChange, onImported }: CSVImportDialogProps) {
+export default function CSVImportDialog({ open, onOpenChange, onImported, categoryId }: CSVImportDialogProps) {
   const [csv, setCsv] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -27,7 +28,7 @@ export default function CSVImportDialog({ open, onOpenChange, onImported }: CSVI
 
   const handleImport = () => {
     if (!csv.trim()) return;
-    const result = importWordsFromCSV(csv);
+    const result = importWordsFromCSV(csv, categoryId);
     toast.success(`${result.imported}개 단어를 가져왔습니다.`, {
       description: result.errors > 0 ? `${result.errors}개 행을 건너뛰었습니다.` : undefined,
     });

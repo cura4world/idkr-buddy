@@ -145,7 +145,7 @@ export function removeSavedWord(wordId: string) {
   localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
 }
 
-export function importWordsFromCSV(csv: string): { imported: number; errors: number } {
+export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imported: number; errors: number } {
   const lines = csv.split("\n").filter((l) => l.trim());
   let imported = 0;
   let errors = 0;
@@ -153,21 +153,23 @@ export function importWordsFromCSV(csv: string): { imported: number; errors: num
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // Support: word,meaning,example,example_meaning,categoryId
     const parts = line.split(",").map((p) => p.trim());
-    if (parts.length >= 4) {
+    if (parts.length >= 2) {
       const [word, meaning, example, exampleMeaning, categoryId] = parts;
-      const categories = getCategories();
-      const catId = categoryId && categories.find((c) => c.id === categoryId || c.name === categoryId)
-        ? (categories.find((c) => c.id === categoryId || c.name === categoryId)!.id)
-        : (categories[0]?.id || "daily");
+      let catId = forceCategoryId;
+      if (!catId) {
+        const categories = getCategories();
+        catId = categoryId && categories.find((c) => c.id === categoryId || c.name === categoryId)
+          ? (categories.find((c) => c.id === categoryId || c.name === categoryId)!.id)
+          : (categories[0]?.id || "daily");
+      }
 
       words.push({
         id: crypto.randomUUID(),
         word,
         meaning,
-        example,
-        exampleMeaning,
+        example: example || "",
+        exampleMeaning: exampleMeaning || "",
         categoryId: catId,
         createdAt: Date.now(),
       });

@@ -29,6 +29,10 @@ const emojis = [
   "🚀", "🛸", "⛵", "🚲", "🏍️", "🚁", "🚂", "⛺",
   "🗽", "🗼", "🏰", "⛩️", "💊", "🔬", "🧪", "📐",
   "🧩", "🎲", "♟️", "🪁",
+  // 기독교 관련
+  "✝️", "⛪", "🙏", "📿", "🕊️", "👼", "😇", "🕯️",
+  "📖", "🔔", "💒", "🌟", "✨", "🫒", "🍞", "🍇",
+  "⭐", "🐑", "🐟", "🪽",
 ];
 
 export default function EditCategoryDialog({ open, onOpenChange, onUpdated, categoryId, currentName, currentEmoji }: Props) {

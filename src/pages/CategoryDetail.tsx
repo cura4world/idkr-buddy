@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, deleteWord } from "@/lib/store";
 import AddWordDialog from "@/components/AddWordDialog";
+import CSVImportDialog from "@/components/CSVImportDialog";
 import { ArrowLeft, Trash2 } from "lucide-react";
 
 export default function CategoryDetail() {
@@ -10,6 +11,7 @@ export default function CategoryDetail() {
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const [addOpen, setAddOpen] = useState(false);
+  const [csvOpen, setCsvOpen] = useState(false);
 
   const categories = getCategories();
   const category = categories.find((c) => c.id === id);
@@ -67,18 +69,32 @@ export default function CategoryDetail() {
         </div>
       )}
 
-      <button
-        onClick={() => setAddOpen(true)}
-        className="mt-4 text-sm text-primary hover:underline underline-offset-4 font-body"
-      >
-        + 단어 추가
-      </button>
+      <div className="mt-4 flex gap-4">
+        <button
+          onClick={() => setAddOpen(true)}
+          className="text-sm text-primary hover:underline underline-offset-4 font-body"
+        >
+          + 단어 추가
+        </button>
+        <button
+          onClick={() => setCsvOpen(true)}
+          className="text-sm text-primary hover:underline underline-offset-4 font-body"
+        >
+          CSV 가져오기
+        </button>
+      </div>
 
       <AddWordDialog
         open={addOpen}
         onOpenChange={setAddOpen}
         defaultCategoryId={id}
         onAdded={refresh}
+      />
+      <CSVImportDialog
+        open={csvOpen}
+        onOpenChange={setCsvOpen}
+        onImported={refresh}
+        categoryId={id}
       />
     </div>
   );
