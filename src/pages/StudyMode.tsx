@@ -89,7 +89,7 @@ export default function StudyMode() {
           <ArrowLeft size={20} />
         </button>
         <span className="text-sm text-muted-foreground font-body">
-          {currentIndex + 1} / {words.length}
+          {currentIndex + 1} / {displayWords.length}
         </span>
         <div className="w-5" />
       </div>
