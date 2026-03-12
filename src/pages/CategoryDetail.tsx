@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getCategories, getWordsByCategory, deleteWord } from "@/lib/store";
+import { getCategories, getWordsByCategory } from "@/lib/store";
 import AddWordDialog from "@/components/AddWordDialog";
 import CSVImportDialog from "@/components/CSVImportDialog";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Volume2 } from "lucide-react";
 
 export default function CategoryDetail() {
   const { id } = useParams<{ id: string }>();
