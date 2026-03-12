@@ -68,6 +68,7 @@ export function updateWord(id: string, updates: { word?: string; meaning?: strin
   saveWords(words);
 }
 
+export function deleteCategory(id: string) {
   const categories = getCategories().filter((c) => c.id !== id);
   saveCategories(categories);
   // Also delete words in this category
