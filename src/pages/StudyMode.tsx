@@ -136,8 +136,7 @@ export default function StudyMode() {
         </div>
       </div>
 
-      {/* Save button */}
-      <div className="flex justify-center py-2">
+      <div className="flex justify-center gap-3 py-2">
         <button
           onClick={handleToggleSave}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-body transition-colors border ${
@@ -146,7 +145,22 @@ export default function StudyMode() {
               : "bg-card text-foreground border-border/50 hover:border-primary/50"
           }`}
         >
-          {isSaved ? "보관됨 ✅" : "단어보관 📌"}
+          {isSaved ? "보관됨 ✅" : "보관 📌"}
+        </button>
+        <button
+          onClick={() => {
+            setIsRandom((r) => !r);
+            setCurrentIndex(0);
+            setIsFlipped(false);
+          }}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+            isRandom
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-foreground border-border/50 hover:border-primary/50"
+          }`}
+        >
+          <Shuffle size={14} />
+          랜덤
         </button>
       </div>
 
