@@ -24,17 +24,14 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
       {/* Header */}
-      <header className="mb-8">
+      <header className="mb-6">
         <h1 className="text-2xl font-semibold font-body tracking-tight">
           Kata kata<span className="text-accent">.</span>
         </h1>
-        <p className="text-sm text-muted-foreground mt-1 font-body">
-          인도네시아어 · 한국어 단어장
-        </p>
       </header>
 
       {/* Utilities row */}
-      <div className="flex gap-4 mb-6 text-sm">
+      <div className="flex justify-end mb-6 text-sm">
         <button
           onClick={() => setAddCatOpen(true)}
           className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline font-body"
@@ -58,19 +55,19 @@ const Index = () => {
               </div>
               <p className="text-sm text-muted-foreground">{savedCount}개의 단어</p>
             </div>
-            <div className="mt-3 flex gap-3">
-              <button
-                onClick={() => navigate("/saved")}
-                className="text-sm text-primary font-medium hover:underline underline-offset-4"
-              >
-                학습하기
-              </button>
+            <div className="mt-3 flex justify-end gap-3">
               <button
                 onClick={() => navigate("/saved?mode=quiz")}
                 className="text-sm text-primary font-medium hover:underline underline-offset-4"
                 disabled={savedCount < 2}
               >
                 퀴즈
+              </button>
+              <button
+                onClick={() => navigate("/saved")}
+                className="text-sm text-primary font-medium hover:underline underline-offset-4"
+              >
+                플래시카드
               </button>
             </div>
           </div>
