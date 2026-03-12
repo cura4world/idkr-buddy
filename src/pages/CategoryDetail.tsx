@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getCategories, getWordsByCategory, deleteWord } from "@/lib/store";
+import { getCategories, getWordsByCategory } from "@/lib/store";
 import AddWordDialog from "@/components/AddWordDialog";
 import CSVImportDialog from "@/components/CSVImportDialog";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Volume2 } from "lucide-react";
 
 export default function CategoryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +12,14 @@ export default function CategoryDetail() {
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const [addOpen, setAddOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
+
+  const speak = (text: string) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "id-ID";
+    utterance.rate = 0.9;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+  };
 
   const categories = getCategories();
   const category = categories.find((c) => c.id === id);
@@ -65,13 +73,11 @@ export default function CategoryDetail() {
               )}
             </div>
             <button
-              onClick={() => {
-                deleteWord(w.id);
-                refresh();
-              }}
-              className="text-muted-foreground/50 hover:text-destructive p-1"
+              onClick={() => speak(w.word)}
+              className="text-muted-foreground/50 hover:text-primary p-1"
+              title="발음 듣기"
             >
-              <Trash2 size={14} />
+              <Volume2 size={16} />
             </button>
           </div>
         ))}
