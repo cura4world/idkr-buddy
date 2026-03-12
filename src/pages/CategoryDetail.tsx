@@ -73,13 +73,11 @@ export default function CategoryDetail() {
               )}
             </div>
             <button
-              onClick={() => {
-                deleteWord(w.id);
-                refresh();
-              }}
-              className="text-muted-foreground/50 hover:text-destructive p-1"
+              onClick={() => speak(w.word)}
+              className="text-muted-foreground/50 hover:text-primary p-1"
+              title="발음 듣기"
             >
-              <Trash2 size={14} />
+              <Volume2 size={16} />
             </button>
           </div>
         ))}
