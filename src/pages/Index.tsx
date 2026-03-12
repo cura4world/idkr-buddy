@@ -55,19 +55,19 @@ const Index = () => {
               </div>
               <p className="text-sm text-muted-foreground">{savedCount}개의 단어</p>
             </div>
-            <div className="mt-3 flex gap-3">
-              <button
-                onClick={() => navigate("/saved")}
-                className="text-sm text-primary font-medium hover:underline underline-offset-4"
-              >
-                학습하기
-              </button>
+            <div className="mt-3 flex justify-end gap-3">
               <button
                 onClick={() => navigate("/saved?mode=quiz")}
                 className="text-sm text-primary font-medium hover:underline underline-offset-4"
                 disabled={savedCount < 2}
               >
                 퀴즈
+              </button>
+              <button
+                onClick={() => navigate("/saved")}
+                className="text-sm text-primary font-medium hover:underline underline-offset-4"
+              >
+                플래시카드
               </button>
             </div>
           </div>
