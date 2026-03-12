@@ -32,13 +32,27 @@ export default function CategoryDetail() {
         <span className="font-body">돌아가기</span>
       </button>
 
-      <header className="mb-6">
+      <header className="mb-2">
         <h1 className="text-xl font-semibold font-body flex items-center gap-2">
           <span>{category.emoji}</span>
           <span>{category.name}</span>
         </h1>
-        <p className="text-sm text-muted-foreground font-body mt-1">{words.length}개의 단어</p>
       </header>
+
+      <div className="flex justify-end gap-4 mb-6">
+        <button
+          onClick={() => setCsvOpen(true)}
+          className="text-sm text-primary hover:underline underline-offset-4 font-body"
+        >
+          CSV 가져오기
+        </button>
+        <button
+          onClick={() => setAddOpen(true)}
+          className="text-sm text-primary hover:underline underline-offset-4 font-body"
+        >
+          + 단어 추가
+        </button>
+      </div>
 
       <div className="space-y-2">
         {words.map((w) => (
