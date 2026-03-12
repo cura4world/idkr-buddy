@@ -73,7 +73,7 @@ export default function StudyMode() {
     setTouchStart(null);
   };
 
-  if (!category || words.length === 0) {
+  if (!category || displayWords.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
         <p className="text-muted-foreground">학습할 단어가 없습니다.</p>
