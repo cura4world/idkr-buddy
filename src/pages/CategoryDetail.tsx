@@ -13,6 +13,14 @@ export default function CategoryDetail() {
   const [addOpen, setAddOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
 
+  const speak = (text: string) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "id-ID";
+    utterance.rate = 0.9;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+  };
+
   const categories = getCategories();
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
