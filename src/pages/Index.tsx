@@ -28,6 +28,9 @@ const Index = () => {
         <h1 className="text-2xl font-semibold font-body tracking-tight">
           Kata kata<span className="text-accent">.</span>
         </h1>
+        <p className="text-sm text-muted-foreground mt-1 font-body">
+          인도네시아어 단어장
+        </p>
       </header>
 
       {/* Utilities row */}
