@@ -61,7 +61,13 @@ export function updateCategory(id: string, name: string, emoji: string) {
   saveCategories(categories);
 }
 
-export function deleteCategory(id: string) {
+export function updateWord(id: string, updates: { word?: string; meaning?: string; example?: string; exampleMeaning?: string; categoryId?: string }) {
+  const words = getWords().map((w) =>
+    w.id === id ? { ...w, ...updates } : w
+  );
+  saveWords(words);
+}
+
   const categories = getCategories().filter((c) => c.id !== id);
   saveCategories(categories);
   // Also delete words in this category
