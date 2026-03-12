@@ -11,13 +11,20 @@ export default function StudyMode() {
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
 
+  const [isRandom, setIsRandom] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isBreathing, setIsBreathing] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
 
-  const currentWord: Word | undefined = words[currentIndex];
+  const shuffledWords = useMemo(() => {
+    if (!isRandom) return words;
+    return [...words].sort(() => Math.random() - 0.5);
+  }, [isRandom, words.length]);
+
+  const displayWords = isRandom ? shuffledWords : words;
+  const currentWord: Word | undefined = displayWords[currentIndex];
   const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
 
   const handleToggleSave = () => {
