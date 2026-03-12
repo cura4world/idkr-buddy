@@ -44,12 +44,12 @@ export default function StudyMode() {
   }, [currentIndex, isFlipped]);
 
   const goNext = useCallback(() => {
-    if (currentIndex < words.length - 1) {
+    if (currentIndex < displayWords.length - 1) {
       setIsFlipped(false);
       setIsBreathing(false);
       setCurrentIndex((i) => i + 1);
     }
-  }, [currentIndex, words.length]);
+  }, [currentIndex, displayWords.length]);
 
   const goPrev = useCallback(() => {
     if (currentIndex > 0) {
