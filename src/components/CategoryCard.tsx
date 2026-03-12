@@ -79,14 +79,7 @@ export default function CategoryCard({ category, onAddWord, onChanged, isFirst, 
         </div>
         <p className="text-sm text-muted-foreground">{words.length}개의 단어</p>
       </div>
-      <div className="mt-3 flex gap-3">
-        <button
-          onClick={() => navigate(`/study/${category.id}`)}
-          className="text-sm text-primary font-medium hover:underline underline-offset-4"
-          disabled={words.length === 0}
-        >
-          학습하기
-        </button>
+      <div className="mt-3 flex justify-end gap-3">
         <button
           onClick={() => navigate(`/quiz/${category.id}`)}
           className="text-sm text-primary font-medium hover:underline underline-offset-4"
@@ -95,13 +88,11 @@ export default function CategoryCard({ category, onAddWord, onChanged, isFirst, 
           퀴즈
         </button>
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddWord(category.id);
-          }}
-          className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 ml-auto"
+          onClick={() => navigate(`/study/${category.id}`)}
+          className="text-sm text-primary font-medium hover:underline underline-offset-4"
+          disabled={words.length === 0}
         >
-          + 단어 추가
+          플래시카드
         </button>
       </div>
     </div>

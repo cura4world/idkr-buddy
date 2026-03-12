@@ -83,20 +83,6 @@ export default function CategoryDetail() {
         </div>
       )}
 
-      <div className="mt-4 flex gap-4">
-        <button
-          onClick={() => setAddOpen(true)}
-          className="text-sm text-primary hover:underline underline-offset-4 font-body"
-        >
-          + 단어 추가
-        </button>
-        <button
-          onClick={() => setCsvOpen(true)}
-          className="text-sm text-primary hover:underline underline-offset-4 font-body"
-        >
-          CSV 가져오기
-        </button>
-      </div>
 
       <AddWordDialog
         open={addOpen}
