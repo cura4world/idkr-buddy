@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, getSavedWordIds, toggleSavedWord, Word } from "@/lib/store";
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function StudyMode() {
@@ -11,13 +11,20 @@ export default function StudyMode() {
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
 
+  const [isRandom, setIsRandom] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isBreathing, setIsBreathing] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
 
-  const currentWord: Word | undefined = words[currentIndex];
+  const shuffledWords = useMemo(() => {
+    if (!isRandom) return words;
+    return [...words].sort(() => Math.random() - 0.5);
+  }, [isRandom, words.length]);
+
+  const displayWords = isRandom ? shuffledWords : words;
+  const currentWord: Word | undefined = displayWords[currentIndex];
   const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
 
   const handleToggleSave = () => {
@@ -37,12 +44,12 @@ export default function StudyMode() {
   }, [currentIndex, isFlipped]);
 
   const goNext = useCallback(() => {
-    if (currentIndex < words.length - 1) {
+    if (currentIndex < displayWords.length - 1) {
       setIsFlipped(false);
       setIsBreathing(false);
       setCurrentIndex((i) => i + 1);
     }
-  }, [currentIndex, words.length]);
+  }, [currentIndex, displayWords.length]);
 
   const goPrev = useCallback(() => {
     if (currentIndex > 0) {
@@ -66,7 +73,7 @@ export default function StudyMode() {
     setTouchStart(null);
   };
 
-  if (!category || words.length === 0) {
+  if (!category || displayWords.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
         <p className="text-muted-foreground">학습할 단어가 없습니다.</p>
@@ -82,7 +89,7 @@ export default function StudyMode() {
           <ArrowLeft size={20} />
         </button>
         <span className="text-sm text-muted-foreground font-body">
-          {currentIndex + 1} / {words.length}
+          {currentIndex + 1} / {displayWords.length}
         </span>
         <div className="w-5" />
       </div>
@@ -129,8 +136,7 @@ export default function StudyMode() {
         </div>
       </div>
 
-      {/* Save button */}
-      <div className="flex justify-center py-2">
+      <div className="flex justify-center gap-3 py-2">
         <button
           onClick={handleToggleSave}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-body transition-colors border ${
@@ -139,7 +145,22 @@ export default function StudyMode() {
               : "bg-card text-foreground border-border/50 hover:border-primary/50"
           }`}
         >
-          {isSaved ? "보관됨 ✅" : "단어보관 📌"}
+          {isSaved ? "보관됨 ✅" : "보관 📌"}
+        </button>
+        <button
+          onClick={() => {
+            setIsRandom((r) => !r);
+            setCurrentIndex(0);
+            setIsFlipped(false);
+          }}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+            isRandom
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-foreground border-border/50 hover:border-primary/50"
+          }`}
+        >
+          <Shuffle size={14} />
+          랜덤
         </button>
       </div>
 
@@ -153,7 +174,7 @@ export default function StudyMode() {
         </button>
         <button
           onClick={goNext}
-          disabled={currentIndex === words.length - 1}
+          disabled={currentIndex === displayWords.length - 1}
           className="p-3 rounded-full bg-card border border-border/50 text-foreground disabled:opacity-30 transition-opacity"
         >
           <ChevronRight size={20} />
