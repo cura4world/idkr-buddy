@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getCategories, getWordsByCategory } from "@/lib/store";
+import { getCategories, getWordsByCategory, Word } from "@/lib/store";
 import AddWordDialog from "@/components/AddWordDialog";
+import EditWordDialog from "@/components/EditWordDialog";
 import CSVImportDialog from "@/components/CSVImportDialog";
 import { ArrowLeft, Volume2 } from "lucide-react";
 
@@ -12,6 +13,9 @@ export default function CategoryDetail() {
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const [addOpen, setAddOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
+  const [editWord, setEditWord] = useState<Word | null>(null);
+
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -24,6 +28,26 @@ export default function CategoryDetail() {
   const categories = getCategories();
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
+
+  const handleTouchStart = (w: Word) => {
+    longPressTimer.current = setTimeout(() => {
+      setEditWord(w);
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleTouchMove = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
 
   if (!category) {
     return (
@@ -64,7 +88,14 @@ export default function CategoryDetail() {
 
       <div className="space-y-2">
         {words.map((w) => (
-          <div key={w.id} className="flex items-center gap-3 bg-card rounded-lg p-4 border border-border/50">
+          <div
+            key={w.id}
+            className="flex items-center gap-3 bg-card rounded-lg p-4 border border-border/50 select-none"
+            onTouchStart={() => handleTouchStart(w)}
+            onTouchEnd={handleTouchEnd}
+            onTouchMove={handleTouchMove}
+            onContextMenu={(e) => { e.preventDefault(); setEditWord(w); }}
+          >
             <div className="flex-1 min-w-0">
               <p className="font-word text-base font-medium truncate">{w.word}</p>
               <p className="text-sm text-muted-foreground font-body">{w.meaning}</p>
@@ -89,12 +120,17 @@ export default function CategoryDetail() {
         </div>
       )}
 
-
       <AddWordDialog
         open={addOpen}
         onOpenChange={setAddOpen}
         defaultCategoryId={id}
         onAdded={refresh}
+      />
+      <EditWordDialog
+        open={!!editWord}
+        onOpenChange={(o) => { if (!o) setEditWord(null); }}
+        word={editWord}
+        onUpdated={refresh}
       />
       <CSVImportDialog
         open={csvOpen}
