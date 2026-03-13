@@ -129,7 +129,7 @@ export default function QuizMode() {
         <div className="mb-10 text-center">
           <p className="font-word text-3xl font-semibold">{currentQ.word.word}</p>
           {currentQ.word.example && (
-            <p className="text-base text-muted-foreground/60 font-word mt-2">
+            <p className="text-base text-white font-word mt-2">
               {currentQ.word.example}
             </p>
           )}
@@ -149,7 +149,7 @@ export default function QuizMode() {
                 className += "bg-card border-border/30 text-muted-foreground/50";
               }
             } else {
-              className += "bg-card border-border/50 hover:border-primary/30 active:scale-[0.98]";
+              className += "bg-card border-border/50 hover:border-primary/30 active:scale-[0.98] text-gray-900";
             }
 
             return (
