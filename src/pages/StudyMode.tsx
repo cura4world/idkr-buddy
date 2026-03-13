@@ -183,14 +183,14 @@ export default function StudyMode() {
         <button
           onClick={goPrev}
           disabled={currentIndex === 0}
-          className="p-3 rounded-full bg-card border border-border/50 text-foreground disabled:opacity-30 transition-opacity"
+          className="p-3 rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity"
         >
           <ChevronLeft size={20} />
         </button>
         <button
           onClick={goNext}
           disabled={currentIndex === displayWords.length - 1}
-          className="p-3 rounded-full bg-card border border-border/50 text-foreground disabled:opacity-30 transition-opacity"
+          className="p-3 rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity"
         >
           <ChevronRight size={20} />
         </button>
