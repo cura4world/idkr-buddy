@@ -130,7 +130,7 @@ export default function StudyMode() {
             </div>
 
             {/* Back: meaning (bold) + example_meaning */}
-            <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm">
+            <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
               <p className="font-body text-2xl font-medium text-center mb-3">
                 {currentWord.meaning}
               </p>
