@@ -59,7 +59,7 @@ export default function CategoryDetail() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
-      <button onClick={() => navigate("/")} className="flex items-center gap-2 text-sm text-muted-foreground mb-6 hover:text-foreground">
+      <button onClick={() => navigate("/")} className="flex items-center gap-2 text-sm text-white mb-6 hover:text-white/80">
         <ArrowLeft size={16} />
         <span className="font-body">돌아가기</span>
       </button>
@@ -74,13 +74,13 @@ export default function CategoryDetail() {
       <div className="flex justify-end gap-4 mb-6">
         <button
           onClick={() => setCsvOpen(true)}
-          className="text-sm text-primary hover:underline underline-offset-4 font-body"
+          className="text-sm text-white hover:underline underline-offset-4 font-body"
         >
           CSV 가져오기
         </button>
         <button
           onClick={() => setAddOpen(true)}
-          className="text-sm text-primary hover:underline underline-offset-4 font-body"
+          className="text-sm text-white hover:underline underline-offset-4 font-body"
         >
           + 단어 추가
         </button>
