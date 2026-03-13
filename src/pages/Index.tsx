@@ -39,7 +39,7 @@ const Index = () => {
           onClick={() => setAddCatOpen(true)}
           className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline font-body"
         >
-          카테고리 추가
+          단어장 추가
         </button>
       </div>
 
