@@ -170,6 +170,13 @@ export default function StudyMode() {
           <Shuffle size={14} />
           랜덤
         </button>
+        <button
+          onClick={() => currentWord && speak(currentWord.word)}
+          disabled={!currentWord}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border bg-card text-foreground border-border/50 hover:border-primary/50 disabled:opacity-30"
+        >
+          <Volume2 size={16} />
+        </button>
       </div>
 
       <div className="flex items-center justify-center gap-8 py-4">
