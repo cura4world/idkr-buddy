@@ -68,7 +68,7 @@ export default function CategoryCard({ category, onAddWord, onChanged, isFirst, 
   };
 
   const cardContent = (
-    <div className="rounded-lg bg-card p-5 shadow-sm border border-border/50 transition-all active:scale-[0.98]">
+    <div className="rounded-lg bg-card p-5 shadow-sm border border-border/50 transition-all active:scale-[0.98] text-card-foreground">
       <div
         className="cursor-pointer"
         onClick={() => navigate(`/category/${category.id}`)}

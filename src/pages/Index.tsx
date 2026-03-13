@@ -47,7 +47,7 @@ const Index = () => {
       <div className="space-y-3">
         {/* Saved words as category-style card */}
         {savedCount > 0 && (
-          <div className="rounded-lg bg-card p-5 shadow-sm border border-border/50 transition-all active:scale-[0.98]">
+          <div className="rounded-lg bg-card p-5 shadow-sm border border-border/50 transition-all active:scale-[0.98] text-card-foreground">
             <div
               className="cursor-pointer"
               onClick={() => navigate("/saved")}
