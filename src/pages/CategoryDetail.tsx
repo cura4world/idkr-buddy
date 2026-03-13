@@ -90,7 +90,7 @@ export default function CategoryDetail() {
         {words.map((w) => (
           <div
             key={w.id}
-            className="flex items-center gap-3 bg-card rounded-lg p-4 border border-border/50 select-none"
+            className="flex items-center gap-3 bg-card rounded-lg p-4 border border-border/50 select-none text-card-foreground"
             onTouchStart={() => handleTouchStart(w)}
             onTouchEnd={handleTouchEnd}
             onTouchMove={handleTouchMove}
@@ -105,7 +105,7 @@ export default function CategoryDetail() {
             </div>
             <button
               onClick={() => speak(w.word)}
-              className="text-muted-foreground/50 hover:text-primary p-1"
+              className="text-card-foreground/50 hover:text-primary p-1"
               title="발음 듣기"
             >
               <Volume2 size={16} />
