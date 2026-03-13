@@ -57,15 +57,15 @@ export default function AddCategoryDialog({ open, onOpenChange, onAdded }: Props
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm mx-auto bg-card">
         <DialogHeader>
-          <DialogTitle className="font-body">새 카테고리</DialogTitle>
+          <DialogTitle className="font-body">새 단어장</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label className="font-body text-sm">이름</Label>
+            <Label className="font-body text-sm text-white">이름</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="여행" className="mt-1" autoFocus />
           </div>
           <div>
-            <Label className="font-body text-sm">아이콘</Label>
+            <Label className="font-body text-sm text-white">아이콘</Label>
             <ScrollArea className="h-40 mt-1 rounded-md border">
               <div className="flex gap-2 flex-wrap p-2">
                 {emojis.map((e) => (
