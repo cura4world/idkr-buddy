@@ -25,10 +25,10 @@ const Index = () => {
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
       {/* Header */}
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold font-body tracking-tight">
+        <h1 className="text-2xl font-semibold font-body tracking-tight text-foreground">
           Kata kata<span className="text-accent">.</span>
         </h1>
-        <p className="text-sm text-muted-foreground mt-1 font-body">
+        <p className="text-sm text-foreground mt-1 font-body">
           인도네시아어 단어장
         </p>
       </header>
@@ -37,7 +37,7 @@ const Index = () => {
       <div className="flex justify-end mb-6 text-sm">
         <button
           onClick={() => setAddCatOpen(true)}
-          className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline font-body"
+          className="text-foreground hover:text-foreground/80 underline-offset-4 hover:underline font-body"
         >
           단어장 추가
         </button>
