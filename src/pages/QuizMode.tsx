@@ -24,14 +24,14 @@ export default function QuizMode() {
   const [correctCount, setCorrectCount] = useState(0);
   const [reviewList, setReviewList] = useState<Word[]>([]);
 
-  const questions = useMemo(() => {
+  const [questions] = useState(() => {
     return shuffle(allWords).map((word) => {
       const others = allWords.filter((w) => w.id !== word.id);
       const wrongChoices = shuffle(others).slice(0, 3).map((w) => w.meaning);
       const choices = shuffle([word.meaning, ...wrongChoices]);
       return { word, choices, correctAnswer: word.meaning };
     });
-  }, [allWords]);
+  });
 
   const currentQ = questions[questionIndex];
   const isFinished = questionIndex >= questions.length;
