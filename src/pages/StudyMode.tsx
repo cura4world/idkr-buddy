@@ -153,7 +153,7 @@ export default function StudyMode() {
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
-          {isSaved ? "보관됨 ✅" : "보관 📌"}
+          {isSaved ? "✅ 보관됨" : "📌 보관"}
         </button>
         <button
           onClick={() => {
