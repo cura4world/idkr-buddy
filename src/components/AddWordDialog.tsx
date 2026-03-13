@@ -43,11 +43,11 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, o
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm mx-auto bg-card">
         <DialogHeader>
-          <DialogTitle className="font-body">새 단어 추가</DialogTitle>
+          <DialogTitle className="font-body text-gray-900">새 단어 추가</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label className="font-body text-sm">인도네시아어</Label>
+            <Label className="font-body text-sm text-gray-900">인도네시아어</Label>
             <Input
               value={word}
               onChange={(e) => setWord(e.target.value)}
@@ -57,7 +57,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, o
             />
           </div>
           <div>
-            <Label className="font-body text-sm">한국어 뜻</Label>
+            <Label className="font-body text-sm text-gray-900">한국어 뜻</Label>
             <Input
               value={meaning}
               onChange={(e) => setMeaning(e.target.value)}
@@ -66,7 +66,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, o
             />
           </div>
           <div>
-            <Label className="font-body text-sm">예문 (인도네시아어)</Label>
+            <Label className="font-body text-sm text-gray-900">예문 (인도네시아어)</Label>
             <Input
               value={example}
               onChange={(e) => setExample(e.target.value)}
@@ -75,7 +75,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, o
             />
           </div>
           <div>
-            <Label className="font-body text-sm">예문 뜻 (한국어)</Label>
+            <Label className="font-body text-sm text-gray-900">예문 뜻 (한국어)</Label>
             <Input
               value={exampleMeaning}
               onChange={(e) => setExampleMeaning(e.target.value)}
@@ -84,7 +84,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, o
             />
           </div>
           <div>
-            <Label className="font-body text-sm">카테고리</Label>
+            <Label className="font-body text-sm text-gray-900">카테고리</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger className="mt-1">
                 <SelectValue placeholder="카테고리 선택" />
