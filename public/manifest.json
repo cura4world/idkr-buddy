@@ -1,0 +1,19 @@
+{
+  "name": "Kata kata - 인도네시아어 단어장",
+  "short_name": "Kata kata",
+  "description": "인도네시아어-한국어 단어 학습 앱",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F3EFEA",
+  "theme_color": "#F3EFEA",
+  "lang": "en",
+  "scope": "/",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}
