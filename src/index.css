@@ -6,9 +6,9 @@
 
 @layer base {
   :root {
-    /* Warm parchment palette */
-    --background: 30 23% 93%; /* #F3EFEA */
-    --foreground: 24 8% 17%; /* #312E2B */
+    /* Ocean deep palette */
+    --background: 196 99% 23%; /* #015F78 */
+    --foreground: 0 0% 100%; /* White text */
 
     --card: 30 20% 96%;
     --card-foreground: 24 8% 17%;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, getSavedWordIds, toggleSavedWord, Word } from "@/lib/store";
-import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function StudyMode() {
@@ -32,6 +32,14 @@ export default function StudyMode() {
     const nowSaved = toggleSavedWord(currentWord.id);
     setSavedIds(getSavedWordIds());
     toast(nowSaved ? "단어를 보관했습니다 📌" : "보관함에서 제거했습니다");
+  };
+
+  const speak = (text: string) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "id-ID";
+    utterance.rate = 0.9;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
   };
 
   useEffect(() => {
@@ -161,6 +169,13 @@ export default function StudyMode() {
         >
           <Shuffle size={14} />
           랜덤
+        </button>
+        <button
+          onClick={() => currentWord && speak(currentWord.word)}
+          disabled={!currentWord}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border bg-card text-foreground border-border/50 hover:border-primary/50 disabled:opacity-30"
+        >
+          <Volume2 size={16} />
         </button>
       </div>
 
