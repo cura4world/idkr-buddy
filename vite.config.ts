@@ -53,3 +53,11 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }));
+```
+👆 **여기까지 복사**
+
+---
+
+Commit 후 **5~10분** 기다렸다가 브라우저에서 확인해 주세요:
+```
+https://idkr-buddy.lovable.app/manifest.webmanifest
