@@ -34,6 +34,14 @@ export default function StudyMode() {
     toast(nowSaved ? "단어를 보관했습니다 📌" : "보관함에서 제거했습니다");
   };
 
+  const speak = (text: string) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "id-ID";
+    utterance.rate = 0.9;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+  };
+
   useEffect(() => {
     if (isFlipped) {
       setIsBreathing(false);
