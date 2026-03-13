@@ -118,7 +118,7 @@ export default function StudyMode() {
                   {currentWord.example}
                 </p>
               )}
-              <p className="text-sm text-muted-foreground/60 mt-6 font-body">탭하여 뒤집기</p>
+              
             </div>
 
             {/* Back: meaning (bold) + example_meaning */}
