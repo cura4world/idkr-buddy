@@ -41,7 +41,7 @@ export default function CSVImportDialog({ open, onOpenChange, onImported, catego
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm mx-auto bg-card">
         <DialogHeader>
-          <DialogTitle className="font-body">CSV 가져오기</DialogTitle>
+          <DialogTitle className="font-body text-gray-900">CSV 가져오기</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground font-body">
