@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, Word } from "@/lib/store";
-import { ArrowLeft, RotateCcw } from "lucide-react";
+import { ArrowLeft, RotateCcw, Shuffle } from "lucide-react";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -23,15 +23,19 @@ export default function QuizMode() {
   const [selected, setSelected] = useState<string | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
   const [reviewList, setReviewList] = useState<Word[]>([]);
+  const [isRandom, setIsRandom] = useState(false);
 
-  const [questions] = useState(() => {
-    return shuffle(allWords).map((word) => {
+  const makeQuestions = (random: boolean) => {
+    const source = random ? shuffle(allWords) : allWords;
+    return source.map((word) => {
       const others = allWords.filter((w) => w.id !== word.id);
       const wrongChoices = shuffle(others).slice(0, 3).map((w) => w.meaning);
       const choices = shuffle([word.meaning, ...wrongChoices]);
       return { word, choices, correctAnswer: word.meaning };
     });
-  });
+  };
+
+  const [questions, setQuestions] = useState(() => makeQuestions(false));
 
   const currentQ = questions[questionIndex];
   const isFinished = questionIndex >= questions.length;
@@ -58,6 +62,17 @@ export default function QuizMode() {
     setSelected(null);
     setCorrectCount(0);
     setReviewList([]);
+    setQuestions(makeQuestions(isRandom));
+  };
+
+  const handleToggleRandom = () => {
+    const next = !isRandom;
+    setIsRandom(next);
+    setQuestionIndex(0);
+    setSelected(null);
+    setCorrectCount(0);
+    setReviewList([]);
+    setQuestions(makeQuestions(next));
   };
 
   if (!category || allWords.length < 2) {
@@ -159,6 +174,20 @@ export default function QuizMode() {
             );
           })}
         </div>
+      </div>
+
+      <div className="flex justify-center py-4">
+        <button
+          onClick={handleToggleRandom}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+            isRandom
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          }`}
+        >
+          <Shuffle size={14} />
+          랜덤
+        </button>
       </div>
     </div>
   );
