@@ -112,14 +112,14 @@ export default function QuizMode() {
         <div className="flex gap-3 mt-8">
           <button
             onClick={restart}
-            className="flex items-center gap-2 text-sm text-primary font-body hover:underline underline-offset-4"
+            className="flex items-center gap-2 text-sm text-white font-body hover:underline underline-offset-4"
           >
             <RotateCcw size={14} />
             다시 하기
           </button>
           <button
             onClick={() => navigate("/")}
-            className="text-sm text-muted-foreground font-body hover:underline underline-offset-4"
+            className="text-sm text-white font-body hover:underline underline-offset-4"
           >
             홈으로
           </button>
