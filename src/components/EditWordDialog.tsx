@@ -56,19 +56,19 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label className="font-body text-sm text-card-foreground">인도네시아어</Label>
-            <Input value={wordText} onChange={(e) => setWordText(e.target.value)} className="mt-1 font-word text-card-foreground" autoFocus />
+            <Input value={wordText} onChange={(e) => setWordText(e.target.value)} className="mt-1 font-word text-white" autoFocus />
           </div>
           <div>
             <Label className="font-body text-sm text-card-foreground">한국어 뜻</Label>
-            <Input value={meaning} onChange={(e) => setMeaning(e.target.value)} className="mt-1 font-body text-card-foreground" />
+            <Input value={meaning} onChange={(e) => setMeaning(e.target.value)} className="mt-1 font-body text-white" />
           </div>
           <div>
             <Label className="font-body text-sm text-card-foreground">예문 (인도네시아어)</Label>
-            <Input value={example} onChange={(e) => setExample(e.target.value)} className="mt-1 font-word text-card-foreground" />
+            <Input value={example} onChange={(e) => setExample(e.target.value)} className="mt-1 font-word text-white" />
           </div>
           <div>
             <Label className="font-body text-sm text-card-foreground">예문 뜻 (한국어)</Label>
-            <Input value={exampleMeaning} onChange={(e) => setExampleMeaning(e.target.value)} className="mt-1 font-body text-card-foreground" />
+            <Input value={exampleMeaning} onChange={(e) => setExampleMeaning(e.target.value)} className="mt-1 font-body text-white" />
           </div>
           <div className="flex gap-2">
             <Button type="button" variant="destructive" className="flex-1" onClick={handleDelete}>
