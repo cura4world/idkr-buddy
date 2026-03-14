@@ -51,24 +51,24 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm mx-auto bg-card">
         <DialogHeader>
-          <DialogTitle className="font-body">단어 정보</DialogTitle>
+          <DialogTitle className="font-body text-card-foreground">단어 정보</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label className="font-body text-sm">인도네시아어</Label>
-            <Input value={wordText} onChange={(e) => setWordText(e.target.value)} className="mt-1 font-word" autoFocus />
+            <Label className="font-body text-sm text-card-foreground">인도네시아어</Label>
+            <Input value={wordText} onChange={(e) => setWordText(e.target.value)} className="mt-1 font-word text-card-foreground" autoFocus />
           </div>
           <div>
-            <Label className="font-body text-sm">한국어 뜻</Label>
-            <Input value={meaning} onChange={(e) => setMeaning(e.target.value)} className="mt-1 font-body" />
+            <Label className="font-body text-sm text-card-foreground">한국어 뜻</Label>
+            <Input value={meaning} onChange={(e) => setMeaning(e.target.value)} className="mt-1 font-body text-card-foreground" />
           </div>
           <div>
-            <Label className="font-body text-sm">예문 (인도네시아어)</Label>
-            <Input value={example} onChange={(e) => setExample(e.target.value)} className="mt-1 font-word" />
+            <Label className="font-body text-sm text-card-foreground">예문 (인도네시아어)</Label>
+            <Input value={example} onChange={(e) => setExample(e.target.value)} className="mt-1 font-word text-card-foreground" />
           </div>
           <div>
-            <Label className="font-body text-sm">예문 뜻 (한국어)</Label>
-            <Input value={exampleMeaning} onChange={(e) => setExampleMeaning(e.target.value)} className="mt-1 font-body" />
+            <Label className="font-body text-sm text-card-foreground">예문 뜻 (한국어)</Label>
+            <Input value={exampleMeaning} onChange={(e) => setExampleMeaning(e.target.value)} className="mt-1 font-body text-card-foreground" />
           </div>
           <div className="flex gap-2">
             <Button type="button" variant="destructive" className="flex-1" onClick={handleDelete}>
