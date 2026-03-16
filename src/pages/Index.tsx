@@ -10,7 +10,7 @@ const Index = () => {
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const categories = getCategories();
-  const savedCount = getSavedWordIds().length;
+  const savedCount = getSavedWords().length;
 
   const [addWordOpen, setAddWordOpen] = useState(false);
   const [addWordCat, setAddWordCat] = useState<string | undefined>();
