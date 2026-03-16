@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { getSavedWords, getSavedWordIds, toggleSavedWord, Word } from "@/lib/store";
-import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2 } from "lucide-react";
+import { getSavedWords, removeSavedWord, Word } from "@/lib/store";
+import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SavedStudyMode() {
@@ -13,7 +13,6 @@ export default function SavedStudyMode() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isBreathing, setIsBreathing] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
 
   const shuffledWords = useMemo(() => {
     if (!isRandom) return words;
@@ -22,13 +21,22 @@ export default function SavedStudyMode() {
 
   const displayWords = isRandom ? shuffledWords : words;
   const currentWord: Word | undefined = displayWords[currentIndex];
-  const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
 
-  const handleToggleSave = () => {
+  const handleDelete = () => {
     if (!currentWord) return;
-    const nowSaved = toggleSavedWord(currentWord.id);
-    setSavedIds(getSavedWordIds());
-    toast(nowSaved ? "단어를 보관했습니다 📌" : "보관함에서 제거했습니다");
+    if (window.confirm(`"${currentWord.word}"을 보관함에서 제거할까요?`)) {
+      removeSavedWord(currentWord.id);
+      toast("보관함에서 제거했습니다");
+      if (currentIndex >= displayWords.length - 1 && currentIndex > 0) {
+        setCurrentIndex((i) => i - 1);
+      }
+      // Force re-render by navigating if no words left
+      if (displayWords.length <= 1) {
+        window.location.reload();
+      } else {
+        window.location.reload();
+      }
+    }
   };
 
   const speak = (text: string) => {
@@ -109,14 +117,11 @@ export default function SavedStudyMode() {
 
       <div className="flex justify-center gap-3 py-2">
         <button
-          onClick={handleToggleSave}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-body transition-colors border ${
-            isSaved
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
-          }`}
+          onClick={handleDelete}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-body transition-colors border bg-card text-destructive border-border/50 hover:border-destructive/50"
         >
-          {isSaved ? "✅ 보관됨" : "📌 보관"}
+          <Trash2 size={14} />
+          삭제
         </button>
         <button
           onClick={() => { setIsRandom((r) => !r); setCurrentIndex(0); setIsFlipped(false); }}
