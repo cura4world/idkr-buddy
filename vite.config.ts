@@ -18,8 +18,8 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        navigateFallbackDenylist: [/^\/~oauth/],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,json}"],
+        navigateFallbackDenylist: [/^\/~oauth/, /^\/.well-known\//],
       },
       manifest: {
         name: "Kata kata - 인도네시아어 단어장",
