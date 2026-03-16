@@ -60,14 +60,14 @@ const Index = () => {
             </div>
             <div className="mt-3 flex justify-end gap-3">
               <button
-                onClick={() => navigate("/saved?mode=quiz")}
+                onClick={() => navigate("/saved/quiz")}
                 className="text-sm text-primary font-medium hover:underline underline-offset-4"
                 disabled={savedCount < 2}
               >
                 퀴즈
               </button>
               <button
-                onClick={() => navigate("/saved")}
+                onClick={() => navigate("/saved/study")}
                 className="text-sm text-primary font-medium hover:underline underline-offset-4"
               >
                 플래시카드

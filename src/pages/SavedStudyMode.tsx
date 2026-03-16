@@ -1,19 +1,35 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { getSavedWords, removeSavedWord, Word } from "@/lib/store";
-import { ArrowLeft, Volume2 } from "lucide-react";
+import { getSavedWords, getSavedWordIds, toggleSavedWord, Word } from "@/lib/store";
+import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 
-export default function SavedStudy() {
+export default function SavedStudyMode() {
   const navigate = useNavigate();
-  const [words, setWords] = useState<Word[]>(() => getSavedWords());
-  const [, setTick] = useState(0);
-  const refresh = useCallback(() => {
-    setWords(getSavedWords());
-    setTick((t) => t + 1);
-  }, []);
+  const words = getSavedWords();
 
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isRandom, setIsRandom] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [isBreathing, setIsBreathing] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
+
+  const shuffledWords = useMemo(() => {
+    if (!isRandom) return words;
+    return [...words].sort(() => Math.random() - 0.5);
+  }, [isRandom, words.length]);
+
+  const displayWords = isRandom ? shuffledWords : words;
+  const currentWord: Word | undefined = displayWords[currentIndex];
+  const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
+
+  const handleToggleSave = () => {
+    if (!currentWord) return;
+    const nowSaved = toggleSavedWord(currentWord.id);
+    setSavedIds(getSavedWordIds());
+    toast(nowSaved ? "단어를 보관했습니다 📌" : "보관함에서 제거했습니다");
+  };
 
   const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -23,91 +39,112 @@ export default function SavedStudy() {
     speechSynthesis.speak(utterance);
   };
 
-  const handleTouchStart = (w: Word) => {
-    longPressTimer.current = setTimeout(() => {
-      if (window.confirm(`"${w.word}"을 보관함에서 제거할까요?`)) {
-        removeSavedWord(w.id);
-        refresh();
-        toast("보관함에서 제거했습니다");
-      }
-    }, 500);
-  };
+  useEffect(() => {
+    if (isFlipped) { setIsBreathing(false); return; }
+    const timer = setTimeout(() => setIsBreathing(true), 2000);
+    return () => clearTimeout(timer);
+  }, [currentIndex, isFlipped]);
 
-  const handleTouchEnd = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
+  const goNext = useCallback(() => {
+    if (currentIndex < displayWords.length - 1) {
+      setIsFlipped(false); setIsBreathing(false);
+      setCurrentIndex((i) => i + 1);
     }
+  }, [currentIndex, displayWords.length]);
+
+  const goPrev = useCallback(() => {
+    if (currentIndex > 0) {
+      setIsFlipped(false); setIsBreathing(false);
+      setCurrentIndex((i) => i - 1);
+    }
+  }, [currentIndex]);
+
+  const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    const diff = e.changedTouches[0].clientX - touchStart;
+    if (Math.abs(diff) > 60) { diff < 0 ? goNext() : goPrev(); }
+    setTouchStart(null);
   };
 
   if (words.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
         <p className="text-muted-foreground">보관된 단어가 없습니다.</p>
-        <button onClick={() => navigate("/")} className="mt-4 text-primary underline underline-offset-4">
-          돌아가기
-        </button>
+        <button onClick={() => navigate("/saved")} className="mt-4 text-primary underline underline-offset-4">돌아가기</button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
-      <button
-        onClick={() => navigate("/")}
-        className="flex items-center gap-2 text-sm text-white mb-6 hover:text-white/80"
-      >
-        <ArrowLeft size={16} />
-        <span className="font-body">돌아가기</span>
-      </button>
+    <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
+      <div className="flex items-center justify-between px-4 py-4">
+        <button onClick={() => navigate("/saved")} className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft size={20} />
+        </button>
+        <span className="text-sm text-muted-foreground font-body">
+          {currentIndex + 1} / {displayWords.length}
+        </span>
+        <div className="w-5" />
+      </div>
 
-      <header className="mb-2">
-        <h1 className="text-xl font-semibold font-body flex items-center gap-2">
-          <span>📌</span>
-          <span>단어보관함</span>
-        </h1>
-      </header>
+      <div className="flex-1 flex items-center justify-center px-6" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <div className="perspective w-full max-w-sm aspect-[3/4] cursor-pointer" onClick={() => setIsFlipped((f) => !f)}>
+          <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
+            <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
+              <p className="font-word text-3xl font-semibold text-center leading-relaxed">{currentWord?.word}</p>
+              {currentWord?.example && (
+                <p className="text-base text-muted-foreground font-word mt-4 text-center leading-relaxed">{currentWord.example}</p>
+              )}
+            </div>
+            <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
+              <p className="font-body text-2xl font-medium text-center mb-3">{currentWord?.meaning}</p>
+              {currentWord?.exampleMeaning && (
+                <p className="text-base text-muted-foreground font-body text-center leading-relaxed">{currentWord.exampleMeaning}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <div className="flex justify-end gap-4 mb-6">
+      <div className="flex justify-center gap-3 py-2">
         <button
-          onClick={() => navigate("/saved/quiz")}
-          className="text-sm text-white hover:underline underline-offset-4 font-body"
-          disabled={words.length < 2}
+          onClick={handleToggleSave}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-body transition-colors border ${
+            isSaved
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          }`}
         >
-          퀴즈
+          {isSaved ? "✅ 보관됨" : "📌 보관"}
         </button>
         <button
-          onClick={() => navigate("/saved/study")}
-          className="text-sm text-white hover:underline underline-offset-4 font-body"
+          onClick={() => { setIsRandom((r) => !r); setCurrentIndex(0); setIsFlipped(false); }}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+            isRandom
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          }`}
         >
-          플래시카드
+          <Shuffle size={14} />
+          랜덤
+        </button>
+        <button
+          onClick={() => currentWord && speak(currentWord.word)}
+          disabled={!currentWord}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30"
+        >
+          <Volume2 size={16} />
         </button>
       </div>
 
-      <div className="space-y-2">
-        {words.map((w) => (
-          <div
-            key={w.id}
-            className="flex items-center gap-3 bg-card rounded-lg p-4 border border-border/50 select-none text-card-foreground"
-            onTouchStart={() => handleTouchStart(w)}
-            onTouchEnd={handleTouchEnd}
-            onTouchMove={handleTouchEnd}
-          >
-            <div className="flex-1 min-w-0">
-              <p className="font-word text-base font-medium truncate">{w.word}</p>
-              <p className="text-sm text-muted-foreground font-body">{w.meaning}</p>
-              {w.example && (
-                <p className="text-xs text-muted-foreground/70 font-word mt-0.5">{w.example}</p>
-              )}
-            </div>
-            <button
-              onClick={() => speak(w.word)}
-              className="text-card-foreground/50 hover:text-primary p-1"
-            >
-              <Volume2 size={16} />
-            </button>
-          </div>
-        ))}
+      <div className="flex items-center justify-center gap-8 py-4">
+        <button onClick={goPrev} disabled={currentIndex === 0} className="p-3 rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity">
+          <ChevronLeft size={20} />
+        </button>
+        <button onClick={goNext} disabled={currentIndex === displayWords.length - 1} className="p-3 rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity">
+          <ChevronRight size={20} />
+        </button>
       </div>
     </div>
   );
