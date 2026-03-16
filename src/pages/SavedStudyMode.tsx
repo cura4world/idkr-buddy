@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSavedWords, removeSavedWord, Word } from "@/lib/store";
-import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SavedStudyMode() {
