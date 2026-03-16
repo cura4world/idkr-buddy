@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSavedWords, removeSavedWord, Word } from "@/lib/store";
-import { ArrowLeft, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Trash2, Shuffle, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SavedStudy() {
@@ -10,6 +10,7 @@ export default function SavedStudy() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isBreathing, setIsBreathing] = useState(false);
+  const [isRandom, setIsRandom] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
 
   const currentWord: Word | undefined = words[currentIndex];
@@ -46,6 +47,27 @@ export default function SavedStudy() {
     setIsFlipped(false);
   };
 
+  const handleToggleRandom = () => {
+    const next = !isRandom;
+    setIsRandom(next);
+    if (next) {
+      const shuffled = [...words].sort(() => Math.random() - 0.5);
+      setWords(shuffled);
+    } else {
+      setWords(getSavedWords());
+    }
+    setCurrentIndex(0);
+    setIsFlipped(false);
+  };
+
+  const speak = (text: string) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "id-ID";
+    utterance.rate = 0.9;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+  };
+
   const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStart === null) return;
@@ -78,35 +100,55 @@ export default function SavedStudy() {
       <div className="flex-1 flex items-center justify-center px-6" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         <div className="perspective w-full max-w-sm aspect-[3/4] cursor-pointer" onClick={() => setIsFlipped((f) => !f)}>
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
+            {/* 앞면: 인도네시아어 */}
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 ${isBreathing ? "animate-breathe" : ""}`}>
-              <p className="font-word text-3xl font-semibold text-center leading-relaxed">{currentWord.word}</p>
+              <p className="font-word text-3xl font-semibold text-center leading-relaxed text-gray-900">{currentWord.word}</p>
               {currentWord.example && <p className="text-base text-muted-foreground font-word mt-4 text-center leading-relaxed">{currentWord.example}</p>}
-              <p className="text-sm text-muted-foreground/60 mt-6 font-body">탭하여 뒤집기</p>
             </div>
+            {/* 뒷면: 한국어 뜻 */}
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm">
-              <p className="font-body text-2xl font-medium text-center mb-3">{currentWord.meaning}</p>
+              <p className="font-body text-2xl font-medium text-center mb-3 text-gray-900">{currentWord.meaning}</p>
               {currentWord.exampleMeaning && <p className="text-base text-muted-foreground font-body text-center leading-relaxed">{currentWord.exampleMeaning}</p>}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Remove from saved */}
-      <div className="flex justify-center py-2">
+      {/* 하단 버튼: 삭제, 랜덤, 스피커 */}
+      <div className="flex justify-center gap-3 py-2">
         <button
           onClick={handleRemove}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-body text-destructive hover:text-destructive/80 transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-body transition-colors border bg-card text-gray-900 border-border/50 hover:border-red-400"
         >
-          <Trash2 size={16} />
-          보관함에서 제거
+          <Trash2 size={14} />
+          삭제
+        </button>
+        <button
+          onClick={handleToggleRandom}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+            isRandom
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          }`}
+        >
+          <Shuffle size={14} />
+          랜덤
+        </button>
+        <button
+          onClick={() => currentWord && speak(currentWord.word)}
+          disabled={!currentWord}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30"
+        >
+          <Volume2 size={16} />
         </button>
       </div>
 
+      {/* 이전/다음 버튼 */}
       <div className="flex items-center justify-center gap-8 py-4">
-        <button onClick={goPrev} disabled={currentIndex === 0} className="p-3 rounded-full bg-card border border-border/50 text-foreground disabled:opacity-30 transition-opacity">
+        <button onClick={goPrev} disabled={currentIndex === 0} className="p-3 rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity">
           <ChevronLeft size={20} />
         </button>
-        <button onClick={goNext} disabled={currentIndex === words.length - 1} className="p-3 rounded-full bg-card border border-border/50 text-foreground disabled:opacity-30 transition-opacity">
+        <button onClick={goNext} disabled={currentIndex === words.length - 1} className="p-3 rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity">
           <ChevronRight size={20} />
         </button>
       </div>
