@@ -13,7 +13,6 @@ export default function SavedStudyMode() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isBreathing, setIsBreathing] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
 
   const shuffledWords = useMemo(() => {
     if (!isRandom) return words;
