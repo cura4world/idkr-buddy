@@ -117,14 +117,11 @@ export default function SavedStudyMode() {
 
       <div className="flex justify-center gap-3 py-2">
         <button
-          onClick={handleToggleSave}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-body transition-colors border ${
-            isSaved
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
-          }`}
+          onClick={handleDelete}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-body transition-colors border bg-card text-destructive border-border/50 hover:border-destructive/50"
         >
-          {isSaved ? "✅ 보관됨" : "📌 보관"}
+          <Trash2 size={14} />
+          삭제
         </button>
         <button
           onClick={() => { setIsRandom((r) => !r); setCurrentIndex(0); setIsFlipped(false); }}
