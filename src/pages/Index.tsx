@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCategories, getSavedWordIds } from "@/lib/store";
+import { getCategories, getSavedWords } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
@@ -10,7 +10,7 @@ const Index = () => {
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const categories = getCategories();
-  const savedCount = getSavedWordIds().length;
+  const savedCount = getSavedWords().length;
 
   const [addWordOpen, setAddWordOpen] = useState(false);
   const [addWordCat, setAddWordCat] = useState<string | undefined>();
