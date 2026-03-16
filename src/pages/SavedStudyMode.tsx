@@ -21,13 +21,22 @@ export default function SavedStudyMode() {
 
   const displayWords = isRandom ? shuffledWords : words;
   const currentWord: Word | undefined = displayWords[currentIndex];
-  const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
 
-  const handleToggleSave = () => {
+  const handleDelete = () => {
     if (!currentWord) return;
-    const nowSaved = toggleSavedWord(currentWord.id);
-    setSavedIds(getSavedWordIds());
-    toast(nowSaved ? "단어를 보관했습니다 📌" : "보관함에서 제거했습니다");
+    if (window.confirm(`"${currentWord.word}"을 보관함에서 제거할까요?`)) {
+      removeSavedWord(currentWord.id);
+      toast("보관함에서 제거했습니다");
+      if (currentIndex >= displayWords.length - 1 && currentIndex > 0) {
+        setCurrentIndex((i) => i - 1);
+      }
+      // Force re-render by navigating if no words left
+      if (displayWords.length <= 1) {
+        window.location.reload();
+      } else {
+        window.location.reload();
+      }
+    }
   };
 
   const speak = (text: string) => {
