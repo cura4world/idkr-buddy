@@ -7,6 +7,8 @@ import CategoryDetail from "./pages/CategoryDetail";
 import StudyMode from "./pages/StudyMode";
 import QuizMode from "./pages/QuizMode";
 import SavedStudy from "./pages/SavedStudy";
+import SavedStudyMode from "./pages/SavedStudyMode";
+import SavedQuizMode from "./pages/SavedQuizMode";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +24,8 @@ const App = () => (
           <Route path="/study/:id" element={<StudyMode />} />
           <Route path="/quiz/:id" element={<QuizMode />} />
           <Route path="/saved" element={<SavedStudy />} />
+          <Route path="/saved/study" element={<SavedStudyMode />} />
+          <Route path="/saved/quiz" element={<SavedQuizMode />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
