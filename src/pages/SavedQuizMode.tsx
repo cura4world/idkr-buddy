@@ -86,27 +86,27 @@ export default function SavedQuizMode() {
         <div className="text-center">
           <p className="text-4xl mb-4">🍃</p>
           <p className="text-lg font-body font-medium">{questions.length}개 중 {correctCount}개</p>
-          <p className="text-sm text-muted-foreground font-body mt-1">수고하셨습니다</p>
+          <p className="text-sm text-white font-body mt-1">수고하셨습니다</p>
         </div>
         {reviewList.length > 0 && (
           <div className="mt-8 w-full">
-            <p className="text-sm text-muted-foreground font-body mb-3">다시 볼 단어</p>
+            <p className="text-sm text-white font-body mb-3">다시 볼 단어</p>
             <div className="space-y-2">
               {reviewList.map((w) => (
                 <div key={w.id} className="bg-card rounded-lg p-3 border border-border/50">
-                  <p className="font-word text-sm font-medium">{w.word}</p>
-                  <p className="text-sm text-muted-foreground font-body">{w.meaning}</p>
+                  <p className="font-word text-sm font-medium text-card-foreground">{w.word}</p>
+                  <p className="text-sm text-card-foreground font-body">{w.meaning}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
         <div className="flex gap-3 mt-8">
-          <button onClick={restart} className="flex items-center gap-2 text-sm text-primary font-body hover:underline underline-offset-4">
+          <button onClick={restart} className="flex items-center gap-2 text-sm text-white font-body hover:underline underline-offset-4">
             <RotateCcw size={14} />
             다시 하기
           </button>
-          <button onClick={() => navigate("/saved")} className="text-sm text-muted-foreground font-body hover:underline underline-offset-4">
+          <button onClick={() => navigate("/saved")} className="text-sm text-white font-body hover:underline underline-offset-4">
             돌아가기
           </button>
         </div>
