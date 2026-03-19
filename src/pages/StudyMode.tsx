@@ -99,6 +99,7 @@ export default function StudyMode() {
     setIsFlipped(false);
     setIsBreathing(false);
 
+    // 1초 후 발음 재생
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(async () => {
         await speak(playWords[index].word);
@@ -106,16 +107,18 @@ export default function StudyMode() {
       }, 1000);
     });
 
+    // 1.5초 후 카드 뒤집기
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(() => {
         setIsFlipped(true);
         resolve();
-      }, 1000);
+      }, 1500);
     });
 
+    // 3초 후 다음 카드
     autoPlayRef.current = setTimeout(() => {
       runAutoPlay(index + 1);
-    }, 2000);
+    }, 3000);
   }, []);
 
   const startAutoPlay = (random: boolean) => {
