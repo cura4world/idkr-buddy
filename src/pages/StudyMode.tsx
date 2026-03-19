@@ -14,12 +14,12 @@ export default function StudyMode() {
   const [isRandom, setIsRandom] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const [isBreathing, setIsBreathing] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [isAutoRandom, setIsAutoRandom] = useState(false);
-  const [autoWords, setAutoWords] = useState<Word[]>([]);
   const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoWordsRef = useRef<Word[]>([]);
 
@@ -86,6 +86,7 @@ export default function StudyMode() {
     }
     speechSynthesis.cancel();
     setIsFlipped(false);
+    setIsVisible(true);
     setCurrentIndex(0);
   }, []);
 
@@ -94,16 +95,24 @@ export default function StudyMode() {
       setIsAutoPlaying(false);
       setIsAutoRandom(false);
       setIsFlipped(false);
+      setIsVisible(true);
       setCurrentIndex(0);
       toast("자동플레이가 완료됐습니다 🎉");
       return;
     }
 
-    // 현재 단어를 ref에도 업데이트
-    autoWordsRef.current = playWords;
-    setCurrentIndex(index);
-    setIsFlipped(false);
-    setIsBreathing(false);
+    // 카드 숨기기 → 내용 교체 → 카드 보이기 (깜빡임 방지)
+    setIsVisible(false);
+    await new Promise<void>((resolve) => {
+      autoPlayRef.current = setTimeout(() => {
+        autoWordsRef.current = playWords;
+        setCurrentIndex(index);
+        setIsFlipped(false);
+        setIsBreathing(false);
+        setIsVisible(true);
+        resolve();
+      }, 300);
+    });
 
     // 1초 후 발음 재생
     await new Promise<void>((resolve) => {
@@ -136,7 +145,6 @@ export default function StudyMode() {
       ? [...words].sort(() => Math.random() - 0.5)
       : [...words];
     autoWordsRef.current = playWords;
-    setAutoWords(playWords);
     setIsAutoRandom(random);
     setIsAutoPlaying(true);
     setCurrentIndex(0);
@@ -195,6 +203,7 @@ export default function StudyMode() {
         <div
           className="perspective w-full max-w-sm aspect-[3/4] cursor-pointer"
           onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}
+          style={{ opacity: isVisible ? 1 : 0, transition: "opacity 0.2s ease" }}
         >
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
