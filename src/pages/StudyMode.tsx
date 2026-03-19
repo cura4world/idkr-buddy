@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, getSavedWordIds, toggleSavedWord, Word } from "@/lib/store";
-import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Play, Square } from "lucide-react";
 import { toast } from "sonner";
 
 export default function StudyMode() {
@@ -17,13 +17,16 @@ export default function StudyMode() {
   const [isBreathing, setIsBreathing] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+  const [isAutoRandom, setIsAutoRandom] = useState(false);
+  const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const shuffledWords = useMemo(() => {
-    if (!isRandom) return words;
+    if (!isRandom && !isAutoRandom) return words;
     return [...words].sort(() => Math.random() - 0.5);
-  }, [isRandom, words.length]);
+  }, [isRandom, isAutoRandom, words.length]);
 
-  const displayWords = isRandom ? shuffledWords : words;
+  const displayWords = (isRandom || isAutoRandom) ? shuffledWords : words;
   const currentWord: Word | undefined = displayWords[currentIndex];
   const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
 
@@ -35,11 +38,14 @@ export default function StudyMode() {
   };
 
   const speak = (text: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "id-ID";
-    utterance.rate = 0.9;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(utterance);
+    return new Promise<void>((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "id-ID";
+      utterance.rate = 0.9;
+      utterance.onend = () => resolve();
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utterance);
+    });
   };
 
   useEffect(() => {
@@ -67,6 +73,76 @@ export default function StudyMode() {
     }
   }, [currentIndex]);
 
+  // 자동플레이 로직
+  const stopAutoPlay = useCallback(() => {
+    setIsAutoPlaying(false);
+    setIsAutoRandom(false);
+    if (autoPlayRef.current) {
+      clearTimeout(autoPlayRef.current);
+      autoPlayRef.current = null;
+    }
+    speechSynthesis.cancel();
+    setIsFlipped(false);
+  }, []);
+
+  const runAutoPlay = useCallback(async (index: number, words: Word[], random: boolean) => {
+    if (index >= words.length) {
+      setIsAutoPlaying(false);
+      setIsAutoRandom(false);
+      setIsFlipped(false);
+      toast("자동플레이가 완료됐습니다 🎉");
+      return;
+    }
+
+    setCurrentIndex(index);
+    setIsFlipped(false);
+    setIsBreathing(false);
+
+    // 1초 후 발음 재생
+    await new Promise<void>((resolve) => {
+      autoPlayRef.current = setTimeout(async () => {
+        await speak(words[index].word);
+        resolve();
+      }, 1000);
+    });
+
+    // 1초 후 카드 뒤집기
+    await new Promise<void>((resolve) => {
+      autoPlayRef.current = setTimeout(() => {
+        setIsFlipped(true);
+        resolve();
+      }, 1000);
+    });
+
+    // 2초 후 다음 카드
+    autoPlayRef.current = setTimeout(() => {
+      runAutoPlay(index + 1, words, random);
+    }, 2000);
+  }, []);
+
+  const startAutoPlay = (random: boolean) => {
+    if (isAutoPlaying) {
+      stopAutoPlay();
+      return;
+    }
+    const playWords = random
+      ? [...words].sort(() => Math.random() - 0.5)
+      : words;
+    setIsAutoRandom(random);
+    setIsAutoPlaying(true);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    runAutoPlay(0, playWords, random);
+  };
+
+  // 컴포넌트 언마운트 시 자동플레이 정지
+  useEffect(() => {
+    return () => {
+      if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
+      speechSynthesis.cancel();
+    };
+  }, []);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientX);
   };
@@ -93,11 +169,12 @@ export default function StudyMode() {
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
       <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground">
+        <button onClick={() => { stopAutoPlay(); navigate("/"); }} className="text-muted-foreground hover:text-foreground">
           <ArrowLeft size={20} />
         </button>
         <span className="text-sm text-muted-foreground font-body">
           {currentIndex + 1} / {displayWords.length}
+          {isAutoPlaying && <span className="ml-2 text-primary">▶ 자동</span>}
         </span>
         <div className="w-5" />
       </div>
@@ -109,16 +186,13 @@ export default function StudyMode() {
       >
         <div
           className="perspective w-full max-w-sm aspect-[3/4] cursor-pointer"
-          onClick={() => setIsFlipped((f) => !f)}
+          onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}
         >
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
-            {/* Front: word (bold) + example */}
             <div
-              className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${
-                isBreathing ? "animate-breathe" : ""
-              }`}
+              className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}
             >
-              <p className="font-word text-3xl font-semibold text-center leading-relaxed">
+              <p className="font-word text-3xl font-semibold text-center leading-relaxed text-gray-900">
                 {currentWord.word}
               </p>
               {currentWord.example && (
@@ -126,12 +200,9 @@ export default function StudyMode() {
                   {currentWord.example}
                 </p>
               )}
-              
             </div>
-
-            {/* Back: meaning (bold) + example_meaning */}
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
-              <p className="font-body text-2xl font-medium text-center mb-3">
+              <p className="font-body text-2xl font-medium text-center mb-3 text-gray-900">
                 {currentWord.meaning}
               </p>
               {currentWord.exampleMeaning && (
@@ -144,14 +215,16 @@ export default function StudyMode() {
         </div>
       </div>
 
+      {/* 상단 버튼: 보관, 랜덤, 스피커 */}
       <div className="flex justify-center gap-3 py-2">
         <button
           onClick={handleToggleSave}
+          disabled={isAutoPlaying}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-body transition-colors border ${
             isSaved
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
-          }`}
+          } disabled:opacity-30`}
         >
           {isSaved ? "✅ 보관됨" : "📌 보관"}
         </button>
@@ -161,35 +234,64 @@ export default function StudyMode() {
             setCurrentIndex(0);
             setIsFlipped(false);
           }}
+          disabled={isAutoPlaying}
           className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
             isRandom
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
-          }`}
+          } disabled:opacity-30`}
         >
           <Shuffle size={14} />
           랜덤
         </button>
         <button
           onClick={() => currentWord && speak(currentWord.word)}
-          disabled={!currentWord}
+          disabled={!currentWord || isAutoPlaying}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30"
         >
           <Volume2 size={16} />
         </button>
       </div>
 
-      <div className="flex items-center justify-center gap-8 py-4">
+      {/* 하단 버튼: < 자동 랜덤자동 > */}
+      <div className="flex items-center justify-center gap-4 py-4">
         <button
           onClick={goPrev}
-          disabled={currentIndex === 0}
+          disabled={currentIndex === 0 || isAutoPlaying}
           className="p-3 rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity"
         >
           <ChevronLeft size={20} />
         </button>
+
+        {/* 자동플레이 버튼 */}
+        <button
+          onClick={() => startAutoPlay(false)}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+            isAutoPlaying && !isAutoRandom
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          }`}
+        >
+          {isAutoPlaying && !isAutoRandom ? <Square size={14} /> : <Play size={14} />}
+          자동
+        </button>
+
+        {/* 랜덤 자동플레이 버튼 */}
+        <button
+          onClick={() => startAutoPlay(true)}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+            isAutoPlaying && isAutoRandom
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          }`}
+        >
+          {isAutoPlaying && isAutoRandom ? <Square size={14} /> : <Shuffle size={14} />}
+          랜덤자동
+        </button>
+
         <button
           onClick={goNext}
-          disabled={currentIndex === displayWords.length - 1}
+          disabled={currentIndex === displayWords.length - 1 || isAutoPlaying}
           className="p-3 rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity"
         >
           <ChevronRight size={20} />
