@@ -14,14 +14,13 @@ export default function StudyMode() {
   const [isRandom, setIsRandom] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
   const [isBreathing, setIsBreathing] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [isAutoRandom, setIsAutoRandom] = useState(false);
+  const [autoCurrentWord, setAutoCurrentWord] = useState<Word | undefined>(undefined);
   const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const autoWordsRef = useRef<Word[]>([]);
 
   const shuffledWords = useMemo(() => {
     if (!isRandom) return words;
@@ -30,7 +29,7 @@ export default function StudyMode() {
 
   const displayWords = isRandom ? shuffledWords : words;
   const currentWord: Word | undefined = isAutoPlaying
-    ? autoWordsRef.current[currentIndex]
+    ? autoCurrentWord
     : displayWords[currentIndex];
   const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
 
@@ -86,8 +85,8 @@ export default function StudyMode() {
     }
     speechSynthesis.cancel();
     setIsFlipped(false);
-    setIsVisible(true);
     setCurrentIndex(0);
+    setAutoCurrentWord(undefined);
   }, []);
 
   const runAutoPlay = useCallback(async (index: number, playWords: Word[]) => {
@@ -95,26 +94,27 @@ export default function StudyMode() {
       setIsAutoPlaying(false);
       setIsAutoRandom(false);
       setIsFlipped(false);
-      setIsVisible(true);
       setCurrentIndex(0);
+      setAutoCurrentWord(undefined);
       toast("자동플레이가 완료됐습니다 🎉");
       return;
     }
 
-    // 카드 숨기기 → 내용 교체 → 카드 보이기 (깜빡임 방지)
-    setIsVisible(false);
+    // ① 카드를 앞면으로 뒤집기 시작
+    setIsFlipped(false);
+    setIsBreathing(false);
+    setCurrentIndex(index);
+
+    // ② flip 애니메이션(0.6초) 완전히 끝난 후 내용 교체
+    // → 이렇게 하면 카드가 앞면으로 완전히 돌아간 뒤에 새 단어로 바뀜
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(() => {
-        autoWordsRef.current = playWords;
-        setCurrentIndex(index);
-        setIsFlipped(false);
-        setIsBreathing(false);
-        setIsVisible(true);
+        setAutoCurrentWord(playWords[index]);
         resolve();
-      }, 300);
+      }, 650);
     });
 
-    // 1초 후 발음 재생
+    // ③ 1초 후 발음 재생
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(async () => {
         await speak(playWords[index].word);
@@ -122,7 +122,7 @@ export default function StudyMode() {
       }, 1000);
     });
 
-    // 1.5초 후 카드 뒤집기
+    // ④ 1.5초 후 카드 뒤집기 (한국어 뜻 표시)
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(() => {
         setIsFlipped(true);
@@ -130,10 +130,10 @@ export default function StudyMode() {
       }, 1500);
     });
 
-    // 3.5초 후 다음 카드
+    // ⑤ 5초 후 다음 카드로 (한국어 뜻 충분히 보여줌)
     autoPlayRef.current = setTimeout(() => {
       runAutoPlay(index + 1, playWords);
-    }, 3500);
+    }, 5000);
   }, []);
 
   const startAutoPlay = (random: boolean) => {
@@ -144,11 +144,11 @@ export default function StudyMode() {
     const playWords = random
       ? [...words].sort(() => Math.random() - 0.5)
       : [...words];
-    autoWordsRef.current = playWords;
     setIsAutoRandom(random);
     setIsAutoPlaying(true);
     setCurrentIndex(0);
     setIsFlipped(false);
+    setAutoCurrentWord(playWords[0]);
     runAutoPlay(0, playWords);
   };
 
@@ -189,7 +189,7 @@ export default function StudyMode() {
           <ArrowLeft size={20} />
         </button>
         <span className="text-sm text-muted-foreground font-body">
-          {currentIndex + 1} / {isAutoPlaying ? autoWordsRef.current.length : displayWords.length}
+          {currentIndex + 1} / {isAutoPlaying ? words.length : displayWords.length}
           {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">▶</span>}
         </span>
         <div className="w-5" />
@@ -203,7 +203,6 @@ export default function StudyMode() {
         <div
           className="perspective w-full max-w-sm aspect-[3/4] cursor-pointer"
           onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}
-          style={{ opacity: isVisible ? 1 : 0, transition: "opacity 0.2s ease" }}
         >
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
@@ -277,7 +276,6 @@ export default function StudyMode() {
         >
           <ChevronLeft size={20} />
         </button>
-
         <button
           onClick={() => startAutoPlay(false)}
           className={`p-3 rounded-full transition-colors border ${
@@ -288,7 +286,6 @@ export default function StudyMode() {
         >
           {isAutoPlaying && !isAutoRandom ? <Square size={20} /> : <Play size={20} />}
         </button>
-
         <button
           onClick={() => startAutoPlay(true)}
           className={`p-3 rounded-full transition-colors border ${
@@ -299,7 +296,6 @@ export default function StudyMode() {
         >
           {isAutoPlaying && isAutoRandom ? <Square size={20} /> : <Shuffle size={20} />}
         </button>
-
         <button
           onClick={goNext}
           disabled={currentIndex === displayWords.length - 1 || isAutoPlaying}
