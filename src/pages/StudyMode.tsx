@@ -19,6 +19,7 @@ export default function StudyMode() {
   const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [isAutoRandom, setIsAutoRandom] = useState(false);
+  const [autoWords, setAutoWords] = useState<Word[]>([]);
   const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoWordsRef = useRef<Word[]>([]);
 
@@ -28,7 +29,9 @@ export default function StudyMode() {
   }, [isRandom, words.length]);
 
   const displayWords = isRandom ? shuffledWords : words;
-  const currentWord: Word | undefined = displayWords[currentIndex];
+  const currentWord: Word | undefined = isAutoPlaying
+    ? autoWordsRef.current[currentIndex]
+    : displayWords[currentIndex];
   const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
 
   const handleToggleSave = () => {
@@ -83,18 +86,21 @@ export default function StudyMode() {
     }
     speechSynthesis.cancel();
     setIsFlipped(false);
+    setCurrentIndex(0);
   }, []);
 
-  const runAutoPlay = useCallback(async (index: number) => {
-    const playWords = autoWordsRef.current;
+  const runAutoPlay = useCallback(async (index: number, playWords: Word[]) => {
     if (index >= playWords.length) {
       setIsAutoPlaying(false);
       setIsAutoRandom(false);
       setIsFlipped(false);
+      setCurrentIndex(0);
       toast("자동플레이가 완료됐습니다 🎉");
       return;
     }
 
+    // 현재 단어를 ref에도 업데이트
+    autoWordsRef.current = playWords;
     setCurrentIndex(index);
     setIsFlipped(false);
     setIsBreathing(false);
@@ -115,10 +121,10 @@ export default function StudyMode() {
       }, 1500);
     });
 
-    // 4초 후 다음 카드
+    // 3.5초 후 다음 카드
     autoPlayRef.current = setTimeout(() => {
-      runAutoPlay(index + 1);
-    }, 4000);
+      runAutoPlay(index + 1, playWords);
+    }, 3500);
   }, []);
 
   const startAutoPlay = (random: boolean) => {
@@ -130,11 +136,12 @@ export default function StudyMode() {
       ? [...words].sort(() => Math.random() - 0.5)
       : [...words];
     autoWordsRef.current = playWords;
+    setAutoWords(playWords);
     setIsAutoRandom(random);
     setIsAutoPlaying(true);
     setCurrentIndex(0);
     setIsFlipped(false);
-    runAutoPlay(0);
+    runAutoPlay(0, playWords);
   };
 
   useEffect(() => {
@@ -174,7 +181,7 @@ export default function StudyMode() {
           <ArrowLeft size={20} />
         </button>
         <span className="text-sm text-muted-foreground font-body">
-          {currentIndex + 1} / {displayWords.length}
+          {currentIndex + 1} / {isAutoPlaying ? autoWordsRef.current.length : displayWords.length}
           {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">▶</span>}
         </span>
         <div className="w-5" />
@@ -192,9 +199,9 @@ export default function StudyMode() {
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
               <p className="font-word text-3xl font-semibold text-center leading-relaxed text-gray-900">
-                {currentWord.word}
+                {currentWord?.word}
               </p>
-              {currentWord.example && (
+              {currentWord?.example && (
                 <p className="text-base text-muted-foreground font-word mt-4 text-center leading-relaxed">
                   {currentWord.example}
                 </p>
@@ -202,9 +209,9 @@ export default function StudyMode() {
             </div>
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
               <p className="font-body text-2xl font-medium text-center mb-3 text-gray-900">
-                {currentWord.meaning}
+                {currentWord?.meaning}
               </p>
-              {currentWord.exampleMeaning && (
+              {currentWord?.exampleMeaning && (
                 <p className="text-base text-muted-foreground font-body text-center leading-relaxed">
                   {currentWord.exampleMeaning}
                 </p>
