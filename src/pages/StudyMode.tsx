@@ -115,10 +115,10 @@ export default function StudyMode() {
       }, 1500);
     });
 
-    // 3초 후 다음 카드
+    // 4초 후 다음 카드
     autoPlayRef.current = setTimeout(() => {
       runAutoPlay(index + 1);
-    }, 3000);
+    }, 4000);
   }, []);
 
   const startAutoPlay = (random: boolean) => {
