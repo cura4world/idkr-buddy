@@ -20,13 +20,14 @@ export default function StudyMode() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [isAutoRandom, setIsAutoRandom] = useState(false);
   const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoWordsRef = useRef<Word[]>([]);
 
   const shuffledWords = useMemo(() => {
-    if (!isRandom && !isAutoRandom) return words;
+    if (!isRandom) return words;
     return [...words].sort(() => Math.random() - 0.5);
-  }, [isRandom, isAutoRandom, words.length]);
+  }, [isRandom, words.length]);
 
-  const displayWords = (isRandom || isAutoRandom) ? shuffledWords : words;
+  const displayWords = isRandom ? shuffledWords : words;
   const currentWord: Word | undefined = displayWords[currentIndex];
   const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
 
@@ -73,7 +74,6 @@ export default function StudyMode() {
     }
   }, [currentIndex]);
 
-  // 자동플레이 로직
   const stopAutoPlay = useCallback(() => {
     setIsAutoPlaying(false);
     setIsAutoRandom(false);
@@ -85,8 +85,9 @@ export default function StudyMode() {
     setIsFlipped(false);
   }, []);
 
-  const runAutoPlay = useCallback(async (index: number, words: Word[], random: boolean) => {
-    if (index >= words.length) {
+  const runAutoPlay = useCallback(async (index: number) => {
+    const playWords = autoWordsRef.current;
+    if (index >= playWords.length) {
       setIsAutoPlaying(false);
       setIsAutoRandom(false);
       setIsFlipped(false);
@@ -98,15 +99,13 @@ export default function StudyMode() {
     setIsFlipped(false);
     setIsBreathing(false);
 
-    // 1초 후 발음 재생
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(async () => {
-        await speak(words[index].word);
+        await speak(playWords[index].word);
         resolve();
       }, 1000);
     });
 
-    // 1초 후 카드 뒤집기
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(() => {
         setIsFlipped(true);
@@ -114,9 +113,8 @@ export default function StudyMode() {
       }, 1000);
     });
 
-    // 2초 후 다음 카드
     autoPlayRef.current = setTimeout(() => {
-      runAutoPlay(index + 1, words, random);
+      runAutoPlay(index + 1);
     }, 2000);
   }, []);
 
@@ -127,15 +125,15 @@ export default function StudyMode() {
     }
     const playWords = random
       ? [...words].sort(() => Math.random() - 0.5)
-      : words;
+      : [...words];
+    autoWordsRef.current = playWords;
     setIsAutoRandom(random);
     setIsAutoPlaying(true);
     setCurrentIndex(0);
     setIsFlipped(false);
-    runAutoPlay(0, playWords, random);
+    runAutoPlay(0);
   };
 
-  // 컴포넌트 언마운트 시 자동플레이 정지
   useEffect(() => {
     return () => {
       if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
@@ -174,7 +172,7 @@ export default function StudyMode() {
         </button>
         <span className="text-sm text-muted-foreground font-body">
           {currentIndex + 1} / {displayWords.length}
-          {isAutoPlaying && <span className="ml-2 text-primary">▶ 자동</span>}
+          {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">▶</span>}
         </span>
         <div className="w-5" />
       </div>
@@ -189,9 +187,7 @@ export default function StudyMode() {
           onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}
         >
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
-            <div
-              className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}
-            >
+            <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
               <p className="font-word text-3xl font-semibold text-center leading-relaxed text-gray-900">
                 {currentWord.word}
               </p>
@@ -253,7 +249,7 @@ export default function StudyMode() {
         </button>
       </div>
 
-      {/* 하단 버튼: < 자동 랜덤자동 > */}
+      {/* 하단 버튼: < ▶ 🔀 > */}
       <div className="flex items-center justify-center gap-4 py-4">
         <button
           onClick={goPrev}
@@ -263,30 +259,26 @@ export default function StudyMode() {
           <ChevronLeft size={20} />
         </button>
 
-        {/* 자동플레이 버튼 */}
         <button
           onClick={() => startAutoPlay(false)}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+          className={`p-3 rounded-full transition-colors border ${
             isAutoPlaying && !isAutoRandom
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
-          {isAutoPlaying && !isAutoRandom ? <Square size={14} /> : <Play size={14} />}
-          자동
+          {isAutoPlaying && !isAutoRandom ? <Square size={20} /> : <Play size={20} />}
         </button>
 
-        {/* 랜덤 자동플레이 버튼 */}
         <button
           onClick={() => startAutoPlay(true)}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+          className={`p-3 rounded-full transition-colors border ${
             isAutoPlaying && isAutoRandom
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
-          {isAutoPlaying && isAutoRandom ? <Square size={14} /> : <Shuffle size={14} />}
-          랜덤자동
+          {isAutoPlaying && isAutoRandom ? <Square size={20} /> : <Shuffle size={20} />}
         </button>
 
         <button
@@ -300,3 +292,12 @@ export default function StudyMode() {
     </div>
   );
 }
+```
+👆 **여기까지**
+
+---
+
+## 하단 버튼 최종 모양
+```
+◀   ▶   🔀   ▶
+(이전) (자동) (랜덤자동) (다음)
