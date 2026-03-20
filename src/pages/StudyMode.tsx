@@ -7,7 +7,7 @@ import { toast } from "sonner";
 export default function StudyMode() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const categories = getCategories();
+  const categories = getCategories();h
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
 
@@ -43,7 +43,9 @@ export default function StudyMode() {
 
   const speak = (text: string, lang: "id" | "ko") => {
     return new Promise<void>((resolve) => {
-      const cleanText = text.replace(/\s*\/\s*/g, ", ");
+      const cleanText = text
+      .replace(/~/g, "무엇무엇")
+      .replace(/\s*\/\s*/g, ", ");
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = lang === "ko" ? "ko-KR" : "id-ID";
       utterance.rate = 0.9;
