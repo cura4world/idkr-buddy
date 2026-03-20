@@ -234,7 +234,7 @@ export default function StudyMode() {
             {/* 앞면 */}
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
               {/* 한국어면 font-body, 인도네시아어면 font-word */}
-              <p className={`text-3xl font-semibold text-center leading-relaxed text-gray-900 ${frontLang === "id" ? "font-word" : "font-body"}`}>
+              <p className={`text-3xl text-center leading-relaxed text-gray-900 ${frontLang === "id" ? "font-word" : "font-body"}`}>
                 {frontLang === "id" ? currentWord?.word : currentWord?.meaning}
               </p>
               {frontLang === "id" && currentWord?.example && (
