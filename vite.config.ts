@@ -3,8 +3,8 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
-
 export default defineConfig(({ mode }) => ({
+  base: '/idkr-buddy/',
   server: {
     host: "::",
     port: 8080,
@@ -29,7 +29,7 @@ export default defineConfig(({ mode }) => ({
         background_color: "#F3EFEA",
         display: "standalone",
         orientation: "portrait",
-        start_url: "/",
+        start_url: "/idkr-buddy/",
         icons: [
           {
             src: "/icon-192x192.png",
