@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Category, getWordsByCategory, deleteCategory, moveCategoryUp, moveCategoryDown } from "@/lib/store";
+import { Category, getWordsByCategory, deleteCategory, moveCategoryUp, moveCategoryDown, moveCategoryToTop, moveCategoryToBottom } from "@/lib/store";
 import { useNavigate } from "react-router-dom";
 import {
   ContextMenu,
@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import EditCategoryDialog from "@/components/EditCategoryDialog";
-import { Pencil, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { Pencil, Trash2, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown } from "lucide-react";
 
 interface CategoryCardProps {
   category: Category;
@@ -34,7 +34,6 @@ export default function CategoryCard({ category, onAddWord, onChanged, isFirst, 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  // Long-press support for touch devices
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [contextOpen, setContextOpen] = useState(false);
   const [touchPos, setTouchPos] = useState({ x: 0, y: 0 });
@@ -111,6 +110,12 @@ export default function CategoryCard({ category, onAddWord, onChanged, isFirst, 
         </ContextMenuTrigger>
         <ContextMenuContent>
           {!isFirst && (
+            <ContextMenuItem onClick={() => { moveCategoryToTop(category.id); onChanged?.(); }}>
+              <ChevronsUp className="mr-2 h-4 w-4" />
+              맨위로 이동
+            </ContextMenuItem>
+          )}
+          {!isFirst && (
             <ContextMenuItem onClick={() => { moveCategoryUp(category.id); onChanged?.(); }}>
               <ArrowUp className="mr-2 h-4 w-4" />
               위로 이동
@@ -120,6 +125,12 @@ export default function CategoryCard({ category, onAddWord, onChanged, isFirst, 
             <ContextMenuItem onClick={() => { moveCategoryDown(category.id); onChanged?.(); }}>
               <ArrowDown className="mr-2 h-4 w-4" />
               아래로 이동
+            </ContextMenuItem>
+          )}
+          {!isLast && (
+            <ContextMenuItem onClick={() => { moveCategoryToBottom(category.id); onChanged?.(); }}>
+              <ChevronsDown className="mr-2 h-4 w-4" />
+              맨아래로 이동
             </ContextMenuItem>
           )}
           <ContextMenuItem onClick={() => setEditOpen(true)}>
@@ -150,6 +161,15 @@ export default function CategoryCard({ category, onAddWord, onChanged, isFirst, 
             {!isFirst && (
               <button
                 className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                onClick={() => { setContextOpen(false); moveCategoryToTop(category.id); onChanged?.(); }}
+              >
+                <ChevronsUp className="mr-2 h-4 w-4" />
+                맨위로 이동
+              </button>
+            )}
+            {!isFirst && (
+              <button
+                className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
                 onClick={() => { setContextOpen(false); moveCategoryUp(category.id); onChanged?.(); }}
               >
                 <ArrowUp className="mr-2 h-4 w-4" />
@@ -163,6 +183,15 @@ export default function CategoryCard({ category, onAddWord, onChanged, isFirst, 
               >
                 <ArrowDown className="mr-2 h-4 w-4" />
                 아래로 이동
+              </button>
+            )}
+            {!isLast && (
+              <button
+                className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                onClick={() => { setContextOpen(false); moveCategoryToBottom(category.id); onChanged?.(); }}
+              >
+                <ChevronsDown className="mr-2 h-4 w-4" />
+                맨아래로 이동
               </button>
             )}
             <button
