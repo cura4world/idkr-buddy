@@ -23,7 +23,7 @@ export default function CSVImportDialog({ open, onOpenChange, onImported, catego
     reader.onload = (ev) => {
       setCsv((ev.target?.result as string) || "");
     };
-    reader.readAsText(file);
+    reader.readAsText(file, "utf-8");
   };
 
   const handleImport = () => {
