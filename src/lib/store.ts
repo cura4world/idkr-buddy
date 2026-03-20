@@ -71,7 +71,6 @@ export function updateWord(id: string, updates: { word?: string; meaning?: strin
 export function deleteCategory(id: string) {
   const categories = getCategories().filter((c) => c.id !== id);
   saveCategories(categories);
-  // Also delete words in this category
   const words = getWords().filter((w) => w.categoryId !== id);
   saveWords(words);
 }
@@ -211,14 +210,16 @@ export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imp
     return result;
   }
 
-  const lines = csv.split("\n").filter((l) => l.trim());
+  // BOM 문자 제거
+  const cleanCsv = csv.replace(/^\uFEFF/, "");
+  const lines = cleanCsv.split(/\r?\n/).filter((l) => l.trim());
   let imported = 0;
   let errors = 0;
   const words = getWords();
 
   for (let i = 0; i < lines.length; i++) {
     const parts = parseCSVLine(lines[i]);
-    if (parts.length >= 2) {
+    if (parts.length >= 2 && parts[0].trim() !== "") {
       const [word, meaning, example, exampleMeaning, categoryId] = parts;
       let catId = forceCategoryId;
       if (!catId) {
