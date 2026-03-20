@@ -7,7 +7,7 @@ import { toast } from "sonner";
 export default function StudyMode() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const categories = getCategories();h
+  const categories = getCategories();
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
 
