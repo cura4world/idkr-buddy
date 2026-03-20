@@ -4,6 +4,7 @@
   "description": "인도네시아어-한국어 단어 학습 앱",
   "start_url": "/idkr-buddy/",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
   "background_color": "#F3EFEA",
   "theme_color": "#F3EFEA",
   "lang": "en",
