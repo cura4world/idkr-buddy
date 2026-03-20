@@ -171,14 +171,53 @@ export function removeSavedWord(wordId: string) {
 }
 
 export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imported: number; errors: number } {
+  // RFC 4180 준수 CSV 파서
+  function parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    let i = 0;
+    while (i < line.length) {
+      const char = line[i];
+      if (inQuotes) {
+        if (char === '"') {
+          if (line[i + 1] === '"') {
+            // "" → " 이스케이프 처리
+            current += '"';
+            i += 2;
+          } else {
+            inQuotes = false;
+            i++;
+          }
+        } else {
+          current += char;
+          i++;
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true;
+          i++;
+        } else if (char === ',') {
+          result.push(current.trim());
+          current = "";
+          i++;
+        } else {
+          current += char;
+          i++;
+        }
+      }
+    }
+    result.push(current.trim());
+    return result;
+  }
+
   const lines = csv.split("\n").filter((l) => l.trim());
   let imported = 0;
   let errors = 0;
   const words = getWords();
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const parts = line.split(",").map((p) => p.trim());
+    const parts = parseCSVLine(lines[i]);
     if (parts.length >= 2) {
       const [word, meaning, example, exampleMeaning, categoryId] = parts;
       let catId = forceCategoryId;
@@ -188,7 +227,6 @@ export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imp
           ? (categories.find((c) => c.id === categoryId || c.name === categoryId)!.id)
           : (categories[0]?.id || "daily");
       }
-
       words.push({
         id: crypto.randomUUID(),
         word,
