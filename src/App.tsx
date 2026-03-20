@@ -17,7 +17,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter basename="/idkr-buddy">
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/category/:id" element={<CategoryDetail />} />
