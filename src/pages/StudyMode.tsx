@@ -20,6 +20,8 @@ export default function StudyMode() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [isAutoRandom, setIsAutoRandom] = useState(false);
   const [autoCurrentWord, setAutoCurrentWord] = useState<Word | undefined>(undefined);
+  // 한/인 모드: "id" = 인도네시아어 앞면(기본), "ko" = 한국어 앞면
+  const [frontLang, setFrontLang] = useState<"id" | "ko">("id");
   const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const shuffledWords = useMemo(() => {
@@ -40,15 +42,29 @@ export default function StudyMode() {
     toast(nowSaved ? "단어를 보관했습니다 📌" : "보관함에서 제거했습니다");
   };
 
-  const speak = (text: string) => {
+  // 언어 지정 speak 함수
+  const speak = (text: string, lang: "id" | "ko") => {
     return new Promise<void>((resolve) => {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "id-ID";
+      utterance.lang = lang === "ko" ? "ko-KR" : "id-ID";
       utterance.rate = 0.9;
       utterance.onend = () => resolve();
       speechSynthesis.cancel();
       speechSynthesis.speak(utterance);
     });
+  };
+
+  // 현재 카드 앞/뒷면 기준으로 발음할 텍스트와 언어 반환
+  const getSpeakTarget = (word: Word, flipped: boolean): { text: string; lang: "id" | "ko" } => {
+    if (frontLang === "id") {
+      return flipped
+        ? { text: word.meaning, lang: "ko" }
+        : { text: word.word, lang: "id" };
+    } else {
+      return flipped
+        ? { text: word.word, lang: "id" }
+        : { text: word.meaning, lang: "ko" };
+    }
   };
 
   useEffect(() => {
@@ -89,7 +105,7 @@ export default function StudyMode() {
     setAutoCurrentWord(undefined);
   }, []);
 
-  const runAutoPlay = useCallback(async (index: number, playWords: Word[]) => {
+  const runAutoPlay = useCallback(async (index: number, playWords: Word[], lang: "id" | "ko") => {
     if (index >= playWords.length) {
       setIsAutoPlaying(false);
       setIsAutoRandom(false);
@@ -100,13 +116,12 @@ export default function StudyMode() {
       return;
     }
 
-    // ① 카드를 앞면으로 뒤집기 시작
+    // ① 카드를 앞면으로
     setIsFlipped(false);
     setIsBreathing(false);
     setCurrentIndex(index);
 
-    // ② flip 애니메이션(0.6초) 완전히 끝난 후 내용 교체
-    // → 이렇게 하면 카드가 앞면으로 완전히 돌아간 뒤에 새 단어로 바뀜
+    // ② flip 완료 후 내용 교체
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(() => {
         setAutoCurrentWord(playWords[index]);
@@ -114,15 +129,16 @@ export default function StudyMode() {
       }, 650);
     });
 
-    // ③ 1초 후 발음 재생
+    // ③ 1초 후 앞면 발음 재생
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(async () => {
-        await speak(playWords[index].word);
+        const frontText = lang === "id" ? playWords[index].word : playWords[index].meaning;
+        await speak(frontText, lang);
         resolve();
       }, 1000);
     });
 
-    // ④ 1.5초 후 카드 뒤집기 (한국어 뜻 표시)
+    // ④ 1.5초 후 카드 뒤집기
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(() => {
         setIsFlipped(true);
@@ -130,10 +146,20 @@ export default function StudyMode() {
       }, 1500);
     });
 
-    // ⑤ 5초 후 다음 카드로 (한국어 뜻 충분히 보여줌)
+    // ④-1 뒤집기 후 뒷면 발음 재생 (flip 애니메이션 0.65초 후)
+    await new Promise<void>((resolve) => {
+      autoPlayRef.current = setTimeout(async () => {
+        const backLang: "id" | "ko" = lang === "id" ? "ko" : "id";
+        const backText = lang === "id" ? playWords[index].meaning : playWords[index].word;
+        await speak(backText, backLang);
+        resolve();
+      }, 700);
+    });
+
+    // ⑤ 3.5초 후 다음 카드 (변경: 5000 → 3500)
     autoPlayRef.current = setTimeout(() => {
-      runAutoPlay(index + 1, playWords);
-    }, 5000);
+      runAutoPlay(index + 1, playWords, lang);
+    }, 3500);
   }, []);
 
   const startAutoPlay = (random: boolean) => {
@@ -149,7 +175,7 @@ export default function StudyMode() {
     setCurrentIndex(0);
     setIsFlipped(false);
     setAutoCurrentWord(playWords[0]);
-    runAutoPlay(0, playWords);
+    runAutoPlay(0, playWords, frontLang);
   };
 
   useEffect(() => {
@@ -192,7 +218,23 @@ export default function StudyMode() {
           {currentIndex + 1} / {isAutoPlaying ? words.length : displayWords.length}
           {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">▶</span>}
         </span>
-        <div className="w-5" />
+        {/* 한/인 토글 버튼 */}
+        <button
+          onClick={() => {
+            if (isAutoPlaying) return;
+            setFrontLang((l) => (l === "id" ? "ko" : "id"));
+            setIsFlipped(false);
+            setCurrentIndex(0);
+          }}
+          disabled={isAutoPlaying}
+          className={`w-9 h-9 rounded-full text-xs font-bold border transition-colors disabled:opacity-30 ${
+            frontLang === "ko"
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          }`}
+        >
+          {frontLang === "id" ? "인" : "한"}
+        </button>
       </div>
 
       <div
@@ -205,23 +247,35 @@ export default function StudyMode() {
           onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}
         >
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
+            {/* 앞면 */}
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
               <p className="font-word text-3xl font-semibold text-center leading-relaxed text-gray-900">
-                {currentWord?.word}
+                {frontLang === "id" ? currentWord?.word : currentWord?.meaning}
               </p>
-              {currentWord?.example && (
+              {frontLang === "id" && currentWord?.example && (
                 <p className="text-base text-muted-foreground font-word mt-4 text-center leading-relaxed">
                   {currentWord.example}
                 </p>
               )}
+              {frontLang === "ko" && currentWord?.exampleMeaning && (
+                <p className="text-base text-muted-foreground font-body mt-4 text-center leading-relaxed">
+                  {currentWord.exampleMeaning}
+                </p>
+              )}
             </div>
+            {/* 뒷면 */}
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
               <p className="font-body text-2xl font-medium text-center mb-3 text-gray-900">
-                {currentWord?.meaning}
+                {frontLang === "id" ? currentWord?.meaning : currentWord?.word}
               </p>
-              {currentWord?.exampleMeaning && (
+              {frontLang === "id" && currentWord?.exampleMeaning && (
                 <p className="text-base text-muted-foreground font-body text-center leading-relaxed">
                   {currentWord.exampleMeaning}
+                </p>
+              )}
+              {frontLang === "ko" && currentWord?.example && (
+                <p className="text-base text-muted-foreground font-word text-center leading-relaxed">
+                  {currentWord.example}
                 </p>
               )}
             </div>
@@ -258,8 +312,13 @@ export default function StudyMode() {
           <Shuffle size={14} />
           랜덤
         </button>
+        {/* 스피커: 앞/뒷면에 따라 언어 자동 선택 */}
         <button
-          onClick={() => currentWord && speak(currentWord.word)}
+          onClick={() => {
+            if (!currentWord) return;
+            const { text, lang } = getSpeakTarget(currentWord, isFlipped);
+            speak(text, lang);
+          }}
           disabled={!currentWord || isAutoPlaying}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30"
         >
