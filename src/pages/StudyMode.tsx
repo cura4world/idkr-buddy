@@ -154,10 +154,10 @@ export default function StudyMode() {
       }, 700);
     });
 
-    // ⑤ 3초 후 다음 카드
+    // ⑤ 2.5초 후 다음 카드
     autoPlayRef.current = setTimeout(() => {
       runAutoPlay(index + 1, playWords, lang);
-    }, 3000);
+    }, 2500);
   }, []);
 
   const startAutoPlay = (random: boolean) => {
@@ -233,7 +233,8 @@ export default function StudyMode() {
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
             {/* 앞면 */}
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
-              <p className="font-word text-3xl font-semibold text-center leading-relaxed text-gray-900">
+              {/* 한국어면 font-body, 인도네시아어면 font-word */}
+              <p className={`text-3xl font-semibold text-center leading-relaxed text-gray-900 ${frontLang === "id" ? "font-word" : "font-body"}`}>
                 {frontLang === "id" ? currentWord?.word : currentWord?.meaning}
               </p>
               {frontLang === "id" && currentWord?.example && (
@@ -249,7 +250,8 @@ export default function StudyMode() {
             </div>
             {/* 뒷면 */}
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
-              <p className="font-body text-2xl font-medium text-center mb-3 text-gray-900">
+              {/* 한국어면 font-body, 인도네시아어면 font-word */}
+              <p className={`text-2xl font-medium text-center mb-3 text-gray-900 ${frontLang === "id" ? "font-body" : "font-word"}`}>
                 {frontLang === "id" ? currentWord?.meaning : currentWord?.word}
               </p>
               {frontLang === "id" && currentWord?.exampleMeaning && (
