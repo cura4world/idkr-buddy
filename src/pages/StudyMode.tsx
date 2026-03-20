@@ -251,7 +251,7 @@ export default function StudyMode() {
             {/* 뒷면 */}
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
               {/* 한국어면 font-body, 인도네시아어면 font-word */}
-              <p className={`text-2xl font-medium text-center mb-3 text-gray-900 ${frontLang === "id" ? "font-body" : "font-word"}`}>
+              <p className={`text-3xl font-medium text-center mb-3 text-gray-900 ${frontLang === "id" ? "font-body" : "font-word"}`}>
                 {frontLang === "id" ? currentWord?.meaning : currentWord?.word}
               </p>
               {frontLang === "id" && currentWord?.exampleMeaning && (
