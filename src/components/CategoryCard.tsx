@@ -80,14 +80,14 @@ export default function CategoryCard({ category, onAddWord, onChanged, isFirst, 
       </div>
       <div className="mt-3 flex justify-end gap-3">
         <button
-          onClick={() => navigate(`/quiz/${category.id}`)}
+          onClick={(e) => { e.stopPropagation(); navigate(`/quiz/${category.id}`); }}
           className="text-sm text-primary font-medium hover:underline underline-offset-4"
           disabled={words.length < 2}
         >
           퀴즈
         </button>
         <button
-          onClick={() => navigate(`/study/${category.id}`)}
+          onClick={(e) => { e.stopPropagation(); navigate(`/study/${category.id}`); }}
           className="text-sm text-primary font-medium hover:underline underline-offset-4"
           disabled={words.length === 0}
         >
