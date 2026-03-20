@@ -154,10 +154,10 @@ export default function StudyMode() {
       }, 700);
     });
 
-    // ⑤ 2.5초 후 다음 카드
+    // ⑤ 1.5초 후 다음 카드
     autoPlayRef.current = setTimeout(() => {
       runAutoPlay(index + 1, playWords, lang);
-    }, 2500);
+    }, 1500);
   }, []);
 
   const startAutoPlay = (random: boolean) => {
