@@ -241,10 +241,10 @@ export default function StudyMode() {
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
       {/* 헤더 */}
       <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={() => { stopAutoPlay(); navigate("/"); }} className="text-muted-foreground hover:text-foreground">
+        <button onClick={() => { stopAutoPlay(); navigate("/"); }} className="text-white hover:text-white/80">
           <ArrowLeft size={20} />
         </button>
-        <span className="text-sm text-muted-foreground font-body">
+        <span className="text-sm text-white font-body">
           {currentIndex + 1} / {isAutoPlaying ? words.length : displayWords.length}
           {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">▶</span>}
         </span>
