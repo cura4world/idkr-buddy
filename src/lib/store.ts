@@ -92,6 +92,24 @@ export function moveCategoryDown(id: string) {
   saveCategories(categories);
 }
 
+export function moveCategoryToTop(id: string) {
+  const categories = getCategories();
+  const idx = categories.findIndex((c) => c.id === id);
+  if (idx <= 0) return;
+  const [item] = categories.splice(idx, 1);
+  categories.unshift(item);
+  saveCategories(categories);
+}
+
+export function moveCategoryToBottom(id: string) {
+  const categories = getCategories();
+  const idx = categories.findIndex((c) => c.id === id);
+  if (idx < 0 || idx >= categories.length - 1) return;
+  const [item] = categories.splice(idx, 1);
+  categories.push(item);
+  saveCategories(categories);
+}
+
 export function getWords(): Word[] {
   const stored = localStorage.getItem(WORDS_KEY);
   if (stored) return JSON.parse(stored);
