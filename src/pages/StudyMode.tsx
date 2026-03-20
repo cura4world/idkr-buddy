@@ -20,7 +20,6 @@ export default function StudyMode() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [isAutoRandom, setIsAutoRandom] = useState(false);
   const [autoCurrentWord, setAutoCurrentWord] = useState<Word | undefined>(undefined);
-  // 한/인 모드: "id" = 인도네시아어 앞면(기본), "ko" = 한국어 앞면
   const [frontLang, setFrontLang] = useState<"id" | "ko">("id");
   const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -42,10 +41,10 @@ export default function StudyMode() {
     toast(nowSaved ? "단어를 보관했습니다 📌" : "보관함에서 제거했습니다");
   };
 
-  // 언어 지정 speak 함수
   const speak = (text: string, lang: "id" | "ko") => {
     return new Promise<void>((resolve) => {
-      const utterance = new SpeechSynthesisUtterance(text);
+      const cleanText = text.replace(/\s*\/\s*/g, ", ");
+      const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = lang === "ko" ? "ko-KR" : "id-ID";
       utterance.rate = 0.9;
       utterance.onend = () => resolve();
@@ -54,7 +53,6 @@ export default function StudyMode() {
     });
   };
 
-  // 현재 카드 앞/뒷면 기준으로 발음할 텍스트와 언어 반환
   const getSpeakTarget = (word: Word, flipped: boolean): { text: string; lang: "id" | "ko" } => {
     if (frontLang === "id") {
       return flipped
@@ -146,7 +144,7 @@ export default function StudyMode() {
       }, 1500);
     });
 
-    // ④-1 뒤집기 후 뒷면 발음 재생 (flip 애니메이션 0.65초 후)
+    // ④-1 뒤집기 후 뒷면 발음 재생
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(async () => {
         const backLang: "id" | "ko" = lang === "id" ? "ko" : "id";
@@ -156,10 +154,10 @@ export default function StudyMode() {
       }, 700);
     });
 
-    // ⑤ 3.5초 후 다음 카드 (변경: 5000 → 3500)
+    // ⑤ 3초 후 다음 카드
     autoPlayRef.current = setTimeout(() => {
       runAutoPlay(index + 1, playWords, lang);
-    }, 3500);
+    }, 3000);
   }, []);
 
   const startAutoPlay = (random: boolean) => {
@@ -210,6 +208,7 @@ export default function StudyMode() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
+      {/* 헤더 */}
       <div className="flex items-center justify-between px-4 py-4">
         <button onClick={() => { stopAutoPlay(); navigate("/"); }} className="text-muted-foreground hover:text-foreground">
           <ArrowLeft size={20} />
@@ -218,25 +217,10 @@ export default function StudyMode() {
           {currentIndex + 1} / {isAutoPlaying ? words.length : displayWords.length}
           {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">▶</span>}
         </span>
-        {/* 한/인 토글 버튼 */}
-        <button
-          onClick={() => {
-            if (isAutoPlaying) return;
-            setFrontLang((l) => (l === "id" ? "ko" : "id"));
-            setIsFlipped(false);
-            setCurrentIndex(0);
-          }}
-          disabled={isAutoPlaying}
-          className={`w-9 h-9 rounded-full text-xs font-bold border transition-colors disabled:opacity-30 ${
-            frontLang === "ko"
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
-          }`}
-        >
-          {frontLang === "id" ? "인" : "한"}
-        </button>
+        <div className="w-5" />
       </div>
 
+      {/* 카드 */}
       <div
         className="flex-1 flex items-center justify-center px-6"
         onTouchStart={handleTouchStart}
@@ -283,7 +267,7 @@ export default function StudyMode() {
         </div>
       </div>
 
-      {/* 상단 버튼: 보관, 랜덤, 스피커 */}
+      {/* 중간 버튼: 보관, 랜덤, 스피커, KO/IN */}
       <div className="flex justify-center gap-3 py-2">
         <button
           onClick={handleToggleSave}
@@ -312,7 +296,7 @@ export default function StudyMode() {
           <Shuffle size={14} />
           랜덤
         </button>
-        {/* 스피커: 앞/뒷면에 따라 언어 자동 선택 */}
+        {/* 스피커 */}
         <button
           onClick={() => {
             if (!currentWord) return;
@@ -323,6 +307,23 @@ export default function StudyMode() {
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30"
         >
           <Volume2 size={16} />
+        </button>
+        {/* KO/IN 토글 */}
+        <button
+          onClick={() => {
+            if (isAutoPlaying) return;
+            setFrontLang((l) => (l === "id" ? "ko" : "id"));
+            setIsFlipped(false);
+            setCurrentIndex(0);
+          }}
+          disabled={isAutoPlaying}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 ${
+            frontLang === "ko"
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          }`}
+        >
+          {frontLang === "id" ? "IN" : "KO"}
         </button>
       </div>
 
