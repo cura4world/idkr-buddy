@@ -10,7 +10,6 @@ export default function StudyMode() {
   const categories = getCategories();
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
-
   const [isRandom, setIsRandom] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -22,6 +21,7 @@ export default function StudyMode() {
   const [autoCurrentWord, setAutoCurrentWord] = useState<Word | undefined>(undefined);
   const [frontLang, setFrontLang] = useState<"id" | "ko">("id");
   const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const shuffledWords = useMemo(() => {
     if (!isRandom) return words;
@@ -29,10 +29,41 @@ export default function StudyMode() {
   }, [isRandom, words.length]);
 
   const displayWords = isRandom ? shuffledWords : words;
-  const currentWord: Word | undefined = isAutoPlaying
-    ? autoCurrentWord
-    : displayWords[currentIndex];
+  const currentWord: Word | undefined = isAutoPlaying ? autoCurrentWord : displayWords[currentIndex];
   const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
+
+  // Wake Lock: 자동플레이 중 화면 꺼짐 방지
+  const requestWakeLock = async () => {
+    try {
+      if ("wakeLock" in navigator) {
+        wakeLockRef.current = await (navigator as any).wakeLock.request("screen");
+      }
+    } catch (e) {
+      // Wake Lock 미지원 환경에서는 무시
+    }
+  };
+
+  const releaseWakeLock = async () => {
+    if (wakeLockRef.current) {
+      try {
+        await wakeLockRef.current.release();
+      } catch (e) {
+        // 무시
+      }
+      wakeLockRef.current = null;
+    }
+  };
+
+  // 화면이 다시 켜졌을 때 Wake Lock 재요청
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "visible" && isAutoPlaying) {
+        await requestWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [isAutoPlaying]);
 
   const handleToggleSave = () => {
     if (!currentWord) return;
@@ -44,8 +75,8 @@ export default function StudyMode() {
   const speak = (text: string, lang: "id" | "ko") => {
     return new Promise<void>((resolve) => {
       const cleanText = text
-      .replace(/~/g, "무엇무엇")
-      .replace(/\s*\/\s*/g, ", ");
+        .replace(/~/g, "무엇무엇")
+        .replace(/\s*\/\s*/g, ", ");
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = lang === "ko" ? "ko-KR" : "id-ID";
       utterance.rate = 0.9;
@@ -57,13 +88,9 @@ export default function StudyMode() {
 
   const getSpeakTarget = (word: Word, flipped: boolean): { text: string; lang: "id" | "ko" } => {
     if (frontLang === "id") {
-      return flipped
-        ? { text: word.meaning, lang: "ko" }
-        : { text: word.word, lang: "id" };
+      return flipped ? { text: word.meaning, lang: "ko" } : { text: word.word, lang: "id" };
     } else {
-      return flipped
-        ? { text: word.word, lang: "id" }
-        : { text: word.meaning, lang: "ko" };
+      return flipped ? { text: word.word, lang: "id" } : { text: word.meaning, lang: "ko" };
     }
   };
 
@@ -103,6 +130,7 @@ export default function StudyMode() {
     setIsFlipped(false);
     setCurrentIndex(0);
     setAutoCurrentWord(undefined);
+    releaseWakeLock();
   }, []);
 
   const runAutoPlay = useCallback(async (index: number, playWords: Word[], lang: "id" | "ko") => {
@@ -112,6 +140,7 @@ export default function StudyMode() {
       setIsFlipped(false);
       setCurrentIndex(0);
       setAutoCurrentWord(undefined);
+      releaseWakeLock();
       toast("자동플레이가 완료됐습니다 🎉");
       return;
     }
@@ -167,14 +196,13 @@ export default function StudyMode() {
       stopAutoPlay();
       return;
     }
-    const playWords = random
-      ? [...words].sort(() => Math.random() - 0.5)
-      : [...words];
+    const playWords = random ? [...words].sort(() => Math.random() - 0.5) : [...words];
     setIsAutoRandom(random);
     setIsAutoPlaying(true);
     setCurrentIndex(0);
     setIsFlipped(false);
     setAutoCurrentWord(playWords[0]);
+    requestWakeLock();
     runAutoPlay(0, playWords, frontLang);
   };
 
@@ -182,6 +210,7 @@ export default function StudyMode() {
     return () => {
       if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
       speechSynthesis.cancel();
+      releaseWakeLock();
     };
   }, []);
 
@@ -235,7 +264,6 @@ export default function StudyMode() {
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
             {/* 앞면 */}
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
-              {/* 한국어면 font-body, 인도네시아어면 font-word */}
               <p className={`text-center leading-relaxed text-gray-900 ${frontLang === "id" ? "font-word text-3xl" : "font-body text-2xl"}`}>
                 {frontLang === "id" ? currentWord?.word : currentWord?.meaning}
               </p>
@@ -250,9 +278,9 @@ export default function StudyMode() {
                 </p>
               )}
             </div>
+
             {/* 뒷면 */}
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
-              {/* 한국어면 font-body, 인도네시아어면 font-word */}
               <p className={`font-normal text-center mb-3 text-gray-900 ${frontLang === "id" ? "font-body text-2xl" : "font-word text-3xl"}`}>
                 {frontLang === "id" ? currentWord?.meaning : currentWord?.word}
               </p>
@@ -284,6 +312,7 @@ export default function StudyMode() {
         >
           {isSaved ? "✅ 보관됨" : "📌 보관"}
         </button>
+
         <button
           onClick={() => {
             setIsRandom((r) => !r);
@@ -300,7 +329,7 @@ export default function StudyMode() {
           <Shuffle size={14} />
           랜덤
         </button>
-        {/* 스피커 */}
+
         <button
           onClick={() => {
             if (!currentWord) return;
@@ -312,7 +341,7 @@ export default function StudyMode() {
         >
           <Volume2 size={16} />
         </button>
-        {/* KO/IN 토글 */}
+
         <button
           onClick={() => {
             if (isAutoPlaying) return;
@@ -340,6 +369,7 @@ export default function StudyMode() {
         >
           <ChevronLeft size={20} />
         </button>
+
         <button
           onClick={() => startAutoPlay(false)}
           className={`p-3 rounded-full transition-colors border ${
@@ -350,6 +380,7 @@ export default function StudyMode() {
         >
           {isAutoPlaying && !isAutoRandom ? <Square size={20} /> : <Play size={20} />}
         </button>
+
         <button
           onClick={() => startAutoPlay(true)}
           className={`p-3 rounded-full transition-colors border ${
@@ -360,6 +391,7 @@ export default function StudyMode() {
         >
           {isAutoPlaying && isAutoRandom ? <Square size={20} /> : <Shuffle size={20} />}
         </button>
+
         <button
           onClick={goNext}
           disabled={currentIndex === displayWords.length - 1 || isAutoPlaying}
