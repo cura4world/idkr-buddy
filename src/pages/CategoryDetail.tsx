@@ -30,6 +30,7 @@ export default function CategoryDetail() {
   const autoScrollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   const touchMoved = useRef(false);
+  const touchStartTime = useRef<number>(0);
 
   const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -131,6 +132,7 @@ export default function CategoryDetail() {
     const t = e.touches[0];
     touchStartPos.current = { x: t.clientX, y: t.clientY };
     touchMoved.current = false;
+    touchStartTime.current = Date.now();
     startLongPress(index, t.clientX, t.clientY);
   };
 
@@ -139,12 +141,16 @@ export default function CategoryDetail() {
     if (touchStartPos.current) {
       const dx = Math.abs(t.clientX - touchStartPos.current.x);
       const dy = Math.abs(t.clientY - touchStartPos.current.y);
-      if (dx > 10 || dy > 10) touchMoved.current = true;
+      if (dx > 5 || dy > 5) {
+        touchMoved.current = true;
+        // 드래그 전 움직임 → 롱프레스 취소
+        if (!isDragging.current) {
+          cancelLongPress();
+          return;
+        }
+      }
     }
-    if (!isDragging.current) {
-      cancelLongPress();
-      return;
-    }
+    if (!isDragging.current) return;
     e.preventDefault();
     setFloatPos({ x: t.clientX, y: t.clientY });
     startAutoScroll(t.clientY);
@@ -154,8 +160,12 @@ export default function CategoryDetail() {
 
   const handleTouchEnd = (index: number) => {
     const wasDragging = isDragging.current;
+    const elapsed = Date.now() - touchStartTime.current;
+    cancelLongPress();
     handleEnd();
-    if (!wasDragging && !touchMoved.current) {
+
+    // 탭 판정: 드래그 아님 + 움직임 없음 + 400ms 이내
+    if (!wasDragging && !touchMoved.current && elapsed < 400) {
       setSelectedIndex((prev) => (prev === index ? null : index));
     }
   };
@@ -249,11 +259,9 @@ export default function CategoryDetail() {
                   "relative flex items-start gap-3 rounded-lg p-4 border border-border/50 select-none text-card-foreground transition-all duration-150",
                   isDraggingThis
                     ? "opacity-20 cursor-grabbing bg-card"
-                    : isSelected
-                    ? "cursor-grab"
                     : "bg-card cursor-grab",
                 ].join(" ")}
-                style={isSelected ? { backgroundColor: "hsl(30, 20%, 82%)" } : undefined}
+                style={isSelected ? { backgroundColor: "hsl(30, 20%, 88%)" } : undefined}
                 onTouchStart={(e) => handleTouchStart(index, e)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={() => handleTouchEnd(index)}
