@@ -30,7 +30,10 @@ export default function CategoryDetail() {
   const autoScrollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   const touchMoved = useRef(false);
-  const touchStartTime = useRef<number>(0);
+
+  // 더블탭 감지용
+  const lastTapTime = useRef<number>(0);
+  const lastTapIndex = useRef<number | null>(null);
 
   const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -132,7 +135,6 @@ export default function CategoryDetail() {
     const t = e.touches[0];
     touchStartPos.current = { x: t.clientX, y: t.clientY };
     touchMoved.current = false;
-    touchStartTime.current = Date.now();
     startLongPress(index, t.clientX, t.clientY);
   };
 
@@ -143,7 +145,6 @@ export default function CategoryDetail() {
       const dy = Math.abs(t.clientY - touchStartPos.current.y);
       if (dx > 5 || dy > 5) {
         touchMoved.current = true;
-        // 드래그 전 움직임 → 롱프레스 취소
         if (!isDragging.current) {
           cancelLongPress();
           return;
@@ -160,17 +161,27 @@ export default function CategoryDetail() {
 
   const handleTouchEnd = (index: number) => {
     const wasDragging = isDragging.current;
-    const elapsed = Date.now() - touchStartTime.current;
-    cancelLongPress();
     handleEnd();
 
-    // 탭 판정: 드래그 아님 + 움직임 없음 + 400ms 이내
-    if (!wasDragging && !touchMoved.current && elapsed < 400) {
-      setSelectedIndex((prev) => (prev === index ? null : index));
+    // 더블탭 감지: 드래그 아님 + 움직임 없음
+    if (!wasDragging && !touchMoved.current) {
+      const now = Date.now();
+      const timeSinceLastTap = now - lastTapTime.current;
+
+      if (timeSinceLastTap < 300 && lastTapIndex.current === index) {
+        // 더블탭 → 선택/해제
+        setSelectedIndex((prev) => (prev === index ? null : index));
+        lastTapTime.current = 0;
+        lastTapIndex.current = null;
+      } else {
+        // 첫 번째 탭 기록
+        lastTapTime.current = now;
+        lastTapIndex.current = index;
+      }
     }
   };
 
-  // ── 마우스 이벤트 ──
+  // ── 마우스 이벤트 (웹) ──
   const handleMouseDown = (index: number, e: React.MouseEvent) => {
     if (e.button !== 0) return;
     startLongPress(index, e.clientX, e.clientY);
