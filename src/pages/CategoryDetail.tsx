@@ -14,6 +14,7 @@ export default function CategoryDetail() {
   const [addOpen, setAddOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
   const [editWord, setEditWord] = useState<Word | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -26,6 +27,9 @@ export default function CategoryDetail() {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDragging = useRef(false);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const autoScrollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+  const touchMoved = useRef(false);
 
   const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -49,6 +53,29 @@ export default function CategoryDetail() {
     setDragOverIndex(index);
   };
 
+  const stopAutoScroll = () => {
+    if (autoScrollTimer.current) {
+      clearInterval(autoScrollTimer.current);
+      autoScrollTimer.current = null;
+    }
+  };
+
+  const startAutoScroll = (clientY: number) => {
+    stopAutoScroll();
+    const EDGE = 100;
+    const MAX_SPEED = 18;
+    autoScrollTimer.current = setInterval(() => {
+      const vh = window.innerHeight;
+      if (clientY < EDGE) {
+        const speed = Math.round(MAX_SPEED * (1 - clientY / EDGE));
+        window.scrollBy(0, -speed);
+      } else if (clientY > vh - EDGE) {
+        const speed = Math.round(MAX_SPEED * (1 - (vh - clientY) / EDGE));
+        window.scrollBy(0, speed);
+      }
+    }, 16);
+  };
+
   const startLongPress = (index: number, startX: number, startY: number) => {
     isDragging.current = false;
     longPressTimer.current = setTimeout(() => {
@@ -57,12 +84,12 @@ export default function CategoryDetail() {
       if (cardEl) {
         const rect = cardEl.getBoundingClientRect();
         setFloatWidth(rect.width);
-        // 카드 안에서 클릭한 상대적 Y 위치를 저장
         floatOffsetY.current = startY - rect.top;
       }
       setDragging(index);
       setDragOver(index);
       setFloatPos({ x: startX, y: startY });
+      startAutoScroll(startY);
     }, 500);
   };
 
@@ -86,6 +113,7 @@ export default function CategoryDetail() {
 
   const handleEnd = () => {
     cancelLongPress();
+    stopAutoScroll();
     const from = draggingIndexRef.current;
     const to = dragOverIndexRef.current;
     if (isDragging.current && from !== null && to !== null && from !== to) {
@@ -101,19 +129,35 @@ export default function CategoryDetail() {
   // ── 터치 이벤트 ──
   const handleTouchStart = (index: number, e: React.TouchEvent) => {
     const t = e.touches[0];
+    touchStartPos.current = { x: t.clientX, y: t.clientY };
+    touchMoved.current = false;
     startLongPress(index, t.clientX, t.clientY);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    if (touchStartPos.current) {
+      const dx = Math.abs(t.clientX - touchStartPos.current.x);
+      const dy = Math.abs(t.clientY - touchStartPos.current.y);
+      if (dx > 10 || dy > 10) touchMoved.current = true;
+    }
     if (!isDragging.current) {
       cancelLongPress();
       return;
     }
     e.preventDefault();
-    const touch = e.touches[0];
-    setFloatPos({ x: touch.clientX, y: touch.clientY });
-    const over = getOverIndex(touch.clientX, touch.clientY);
+    setFloatPos({ x: t.clientX, y: t.clientY });
+    startAutoScroll(t.clientY);
+    const over = getOverIndex(t.clientX, t.clientY);
     if (over >= 0) setDragOver(over);
+  };
+
+  const handleTouchEnd = (index: number) => {
+    const wasDragging = isDragging.current;
+    handleEnd();
+    if (!wasDragging && !touchMoved.current) {
+      setSelectedIndex((prev) => (prev === index ? null : index));
+    }
   };
 
   // ── 마우스 이벤트 ──
@@ -124,6 +168,7 @@ export default function CategoryDetail() {
     const onMouseMove = (ev: MouseEvent) => {
       if (!isDragging.current) return;
       setFloatPos({ x: ev.clientX, y: ev.clientY });
+      startAutoScroll(ev.clientY);
       const over = getOverIndex(ev.clientX, ev.clientY);
       if (over >= 0) setDragOver(over);
     };
@@ -138,6 +183,11 @@ export default function CategoryDetail() {
     window.addEventListener("mouseup", onMouseUp);
   };
 
+  const handleMouseClick = (index: number) => {
+    if (isDragging.current) return;
+    setSelectedIndex((prev) => (prev === index ? null : index));
+  };
+
   if (!category) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background font-body">
@@ -150,7 +200,10 @@ export default function CategoryDetail() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
-      <button onClick={() => navigate("/")} className="flex items-center gap-2 text-sm text-white mb-6 hover:text-white/80">
+      <button
+        onClick={() => navigate("/")}
+        className="flex items-center gap-2 text-sm text-white mb-6 hover:text-white/80"
+      >
         <ArrowLeft size={16} />
         <span className="font-body">돌아가기</span>
       </button>
@@ -177,10 +230,17 @@ export default function CategoryDetail() {
         </button>
       </div>
 
+      {selectedIndex !== null && (
+        <p className="text-xs text-sky-400 font-body mb-2 text-right">
+          선택된 단어 아래에 추가됩니다
+        </p>
+      )}
+
       <div className="space-y-2">
         {words.map((w, index) => {
           const isDraggingThis = draggingIndex === index;
           const isDropTarget = dragOverIndex === index && draggingIndex !== index;
+          const isSelected = selectedIndex === index;
 
           return (
             <div key={w.id}>
@@ -192,15 +252,18 @@ export default function CategoryDetail() {
                 ref={(el) => { cardRefs.current[index] = el; }}
                 data-word-index={index}
                 className={[
-                  "relative flex items-start gap-3 bg-card rounded-lg p-4 border select-none text-card-foreground transition-all duration-150",
+                  "relative flex items-start gap-3 rounded-lg p-4 border select-none text-card-foreground transition-all duration-150",
                   isDraggingThis
-                    ? "opacity-20 border-sky-400/30 cursor-grabbing"
-                    : "border-border/50 cursor-grab",
+                    ? "opacity-20 border-sky-400/30 cursor-grabbing bg-card"
+                    : isSelected
+                    ? "bg-sky-950 border-sky-400/60 cursor-grab"
+                    : "bg-card border-border/50 cursor-grab",
                 ].join(" ")}
                 onTouchStart={(e) => handleTouchStart(index, e)}
                 onTouchMove={handleTouchMove}
-                onTouchEnd={handleEnd}
+                onTouchEnd={() => handleTouchEnd(index)}
                 onMouseDown={(e) => handleMouseDown(index, e)}
+                onClick={() => handleMouseClick(index)}
                 onContextMenu={(e) => e.preventDefault()}
               >
                 <div className="flex-1 min-w-0">
@@ -216,7 +279,7 @@ export default function CategoryDetail() {
                 <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
                   <button
                     onMouseDown={(e) => e.stopPropagation()}
-                    onClick={() => setEditWord(w)}
+                    onClick={(e) => { e.stopPropagation(); setEditWord(w); }}
                     className="text-card-foreground/40 hover:text-primary p-1"
                     title="단어 정보"
                   >
@@ -224,7 +287,7 @@ export default function CategoryDetail() {
                   </button>
                   <button
                     onMouseDown={(e) => e.stopPropagation()}
-                    onClick={() => speak(w.word)}
+                    onClick={(e) => { e.stopPropagation(); speak(w.word); }}
                     className="text-card-foreground/50 hover:text-primary p-1"
                     title="발음 듣기"
                   >
@@ -243,7 +306,7 @@ export default function CategoryDetail() {
         </div>
       )}
 
-      {/* 떠다니는 단어박스 — 클릭한 위치 기준으로 자연스럽게 */}
+      {/* 떠다니는 단어박스 */}
       {draggingWord && floatPos && (
         <div
           className="fixed pointer-events-none z-50 flex items-start gap-3 bg-card rounded-lg p-4 border border-sky-400 shadow-lg shadow-sky-400/20"
@@ -272,9 +335,23 @@ export default function CategoryDetail() {
 
       <AddWordDialog
         open={addOpen}
-        onOpenChange={setAddOpen}
+        onOpenChange={(o) => {
+          setAddOpen(o);
+          if (!o) setSelectedIndex(null);
+        }}
         defaultCategoryId={id}
-        onAdded={refresh}
+        onAdded={(newWordId) => {
+          refresh();
+          if (selectedIndex !== null && newWordId) {
+            const currentWords = getWordsByCategory(id!);
+            const newIdx = currentWords.findIndex((w) => w.id === newWordId);
+            if (newIdx !== -1 && newIdx !== selectedIndex + 1) {
+              reorderWords(id!, newIdx, selectedIndex + 1);
+              refresh();
+            }
+          }
+          setSelectedIndex(null);
+        }}
       />
       <EditWordDialog
         open={!!editWord}
