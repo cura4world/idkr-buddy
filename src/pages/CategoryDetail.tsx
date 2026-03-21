@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, Word, reorderWords } from "@/lib/store";
 import AddWordDialog from "@/components/AddWordDialog";
@@ -31,7 +31,6 @@ export default function CategoryDetail() {
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   const touchMoved = useRef(false);
 
-  // 더블탭 감지용
   const lastTapTime = useRef<number>(0);
   const lastTapIndex = useRef<number | null>(null);
 
@@ -80,23 +79,6 @@ export default function CategoryDetail() {
     }, 16);
   };
 
-  const startLongPress = (index: number, startX: number, startY: number) => {
-    isDragging.current = false;
-    longPressTimer.current = setTimeout(() => {
-      isDragging.current = true;
-      const cardEl = cardRefs.current[index];
-      if (cardEl) {
-        const rect = cardEl.getBoundingClientRect();
-        setFloatWidth(rect.width);
-        floatOffsetY.current = startY - rect.top;
-      }
-      setDragging(index);
-      setDragOver(index);
-      setFloatPos({ x: startX, y: startY });
-      startAutoScroll(startY);
-    }, 500);
-  };
-
   const cancelLongPress = () => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
@@ -122,7 +104,7 @@ export default function CategoryDetail() {
     const to = dragOverIndexRef.current;
     if (isDragging.current && from !== null && to !== null && from !== to) {
       reorderWords(id!, from, to);
-      refresh();
+      setTick((t) => t + 1);
     }
     setDragging(null);
     setDragOver(null);
@@ -130,37 +112,63 @@ export default function CategoryDetail() {
     isDragging.current = false;
   };
 
+  // ── document 레벨 네이티브 터치무브 (passive:false 로 스크롤 완전 차단) ──
+  useEffect(() => {
+    const onTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+
+      if (touchStartPos.current) {
+        const dx = Math.abs(t.clientX - touchStartPos.current.x);
+        const dy = Math.abs(t.clientY - touchStartPos.current.y);
+        if (dx > 10 || dy > 10) touchMoved.current = true;
+      }
+
+      if (!isDragging.current) {
+        // 드래그 시작 전 움직임 → 롱프레스 취소, 스크롤 허용
+        cancelLongPress();
+        return;
+      }
+
+      // 드래그 중 → 스크롤 완전 차단
+      e.preventDefault();
+      setFloatPos({ x: t.clientX, y: t.clientY });
+      startAutoScroll(t.clientY);
+      const over = getOverIndex(t.clientX, t.clientY);
+      if (over >= 0) setDragOver(over);
+    };
+
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      document.removeEventListener("touchmove", onTouchMove);
+    };
+  }, []);
+
   // ── 터치 이벤트 ──
   const handleTouchStart = (index: number, e: React.TouchEvent) => {
     const t = e.touches[0];
     touchStartPos.current = { x: t.clientX, y: t.clientY };
     touchMoved.current = false;
-    startLongPress(index, t.clientX, t.clientY);
-  };
+    isDragging.current = false;
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    if (touchStartPos.current) {
-      const dx = Math.abs(t.clientX - touchStartPos.current.x);
-      const dy = Math.abs(t.clientY - touchStartPos.current.y);
-      if (dx > 10 || dy > 10) touchMoved.current = true;
-    }
-    if (!isDragging.current) {
-      cancelLongPress();
-      return;
-    }
-    e.preventDefault();
-    setFloatPos({ x: t.clientX, y: t.clientY });
-    startAutoScroll(t.clientY);
-    const over = getOverIndex(t.clientX, t.clientY);
-    if (over >= 0) setDragOver(over);
+    longPressTimer.current = setTimeout(() => {
+      isDragging.current = true;
+      const cardEl = cardRefs.current[index];
+      if (cardEl) {
+        const rect = cardEl.getBoundingClientRect();
+        setFloatWidth(rect.width);
+        floatOffsetY.current = t.clientY - rect.top;
+      }
+      setDragging(index);
+      setDragOver(index);
+      setFloatPos({ x: t.clientX, y: t.clientY });
+      startAutoScroll(t.clientY);
+    }, 500);
   };
 
   const handleTouchEnd = (index: number) => {
     const wasDragging = isDragging.current;
     handleEnd();
 
-    // 더블탭 감지: 드래그 아님 + 움직임 없음
     if (!wasDragging && !touchMoved.current) {
       const now = Date.now();
       const timeSinceLastTap = now - lastTapTime.current;
@@ -178,7 +186,20 @@ export default function CategoryDetail() {
   // ── 마우스 이벤트 (웹) ──
   const handleMouseDown = (index: number, e: React.MouseEvent) => {
     if (e.button !== 0) return;
-    startLongPress(index, e.clientX, e.clientY);
+    isDragging.current = false;
+
+    longPressTimer.current = setTimeout(() => {
+      isDragging.current = true;
+      const cardEl = cardRefs.current[index];
+      if (cardEl) {
+        const rect = cardEl.getBoundingClientRect();
+        setFloatWidth(rect.width);
+        floatOffsetY.current = e.clientY - rect.top;
+      }
+      setDragging(index);
+      setDragOver(index);
+      setFloatPos({ x: e.clientX, y: e.clientY });
+    }, 500);
 
     const onMouseMove = (ev: MouseEvent) => {
       if (!isDragging.current) return;
@@ -267,7 +288,6 @@ export default function CategoryDetail() {
                 ].join(" ")}
                 style={isSelected ? { backgroundColor: "hsl(30, 20%, 88%)" } : undefined}
                 onTouchStart={(e) => handleTouchStart(index, e)}
-                onTouchMove={handleTouchMove}
                 onTouchEnd={() => handleTouchEnd(index)}
                 onMouseDown={(e) => handleMouseDown(index, e)}
                 onClick={() => handleMouseClick(index)}
