@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, Word, reorderWords } from "@/lib/store";
 import AddWordDialog from "@/components/AddWordDialog";
@@ -17,8 +17,8 @@ export default function CategoryDetail() {
 
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [floatPos, setFloatPos] = useState<{ x: number; y: number } | null>(null);
 
-  // ref로 최신값 추적 (클로저 문제 해결)
   const draggingIndexRef = useRef<number | null>(null);
   const dragOverIndexRef = useRef<number | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,12 +46,13 @@ export default function CategoryDetail() {
     setDragOverIndex(index);
   };
 
-  const startLongPress = (index: number) => {
+  const startLongPress = (index: number, startX: number, startY: number) => {
     isDragging.current = false;
     longPressTimer.current = setTimeout(() => {
       isDragging.current = true;
       setDragging(index);
       setDragOver(index);
+      setFloatPos({ x: startX, y: startY });
     }, 500);
   };
 
@@ -63,10 +64,13 @@ export default function CategoryDetail() {
   };
 
   const getOverIndex = (clientX: number, clientY: number): number => {
-    const el = document.elementFromPoint(clientX, clientY);
-    const wordCard = el?.closest("[data-word-index]");
-    if (wordCard) {
-      return parseInt(wordCard.getAttribute("data-word-index") || "-1");
+    // 떠있는 박스 아래의 실제 카드를 찾기 위해 포인터 이벤트 무시
+    const elements = document.elementsFromPoint(clientX, clientY);
+    for (const el of elements) {
+      const wordCard = el.closest("[data-word-index]");
+      if (wordCard) {
+        return parseInt(wordCard.getAttribute("data-word-index") || "-1");
+      }
     }
     return -1;
   };
@@ -81,12 +85,14 @@ export default function CategoryDetail() {
     }
     setDragging(null);
     setDragOver(null);
+    setFloatPos(null);
     isDragging.current = false;
   };
 
   // ── 터치 이벤트 ──
-  const handleTouchStart = (index: number) => {
-    startLongPress(index);
+  const handleTouchStart = (index: number, e: React.TouchEvent) => {
+    const t = e.touches[0];
+    startLongPress(index, t.clientX, t.clientY);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -96,6 +102,7 @@ export default function CategoryDetail() {
     }
     e.preventDefault();
     const touch = e.touches[0];
+    setFloatPos({ x: touch.clientX, y: touch.clientY });
     const over = getOverIndex(touch.clientX, touch.clientY);
     if (over >= 0) setDragOver(over);
   };
@@ -103,10 +110,11 @@ export default function CategoryDetail() {
   // ── 마우스 이벤트 ──
   const handleMouseDown = (index: number, e: React.MouseEvent) => {
     if (e.button !== 0) return;
-    startLongPress(index);
+    startLongPress(index, e.clientX, e.clientY);
 
     const onMouseMove = (ev: MouseEvent) => {
       if (!isDragging.current) return;
+      setFloatPos({ x: ev.clientX, y: ev.clientY });
       const over = getOverIndex(ev.clientX, ev.clientY);
       if (over >= 0) setDragOver(over);
     };
@@ -128,6 +136,8 @@ export default function CategoryDetail() {
       </div>
     );
   }
+
+  const draggingWord = draggingIndex !== null ? words[draggingIndex] : null;
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
@@ -164,59 +174,58 @@ export default function CategoryDetail() {
           const isDropTarget = dragOverIndex === index && draggingIndex !== index;
 
           return (
-            <div
-              key={w.id}
-              data-word-index={index}
-              className={[
-                "relative flex items-start gap-3 bg-card rounded-lg p-4 border select-none text-card-foreground transition-all duration-150",
-                isDraggingThis
-                  ? "border-primary shadow-lg shadow-primary/30 scale-[1.02] opacity-90 z-10 bg-card/95 cursor-grabbing"
-                  : "border-border/50 cursor-grab",
-                isDropTarget
-                  ? "border-t-2 border-t-primary"
-                  : "",
-              ].join(" ")}
-              onTouchStart={() => handleTouchStart(index)}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleEnd}
-              onMouseDown={(e) => handleMouseDown(index, e)}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              {/* 단어 정보 */}
-              <div className="flex-1 min-w-0">
-                <p className="font-word text-base font-medium truncate">{w.word}</p>
-                <p className="text-sm text-muted-foreground font-body">{w.meaning}</p>
-                {w.example && (
-                  <p className="text-xs text-muted-foreground/70 font-word mt-0.5">{w.example}</p>
-                )}
-                {w.exampleMeaning && (
-                  <p className="text-xs text-muted-foreground/50 font-body mt-0.5">{w.exampleMeaning}</p>
-                )}
-              </div>
-
-              {/* 오른쪽 아이콘: 톱니바퀴(위) → 스피커(아래) */}
-              <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
-                <button
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={() => setEditWord(w)}
-                  className="text-card-foreground/40 hover:text-primary p-1"
-                  title="단어 정보"
-                >
-                  <Settings size={16} />
-                </button>
-                <button
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={() => speak(w.word)}
-                  className="text-card-foreground/50 hover:text-primary p-1"
-                  title="발음 듣기"
-                >
-                  <Volume2 size={16} />
-                </button>
-              </div>
-
-              {isDraggingThis && (
-                <div className="absolute inset-0 rounded-lg border-2 border-primary pointer-events-none" />
+            <div key={w.id}>
+              {/* 드롭 위치 표시선 — 해당 카드 위에 표시 */}
+              {isDropTarget && (
+                <div className="h-0.5 bg-sky-400 rounded-full mx-1 mb-1 shadow-sm shadow-sky-400/50" />
               )}
+              <div
+                data-word-index={index}
+                className={[
+                  "relative flex items-start gap-3 bg-card rounded-lg p-4 border select-none text-card-foreground transition-all duration-150",
+                  isDraggingThis
+                    ? "opacity-30 border-sky-400/50"
+                    : "border-border/50 cursor-grab",
+                  !isDraggingThis && isDropTarget
+                    ? ""
+                    : "",
+                ].join(" ")}
+                onTouchStart={(e) => handleTouchStart(index, e)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleEnd}
+                onMouseDown={(e) => handleMouseDown(index, e)}
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="font-word text-base font-medium truncate">{w.word}</p>
+                  <p className="text-sm text-muted-foreground font-body">{w.meaning}</p>
+                  {w.example && (
+                    <p className="text-xs text-muted-foreground/70 font-word mt-0.5">{w.example}</p>
+                  )}
+                  {w.exampleMeaning && (
+                    <p className="text-xs text-muted-foreground/50 font-body mt-0.5">{w.exampleMeaning}</p>
+                  )}
+                </div>
+
+                <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
+                  <button
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => setEditWord(w)}
+                    className="text-card-foreground/40 hover:text-primary p-1"
+                    title="단어 정보"
+                  >
+                    <Settings size={16} />
+                  </button>
+                  <button
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => speak(w.word)}
+                    className="text-card-foreground/50 hover:text-primary p-1"
+                    title="발음 듣기"
+                  >
+                    <Volume2 size={16} />
+                  </button>
+                </div>
+              </div>
             </div>
           );
         })}
@@ -225,6 +234,28 @@ export default function CategoryDetail() {
       {words.length === 0 && (
         <div className="text-center py-12 text-muted-foreground font-body">
           <p>단어가 없습니다.</p>
+        </div>
+      )}
+
+      {/* 떠다니는 단어박스 */}
+      {draggingWord && floatPos && (
+        <div
+          className="fixed pointer-events-none z-50 w-72 flex items-start gap-3 bg-sky-950 rounded-lg p-4 border border-sky-400 shadow-xl shadow-sky-400/30 text-card-foreground opacity-95"
+          style={{
+            left: floatPos.x - 140,
+            top: floatPos.y - 30,
+          }}
+        >
+          <div className="flex-1 min-w-0">
+            <p className="font-word text-base font-medium truncate">{draggingWord.word}</p>
+            <p className="text-sm text-muted-foreground font-body">{draggingWord.meaning}</p>
+            {draggingWord.example && (
+              <p className="text-xs text-muted-foreground/70 font-word mt-0.5">{draggingWord.example}</p>
+            )}
+            {draggingWord.exampleMeaning && (
+              <p className="text-xs text-muted-foreground/50 font-body mt-0.5">{draggingWord.exampleMeaning}</p>
+            )}
+          </div>
         </div>
       )}
 
