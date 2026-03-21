@@ -10,7 +10,7 @@ interface AddWordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultCategoryId?: string;
-  onAdded: () => void;
+  onAdded: (newWordId: string) => void;
 }
 
 export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, onAdded }: AddWordDialogProps) {
@@ -24,7 +24,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, o
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!word.trim() || !meaning.trim()) return;
-    addWord({
+    const newWord = addWord({
       word: word.trim(),
       meaning: meaning.trim(),
       example: example.trim(),
@@ -35,7 +35,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, o
     setMeaning("");
     setExample("");
     setExampleMeaning("");
-    onAdded();
+    onAdded(newWord.id);
     onOpenChange(false);
   };
 
