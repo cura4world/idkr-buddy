@@ -19,7 +19,6 @@ export default function CategoryDetail() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDragging = useRef(false);
-  const lastClientY = useRef(0);
 
   const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -38,6 +37,7 @@ export default function CategoryDetail() {
     longPressTimer.current = setTimeout(() => {
       isDragging.current = true;
       setDraggingIndex(index);
+      setDragOverIndex(index);
     }, 500);
   };
 
@@ -70,7 +70,6 @@ export default function CategoryDetail() {
 
   // ── 터치 이벤트 ──
   const handleTouchStart = (index: number, e: React.TouchEvent) => {
-    lastClientY.current = e.touches[0].clientY;
     startLongPress(index);
   };
 
@@ -81,7 +80,6 @@ export default function CategoryDetail() {
     }
     e.preventDefault();
     const touch = e.touches[0];
-    lastClientY.current = touch.clientY;
     const over = getOverIndex(touch.clientX, touch.clientY);
     if (over >= 0) setDragOverIndex(over);
   };
@@ -89,15 +87,10 @@ export default function CategoryDetail() {
   // ── 마우스 이벤트 ──
   const handleMouseDown = (index: number, e: React.MouseEvent) => {
     if (e.button !== 0) return;
-    lastClientY.current = e.clientY;
     startLongPress(index);
 
     const onMouseMove = (ev: MouseEvent) => {
-      if (!isDragging.current) {
-        cancelLongPress();
-        return;
-      }
-      lastClientY.current = ev.clientY;
+      if (!isDragging.current) return;
       const over = getOverIndex(ev.clientX, ev.clientY);
       if (over >= 0) setDragOverIndex(over);
     };
