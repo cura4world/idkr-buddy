@@ -17,6 +17,10 @@ export default function CategoryDetail() {
 
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // ref로 최신값 추적 (클로저 문제 해결)
+  const draggingIndexRef = useRef<number | null>(null);
+  const dragOverIndexRef = useRef<number | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDragging = useRef(false);
 
@@ -32,12 +36,22 @@ export default function CategoryDetail() {
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
 
+  const setDragging = (index: number | null) => {
+    draggingIndexRef.current = index;
+    setDraggingIndex(index);
+  };
+
+  const setDragOver = (index: number | null) => {
+    dragOverIndexRef.current = index;
+    setDragOverIndex(index);
+  };
+
   const startLongPress = (index: number) => {
     isDragging.current = false;
     longPressTimer.current = setTimeout(() => {
       isDragging.current = true;
-      setDraggingIndex(index);
-      setDragOverIndex(index);
+      setDragging(index);
+      setDragOver(index);
     }, 500);
   };
 
@@ -48,7 +62,7 @@ export default function CategoryDetail() {
     }
   };
 
-  const getOverIndex = (clientX: number, clientY: number) => {
+  const getOverIndex = (clientX: number, clientY: number): number => {
     const el = document.elementFromPoint(clientX, clientY);
     const wordCard = el?.closest("[data-word-index]");
     if (wordCard) {
@@ -59,17 +73,19 @@ export default function CategoryDetail() {
 
   const handleEnd = () => {
     cancelLongPress();
-    if (isDragging.current && draggingIndex !== null && dragOverIndex !== null && draggingIndex !== dragOverIndex) {
-      reorderWords(id!, draggingIndex, dragOverIndex);
+    const from = draggingIndexRef.current;
+    const to = dragOverIndexRef.current;
+    if (isDragging.current && from !== null && to !== null && from !== to) {
+      reorderWords(id!, from, to);
       refresh();
     }
-    setDraggingIndex(null);
-    setDragOverIndex(null);
+    setDragging(null);
+    setDragOver(null);
     isDragging.current = false;
   };
 
   // ── 터치 이벤트 ──
-  const handleTouchStart = (index: number, e: React.TouchEvent) => {
+  const handleTouchStart = (index: number) => {
     startLongPress(index);
   };
 
@@ -81,7 +97,7 @@ export default function CategoryDetail() {
     e.preventDefault();
     const touch = e.touches[0];
     const over = getOverIndex(touch.clientX, touch.clientY);
-    if (over >= 0) setDragOverIndex(over);
+    if (over >= 0) setDragOver(over);
   };
 
   // ── 마우스 이벤트 ──
@@ -92,7 +108,7 @@ export default function CategoryDetail() {
     const onMouseMove = (ev: MouseEvent) => {
       if (!isDragging.current) return;
       const over = getOverIndex(ev.clientX, ev.clientY);
-      if (over >= 0) setDragOverIndex(over);
+      if (over >= 0) setDragOver(over);
     };
 
     const onMouseUp = () => {
@@ -160,7 +176,7 @@ export default function CategoryDetail() {
                   ? "border-t-2 border-t-primary"
                   : "",
               ].join(" ")}
-              onTouchStart={(e) => handleTouchStart(index, e)}
+              onTouchStart={() => handleTouchStart(index)}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleEnd}
               onMouseDown={(e) => handleMouseDown(index, e)}
