@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, Word, reorderWords } from "@/lib/store";
 import AddWordDialog from "@/components/AddWordDialog";
@@ -18,11 +18,13 @@ export default function CategoryDetail() {
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [floatPos, setFloatPos] = useState<{ x: number; y: number } | null>(null);
+  const [floatWidth, setFloatWidth] = useState<number>(300);
 
   const draggingIndexRef = useRef<number | null>(null);
   const dragOverIndexRef = useRef<number | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDragging = useRef(false);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -50,6 +52,8 @@ export default function CategoryDetail() {
     isDragging.current = false;
     longPressTimer.current = setTimeout(() => {
       isDragging.current = true;
+      const cardEl = cardRefs.current[index];
+      if (cardEl) setFloatWidth(cardEl.getBoundingClientRect().width);
       setDragging(index);
       setDragOver(index);
       setFloatPos({ x: startX, y: startY });
@@ -64,7 +68,6 @@ export default function CategoryDetail() {
   };
 
   const getOverIndex = (clientX: number, clientY: number): number => {
-    // 떠있는 박스 아래의 실제 카드를 찾기 위해 포인터 이벤트 무시
     const elements = document.elementsFromPoint(clientX, clientY);
     for (const el of elements) {
       const wordCard = el.closest("[data-word-index]");
@@ -175,20 +178,18 @@ export default function CategoryDetail() {
 
           return (
             <div key={w.id}>
-              {/* 드롭 위치 표시선 — 해당 카드 위에 표시 */}
+              {/* 드롭 위치 표시선 */}
               {isDropTarget && (
                 <div className="h-0.5 bg-sky-400 rounded-full mx-1 mb-1 shadow-sm shadow-sky-400/50" />
               )}
               <div
+                ref={(el) => { cardRefs.current[index] = el; }}
                 data-word-index={index}
                 className={[
                   "relative flex items-start gap-3 bg-card rounded-lg p-4 border select-none text-card-foreground transition-all duration-150",
                   isDraggingThis
-                    ? "opacity-30 border-sky-400/50"
+                    ? "opacity-20 border-sky-400/30 cursor-grabbing"
                     : "border-border/50 cursor-grab",
-                  !isDraggingThis && isDropTarget
-                    ? ""
-                    : "",
                 ].join(" ")}
                 onTouchStart={(e) => handleTouchStart(index, e)}
                 onTouchMove={handleTouchMove}
@@ -206,7 +207,6 @@ export default function CategoryDetail() {
                     <p className="text-xs text-muted-foreground/50 font-body mt-0.5">{w.exampleMeaning}</p>
                   )}
                 </div>
-
                 <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
                   <button
                     onMouseDown={(e) => e.stopPropagation()}
@@ -237,17 +237,19 @@ export default function CategoryDetail() {
         </div>
       )}
 
-      {/* 떠다니는 단어박스 */}
+      {/* 떠다니는 단어박스 — 원래 크기 그대로 */}
       {draggingWord && floatPos && (
         <div
-          className="fixed pointer-events-none z-50 w-72 flex items-start gap-3 bg-sky-950 rounded-lg p-4 border border-sky-400 shadow-xl shadow-sky-400/30 text-card-foreground opacity-95"
+          className="fixed pointer-events-none z-50 flex items-start gap-3 bg-card rounded-lg p-4 border border-sky-400 shadow-lg shadow-sky-400/20 text-card-foreground"
           style={{
-            left: floatPos.x - 140,
+            width: floatWidth,
+            left: floatPos.x - floatWidth / 2,
             top: floatPos.y - 30,
+            transform: "rotate(1.5deg)",
           }}
         >
           <div className="flex-1 min-w-0">
-            <p className="font-word text-base font-medium truncate">{draggingWord.word}</p>
+            <p className="font-word text-base font-medium truncate text-white">{draggingWord.word}</p>
             <p className="text-sm text-muted-foreground font-body">{draggingWord.meaning}</p>
             {draggingWord.example && (
               <p className="text-xs text-muted-foreground/70 font-word mt-0.5">{draggingWord.example}</p>
@@ -255,6 +257,10 @@ export default function CategoryDetail() {
             {draggingWord.exampleMeaning && (
               <p className="text-xs text-muted-foreground/50 font-body mt-0.5">{draggingWord.exampleMeaning}</p>
             )}
+          </div>
+          <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
+            <Settings size={16} className="text-sky-400/40" />
+            <Volume2 size={16} className="text-sky-400/50" />
           </div>
         </div>
       )}
