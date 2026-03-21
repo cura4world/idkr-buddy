@@ -244,12 +244,11 @@ export default function CategoryDetail() {
           style={{
             width: floatWidth,
             left: floatPos.x - floatWidth / 2,
-            top: floatPos.y - 30,
-            transform: "rotate(1.5deg)",
+            top: floatPos.y - floatWidth * 0.05,
           }}
         >
           <div className="flex-1 min-w-0">
-            <p className="font-word text-base font-medium truncate text-white">{draggingWord.word}</p>
+            <p className="font-word text-base font-medium truncate text-gray-400">{draggingWord.word}</p>
             <p className="text-sm text-muted-foreground font-body">{draggingWord.meaning}</p>
             {draggingWord.example && (
               <p className="text-xs text-muted-foreground/70 font-word mt-0.5">{draggingWord.example}</p>
@@ -259,8 +258,8 @@ export default function CategoryDetail() {
             )}
           </div>
           <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
-            <Settings size={16} className="text-sky-400/40" />
-            <Volume2 size={16} className="text-sky-400/50" />
+            <Settings size={16} className="text-gray-500" />
+            <Volume2 size={16} className="text-gray-500" />
           </div>
         </div>
       )}
