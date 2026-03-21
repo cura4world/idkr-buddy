@@ -250,9 +250,10 @@ export default function CategoryDetail() {
                   isDraggingThis
                     ? "opacity-20 cursor-grabbing bg-card"
                     : isSelected
-                    ? "bg-slate-400 cursor-grab"
+                    ? "cursor-grab"
                     : "bg-card cursor-grab",
                 ].join(" ")}
+                style={isSelected ? { backgroundColor: "hsl(30, 20%, 88%)" } : undefined}
                 onTouchStart={(e) => handleTouchStart(index, e)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={() => handleTouchEnd(index)}
