@@ -143,15 +143,12 @@ export default function CategoryDetail() {
     if (touchStartPos.current) {
       const dx = Math.abs(t.clientX - touchStartPos.current.x);
       const dy = Math.abs(t.clientY - touchStartPos.current.y);
-      if (dx > 5 || dy > 5) {
-        touchMoved.current = true;
-        if (!isDragging.current) {
-          cancelLongPress();
-          return;
-        }
-      }
+      if (dx > 10 || dy > 10) touchMoved.current = true;
     }
-    if (!isDragging.current) return;
+    if (!isDragging.current) {
+      cancelLongPress();
+      return;
+    }
     e.preventDefault();
     setFloatPos({ x: t.clientX, y: t.clientY });
     startAutoScroll(t.clientY);
@@ -167,14 +164,11 @@ export default function CategoryDetail() {
     if (!wasDragging && !touchMoved.current) {
       const now = Date.now();
       const timeSinceLastTap = now - lastTapTime.current;
-
       if (timeSinceLastTap < 300 && lastTapIndex.current === index) {
-        // 더블탭 → 선택/해제
         setSelectedIndex((prev) => (prev === index ? null : index));
         lastTapTime.current = 0;
         lastTapIndex.current = null;
       } else {
-        // 첫 번째 탭 기록
         lastTapTime.current = now;
         lastTapIndex.current = index;
       }
@@ -259,7 +253,6 @@ export default function CategoryDetail() {
 
           return (
             <div key={w.id}>
-              {/* 드롭 위치 표시선 */}
               {isDropTarget && (
                 <div className="h-0.5 bg-sky-400 rounded-full mx-1 mb-1 shadow-sm shadow-sky-400/50" />
               )}
