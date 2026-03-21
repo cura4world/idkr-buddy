@@ -250,7 +250,7 @@ export default function CategoryDetail() {
                   isDraggingThis
                     ? "opacity-20 cursor-grabbing bg-card"
                     : isSelected
-                    ? "bg-slate-600 cursor-grab"
+                    ? "bg-slate-400 cursor-grab"
                     : "bg-card cursor-grab",
                 ].join(" ")}
                 onTouchStart={(e) => handleTouchStart(index, e)}
