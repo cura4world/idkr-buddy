@@ -246,12 +246,12 @@ export default function CategoryDetail() {
                 ref={(el) => { cardRefs.current[index] = el; }}
                 data-word-index={index}
                 className={[
-                  "relative flex items-start gap-3 rounded-lg p-4 border select-none text-card-foreground transition-all duration-150",
+                  "relative flex items-start gap-3 rounded-lg p-4 border border-border/50 select-none text-card-foreground transition-all duration-150",
                   isDraggingThis
-                    ? "opacity-20 border-sky-400/30 cursor-grabbing bg-card"
+                    ? "opacity-20 cursor-grabbing bg-card"
                     : isSelected
-                    ? "bg-card border-sky-400/50 cursor-grab shadow-sm shadow-sky-400/20"
-                    : "bg-card border-border/50 cursor-grab",
+                    ? "bg-slate-600/40 cursor-grab"
+                    : "bg-card cursor-grab",
                 ].join(" ")}
                 onTouchStart={(e) => handleTouchStart(index, e)}
                 onTouchMove={handleTouchMove}
