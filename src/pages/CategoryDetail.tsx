@@ -19,6 +19,7 @@ export default function CategoryDetail() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [floatPos, setFloatPos] = useState<{ x: number; y: number } | null>(null);
   const [floatWidth, setFloatWidth] = useState<number>(300);
+  const floatOffsetY = useRef<number>(0);
 
   const draggingIndexRef = useRef<number | null>(null);
   const dragOverIndexRef = useRef<number | null>(null);
@@ -53,7 +54,12 @@ export default function CategoryDetail() {
     longPressTimer.current = setTimeout(() => {
       isDragging.current = true;
       const cardEl = cardRefs.current[index];
-      if (cardEl) setFloatWidth(cardEl.getBoundingClientRect().width);
+      if (cardEl) {
+        const rect = cardEl.getBoundingClientRect();
+        setFloatWidth(rect.width);
+        // 카드 안에서 클릭한 상대적 Y 위치를 저장
+        floatOffsetY.current = startY - rect.top;
+      }
       setDragging(index);
       setDragOver(index);
       setFloatPos({ x: startX, y: startY });
@@ -237,29 +243,29 @@ export default function CategoryDetail() {
         </div>
       )}
 
-      {/* 떠다니는 단어박스 — 원래 크기 그대로 */}
+      {/* 떠다니는 단어박스 — 클릭한 위치 기준으로 자연스럽게 */}
       {draggingWord && floatPos && (
         <div
-          className="fixed pointer-events-none z-50 flex items-start gap-3 bg-card rounded-lg p-4 border border-sky-400 shadow-lg shadow-sky-400/20 text-card-foreground"
+          className="fixed pointer-events-none z-50 flex items-start gap-3 bg-card rounded-lg p-4 border border-sky-400 shadow-lg shadow-sky-400/20"
           style={{
             width: floatWidth,
             left: floatPos.x - floatWidth / 2,
-            top: floatPos.y - floatWidth * 0.05,
+            top: floatPos.y - floatOffsetY.current,
           }}
         >
           <div className="flex-1 min-w-0">
-            <p className="font-word text-base font-medium truncate text-gray-400">{draggingWord.word}</p>
+            <p className="font-word text-base font-medium truncate text-muted-foreground">{draggingWord.word}</p>
             <p className="text-sm text-muted-foreground font-body">{draggingWord.meaning}</p>
             {draggingWord.example && (
-              <p className="text-xs text-muted-foreground/70 font-word mt-0.5">{draggingWord.example}</p>
+              <p className="text-xs text-muted-foreground font-word mt-0.5">{draggingWord.example}</p>
             )}
             {draggingWord.exampleMeaning && (
-              <p className="text-xs text-muted-foreground/50 font-body mt-0.5">{draggingWord.exampleMeaning}</p>
+              <p className="text-xs text-muted-foreground font-body mt-0.5">{draggingWord.exampleMeaning}</p>
             )}
           </div>
           <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
-            <Settings size={16} className="text-gray-500" />
-            <Volume2 size={16} className="text-gray-500" />
+            <Settings size={16} className="text-muted-foreground" />
+            <Volume2 size={16} className="text-muted-foreground" />
           </div>
         </div>
       )}
