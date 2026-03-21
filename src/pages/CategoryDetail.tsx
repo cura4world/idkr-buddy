@@ -230,12 +230,6 @@ export default function CategoryDetail() {
         </button>
       </div>
 
-      {selectedIndex !== null && (
-        <p className="text-xs text-sky-400 font-body mb-2 text-right">
-          선택된 단어 아래에 추가됩니다
-        </p>
-      )}
-
       <div className="space-y-2">
         {words.map((w, index) => {
           const isDraggingThis = draggingIndex === index;
@@ -256,7 +250,7 @@ export default function CategoryDetail() {
                   isDraggingThis
                     ? "opacity-20 border-sky-400/30 cursor-grabbing bg-card"
                     : isSelected
-                    ? "bg-sky-950 border-sky-400/60 cursor-grab"
+                    ? "bg-card border-sky-400/50 cursor-grab shadow-sm shadow-sky-400/20"
                     : "bg-card border-border/50 cursor-grab",
                 ].join(" ")}
                 onTouchStart={(e) => handleTouchStart(index, e)}
