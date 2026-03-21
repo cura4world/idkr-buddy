@@ -253,7 +253,7 @@ export default function CategoryDetail() {
                     ? "cursor-grab"
                     : "bg-card cursor-grab",
                 ].join(" ")}
-                style={isSelected ? { backgroundColor: "hsl(30, 20%, 88%)" } : undefined}
+                style={isSelected ? { backgroundColor: "hsl(30, 20%, 82%)" } : undefined}
                 onTouchStart={(e) => handleTouchStart(index, e)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={() => handleTouchEnd(index)}
