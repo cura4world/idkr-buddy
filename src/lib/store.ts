@@ -170,7 +170,6 @@ export function removeSavedWord(wordId: string) {
 }
 
 export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imported: number; errors: number } {
-  // RFC 4180 준수 CSV 파서
   function parseCSVLine(line: string): string[] {
     const result: string[] = [];
     let current = "";
@@ -181,7 +180,6 @@ export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imp
       if (inQuotes) {
         if (char === '"') {
           if (line[i + 1] === '"') {
-            // "" → " 이스케이프 처리
             current += '"';
             i += 2;
           } else {
@@ -210,7 +208,6 @@ export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imp
     return result;
   }
 
-  // BOM 문자 제거
   const cleanCsv = csv.replace(/^\uFEFF/, "");
   const lines = cleanCsv.split(/\r?\n/).filter((l) => l.trim());
   let imported = 0;
@@ -245,4 +242,13 @@ export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imp
 
   saveWords(words);
   return { imported, errors };
+}
+
+export function reorderWords(categoryId: string, fromIndex: number, toIndex: number) {
+  const words = getWords();
+  const catWords = words.filter((w) => w.categoryId === categoryId);
+  const otherWords = words.filter((w) => w.categoryId !== categoryId);
+  const [moved] = catWords.splice(fromIndex, 1);
+  catWords.splice(toIndex, 0, moved);
+  saveWords([...otherWords, ...catWords]);
 }
