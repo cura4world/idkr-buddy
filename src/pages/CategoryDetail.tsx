@@ -52,9 +52,8 @@ export default function CategoryDetail() {
   };
 
   const copyToClipboard = async (word: Word) => {
-    const text = `${word.word} : ${word.meaning}${word.example ? `\n예문: ${word.example}` : ""}${word.exampleMeaning ? `\n예문 뜻: ${word.exampleMeaning}` : ""}`;
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(word.word);
       toast("클립보드에 복사됐습니다 📋");
     } catch {
       toast("복사 실패. 다시 시도해주세요.");
