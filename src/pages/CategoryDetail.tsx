@@ -18,6 +18,7 @@ export default function CategoryDetail() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [swipingIndex, setSwipingIndex] = useState<number | null>(null);
   const [swipeX, setSwipeX] = useState(0);
+  const swipeXRef = useRef(0); // stale closure 방지용
 
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -29,19 +30,18 @@ export default function CategoryDetail() {
   const dragOverIndexRef = useRef<number | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDragging = useRef(false);
+  const isSwipe = useRef(false);
+  const touchIntent = useRef<"none" | "swipe" | "drag" | "scroll">("none");
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const autoScrollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   const touchMoved = useRef(false);
+  const swipeIndexRef = useRef<number | null>(null);
 
   const lastTapTime = useRef<number>(0);
   const lastTapIndex = useRef<number | null>(null);
 
-  // 스와이프 관련
-  const swipeStartX = useRef<number>(0);
-  const swipeStartY = useRef<number>(0);
-  const isSwipeMode = useRef(false);
-  const SWIPE_THRESHOLD = 80; // 오른쪽으로 80px 이상 → 복사
+  const SWIPE_THRESHOLD = 80;
 
   const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -131,39 +131,52 @@ export default function CategoryDetail() {
     isDragging.current = false;
   };
 
-  // ── document 레벨 네이티브 터치무브 ──
+  // ── document 레벨 네이티브 터치무브 (passive:false) ──
   useEffect(() => {
     const onTouchMove = (e: TouchEvent) => {
       const t = e.touches[0];
+      if (!touchStartPos.current) return;
 
-      if (touchStartPos.current) {
-        const dx = Math.abs(t.clientX - touchStartPos.current.x);
-        const dy = Math.abs(t.clientY - touchStartPos.current.y);
-        if (dx > 10 || dy > 10) touchMoved.current = true;
-      }
+      const dx = t.clientX - touchStartPos.current.x;
+      const dy = t.clientY - touchStartPos.current.y;
+      const adx = Math.abs(dx);
+      const ady = Math.abs(dy);
 
-      // 스와이프 모드 처리
-      if (isSwipeMode.current) {
-        const dx = t.clientX - swipeStartX.current;
-        const dy = Math.abs(t.clientY - swipeStartY.current);
-        if (dy < 40 && dx > 0) {
-          // 오른쪽 스와이프 → 카드 시각적 이동
-          setSwipeX(Math.min(dx, SWIPE_THRESHOLD + 20));
-          e.preventDefault();
+      // 의도 결정
+      if (touchIntent.current === "none") {
+        if (adx > 12 || ady > 12) {
+          if (dx > 0 && adx > ady * 1.5) {
+            touchIntent.current = "swipe";
+            isSwipe.current = true;
+            cancelLongPress();
+            setSwipingIndex(swipeIndexRef.current);
+          } else if (ady > adx) {
+            touchIntent.current = "scroll";
+            cancelLongPress();
+          } else {
+            touchIntent.current = "drag";
+          }
         }
+        touchMoved.current = adx > 10 || ady > 10;
+      }
+
+      // 스와이프 처리
+      if (touchIntent.current === "swipe") {
+        e.preventDefault();
+        const clampedX = Math.max(0, Math.min(dx, SWIPE_THRESHOLD + 30));
+        swipeXRef.current = clampedX; // ref 동기 업데이트
+        setSwipeX(clampedX);          // state는 렌더링용
         return;
       }
 
-      if (!isDragging.current) {
-        cancelLongPress();
-        return;
+      // 드래그 처리
+      if (isDragging.current) {
+        e.preventDefault();
+        setFloatPos({ x: t.clientX, y: t.clientY });
+        startAutoScroll(t.clientY);
+        const over = getOverIndex(t.clientX, t.clientY);
+        if (over >= 0) setDragOver(over);
       }
-
-      e.preventDefault();
-      setFloatPos({ x: t.clientX, y: t.clientY });
-      startAutoScroll(t.clientY);
-      const over = getOverIndex(t.clientX, t.clientY);
-      if (over >= 0) setDragOver(over);
     };
 
     document.addEventListener("touchmove", onTouchMove, { passive: false });
@@ -176,14 +189,15 @@ export default function CategoryDetail() {
     touchStartPos.current = { x: t.clientX, y: t.clientY };
     touchMoved.current = false;
     isDragging.current = false;
-    isSwipeMode.current = false;
-    swipeStartX.current = t.clientX;
-    swipeStartY.current = t.clientY;
+    isSwipe.current = false;
+    touchIntent.current = "none";
+    swipeIndexRef.current = index;
+    swipeXRef.current = 0;
 
     longPressTimer.current = setTimeout(() => {
-      // 스와이프 중이면 드래그 시작 안 함
-      if (isSwipeMode.current) return;
+      if (isSwipe.current || touchIntent.current === "swipe" || touchIntent.current === "scroll") return;
       isDragging.current = true;
+      touchIntent.current = "drag";
       const cardEl = cardRefs.current[index];
       if (cardEl) {
         const rect = cardEl.getBoundingClientRect();
@@ -199,22 +213,24 @@ export default function CategoryDetail() {
 
   const handleTouchEnd = (index: number, word: Word) => {
     const wasDragging = isDragging.current;
-    const wasSwipe = isSwipeMode.current;
-    const finalSwipeX = swipeX;
+    const wasSwipe = touchIntent.current === "swipe";
 
-    // 스와이프 완료 처리
     if (wasSwipe) {
-      if (finalSwipeX >= SWIPE_THRESHOLD) {
+      // ref로 최신 swipeX 읽기 (stale closure 방지)
+      if (swipeXRef.current >= SWIPE_THRESHOLD) {
         copyToClipboard(word);
       }
       setSwipingIndex(null);
       setSwipeX(0);
-      isSwipeMode.current = false;
+      swipeXRef.current = 0;
+      isSwipe.current = false;
+      touchIntent.current = "none";
       cancelLongPress();
       return;
     }
 
     handleEnd();
+    touchIntent.current = "none";
 
     if (!wasDragging && !touchMoved.current) {
       const now = Date.now();
@@ -228,30 +244,6 @@ export default function CategoryDetail() {
         lastTapIndex.current = index;
       }
     }
-  };
-
-  // 스와이프 감지: touchstart 후 빠른 오른쪽 이동 감지
-  const handleTouchStartSwipe = (index: number, e: React.TouchEvent) => {
-    const t = e.touches[0];
-    // 오른쪽 방향 초기 움직임 감지를 위해 swipingIndex 설정
-    const checkSwipe = (ev: TouchEvent) => {
-      const dx = ev.touches[0].clientX - t.clientX;
-      const dy = Math.abs(ev.touches[0].clientY - t.clientY);
-      if (dx > 15 && dy < 30) {
-        isSwipeMode.current = true;
-        setSwipingIndex(index);
-        cancelLongPress();
-        document.removeEventListener("touchmove", checkSwipe);
-      } else if (Math.abs(dx) > 10 || dy > 10) {
-        document.removeEventListener("touchmove", checkSwipe);
-      }
-    };
-    document.addEventListener("touchmove", checkSwipe, { passive: true });
-    const cleanup = () => {
-      document.removeEventListener("touchmove", checkSwipe);
-      document.removeEventListener("touchend", cleanup);
-    };
-    document.addEventListener("touchend", cleanup, { once: true });
   };
 
   // ── 마우스 이벤트 (웹) ──
@@ -344,14 +336,16 @@ export default function CategoryDetail() {
           const isSelected = selectedIndex === index;
           const isSwiping = swipingIndex === index;
           const currentSwipeX = isSwiping ? swipeX : 0;
-          const showCopyHint = isSwiping && currentSwipeX >= SWIPE_THRESHOLD;
+          const showCopyConfirm = isSwiping && currentSwipeX >= SWIPE_THRESHOLD;
 
           return (
             <div key={w.id} className="relative overflow-hidden rounded-lg">
-              {/* 스와이프 배경 (복사 힌트) */}
-              <div className={`absolute inset-0 flex items-center px-4 rounded-lg transition-colors ${showCopyHint ? "bg-sky-500" : "bg-sky-400/60"}`}>
+              {/* 스와이프 배경 */}
+              <div className={`absolute inset-0 flex items-center px-5 rounded-lg transition-colors duration-100 ${showCopyConfirm ? "bg-sky-500" : "bg-sky-400/70"}`}>
                 <Copy size={18} className="text-white" />
-                <span className="text-white text-sm font-body ml-2">복사</span>
+                <span className="text-white text-sm font-body ml-2">
+                  {showCopyConfirm ? "복사!" : "복사"}
+                </span>
               </div>
 
               {isDropTarget && (
@@ -361,7 +355,7 @@ export default function CategoryDetail() {
                 ref={(el) => { cardRefs.current[index] = el; }}
                 data-word-index={index}
                 className={[
-                  "relative flex items-start gap-3 rounded-lg p-4 border border-border/50 select-none text-card-foreground transition-colors duration-150",
+                  "relative flex items-start gap-3 rounded-lg p-4 border border-border/50 select-none text-card-foreground",
                   isDraggingThis
                     ? "opacity-20 cursor-grabbing bg-card"
                     : "bg-card cursor-grab",
@@ -369,12 +363,9 @@ export default function CategoryDetail() {
                 style={{
                   ...(isSelected ? { backgroundColor: "hsl(30, 20%, 88%)" } : {}),
                   transform: `translateX(${currentSwipeX}px)`,
-                  transition: isSwiping ? "none" : "transform 0.2s ease",
+                  transition: isSwiping ? "none" : "transform 0.25s ease",
                 }}
-                onTouchStart={(e) => {
-                  handleTouchStart(index, e);
-                  handleTouchStartSwipe(index, e);
-                }}
+                onTouchStart={(e) => handleTouchStart(index, e)}
                 onTouchEnd={() => handleTouchEnd(index, w)}
                 onMouseDown={(e) => handleMouseDown(index, e)}
                 onClick={() => handleMouseClick(index)}
