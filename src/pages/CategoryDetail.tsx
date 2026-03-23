@@ -4,7 +4,8 @@ import { getCategories, getWordsByCategory, Word, reorderWords } from "@/lib/sto
 import AddWordDialog from "@/components/AddWordDialog";
 import EditWordDialog from "@/components/EditWordDialog";
 import CSVImportDialog from "@/components/CSVImportDialog";
-import { ArrowLeft, Volume2, Settings } from "lucide-react";
+import { ArrowLeft, Volume2, Settings, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 export default function CategoryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +16,8 @@ export default function CategoryDetail() {
   const [csvOpen, setCsvOpen] = useState(false);
   const [editWord, setEditWord] = useState<Word | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [swipingIndex, setSwipingIndex] = useState<number | null>(null);
+  const [swipeX, setSwipeX] = useState(0);
 
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -34,12 +37,28 @@ export default function CategoryDetail() {
   const lastTapTime = useRef<number>(0);
   const lastTapIndex = useRef<number | null>(null);
 
+  // 스와이프 관련
+  const swipeStartX = useRef<number>(0);
+  const swipeStartY = useRef<number>(0);
+  const isSwipeMode = useRef(false);
+  const SWIPE_THRESHOLD = 80; // 오른쪽으로 80px 이상 → 복사
+
   const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "id-ID";
     utterance.rate = 0.9;
     speechSynthesis.cancel();
-    speechSynthesis.speak(utterance);
+    setTimeout(() => speechSynthesis.speak(utterance), 150);
+  };
+
+  const copyToClipboard = async (word: Word) => {
+    const text = `${word.word} : ${word.meaning}${word.example ? `\n예문: ${word.example}` : ""}${word.exampleMeaning ? `\n예문 뜻: ${word.exampleMeaning}` : ""}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast("클립보드에 복사됐습니다 📋");
+    } catch {
+      toast("복사 실패. 다시 시도해주세요.");
+    }
   };
 
   const categories = getCategories();
@@ -112,7 +131,7 @@ export default function CategoryDetail() {
     isDragging.current = false;
   };
 
-  // ── document 레벨 네이티브 터치무브 (passive:false 로 스크롤 완전 차단) ──
+  // ── document 레벨 네이티브 터치무브 ──
   useEffect(() => {
     const onTouchMove = (e: TouchEvent) => {
       const t = e.touches[0];
@@ -123,13 +142,23 @@ export default function CategoryDetail() {
         if (dx > 10 || dy > 10) touchMoved.current = true;
       }
 
+      // 스와이프 모드 처리
+      if (isSwipeMode.current) {
+        const dx = t.clientX - swipeStartX.current;
+        const dy = Math.abs(t.clientY - swipeStartY.current);
+        if (dy < 40 && dx > 0) {
+          // 오른쪽 스와이프 → 카드 시각적 이동
+          setSwipeX(Math.min(dx, SWIPE_THRESHOLD + 20));
+          e.preventDefault();
+        }
+        return;
+      }
+
       if (!isDragging.current) {
-        // 드래그 시작 전 움직임 → 롱프레스 취소, 스크롤 허용
         cancelLongPress();
         return;
       }
 
-      // 드래그 중 → 스크롤 완전 차단
       e.preventDefault();
       setFloatPos({ x: t.clientX, y: t.clientY });
       startAutoScroll(t.clientY);
@@ -138,9 +167,7 @@ export default function CategoryDetail() {
     };
 
     document.addEventListener("touchmove", onTouchMove, { passive: false });
-    return () => {
-      document.removeEventListener("touchmove", onTouchMove);
-    };
+    return () => document.removeEventListener("touchmove", onTouchMove);
   }, []);
 
   // ── 터치 이벤트 ──
@@ -149,8 +176,13 @@ export default function CategoryDetail() {
     touchStartPos.current = { x: t.clientX, y: t.clientY };
     touchMoved.current = false;
     isDragging.current = false;
+    isSwipeMode.current = false;
+    swipeStartX.current = t.clientX;
+    swipeStartY.current = t.clientY;
 
     longPressTimer.current = setTimeout(() => {
+      // 스와이프 중이면 드래그 시작 안 함
+      if (isSwipeMode.current) return;
       isDragging.current = true;
       const cardEl = cardRefs.current[index];
       if (cardEl) {
@@ -165,8 +197,23 @@ export default function CategoryDetail() {
     }, 500);
   };
 
-  const handleTouchEnd = (index: number) => {
+  const handleTouchEnd = (index: number, word: Word) => {
     const wasDragging = isDragging.current;
+    const wasSwipe = isSwipeMode.current;
+    const finalSwipeX = swipeX;
+
+    // 스와이프 완료 처리
+    if (wasSwipe) {
+      if (finalSwipeX >= SWIPE_THRESHOLD) {
+        copyToClipboard(word);
+      }
+      setSwipingIndex(null);
+      setSwipeX(0);
+      isSwipeMode.current = false;
+      cancelLongPress();
+      return;
+    }
+
     handleEnd();
 
     if (!wasDragging && !touchMoved.current) {
@@ -181,6 +228,30 @@ export default function CategoryDetail() {
         lastTapIndex.current = index;
       }
     }
+  };
+
+  // 스와이프 감지: touchstart 후 빠른 오른쪽 이동 감지
+  const handleTouchStartSwipe = (index: number, e: React.TouchEvent) => {
+    const t = e.touches[0];
+    // 오른쪽 방향 초기 움직임 감지를 위해 swipingIndex 설정
+    const checkSwipe = (ev: TouchEvent) => {
+      const dx = ev.touches[0].clientX - t.clientX;
+      const dy = Math.abs(ev.touches[0].clientY - t.clientY);
+      if (dx > 15 && dy < 30) {
+        isSwipeMode.current = true;
+        setSwipingIndex(index);
+        cancelLongPress();
+        document.removeEventListener("touchmove", checkSwipe);
+      } else if (Math.abs(dx) > 10 || dy > 10) {
+        document.removeEventListener("touchmove", checkSwipe);
+      }
+    };
+    document.addEventListener("touchmove", checkSwipe, { passive: true });
+    const cleanup = () => {
+      document.removeEventListener("touchmove", checkSwipe);
+      document.removeEventListener("touchend", cleanup);
+    };
+    document.addEventListener("touchend", cleanup, { once: true });
   };
 
   // ── 마우스 이벤트 (웹) ──
@@ -271,9 +342,18 @@ export default function CategoryDetail() {
           const isDraggingThis = draggingIndex === index;
           const isDropTarget = dragOverIndex === index && draggingIndex !== index;
           const isSelected = selectedIndex === index;
+          const isSwiping = swipingIndex === index;
+          const currentSwipeX = isSwiping ? swipeX : 0;
+          const showCopyHint = isSwiping && currentSwipeX >= SWIPE_THRESHOLD;
 
           return (
-            <div key={w.id}>
+            <div key={w.id} className="relative overflow-hidden rounded-lg">
+              {/* 스와이프 배경 (복사 힌트) */}
+              <div className={`absolute inset-0 flex items-center px-4 rounded-lg transition-colors ${showCopyHint ? "bg-sky-500" : "bg-sky-400/60"}`}>
+                <Copy size={18} className="text-white" />
+                <span className="text-white text-sm font-body ml-2">복사</span>
+              </div>
+
               {isDropTarget && (
                 <div className="h-0.5 bg-sky-400 rounded-full mx-1 mb-1 shadow-sm shadow-sky-400/50" />
               )}
@@ -281,14 +361,21 @@ export default function CategoryDetail() {
                 ref={(el) => { cardRefs.current[index] = el; }}
                 data-word-index={index}
                 className={[
-                  "relative flex items-start gap-3 rounded-lg p-4 border border-border/50 select-none text-card-foreground transition-all duration-150",
+                  "relative flex items-start gap-3 rounded-lg p-4 border border-border/50 select-none text-card-foreground transition-colors duration-150",
                   isDraggingThis
                     ? "opacity-20 cursor-grabbing bg-card"
                     : "bg-card cursor-grab",
                 ].join(" ")}
-                style={isSelected ? { backgroundColor: "hsl(30, 20%, 88%)" } : undefined}
-                onTouchStart={(e) => handleTouchStart(index, e)}
-                onTouchEnd={() => handleTouchEnd(index)}
+                style={{
+                  ...(isSelected ? { backgroundColor: "hsl(30, 20%, 88%)" } : {}),
+                  transform: `translateX(${currentSwipeX}px)`,
+                  transition: isSwiping ? "none" : "transform 0.2s ease",
+                }}
+                onTouchStart={(e) => {
+                  handleTouchStart(index, e);
+                  handleTouchStartSwipe(index, e);
+                }}
+                onTouchEnd={() => handleTouchEnd(index, w)}
                 onMouseDown={(e) => handleMouseDown(index, e)}
                 onClick={() => handleMouseClick(index)}
                 onContextMenu={(e) => e.preventDefault()}
