@@ -82,7 +82,10 @@ export default function StudyMode() {
       utterance.rate = 0.9;
       utterance.onend = () => resolve();
       speechSynthesis.cancel();
-      speechSynthesis.speak(utterance);
+      // cancel 후 150ms 딜레이 → 앞부분 잘림 방지
+      setTimeout(() => {
+        speechSynthesis.speak(utterance);
+      }, 150);
     });
   };
 
