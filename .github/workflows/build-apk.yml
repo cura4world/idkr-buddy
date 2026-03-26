@@ -15,19 +15,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -35,75 +27,117 @@ jobs:
       - name: Install Android Build Tools
         run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
 
-      - name: Generate keystore
+      - name: Clone Bubblewrap TWA template
         run: |
+          git clone https://github.com/GoogleChromeLabs/svgomg-twa.git twa-project
+
+      - name: Configure TWA app
+        run: |
+          cd twa-project
+          # app/build.gradle 수정
+          cat > app/build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+          android {
+              compileSdk 34
+              defaultConfig {
+                  applicationId "io.github.cura4world.twa"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0.0"
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      signingConfig signingConfigs.debug
+                  }
+              }
+              signingConfigs {
+                  debug {
+                      storeFile file("debug.keystore")
+                      storePassword "android"
+                      keyAlias "androiddebugkey"
+                      keyPassword "android"
+                  }
+              }
+              namespace "io.github.cura4world.twa"
+          }
+          dependencies {
+              implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+          }
+          EOF
+
+          # strings.xml 수정
+          mkdir -p app/src/main/res/values
+          cat > app/src/main/res/values/strings.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">Kata kata</string>
+              <string name="asset_statements">[{ \"relation\": [\"delegate_permission/common.handle_all_urls\"], \"target\": { \"namespace\": \"web\", \"site\": \"https://cura4world.github.io\" }}]</string>
+          </resources>
+          EOF
+
+          # AndroidManifest.xml 수정
+          mkdir -p app/src/main
+          cat > app/src/main/AndroidManifest.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <application
+                  android:allowBackup="true"
+                  android:label="@string/app_name"
+                  android:supportsRtl="true"
+                  android:theme="@style/Theme.AppCompat.NoActionBar">
+                  <activity
+                      android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+                      android:exported="true">
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.DEFAULT_URL"
+                          android:value="https://cura4world.github.io/idkr-buddy/" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
+                          android:value="#003d5c" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
+                          android:value="#003d5c" />
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW"/>
+                          <category android:name="android.intent.category.DEFAULT"/>
+                          <category android:name="android.intent.category.BROWSABLE"/>
+                          <data android:scheme="https" android:host="cura4world.github.io" android:pathPrefix="/idkr-buddy/"/>
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+      - name: Generate debug keystore
+        run: |
+          cd twa-project
           keytool -genkey -v \
-            -keystore keystore.jks \
-            -alias upload \
+            -keystore app/debug.keystore \
+            -alias androiddebugkey \
             -keyalg RSA \
             -keysize 2048 \
             -validity 10000 \
             -storepass android \
             -keypass android \
-            -dname "CN=Kata kata, OU=App, O=cura4world, L=Seoul, S=Seoul, C=KR"
-
-      - name: Create twa-manifest.json
-        run: |
-          cat > twa-manifest.json << 'EOF'
-          {
-            "packageId": "io.github.cura4world.twa",
-            "host": "cura4world.github.io",
-            "name": "Kata kata",
-            "launcherName": "Kata kata",
-            "display": "standalone",
-            "themeColor": "#003d5c",
-            "navigationColor": "#003d5c",
-            "navigationColorDark": "#003d5c",
-            "navigationDividerColor": "#003d5c",
-            "navigationDividerColorDark": "#003d5c",
-            "backgroundColor": "#003d5c",
-            "enableNotifications": false,
-            "startUrl": "/idkr-buddy/",
-            "iconUrl": "https://cura4world.github.io/idkr-buddy/icon-512x512.png",
-            "maskableIconUrl": "https://cura4world.github.io/idkr-buddy/icon-512x512.png",
-            "monochromeIconUrl": "https://cura4world.github.io/idkr-buddy/icon-512x512.png",
-            "appVersion": "1.0.0",
-            "appVersionCode": 1,
-            "signingKey": {
-              "path": "../keystore.jks",
-              "alias": "upload"
-            },
-            "splashScreenFadeOutDuration": 300,
-            "enableSiteSettingsShortcut": true,
-            "isChromeOSOnly": false,
-            "isMetaQuest": false,
-            "fullScopeUrl": "https://cura4world.github.io/idkr-buddy/",
-            "minSdkVersion": 21,
-            "orientation": "default",
-            "shortcuts": [],
-            "generatorApp": "bubblewrap-cli",
-            "webManifestUrl": "https://cura4world.github.io/idkr-buddy/manifest.json",
-            "fallbackType": "customtabs",
-            "features": {},
-            "alphaDependencies": { "enabled": false },
-            "enableSideNavigation": false,
-            "fingerprints": [],
-            "serviceAccountJsonFile": ""
-          }
-          EOF
+            -dname "CN=Android Debug, O=Android, C=US"
 
       - name: Build APK
         run: |
-          mkdir apk-build
-          cp twa-manifest.json apk-build/
-          cd apk-build
-          bubblewrap build \
-            --skipPwaValidation \
-            --signingKeyPassword android \
-            --signingKeyStorePassword android
+          cd twa-project
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: kata-kata-apk
-          path: apk-build/app-release-signed.apk
+          path: twa-project/app/build/outputs/apk/release/app-release-unsigned.apk
