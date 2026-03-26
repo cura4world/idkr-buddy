@@ -44,6 +44,12 @@ jobs:
           mkdir -p twa/app/src/main/res/values
           mkdir -p twa/gradle/wrapper
 
+          cat > twa/gradle.properties << 'EOF'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m
+          EOF
+
           cat > twa/settings.gradle << 'EOF'
           pluginManagement {
               repositories {
@@ -173,13 +179,9 @@ jobs:
           cd twa
           ./gradlew assembleRelease --no-daemon
 
-      - name: Find APK files
-        if: always()
-        run: find twa -name "*.apk" -o -name "*.aab" 2>/dev/null
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: kata-kata-apk
           path: twa/app/build/outputs/apk/**/*.apk
-          if-no-files-found: warn
+          if-no-files-found: error
