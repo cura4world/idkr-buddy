@@ -42,10 +42,8 @@ jobs:
       - name: Create Android TWA project
         run: |
           mkdir -p twa/app/src/main/res/values
-          mkdir -p twa/app/src/main/res/mipmap-hdpi
           mkdir -p twa/gradle/wrapper
 
-          # settings.gradle
           cat > twa/settings.gradle << 'EOF'
           pluginManagement {
               repositories {
@@ -65,14 +63,12 @@ jobs:
           include ':app'
           EOF
 
-          # build.gradle (root)
           cat > twa/build.gradle << 'EOF'
           plugins {
               id 'com.android.application' version '8.2.2' apply false
           }
           EOF
 
-          # app/build.gradle
           cat > twa/app/build.gradle << 'EOF'
           plugins {
               id 'com.android.application'
@@ -111,7 +107,6 @@ jobs:
           }
           EOF
 
-          # gradle wrapper properties
           cat > twa/gradle/wrapper/gradle-wrapper.properties << 'EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
@@ -120,15 +115,12 @@ jobs:
           zipStorePath=wrapper/dists
           EOF
 
-          # gradlew 스크립트
           curl -s https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradlew -o twa/gradlew
           chmod +x twa/gradlew
 
-          # gradle-wrapper.jar
-          curl -sL https://github.com/gradle/gradle/raw/v8.2.0/gradle/wrapper/gradle-wrapper.jar \
+          curl -sL "https://github.com/gradle/gradle/raw/v8.2.0/gradle/wrapper/gradle-wrapper.jar" \
             -o twa/gradle/wrapper/gradle-wrapper.jar
 
-          # AndroidManifest.xml
           cat > twa/app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -167,7 +159,6 @@ jobs:
           </manifest>
           EOF
 
-          # strings.xml
           cat > twa/app/src/main/res/values/strings.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
@@ -179,7 +170,22 @@ jobs:
       - name: Build APK
         run: |
           cd twa
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleRelease --no-daemon --info 2>&1 | tee ../build-log.txt
+          echo "EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_ENV
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build-log.txt
+
+      - name: Check build result
+        run: |
+          if [ "${EXIT_CODE}" != "0" ]; then
+            echo "=== ERRORS ===" && grep -i "error\|exception\|failed\|caused by" build-log.txt | head -50
+            exit 1
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
