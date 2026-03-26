@@ -1,11 +1,11 @@
 name: Build Android APK
 
 on:
-  workflow_dispatch:  # 수동 실행 버튼
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - 'public/manifest.json'  # manifest 바뀔 때만 자동 실행
+      - 'public/manifest.json'
 
 jobs:
   build:
@@ -33,19 +33,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install Android Build Tools
-        run: |
-          sdkmanager "build-tools;34.0.0" "platforms;android-34"
-
-      - name: Init Bubblewrap project
-        run: |
-          mkdir apk-build && cd apk-build
-          bubblewrap init \
-            --manifest "https://cura4world.github.io/idkr-buddy/manifest.json" \
-            --directory . \
-            --packageId "io.github.cura4world.twa" \
-            --name "Kata kata" \
-            --signingKeyPath "../keystore.jks" \
-            --signingKeyAlias "upload"
+        run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
 
       - name: Generate keystore
         run: |
@@ -59,22 +47,63 @@ jobs:
             -keypass android \
             -dname "CN=Kata kata, OU=App, O=cura4world, L=Seoul, S=Seoul, C=KR"
 
+      - name: Create twa-manifest.json
+        run: |
+          cat > twa-manifest.json << 'EOF'
+          {
+            "packageId": "io.github.cura4world.twa",
+            "host": "cura4world.github.io",
+            "name": "Kata kata",
+            "launcherName": "Kata kata",
+            "display": "standalone",
+            "themeColor": "#003d5c",
+            "navigationColor": "#003d5c",
+            "navigationColorDark": "#003d5c",
+            "navigationDividerColor": "#003d5c",
+            "navigationDividerColorDark": "#003d5c",
+            "backgroundColor": "#003d5c",
+            "enableNotifications": false,
+            "startUrl": "/idkr-buddy/",
+            "iconUrl": "https://cura4world.github.io/idkr-buddy/icon-512x512.png",
+            "maskableIconUrl": "https://cura4world.github.io/idkr-buddy/icon-512x512.png",
+            "monochromeIconUrl": "https://cura4world.github.io/idkr-buddy/icon-512x512.png",
+            "appVersion": "1.0.0",
+            "appVersionCode": 1,
+            "signingKey": {
+              "path": "../keystore.jks",
+              "alias": "upload"
+            },
+            "splashScreenFadeOutDuration": 300,
+            "enableSiteSettingsShortcut": true,
+            "isChromeOSOnly": false,
+            "isMetaQuest": false,
+            "fullScopeUrl": "https://cura4world.github.io/idkr-buddy/",
+            "minSdkVersion": 21,
+            "orientation": "default",
+            "shortcuts": [],
+            "generatorApp": "bubblewrap-cli",
+            "webManifestUrl": "https://cura4world.github.io/idkr-buddy/manifest.json",
+            "fallbackType": "customtabs",
+            "features": {},
+            "alphaDependencies": { "enabled": false },
+            "enableSideNavigation": false,
+            "fingerprints": [],
+            "serviceAccountJsonFile": ""
+          }
+          EOF
+
       - name: Build APK
-        working-directory: apk-build
-        run: bubblewrap build --skipPwaValidation
+        run: |
+          mkdir apk-build
+          cp twa-manifest.json apk-build/
+          cd apk-build
+          bubblewrap build \
+            --skipPwaValidation \
+            --signingKeyPassword android \
+            --signingKeyStorePassword android
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: kata-kata-apk
           path: apk-build/app-release-signed.apk
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: apk-${{ github.run_number }}
-          name: Kata kata APK (build ${{ github.run_number }})
-          files: apk-build/app-release-signed.apk
-          body: "자동 빌드된 APK입니다."
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
