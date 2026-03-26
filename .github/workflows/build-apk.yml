@@ -38,6 +38,12 @@ jobs:
             -storepass android \
             -keypass android \
             -dname "CN=Android Debug, O=Android, C=US"
+          echo "=== SHA-256 Fingerprint ==="
+          keytool -list -v \
+            -keystore keystore.jks \
+            -alias androiddebugkey \
+            -storepass android \
+            | grep "SHA256:"
 
       - name: Create Android TWA project
         run: |
