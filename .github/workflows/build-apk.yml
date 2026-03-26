@@ -1,0 +1,80 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:  # 수동 실행 버튼
+  push:
+    branches: [main]
+    paths:
+      - 'public/manifest.json'  # manifest 바뀔 때만 자동 실행
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android Build Tools
+        run: |
+          sdkmanager "build-tools;34.0.0" "platforms;android-34"
+
+      - name: Init Bubblewrap project
+        run: |
+          mkdir apk-build && cd apk-build
+          bubblewrap init \
+            --manifest "https://cura4world.github.io/idkr-buddy/manifest.json" \
+            --directory . \
+            --packageId "io.github.cura4world.twa" \
+            --name "Kata kata" \
+            --signingKeyPath "../keystore.jks" \
+            --signingKeyAlias "upload"
+
+      - name: Generate keystore
+        run: |
+          keytool -genkey -v \
+            -keystore keystore.jks \
+            -alias upload \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "CN=Kata kata, OU=App, O=cura4world, L=Seoul, S=Seoul, C=KR"
+
+      - name: Build APK
+        working-directory: apk-build
+        run: bubblewrap build --skipPwaValidation
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kata-kata-apk
+          path: apk-build/app-release-signed.apk
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: Kata kata APK (build ${{ github.run_number }})
+          files: apk-build/app-release-signed.apk
+          body: "자동 빌드된 APK입니다."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
