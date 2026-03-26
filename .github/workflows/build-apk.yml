@@ -27,68 +27,115 @@ jobs:
       - name: Install Android Build Tools
         run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
 
-      - name: Clone Bubblewrap TWA template
+      - name: Generate keystore
         run: |
-          git clone https://github.com/GoogleChromeLabs/svgomg-twa.git twa-project
+          keytool -genkey -v \
+            -keystore keystore.jks \
+            -alias androiddebugkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "CN=Android Debug, O=Android, C=US"
 
-      - name: Configure TWA app
+      - name: Create Android TWA project
         run: |
-          cd twa-project
-          # app/build.gradle 수정
-          cat > app/build.gradle << 'EOF'
+          mkdir -p twa/app/src/main/res/values
+          mkdir -p twa/app/src/main/res/mipmap-hdpi
+          mkdir -p twa/gradle/wrapper
+
+          # settings.gradle
+          cat > twa/settings.gradle << 'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "KataKata"
+          include ':app'
+          EOF
+
+          # build.gradle (root)
+          cat > twa/build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application' version '8.2.2' apply false
+          }
+          EOF
+
+          # app/build.gradle
+          cat > twa/app/build.gradle << 'EOF'
           plugins {
               id 'com.android.application'
           }
           android {
+              namespace 'io.github.cura4world.twa'
               compileSdk 34
               defaultConfig {
-                  applicationId "io.github.cura4world.twa"
+                  applicationId 'io.github.cura4world.twa'
                   minSdk 21
                   targetSdk 34
                   versionCode 1
-                  versionName "1.0.0"
+                  versionName '1.0.0'
+              }
+              signingConfigs {
+                  release {
+                      storeFile file('../../keystore.jks')
+                      storePassword 'android'
+                      keyAlias 'androiddebugkey'
+                      keyPassword 'android'
+                  }
               }
               buildTypes {
                   release {
                       minifyEnabled false
-                      signingConfig signingConfigs.debug
+                      signingConfig signingConfigs.release
                   }
               }
-              signingConfigs {
-                  debug {
-                      storeFile file("debug.keystore")
-                      storePassword "android"
-                      keyAlias "androiddebugkey"
-                      keyPassword "android"
-                  }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
               }
-              namespace "io.github.cura4world.twa"
           }
           dependencies {
               implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
           }
           EOF
 
-          # strings.xml 수정
-          mkdir -p app/src/main/res/values
-          cat > app/src/main/res/values/strings.xml << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <string name="app_name">Kata kata</string>
-              <string name="asset_statements">[{ \"relation\": [\"delegate_permission/common.handle_all_urls\"], \"target\": { \"namespace\": \"web\", \"site\": \"https://cura4world.github.io\" }}]</string>
-          </resources>
+          # gradle wrapper properties
+          cat > twa/gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.2-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
           EOF
 
-          # AndroidManifest.xml 수정
-          mkdir -p app/src/main
-          cat > app/src/main/AndroidManifest.xml << 'EOF'
+          # gradlew 스크립트
+          curl -s https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradlew -o twa/gradlew
+          chmod +x twa/gradlew
+
+          # gradle-wrapper.jar
+          curl -sL https://github.com/gradle/gradle/raw/v8.2.0/gradle/wrapper/gradle-wrapper.jar \
+            -o twa/gradle/wrapper/gradle-wrapper.jar
+
+          # AndroidManifest.xml
+          cat > twa/app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
               <application
                   android:allowBackup="true"
                   android:label="@string/app_name"
-                  android:supportsRtl="true"
                   android:theme="@style/Theme.AppCompat.NoActionBar">
                   <activity
                       android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
@@ -107,37 +154,35 @@ jobs:
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
                       <intent-filter android:autoVerify="true">
-                          <action android:name="android.intent.action.VIEW"/>
-                          <category android:name="android.intent.category.DEFAULT"/>
-                          <category android:name="android.intent.category.BROWSABLE"/>
-                          <data android:scheme="https" android:host="cura4world.github.io" android:pathPrefix="/idkr-buddy/"/>
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data
+                              android:scheme="https"
+                              android:host="cura4world.github.io"
+                              android:pathPrefix="/idkr-buddy/" />
                       </intent-filter>
                   </activity>
               </application>
           </manifest>
           EOF
 
-      - name: Generate debug keystore
-        run: |
-          cd twa-project
-          keytool -genkey -v \
-            -keystore app/debug.keystore \
-            -alias androiddebugkey \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass android \
-            -keypass android \
-            -dname "CN=Android Debug, O=Android, C=US"
+          # strings.xml
+          cat > twa/app/src/main/res/values/strings.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">Kata kata</string>
+              <string name="asset_statements">[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"web","site":"https://cura4world.github.io"}}]</string>
+          </resources>
+          EOF
 
       - name: Build APK
         run: |
-          cd twa-project
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          cd twa
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: kata-kata-apk
-          path: twa-project/app/build/outputs/apk/release/app-release-unsigned.apk
+          path: twa/app/build/outputs/apk/release/app-release.apk
