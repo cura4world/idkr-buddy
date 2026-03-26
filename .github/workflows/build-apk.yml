@@ -38,12 +38,18 @@ jobs:
             -storepass android \
             -keypass android \
             -dname "CN=Android Debug, O=Android, C=US"
-          echo "=== SHA-256 Fingerprint ==="
           keytool -list -v \
             -keystore keystore.jks \
             -alias androiddebugkey \
             -storepass android \
-            | grep "SHA256:"
+            | grep "SHA256:" > sha256.txt
+          echo "=== SHA256 ===" && cat sha256.txt
+
+      - name: Upload SHA256
+        uses: actions/upload-artifact@v4
+        with:
+          name: keystore-sha256
+          path: sha256.txt
 
       - name: Create Android TWA project
         run: |
