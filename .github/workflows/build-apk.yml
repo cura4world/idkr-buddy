@@ -115,7 +115,8 @@ jobs:
           zipStorePath=wrapper/dists
           EOF
 
-          curl -s https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradlew -o twa/gradlew
+          curl -s https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradlew \
+            -o twa/gradlew
           chmod +x twa/gradlew
 
           curl -sL "https://github.com/gradle/gradle/raw/v8.2.0/gradle/wrapper/gradle-wrapper.jar" \
@@ -170,17 +171,15 @@ jobs:
       - name: Build APK
         run: |
           cd twa
-          ./gradlew assembleRelease --no-daemon 2>&1 | tee ../build-log.txt
+          ./gradlew assembleRelease --no-daemon
 
-      - name: Upload build log
+      - name: Find APK files
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: build-log.txt
+        run: find twa -name "*.apk" -o -name "*.aab" 2>/dev/null
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: kata-kata-apk
-          path: twa/app/build/outputs/apk/release/app-release.apk
+          path: twa/app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
