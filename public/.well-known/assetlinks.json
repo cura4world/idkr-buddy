@@ -2,19 +2,7 @@
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
     "namespace": "android_app",
-    "package_name": "app.lovable.idkr_buddy.twa",
-    "sha256_cert_fingerprints": ["96:58:9E:31:6A:00:6A:A1:68:24:34:4E:7F:2C:75:67:68:49:8B:64:41:C8:E2:5D:12:AE:27:71:42:B8:FC:25"]
+    "package_name": "io.github.cura4world.twa",
+    "sha256_cert_fingerprints": ["C1:BE:DD:40:FA:5C:35:47:C5:F9:FE:05:01:88:43:CC:42:2C:34:59:E0:88:E8:90:63:9E:B3:8C:74:EC:32:1C"]
   }
 }]
-```
-👆 **여기까지**
-
-5. **Commit new file** 클릭
-
----
-
-## 그 다음
-
-Lovable 배포 후 아래 주소에서 파일이 접근되는지 확인해 주세요:
-```
-https://idkr-buddy.lovable.app/.well-known/assetlinks.json
