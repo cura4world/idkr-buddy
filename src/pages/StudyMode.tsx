@@ -10,6 +10,7 @@ export default function StudyMode() {
   const categories = getCategories();
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
+
   const [isRandom, setIsRandom] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -20,6 +21,7 @@ export default function StudyMode() {
   const [isAutoRandom, setIsAutoRandom] = useState(false);
   const [autoCurrentWord, setAutoCurrentWord] = useState<Word | undefined>(undefined);
   const [frontLang, setFrontLang] = useState<"id" | "ko">("id");
+
   const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
@@ -38,23 +40,18 @@ export default function StudyMode() {
       if ("wakeLock" in navigator) {
         wakeLockRef.current = await (navigator as any).wakeLock.request("screen");
       }
-    } catch (e) {
-      // Wake Lock 미지원 환경에서는 무시
-    }
+    } catch (e) {}
   };
 
   const releaseWakeLock = async () => {
     if (wakeLockRef.current) {
       try {
         await wakeLockRef.current.release();
-      } catch (e) {
-        // 무시
-      }
+      } catch (e) {}
       wakeLockRef.current = null;
     }
   };
 
-  // 화면이 다시 켜졌을 때 Wake Lock 재요청
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (document.visibilityState === "visible" && isAutoPlaying) {
@@ -77,14 +74,24 @@ export default function StudyMode() {
       const cleanText = text
         .replace(/~/g, "무엇무엇")
         .replace(/\s*\/\s*/g, ", ");
+
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = lang === "ko" ? "ko-KR" : "id-ID";
       utterance.rate = 0.9;
       utterance.onend = () => resolve();
+
+      // 차량 오디오 워밍업: 무음 utterance로 오디오 출력을 먼저 깨운 후 실제 단어 재생
       speechSynthesis.cancel();
-      // cancel 후 150ms 딜레이 → 앞부분 잘림 방지
+      const warmup = new SpeechSynthesisUtterance(" ");
+      warmup.volume = 0;
+      warmup.lang = utterance.lang;
+      warmup.onend = () => {
+        setTimeout(() => {
+          speechSynthesis.speak(utterance);
+        }, 100);
+      };
       setTimeout(() => {
-        speechSynthesis.speak(utterance);
+        speechSynthesis.speak(warmup);
       }, 150);
     });
   };
@@ -281,7 +288,6 @@ export default function StudyMode() {
                 </p>
               )}
             </div>
-
             {/* 뒷면 */}
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
               <p className={`font-normal text-center mb-3 text-gray-900 ${frontLang === "id" ? "font-body text-2xl" : "font-word text-3xl"}`}>
@@ -315,7 +321,6 @@ export default function StudyMode() {
         >
           {isSaved ? "✅ 보관됨" : "📌 보관"}
         </button>
-
         <button
           onClick={() => {
             setIsRandom((r) => !r);
@@ -329,10 +334,8 @@ export default function StudyMode() {
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           } disabled:opacity-30`}
         >
-          <Shuffle size={14} />
-          랜덤
+          <Shuffle size={14} /> 랜덤
         </button>
-
         <button
           onClick={() => {
             if (!currentWord) return;
@@ -344,7 +347,6 @@ export default function StudyMode() {
         >
           <Volume2 size={16} />
         </button>
-
         <button
           onClick={() => {
             if (isAutoPlaying) return;
@@ -372,7 +374,6 @@ export default function StudyMode() {
         >
           <ChevronLeft size={20} />
         </button>
-
         <button
           onClick={() => startAutoPlay(false)}
           className={`p-3 rounded-full transition-colors border ${
@@ -383,7 +384,6 @@ export default function StudyMode() {
         >
           {isAutoPlaying && !isAutoRandom ? <Square size={20} /> : <Play size={20} />}
         </button>
-
         <button
           onClick={() => startAutoPlay(true)}
           className={`p-3 rounded-full transition-colors border ${
@@ -394,7 +394,6 @@ export default function StudyMode() {
         >
           {isAutoPlaying && isAutoRandom ? <Square size={20} /> : <Shuffle size={20} />}
         </button>
-
         <button
           onClick={goNext}
           disabled={currentIndex === displayWords.length - 1 || isAutoPlaying}
