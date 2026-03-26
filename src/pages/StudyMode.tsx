@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, getSavedWordIds, toggleSavedWord, Word } from "@/lib/store";
-import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Play, Square } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Play, Square, Bookmark, RefreshCw, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
 
 export default function StudyMode() {
@@ -19,11 +19,16 @@ export default function StudyMode() {
   const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [isAutoRandom, setIsAutoRandom] = useState(false);
+  const [isLooping, setIsLooping] = useState(false);
   const [autoCurrentWord, setAutoCurrentWord] = useState<Word | undefined>(undefined);
   const [frontLang, setFrontLang] = useState<"id" | "ko">("id");
+  const [isScreenLocked, setIsScreenLocked] = useState(false);
 
   const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const isLoopingRef = useRef(false);
+  const isAutoPlayingRef = useRef(false);
+  const autoRandomRef = useRef(false);
 
   const shuffledWords = useMemo(() => {
     if (!isRandom) return words;
@@ -34,7 +39,7 @@ export default function StudyMode() {
   const currentWord: Word | undefined = isAutoPlaying ? autoCurrentWord : displayWords[currentIndex];
   const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
 
-  // Wake Lock: 자동플레이 중 화면 꺼짐 방지
+  // Wake Lock
   const requestWakeLock = async () => {
     try {
       if ("wakeLock" in navigator) {
@@ -45,22 +50,20 @@ export default function StudyMode() {
 
   const releaseWakeLock = async () => {
     if (wakeLockRef.current) {
-      try {
-        await wakeLockRef.current.release();
-      } catch (e) {}
+      try { await wakeLockRef.current.release(); } catch (e) {}
       wakeLockRef.current = null;
     }
   };
 
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      if (document.visibilityState === "visible" && isAutoPlaying) {
+      if (document.visibilityState === "visible" && isAutoPlayingRef.current) {
         await requestWakeLock();
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [isAutoPlaying]);
+  }, []);
 
   const handleToggleSave = () => {
     if (!currentWord) return;
@@ -105,10 +108,7 @@ export default function StudyMode() {
   };
 
   useEffect(() => {
-    if (isFlipped) {
-      setIsBreathing(false);
-      return;
-    }
+    if (isFlipped) { setIsBreathing(false); return; }
     const timer = setTimeout(() => setIsBreathing(true), 2000);
     return () => clearTimeout(timer);
   }, [currentIndex, isFlipped]);
@@ -130,8 +130,10 @@ export default function StudyMode() {
   }, [currentIndex]);
 
   const stopAutoPlay = useCallback(() => {
+    isAutoPlayingRef.current = false;
     setIsAutoPlaying(false);
     setIsAutoRandom(false);
+    setIsScreenLocked(false);
     if (autoPlayRef.current) {
       clearTimeout(autoPlayRef.current);
       autoPlayRef.current = null;
@@ -144,9 +146,20 @@ export default function StudyMode() {
   }, []);
 
   const runAutoPlay = useCallback(async (index: number, playWords: Word[], lang: "id" | "ko") => {
+    if (!isAutoPlayingRef.current) return;
+
     if (index >= playWords.length) {
+      if (isLoopingRef.current) {
+        const nextWords = autoRandomRef.current
+          ? [...playWords].sort(() => Math.random() - 0.5)
+          : playWords;
+        runAutoPlay(0, nextWords, lang);
+        return;
+      }
+      isAutoPlayingRef.current = false;
       setIsAutoPlaying(false);
       setIsAutoRandom(false);
+      setIsScreenLocked(false);
       setIsFlipped(false);
       setCurrentIndex(0);
       setAutoCurrentWord(undefined);
@@ -155,20 +168,18 @@ export default function StudyMode() {
       return;
     }
 
-    // ① 카드를 앞면으로
     setIsFlipped(false);
     setIsBreathing(false);
     setCurrentIndex(index);
 
-    // ② flip 완료 후 내용 교체
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(() => {
         setAutoCurrentWord(playWords[index]);
         resolve();
       }, 650);
     });
+    if (!isAutoPlayingRef.current) return;
 
-    // ③ 1초 후 앞면 발음 재생
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(async () => {
         const frontText = lang === "id" ? playWords[index].word : playWords[index].meaning;
@@ -176,16 +187,16 @@ export default function StudyMode() {
         resolve();
       }, 1000);
     });
+    if (!isAutoPlayingRef.current) return;
 
-    // ④ 1.5초 후 카드 뒤집기
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(() => {
         setIsFlipped(true);
         resolve();
       }, 1500);
     });
+    if (!isAutoPlayingRef.current) return;
 
-    // ④-1 뒤집기 후 뒷면 발음 재생
     await new Promise<void>((resolve) => {
       autoPlayRef.current = setTimeout(async () => {
         const backLang: "id" | "ko" = lang === "id" ? "ko" : "id";
@@ -194,8 +205,8 @@ export default function StudyMode() {
         resolve();
       }, 700);
     });
+    if (!isAutoPlayingRef.current) return;
 
-    // ⑤ 1.5초 후 다음 카드
     autoPlayRef.current = setTimeout(() => {
       runAutoPlay(index + 1, playWords, lang);
     }, 1500);
@@ -207,6 +218,8 @@ export default function StudyMode() {
       return;
     }
     const playWords = random ? [...words].sort(() => Math.random() - 0.5) : [...words];
+    autoRandomRef.current = random;
+    isAutoPlayingRef.current = true;
     setIsAutoRandom(random);
     setIsAutoPlaying(true);
     setCurrentIndex(0);
@@ -214,6 +227,13 @@ export default function StudyMode() {
     setAutoCurrentWord(playWords[0]);
     requestWakeLock();
     runAutoPlay(0, playWords, frontLang);
+  };
+
+  const toggleLoop = () => {
+    const next = !isLooping;
+    isLoopingRef.current = next;
+    setIsLooping(next);
+    toast(next ? "반복 재생 켜짐 🔁" : "반복 재생 꺼짐");
   };
 
   useEffect(() => {
@@ -249,16 +269,49 @@ export default function StudyMode() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
+
+      {/* 화면 잠금 오버레이 */}
+      {isScreenLocked && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex flex-col items-center justify-center gap-4"
+          onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
+        >
+          <p className="text-white text-lg font-body">화면 잠금 중</p>
+          <p className="text-white/60 text-sm font-body">자동재생이 계속됩니다</p>
+          <button
+            onClick={() => setIsScreenLocked(false)}
+            className="mt-4 flex items-center gap-2 px-6 py-3 rounded-full bg-white/20 border border-white/40 text-white font-body text-sm"
+          >
+            <Unlock size={16} /> 잠금 해제
+          </button>
+        </div>
+      )}
+
       {/* 헤더 */}
       <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={() => { stopAutoPlay(); navigate("/"); }} className="text-white hover:text-white/80">
+        <button
+          onClick={() => { stopAutoPlay(); navigate("/"); }}
+          className="text-white hover:text-white/80"
+        >
           <ArrowLeft size={20} />
         </button>
         <span className="text-sm text-white font-body">
           {currentIndex + 1} / {isAutoPlaying ? words.length : displayWords.length}
           {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">▶</span>}
         </span>
-        <div className="w-5" />
+        {/* 화면 잠금 버튼 — 자동플레이 중에만 표시, 아니면 빈 공간 */}
+        {isAutoPlaying ? (
+          <button
+            onClick={() => setIsScreenLocked(true)}
+            className="text-white hover:text-white/80"
+          >
+            <Lock size={20} />
+          </button>
+        ) : (
+          <div className="w-5" />
+        )}
       </div>
 
       {/* 카드 */}
@@ -310,17 +363,19 @@ export default function StudyMode() {
 
       {/* 중간 버튼: 보관, 랜덤, 스피커, KO/IN */}
       <div className="flex justify-center gap-3 py-2">
+        {/* 보관 — 아이콘만 */}
         <button
           onClick={handleToggleSave}
           disabled={isAutoPlaying}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-body transition-colors border ${
+          className={`flex items-center justify-center p-2.5 rounded-full transition-colors border ${
             isSaved
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           } disabled:opacity-30`}
         >
-          {isSaved ? "✅ 보관됨" : "📌 보관"}
+          <Bookmark size={16} fill={isSaved ? "currentColor" : "none"} />
         </button>
+        {/* 랜덤 — 아이콘만 */}
         <button
           onClick={() => {
             setIsRandom((r) => !r);
@@ -328,14 +383,15 @@ export default function StudyMode() {
             setIsFlipped(false);
           }}
           disabled={isAutoPlaying}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+          className={`flex items-center justify-center p-2.5 rounded-full transition-colors border ${
             isRandom
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           } disabled:opacity-30`}
         >
-          <Shuffle size={14} /> 랜덤
+          <Shuffle size={16} />
         </button>
+        {/* 스피커 */}
         <button
           onClick={() => {
             if (!currentWord) return;
@@ -343,10 +399,11 @@ export default function StudyMode() {
             speak(text, lang);
           }}
           disabled={!currentWord || isAutoPlaying}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30"
+          className="flex items-center justify-center p-2.5 rounded-full transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30"
         >
           <Volume2 size={16} />
         </button>
+        {/* KO/IN 토글 */}
         <button
           onClick={() => {
             if (isAutoPlaying) return;
@@ -355,7 +412,7 @@ export default function StudyMode() {
             setCurrentIndex(0);
           }}
           disabled={isAutoPlaying}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 ${
+          className={`flex items-center justify-center p-2.5 rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 ${
             frontLang === "ko"
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
@@ -365,7 +422,7 @@ export default function StudyMode() {
         </button>
       </div>
 
-      {/* 하단 버튼: < ▶ 🔀 > */}
+      {/* 하단 버튼: < ▶ 🔁 🔀 > */}
       <div className="flex items-center justify-center gap-4 py-4">
         <button
           onClick={goPrev}
@@ -374,6 +431,7 @@ export default function StudyMode() {
         >
           <ChevronLeft size={20} />
         </button>
+        {/* 순서 재생 */}
         <button
           onClick={() => startAutoPlay(false)}
           className={`p-3 rounded-full transition-colors border ${
@@ -384,6 +442,18 @@ export default function StudyMode() {
         >
           {isAutoPlaying && !isAutoRandom ? <Square size={20} /> : <Play size={20} />}
         </button>
+        {/* 반복 재생 */}
+        <button
+          onClick={toggleLoop}
+          className={`p-3 rounded-full transition-colors border ${
+            isLooping
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          }`}
+        >
+          <RefreshCw size={20} />
+        </button>
+        {/* 랜덤 재생 */}
         <button
           onClick={() => startAutoPlay(true)}
           className={`p-3 rounded-full transition-colors border ${
@@ -402,6 +472,7 @@ export default function StudyMode() {
           <ChevronRight size={20} />
         </button>
       </div>
+
     </div>
   );
 }
