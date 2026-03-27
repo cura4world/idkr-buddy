@@ -149,14 +149,14 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
-      {/* 헤더 — Kata kata. 제목과 + 버튼을 같은 줄 (톱니바퀴와 세로 동일 위치) */}
-      <header className="flex items-center justify-between mb-6">
+      {/* 헤더: Kata kata. 왼쪽 / + 버튼 오른쪽 (mr-2로 톱니바퀴 라인보다 약간 안쪽) */}
+      <header className="flex items-center justify-between mb-6 pr-2">
         <h1 className="text-2xl font-semibold font-body tracking-tight text-foreground">
           Kata kata<span className="text-accent">.</span>
         </h1>
         <button
           onClick={() => setAddCatOpen(true)}
-          className="text-white hover:text-white/70 text-2xl font-light leading-none w-9 h-9 flex items-center justify-center"
+          className="text-white hover:text-white/70 text-3xl font-light leading-none w-10 h-10 flex items-center justify-center"
           title="단어장 추가"
         >
           +
@@ -165,12 +165,12 @@ const Index = () => {
 
       <div className="space-y-2">
         {savedCount > 0 && (
-          <div className="rounded-lg bg-card px-5 py-4 shadow-sm border border-border/50 text-card-foreground">
+          <div className="rounded-lg bg-card px-6 py-5 shadow-sm border border-border/50 text-card-foreground">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/saved")}>
               <span className="text-lg">📌</span>
               <h2 className="text-base font-medium font-body">단어보관함</h2>
             </div>
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-between mt-3">
               <p className="text-sm text-muted-foreground">{savedCount}개의 단어</p>
               <div className="flex gap-3">
                 <button onClick={() => navigate("/saved/quiz")} className="text-sm text-primary font-medium hover:underline underline-offset-4" disabled={savedCount < 2}>퀴즈</button>
@@ -209,7 +209,7 @@ const Index = () => {
 
       {floatCat && floatPos && (
         <div
-          className="fixed pointer-events-none z-50 rounded-lg bg-card px-5 py-4 shadow-lg border border-sky-400 shadow-sky-400/20"
+          className="fixed pointer-events-none z-50 rounded-lg bg-card px-6 py-5 shadow-lg border border-sky-400 shadow-sky-400/20"
           style={{ width: floatWidth, left: floatPos.x - floatWidth / 2, top: floatPos.y - floatOffsetY.current }}
         >
           <div className="flex items-center gap-2">
