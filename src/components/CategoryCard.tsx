@@ -20,9 +20,17 @@ interface CategoryCardProps {
 }
 
 export default function CategoryCard({
-  category, onAddWord, onChanged,
-  cardRef, index, isDragging, isDropTarget,
-  onTouchStart, onTouchEnd, onMouseDown, onCancelDrag,
+  category,
+  onAddWord,
+  onChanged,
+  cardRef,
+  index,
+  isDragging,
+  isDropTarget,
+  onTouchStart,
+  onTouchEnd,
+  onMouseDown,
+  onCancelDrag,
 }: CategoryCardProps) {
   const navigate = useNavigate();
   const words = getWordsByCategory(category.id);
@@ -52,16 +60,16 @@ export default function CategoryCard({
         onMouseDown={onMouseDown}
         onContextMenu={(e) => e.preventDefault()}
       >
-        <div className="flex items-center justify-between">
+        <div className="relative">
           <div
-            className="flex items-center gap-2 flex-1 cursor-pointer"
+            className="flex items-center gap-2 cursor-pointer pr-8"
             onClick={() => navigate(`/category/${category.id}`)}
           >
             <span className="text-lg">{category.emoji}</span>
             <h2 className="text-base font-medium font-body">{category.name}</h2>
           </div>
 
-          <div className="relative">
+          <div className="absolute -top-2 -right-2">
             <button
               onMouseDown={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
               onTouchStart={(e) => { e.stopPropagation(); e.preventDefault(); onCancelDrag?.(); }}
@@ -84,14 +92,16 @@ export default function CategoryCard({
                   onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
                   onClick={() => { setGearOpen(false); setEditOpen(true); }}
                 >
-                  <Pencil className="mr-2 h-4 w-4" /> 이름 변경
+                  <Pencil className="mr-2 h-4 w-4" />
+                  이름 변경
                 </button>
                 <button
                   className="flex w-full items-center rounded-sm px-2 py-2 text-sm text-destructive hover:bg-accent"
                   onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
                   onClick={() => { setGearOpen(false); setDeleteOpen(true); }}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" /> 단어장 삭제
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  단어장 삭제
                 </button>
               </div>
             )}
@@ -139,6 +149,7 @@ export default function CategoryCard({
         currentName={category.name}
         currentEmoji={category.emoji}
       />
+
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -149,7 +160,10 @@ export default function CategoryCard({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               삭제
             </AlertDialogAction>
           </AlertDialogFooter>
