@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Category, getWordsByCategory, deleteCategory } from "@/lib/store";
 import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -9,27 +9,19 @@ interface CategoryCardProps {
   category: Category;
   onAddWord: (categoryId: string) => void;
   onChanged?: () => void;
-  // 드래그용 props
   cardRef?: (el: HTMLDivElement | null) => void;
   index?: number;
   isDragging?: boolean;
   isDropTarget?: boolean;
   onTouchStart?: (e: React.TouchEvent) => void;
-  onTouchEnd?: () => void;
+  onTouchEnd?: (e: React.TouchEvent) => void;
   onMouseDown?: (e: React.MouseEvent) => void;
 }
 
 export default function CategoryCard({
-  category,
-  onAddWord,
-  onChanged,
-  cardRef,
-  index,
-  isDragging,
-  isDropTarget,
-  onTouchStart,
-  onTouchEnd,
-  onMouseDown,
+  category, onAddWord, onChanged,
+  cardRef, index, isDragging, isDropTarget,
+  onTouchStart, onTouchEnd, onMouseDown,
 }: CategoryCardProps) {
   const navigate = useNavigate();
   const words = getWordsByCategory(category.id);
@@ -51,7 +43,7 @@ export default function CategoryCard({
       <div
         ref={cardRef}
         data-cat-index={index}
-        className={`rounded-lg bg-card p-5 shadow-sm border border-border/50 transition-all text-card-foreground select-none ${
+        className={`rounded-lg bg-card px-4 py-3 shadow-sm border border-border/50 text-card-foreground select-none ${
           isDragging ? "opacity-20 cursor-grabbing" : "cursor-grab active:scale-[0.98]"
         }`}
         onTouchStart={onTouchStart}
@@ -59,36 +51,36 @@ export default function CategoryCard({
         onMouseDown={onMouseDown}
         onContextMenu={(e) => e.preventDefault()}
       >
-        {/* 톱니바퀴 — 오른쪽 위 */}
-        <div className="flex items-start justify-between mb-2">
+        {/* 상단: 이모지+이름 + 톱니바퀴 */}
+        <div className="flex items-center justify-between">
           <div
-            className="flex items-center gap-3 flex-1 cursor-pointer"
+            className="flex items-center gap-2 flex-1 cursor-pointer"
             onClick={() => navigate(`/category/${category.id}`)}
           >
-            <span className="text-2xl">{category.emoji}</span>
-            <h2 className="text-lg font-medium font-body">{category.name}</h2>
+            <span className="text-lg">{category.emoji}</span>
+            <h2 className="text-base font-medium font-body">{category.name}</h2>
           </div>
           <div className="relative">
             <button
               onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
+              onTouchStart={(e) => { e.stopPropagation(); e.preventDefault(); }}
               onClick={(e) => { e.stopPropagation(); setGearOpen((o) => !o); }}
               className="p-1 text-card-foreground/40 hover:text-primary rounded"
             >
-              <Settings size={16} />
+              <Settings size={18} />
             </button>
             {gearOpen && (
               <div
-                className="absolute right-0 top-7 z-50 min-w-[10rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+                className="absolute right-0 top-8 z-50 min-w-[10rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
                 onClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
+                onTouchStart={(e) => { e.stopPropagation(); }}
               >
                 <button
                   className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
                   onClick={() => { setGearOpen(false); setEditOpen(true); }}
                 >
-                  <Pencil className="mr-2 h-4 w-4" /> 이름 / 아이콘 변경
+                  <Pencil className="mr-2 h-4 w-4" /> 이름 변경
                 </button>
                 <button
                   className="flex w-full items-center rounded-sm px-2 py-2 text-sm text-destructive hover:bg-accent"
@@ -101,35 +93,34 @@ export default function CategoryCard({
           </div>
         </div>
 
-        {/* 닫기 — 외부 클릭 */}
+        {/* 닫기 오버레이 */}
         {gearOpen && (
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setGearOpen(false)}
-            onTouchStart={() => setGearOpen(false)}
-          />
+          <div className="fixed inset-0 z-40" onClick={() => setGearOpen(false)} onTouchStart={() => setGearOpen(false)} />
         )}
 
-        <p className="text-sm text-muted-foreground">{words.length}개의 단어</p>
-        <div className="mt-3 flex justify-end gap-3">
-          <button
-            onClick={(e) => { e.stopPropagation(); navigate(`/quiz/${category.id}`); }}
-            className="text-sm text-primary font-medium hover:underline underline-offset-4"
-            disabled={words.length < 2}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-          >
-            퀴즈
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); navigate(`/study/${category.id}`); }}
-            className="text-sm text-primary font-medium hover:underline underline-offset-4"
-            disabled={words.length === 0}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-          >
-            플래시카드
-          </button>
+        {/* 하단: 단어 수 + 퀴즈/플래시카드 버튼 — 같은 줄 */}
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-sm text-muted-foreground">{words.length}개의 단어</p>
+          <div className="flex gap-3">
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate(`/quiz/${category.id}`); }}
+              className="text-sm text-primary font-medium hover:underline underline-offset-4"
+              disabled={words.length < 2}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+            >
+              퀴즈
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate(`/study/${category.id}`); }}
+              className="text-sm text-primary font-medium hover:underline underline-offset-4"
+              disabled={words.length === 0}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+            >
+              플래시카드
+            </button>
+          </div>
         </div>
       </div>
 
@@ -151,10 +142,7 @@ export default function CategoryCard({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               삭제
             </AlertDialogAction>
           </AlertDialogFooter>
