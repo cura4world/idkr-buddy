@@ -36,7 +36,6 @@ export default function QuizMode() {
   };
 
   const [questions, setQuestions] = useState(() => makeQuestions(false));
-
   const currentQ = questions[questionIndex];
   const isFinished = questionIndex >= questions.length;
 
@@ -89,12 +88,11 @@ export default function QuizMode() {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 max-w-lg mx-auto">
         <div className="text-center">
           <p className="text-4xl mb-4">🍃</p>
-        <p className="text-lg font-body font-medium">
+          <p className="text-lg font-body font-medium">
             {questions.length}개 중 {correctCount}개
           </p>
           <p className="text-sm text-white font-body mt-1">수고하셨습니다</p>
         </div>
-
         {reviewList.length > 0 && (
           <div className="mt-8 w-full">
             <p className="text-sm text-white font-body mb-3">다시 볼 단어</p>
@@ -108,19 +106,11 @@ export default function QuizMode() {
             </div>
           </div>
         )}
-
         <div className="flex gap-3 mt-8">
-          <button
-            onClick={restart}
-            className="flex items-center gap-2 text-sm text-white font-body hover:underline underline-offset-4"
-          >
-            <RotateCcw size={14} />
-            다시 하기
+          <button onClick={restart} className="flex items-center gap-2 text-sm text-white font-body hover:underline underline-offset-4">
+            <RotateCcw size={14} /> 다시 하기
           </button>
-          <button
-            onClick={() => navigate("/")}
-            className="text-sm text-white font-body hover:underline underline-offset-4"
-          >
+          <button onClick={() => navigate("/")} className="text-sm text-white font-body hover:underline underline-offset-4">
             홈으로
           </button>
         </div>
@@ -130,11 +120,12 @@ export default function QuizMode() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
+      {/* 헤더 — 뒤로가기·숫자 흰색 */}
       <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground">
+        <button onClick={() => navigate("/")} className="text-white hover:text-white/80">
           <ArrowLeft size={20} />
         </button>
-        <span className="text-sm text-muted-foreground font-body">
+        <span className="text-sm text-white font-body">
           {questionIndex + 1} / {questions.length}
         </span>
         <div className="w-5" />
@@ -149,12 +140,9 @@ export default function QuizMode() {
             </p>
           )}
         </div>
-
         <div className="w-full max-w-sm space-y-3">
           {currentQ.choices.map((choice) => {
-            let className =
-              "w-full text-left px-5 py-4 rounded-xl border transition-all duration-300 font-body text-sm ";
-
+            let className = "w-full text-left px-5 py-4 rounded-xl border transition-all duration-300 font-body text-sm ";
             if (selected) {
               if (choice === currentQ.correctAnswer) {
                 className += "bg-accent/15 border-accent text-foreground";
@@ -166,7 +154,6 @@ export default function QuizMode() {
             } else {
               className += "bg-card border-border/50 hover:border-primary/30 active:scale-[0.98] text-gray-900";
             }
-
             return (
               <button key={choice} onClick={() => handleSelect(choice)} className={className}>
                 {choice}
@@ -185,8 +172,7 @@ export default function QuizMode() {
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
-          <Shuffle size={14} />
-          랜덤
+          <Shuffle size={14} /> 랜덤
         </button>
       </div>
     </div>
