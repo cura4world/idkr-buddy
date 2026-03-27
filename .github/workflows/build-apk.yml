@@ -17,15 +17,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'temurin'
 
       - name: Setup Android SDK
@@ -34,70 +29,28 @@ jobs:
       - name: Install Android Build Tools
         run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
 
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli@latest
-
-      - name: Create twa-manifest.json
+      - name: Generate or reuse keystore
         run: |
-          cat > twa-manifest.json << 'EOF'
-          {
-            "packageId": "io.github.cura4world.twa",
-            "host": "cura4world.github.io",
-            "name": "Kata kata",
-            "launcherName": "Kata kata",
-            "display": "standalone",
-            "themeColor": "#003d5c",
-            "navigationColor": "#003d5c",
-            "navigationColorDark": "#003d5c",
-            "navigationDividerColor": "#003d5c",
-            "navigationDividerColorDark": "#003d5c",
-            "backgroundColor": "#003d5c",
-            "enableNotifications": false,
-            "startUrl": "/idkr-buddy/",
-            "iconUrl": "https://cura4world.github.io/idkr-buddy/icon-512x512.png",
-            "maskableIconUrl": "https://cura4world.github.io/idkr-buddy/icon-512x512.png",
-            "monochromeIconUrl": "https://cura4world.github.io/idkr-buddy/icon-512x512.png",
-            "appVersion": "1.0.0",
-            "appVersionCode": 1,
-            "signingKey": {
-              "path": "./upload-keystore.jks",
-              "alias": "upload"
-            },
-            "splashScreenFadeOutDuration": 300,
-            "enableSiteSettingsShortcut": true,
-            "isChromeOSOnly": false,
-            "isMetaQuest": false,
-            "fullScopeUrl": "https://cura4world.github.io/idkr-buddy/",
-            "minSdkVersion": 21,
-            "orientation": "default",
-            "shortcuts": [],
-            "generatorApp": "bubblewrap-cli",
-            "webManifestUrl": "https://cura4world.github.io/idkr-buddy/manifest.json",
-            "fallbackType": "customtabs",
-            "features": {},
-            "alphaDependencies": { "enabled": false },
-            "enableSideNavigation": false,
-            "fingerprints": [],
-            "serviceAccountJsonFile": ""
-          }
-          EOF
+          if [ -f keystore/upload-keystore.jks ]; then
+            echo "Reusing existing keystore from repo"
+          else
+            echo "Generating new keystore"
+            mkdir -p keystore
+            keytool -genkey -v \
+              -keystore keystore/upload-keystore.jks \
+              -alias upload \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass android \
+              -keypass android \
+              -dname "CN=Kata kata, OU=App, O=cura4world, L=Seoul, S=Seoul, C=KR"
+          fi
 
-      - name: Generate keystore
-        run: |
-          keytool -genkey -v \
-            -keystore upload-keystore.jks \
-            -alias upload \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass android \
-            -keypass android \
-            -dname "CN=Kata kata, OU=App, O=cura4world, L=Seoul, S=Seoul, C=KR"
-
-      - name: Extract SHA256 and update assetlinks.json
+      - name: Update assetlinks.json from keystore SHA256
         run: |
           SHA256=$(keytool -list -v \
-            -keystore upload-keystore.jks \
+            -keystore keystore/upload-keystore.jks \
             -alias upload \
             -storepass android \
             | grep "SHA256:" | awk '{print $2}')
@@ -106,39 +59,175 @@ jobs:
           printf '[{\n  "relation": ["delegate_permission/common.handle_all_urls"],\n  "target": {\n    "namespace": "android_app",\n    "package_name": "io.github.cura4world.twa",\n    "sha256_cert_fingerprints": ["%s"]\n  }\n}]' "$SHA256" > public/.well-known/assetlinks.json
           cat public/.well-known/assetlinks.json
 
-      - name: Commit updated assetlinks.json
+      - name: Commit keystore and assetlinks.json
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/.well-known/assetlinks.json
-          git diff --staged --quiet || git commit -m "chore: update assetlinks.json"
+          git add -f keystore/upload-keystore.jks public/.well-known/assetlinks.json
+          git diff --staged --quiet || git commit -m "chore: sync keystore and assetlinks.json"
           git push
 
-      - name: Configure Bubblewrap
+      - name: Download and prepare app icons
         run: |
-          mkdir -p ~/.bubblewrap
-          cat > ~/.bubblewrap/config.json << EOF
-          {
-            "jdkPath": "$(dirname $(dirname $(readlink -f $(which java))))",
-            "androidSdkPath": "$ANDROID_SDK_ROOT"
+          curl -sL "https://cura4world.github.io/idkr-buddy/icon-512x512.png" -o icon-original.png
+          sudo apt-get install -y imagemagick -q
+          mkdir -p twa/app/src/main/res/mipmap-mdpi
+          mkdir -p twa/app/src/main/res/mipmap-hdpi
+          mkdir -p twa/app/src/main/res/mipmap-xhdpi
+          mkdir -p twa/app/src/main/res/mipmap-xxhdpi
+          mkdir -p twa/app/src/main/res/mipmap-xxxhdpi
+          convert icon-original.png -resize 48x48   twa/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert icon-original.png -resize 72x72   twa/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert icon-original.png -resize 96x96   twa/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert icon-original.png -resize 144x144 twa/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert icon-original.png -resize 192x192 twa/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+      - name: Create Android TWA project
+        run: |
+          mkdir -p twa/app/src/main/res/values
+          mkdir -p twa/gradle/wrapper
+
+          cat > twa/gradle.properties << 'EOF'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m
+          EOF
+
+          cat > twa/settings.gradle << 'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "KataKata"
+          include ':app'
+          EOF
+
+          cat > twa/build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application' version '8.2.2' apply false
           }
           EOF
 
-      - name: Build APK with Bubblewrap
+          cat > twa/app/build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+          android {
+              namespace 'io.github.cura4world.twa'
+              compileSdk 34
+              defaultConfig {
+                  applicationId 'io.github.cura4world.twa'
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName '1.0.0'
+              }
+              signingConfigs {
+                  release {
+                      storeFile file('../../keystore/upload-keystore.jks')
+                      storePassword 'android'
+                      keyAlias 'upload'
+                      keyPassword 'android'
+                  }
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      signingConfig signingConfigs.release
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          dependencies {
+              implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
+          EOF
+
+          cat > twa/gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.2-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+
+          curl -s https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradlew \
+            -o twa/gradlew
+          chmod +x twa/gradlew
+
+          curl -sL "https://github.com/gradle/gradle/raw/v8.2.0/gradle/wrapper/gradle-wrapper.jar" \
+            -o twa/gradle/wrapper/gradle-wrapper.jar
+
+          cat > twa/app/src/main/AndroidManifest.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <application
+                  android:allowBackup="true"
+                  android:label="@string/app_name"
+                  android:icon="@mipmap/ic_launcher"
+                  android:roundIcon="@mipmap/ic_launcher"
+                  android:theme="@style/Theme.AppCompat.NoActionBar">
+                  <activity
+                      android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+                      android:exported="true">
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.DEFAULT_URL"
+                          android:value="https://cura4world.github.io/idkr-buddy/" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
+                          android:value="#003d5c" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
+                          android:value="#003d5c" />
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data
+                              android:scheme="https"
+                              android:host="cura4world.github.io"
+                              android:pathPrefix="/idkr-buddy/" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > twa/app/src/main/res/values/strings.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">Kata kata</string>
+              <string name="asset_statements">[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"web","site":"https://cura4world.github.io"}}]</string>
+          </resources>
+          EOF
+
+      - name: Build APK
         run: |
-          mkdir bubblewrap-build
-          cp twa-manifest.json bubblewrap-build/twa-manifest.json
-          cp upload-keystore.jks bubblewrap-build/upload-keystore.jks
-          cd bubblewrap-build
-          bubblewrap build \
-            --skipPwaValidation \
-            --signingKeyPassword android \
-            --signingKeyStorePassword android \
-            --manifest ./twa-manifest.json
+          cd twa
+          ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: kata-kata-apk
-          path: bubblewrap-build/app-release-signed.apk
+          path: twa/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
