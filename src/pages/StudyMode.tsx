@@ -77,7 +77,6 @@ export default function StudyMode() {
         .replace(/~/g, "무엇무엇")
         .replace(/\s*\/\s*/g, ", ");
 
-      // Android WebView 네이티브 TTS 지원
       if ((window as any).AndroidTTS) {
         (window as any).AndroidTTS.speak(cleanText, lang === "ko" ? "ko-KR" : "id-ID");
         setTimeout(() => resolve(), cleanText.length * 80 + 500);
@@ -89,14 +88,14 @@ export default function StudyMode() {
       utterance.rate = 0.9;
       utterance.onend = () => resolve();
 
-      speechSynthesis.cancel();
+      speechSynthesis?.cancel?.();
       const warmup = new SpeechSynthesisUtterance(" ");
       warmup.volume = 0;
       warmup.lang = utterance.lang;
       warmup.onend = () => {
-        setTimeout(() => { speechSynthesis.speak(utterance); }, 100);
+        setTimeout(() => { speechSynthesis?.speak?.(utterance); }, 100);
       };
-      setTimeout(() => { speechSynthesis.speak(warmup); }, 150);
+      setTimeout(() => { speechSynthesis?.speak?.(warmup); }, 150);
     });
   };
 
@@ -139,7 +138,11 @@ export default function StudyMode() {
       clearTimeout(autoPlayRef.current);
       autoPlayRef.current = null;
     }
-    speechSynthesis.cancel();
+    // WebView에서 speechSynthesis가 없을 수 있으므로 optional chaining 사용
+    speechSynthesis?.cancel?.();
+    if ((window as any).AndroidTTS?.stop) {
+      (window as any).AndroidTTS.stop();
+    }
     setIsFlipped(false);
     setCurrentIndex(0);
     setAutoCurrentWord(undefined);
@@ -229,16 +232,19 @@ export default function StudyMode() {
   useEffect(() => {
     return () => {
       if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
-      speechSynthesis.cancel?.();
+      speechSynthesis?.cancel?.();
       releaseWakeLock();
     };
   }, []);
 
+  // 스와이프: 오른쪽 → 다음, 왼쪽 → 이전 (원래 방향)
   const handleTouchStart = (e: React.TouchEvent) => { setTouchStart(e.touches[0].clientX); };
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStart === null) return;
     const diff = e.changedTouches[0].clientX - touchStart;
-    if (Math.abs(diff) > 60) { if (diff < 0) goNext(); else goPrev(); }
+    if (Math.abs(diff) > 60) {
+      if (diff > 0) goNext(); else goPrev();
+    }
     setTouchStart(null);
   };
 
@@ -254,19 +260,18 @@ export default function StudyMode() {
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
 
-      {/* 화면 잠금 오버레이 */}
+      {/* 화면 잠금 오버레이 — 텍스트 위쪽 배치, 카드 글씨가 살짝 비침 */}
       {isScreenLocked && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 flex flex-col items-center justify-center gap-4"
+          className="fixed inset-0 z-50 bg-black/50 flex flex-col items-center justify-start pt-24 gap-4"
           onClick={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
         >
           <p className="text-white text-lg font-body">화면 잠금 중</p>
-          <p className="text-white/60 text-sm font-body">자동재생이 계속됩니다</p>
           <button
             onClick={() => setIsScreenLocked(false)}
-            className="mt-4 flex items-center gap-2 px-6 py-3 rounded-full bg-white/20 border border-white/40 text-white font-body text-sm"
+            className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/20 border border-white/40 text-white font-body text-sm"
           >
             <Unlock size={16} /> 잠금 해제
           </button>
@@ -326,12 +331,12 @@ export default function StudyMode() {
         </div>
       </div>
 
-      {/* 중간 버튼: 보관, 랜덤, 스피커, KO/IN — 하단 버튼과 동일한 p-3 크기 */}
+      {/* 중간 버튼: w-12 h-12 고정으로 완전한 원형 통일 */}
       <div className="flex justify-center gap-3 py-2">
         <button
           onClick={handleToggleSave}
           disabled={isAutoPlaying}
-          className={`flex items-center justify-center p-3 rounded-full transition-colors border ${
+          className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${
             isSaved ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           } disabled:opacity-30`}
         >
@@ -340,7 +345,7 @@ export default function StudyMode() {
         <button
           onClick={() => { setIsRandom((r) => !r); setCurrentIndex(0); setIsFlipped(false); }}
           disabled={isAutoPlaying}
-          className={`flex items-center justify-center p-3 rounded-full transition-colors border ${
+          className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${
             isRandom ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           } disabled:opacity-30`}
         >
@@ -349,14 +354,14 @@ export default function StudyMode() {
         <button
           onClick={() => { if (!currentWord) return; const { text, lang } = getSpeakTarget(currentWord, isFlipped); speak(text, lang); }}
           disabled={!currentWord || isAutoPlaying}
-          className="flex items-center justify-center p-3 rounded-full transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30"
+          className="w-12 h-12 flex items-center justify-center rounded-full transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30"
         >
           <Volume2 size={20} />
         </button>
         <button
           onClick={() => { if (isAutoPlaying) return; setFrontLang((l) => (l === "id" ? "ko" : "id")); setIsFlipped(false); setCurrentIndex(0); }}
           disabled={isAutoPlaying}
-          className={`flex items-center justify-center p-3 rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 ${
+          className={`w-12 h-12 flex items-center justify-center rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 ${
             frontLang === "ko" ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
@@ -408,4 +413,4 @@ export default function StudyMode() {
 
     </div>
   );
-                    }
+    }
