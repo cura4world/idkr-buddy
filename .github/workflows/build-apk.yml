@@ -10,8 +10,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout
@@ -29,71 +27,41 @@ jobs:
       - name: Install Android Build Tools
         run: sdkmanager "build-tools;34.0.0" "platforms;android-34"
 
-      - name: Generate or reuse keystore
+      - name: Generate keystore
         run: |
-          if [ -f keystore/upload-keystore.jks ]; then
-            echo "Reusing existing keystore from repo"
-          else
-            echo "Generating new keystore"
-            mkdir -p keystore
-            keytool -genkey -v \
-              -keystore keystore/upload-keystore.jks \
-              -alias upload \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass android \
-              -keypass android \
-              -dname "CN=Kata kata, OU=App, O=cura4world, L=Seoul, S=Seoul, C=KR"
-          fi
-
-      - name: Update assetlinks.json from keystore SHA256
-        run: |
-          SHA256=$(keytool -list -v \
-            -keystore keystore/upload-keystore.jks \
+          keytool -genkey -v \
+            -keystore keystore.jks \
             -alias upload \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
             -storepass android \
-            | grep "SHA256:" | awk '{print $2}')
-          echo "SHA256: $SHA256"
-          mkdir -p public/.well-known
-          printf '[{\n  "relation": ["delegate_permission/common.handle_all_urls"],\n  "target": {\n    "namespace": "android_app",\n    "package_name": "io.github.cura4world.twa",\n    "sha256_cert_fingerprints": ["%s"]\n  }\n}]' "$SHA256" > public/.well-known/assetlinks.json
-          cat public/.well-known/assetlinks.json
+            -keypass android \
+            -dname "CN=Kata kata, OU=App, O=cura4world, L=Seoul, S=Seoul, C=KR"
 
-      - name: Commit keystore and assetlinks.json
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f keystore/upload-keystore.jks public/.well-known/assetlinks.json
-          git diff --staged --quiet || git commit -m "chore: sync keystore and assetlinks.json"
-          git push
-
-      - name: Download and prepare app icons
+      - name: Download app icon
         run: |
           curl -sL "https://cura4world.github.io/idkr-buddy/icon-512x512.png" -o icon-original.png
           sudo apt-get install -y imagemagick -q
-          mkdir -p twa/app/src/main/res/mipmap-mdpi
-          mkdir -p twa/app/src/main/res/mipmap-hdpi
-          mkdir -p twa/app/src/main/res/mipmap-xhdpi
-          mkdir -p twa/app/src/main/res/mipmap-xxhdpi
-          mkdir -p twa/app/src/main/res/mipmap-xxxhdpi
-          convert icon-original.png -resize 48x48   twa/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          convert icon-original.png -resize 72x72   twa/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert icon-original.png -resize 96x96   twa/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert icon-original.png -resize 144x144 twa/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          convert icon-original.png -resize 192x192 twa/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          mkdir -p app/src/main/res/mipmap-mdpi
+          mkdir -p app/src/main/res/mipmap-hdpi
+          mkdir -p app/src/main/res/mipmap-xhdpi
+          mkdir -p app/src/main/res/mipmap-xxhdpi
+          mkdir -p app/src/main/res/mipmap-xxxhdpi
+          convert icon-original.png -resize 48x48   app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert icon-original.png -resize 72x72   app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert icon-original.png -resize 96x96   app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert icon-original.png -resize 144x144 app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert icon-original.png -resize 192x192 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
-      - name: Create Android TWA project
+      - name: Create WebView Android project
         run: |
-          mkdir -p twa/app/src/main/res/values
-          mkdir -p twa/gradle/wrapper
+          mkdir -p app/src/main/java/io/github/cura4world/twa
+          mkdir -p app/src/main/res/values
+          mkdir -p gradle/wrapper
 
-          cat > twa/gradle.properties << 'EOF'
-          android.useAndroidX=true
-          android.enableJetifier=true
-          org.gradle.jvmargs=-Xmx2048m
-          EOF
-
-          cat > twa/settings.gradle << 'EOF'
+          # settings.gradle
+          cat > settings.gradle << 'EOF'
           pluginManagement {
               repositories {
                   google()
@@ -112,13 +80,22 @@ jobs:
           include ':app'
           EOF
 
-          cat > twa/build.gradle << 'EOF'
+          # root build.gradle
+          cat > build.gradle << 'EOF'
           plugins {
               id 'com.android.application' version '8.2.2' apply false
           }
           EOF
 
-          cat > twa/app/build.gradle << 'EOF'
+          # gradle.properties
+          cat > gradle.properties << 'EOF'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m
+          EOF
+
+          # app/build.gradle
+          cat > app/build.gradle << 'EOF'
           plugins {
               id 'com.android.application'
           }
@@ -134,7 +111,7 @@ jobs:
               }
               signingConfigs {
                   release {
-                      storeFile file('../../keystore/upload-keystore.jks')
+                      storeFile file('../keystore.jks')
                       storePassword 'android'
                       keyAlias 'upload'
                       keyPassword 'android'
@@ -152,12 +129,12 @@ jobs:
               }
           }
           dependencies {
-              implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
               implementation 'androidx.appcompat:appcompat:1.6.1'
           }
           EOF
 
-          cat > twa/gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          # gradle wrapper
+          cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
           distributionUrl=https\://services.gradle.org/distributions/gradle-8.2-bin.zip
@@ -165,84 +142,101 @@ jobs:
           zipStorePath=wrapper/dists
           EOF
 
-          curl -s https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradlew \
-            -o twa/gradlew
-          chmod +x twa/gradlew
-
+          curl -s https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradlew -o gradlew
+          chmod +x gradlew
           curl -sL "https://github.com/gradle/gradle/raw/v8.2.0/gradle/wrapper/gradle-wrapper.jar" \
-            -o twa/gradle/wrapper/gradle-wrapper.jar
+            -o gradle/wrapper/gradle-wrapper.jar
 
-          cat > twa/app/src/main/AndroidManifest.xml << 'EOF'
+          # AndroidManifest.xml
+          cat > app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
-              <queries>
-                  <intent>
-                      <action android:name="android.intent.action.VIEW" />
-                      <category android:name="android.intent.category.BROWSABLE" />
-                      <data android:scheme="https" />
-                  </intent>
-                  <package android:name="com.android.chrome" />
-                  <package android:name="com.google.android.apps.chrome" />
-              </queries>
               <application
                   android:allowBackup="true"
                   android:label="@string/app_name"
                   android:icon="@mipmap/ic_launcher"
                   android:roundIcon="@mipmap/ic_launcher"
                   android:theme="@style/Theme.AppCompat.NoActionBar">
-                  <meta-data
-                      android:name="asset_statements"
-                      android:resource="@string/asset_statements" />
                   <activity
-                      android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
-                      android:exported="true">
-                      <meta-data
-                          android:name="android.support.customtabs.trusted.DEFAULT_URL"
-                          android:value="https://cura4world.github.io/idkr-buddy/" />
-                      <meta-data
-                          android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
-                          android:value="#003d5c" />
-                      <meta-data
-                          android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
-                          android:value="#003d5c" />
-                      <meta-data
-                          android:name="android.support.customtabs.trusted.FALLBACK_STRATEGY"
-                          android:value="customtabs" />
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|screenLayout|uiMode">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                      <intent-filter android:autoVerify="true">
-                          <action android:name="android.intent.action.VIEW" />
-                          <category android:name="android.intent.category.DEFAULT" />
-                          <category android:name="android.intent.category.BROWSABLE" />
-                          <data
-                              android:scheme="https"
-                              android:host="cura4world.github.io"
-                              android:pathPrefix="/idkr-buddy/" />
                       </intent-filter>
                   </activity>
               </application>
           </manifest>
           EOF
 
-          cat > twa/app/src/main/res/values/strings.xml << 'EOF'
+          # strings.xml
+          cat > app/src/main/res/values/strings.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <string name="app_name">Kata kata</string>
-              <string name="asset_statements">[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"web","site":"https://cura4world.github.io"}}]</string>
           </resources>
           EOF
 
+          # MainActivity.java
+          cat > app/src/main/java/io/github/cura4world/twa/MainActivity.java << 'EOF'
+          package io.github.cura4world.twa;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.view.View;
+          import android.view.WindowManager;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.webkit.WebChromeClient;
+
+          public class MainActivity extends Activity {
+              private WebView webView;
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  // 풀스크린 (상태바 숨김)
+                  getWindow().setFlags(
+                      WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                      WindowManager.LayoutParams.FLAG_FULLSCREEN
+                  );
+
+                  webView = new WebView(this);
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setAllowFileAccess(false);
+                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+
+                  webView.setWebViewClient(new WebViewClient());
+                  webView.setWebChromeClient(new WebChromeClient());
+                  webView.loadUrl("https://cura4world.github.io/idkr-buddy/");
+
+                  setContentView(webView);
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (webView.canGoBack()) {
+                      webView.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          EOF
+
       - name: Build APK
-        run: |
-          cd twa
-          ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: kata-kata-apk
-          path: twa/app/build/outputs/apk/release/*.apk
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
