@@ -88,14 +88,14 @@ export default function StudyMode() {
       utterance.rate = 0.9;
       utterance.onend = () => resolve();
 
-      speechSynthesis?.cancel?.();
+      try { speechSynthesis?.cancel?.(); } catch(e) {}
       const warmup = new SpeechSynthesisUtterance(" ");
       warmup.volume = 0;
       warmup.lang = utterance.lang;
       warmup.onend = () => {
-        setTimeout(() => { speechSynthesis?.speak?.(utterance); }, 100);
+        setTimeout(() => { try { speechSynthesis?.speak?.(utterance); } catch(e) {} }, 100);
       };
-      setTimeout(() => { speechSynthesis?.speak?.(warmup); }, 150);
+      setTimeout(() => { try { speechSynthesis?.speak?.(warmup); } catch(e) {} }, 150);
     });
   };
 
@@ -129,6 +129,18 @@ export default function StudyMode() {
     }
   }, [currentIndex]);
 
+  // 상태변경 없이 타이머/TTS만 중단 (navigate 직전에 안전하게 사용)
+  const cancelOperations = () => {
+    isAutoPlayingRef.current = false;
+    if (autoPlayRef.current) {
+      clearTimeout(autoPlayRef.current);
+      autoPlayRef.current = null;
+    }
+    try { speechSynthesis?.cancel?.(); } catch(e) {}
+    try { (window as any).AndroidTTS?.stop?.(); } catch(e) {}
+    releaseWakeLock();
+  };
+
   const stopAutoPlay = useCallback(() => {
     isAutoPlayingRef.current = false;
     setIsAutoPlaying(false);
@@ -138,11 +150,8 @@ export default function StudyMode() {
       clearTimeout(autoPlayRef.current);
       autoPlayRef.current = null;
     }
-    // WebView에서 speechSynthesis가 없을 수 있으므로 optional chaining 사용
-    speechSynthesis?.cancel?.();
-    if ((window as any).AndroidTTS?.stop) {
-      (window as any).AndroidTTS.stop();
-    }
+    try { speechSynthesis?.cancel?.(); } catch(e) {}
+    try { (window as any).AndroidTTS?.stop?.(); } catch(e) {}
     setIsFlipped(false);
     setCurrentIndex(0);
     setAutoCurrentWord(undefined);
@@ -232,12 +241,12 @@ export default function StudyMode() {
   useEffect(() => {
     return () => {
       if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
-      speechSynthesis?.cancel?.();
+      try { speechSynthesis?.cancel?.(); } catch(e) {}
       releaseWakeLock();
     };
   }, []);
 
-  // 스와이프: 오른쪽 → 다음, 왼쪽 → 이전 (원래 방향)
+  // 스와이프: 오른쪽 → 다음, 왼쪽 → 이전
   const handleTouchStart = (e: React.TouchEvent) => { setTouchStart(e.touches[0].clientX); };
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStart === null) return;
@@ -260,28 +269,33 @@ export default function StudyMode() {
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
 
-      {/* 화면 잠금 오버레이 — 텍스트 위쪽 배치, 카드 글씨가 살짝 비침 */}
+      {/* 화면 잠금 오버레이 — 잠금해제 버튼만 헤더 바로 아래 배치 */}
       {isScreenLocked && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 flex flex-col items-center justify-start pt-24 gap-4"
+          className="fixed inset-0 z-50 bg-black/50"
           onClick={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
         >
-          <p className="text-white text-lg font-body">화면 잠금 중</p>
-          <button
-            onClick={() => setIsScreenLocked(false)}
-            className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/20 border border-white/40 text-white font-body text-sm"
-          >
-            <Unlock size={16} /> 잠금 해제
-          </button>
+          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '72px' }}>
+            <button
+              onClick={() => setIsScreenLocked(false)}
+              className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/20 border border-white/40 text-white font-body text-sm"
+            >
+              <Unlock size={18} /> 잠금 해제
+            </button>
+          </div>
         </div>
       )}
 
       {/* 헤더 */}
       <div className="flex items-center justify-between px-4 py-4">
         <button
-          onClick={() => { stopAutoPlay(); navigate("/"); }}
+          onClick={() => {
+            // setState 없이 타이머/TTS만 취소 후 navigate → WebView 크래시 방지
+            cancelOperations();
+            navigate("/");
+          }}
           className="text-white hover:text-white/80"
         >
           <ArrowLeft size={20} />
@@ -305,7 +319,7 @@ export default function StudyMode() {
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
             {/* 앞면 */}
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
-              <p className={`text-center leading-relaxed text-gray-900 ${frontLang === "id" ? "font-word text-3xl" : "font-body text-2xl"}`}>
+              <p className={`text-center leading-relaxed text-gray-900 ${frontLang === "id" ? "font-word text-2xl" : "font-body text-xl"}`}>
                 {frontLang === "id" ? currentWord?.word : currentWord?.meaning}
               </p>
               {frontLang === "id" && currentWord?.example && (
@@ -317,7 +331,7 @@ export default function StudyMode() {
             </div>
             {/* 뒷면 */}
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
-              <p className={`font-normal text-center mb-3 text-gray-900 ${frontLang === "id" ? "font-body text-2xl" : "font-word text-3xl"}`}>
+              <p className={`font-normal text-center mb-3 text-gray-900 ${frontLang === "id" ? "font-body text-xl" : "font-word text-2xl"}`}>
                 {frontLang === "id" ? currentWord?.meaning : currentWord?.word}
               </p>
               {frontLang === "id" && currentWord?.exampleMeaning && (
@@ -331,7 +345,7 @@ export default function StudyMode() {
         </div>
       </div>
 
-      {/* 중간 버튼: w-12 h-12 고정으로 완전한 원형 통일 */}
+      {/* 중간 버튼: w-12 h-12 완전한 원형 */}
       <div className="flex justify-center gap-3 py-2">
         <button
           onClick={handleToggleSave}
@@ -413,4 +427,4 @@ export default function StudyMode() {
 
     </div>
   );
-    }
+}
