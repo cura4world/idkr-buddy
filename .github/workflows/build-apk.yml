@@ -60,7 +60,6 @@ jobs:
           mkdir -p app/src/main/res/values
           mkdir -p gradle/wrapper
 
-          # settings.gradle
           cat > settings.gradle << 'EOF'
           pluginManagement {
               repositories {
@@ -80,21 +79,18 @@ jobs:
           include ':app'
           EOF
 
-          # root build.gradle
           cat > build.gradle << 'EOF'
           plugins {
               id 'com.android.application' version '8.2.2' apply false
           }
           EOF
 
-          # gradle.properties
           cat > gradle.properties << 'EOF'
           android.useAndroidX=true
           android.enableJetifier=true
           org.gradle.jvmargs=-Xmx2048m
           EOF
 
-          # app/build.gradle
           cat > app/build.gradle << 'EOF'
           plugins {
               id 'com.android.application'
@@ -133,7 +129,6 @@ jobs:
           }
           EOF
 
-          # gradle wrapper
           cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
@@ -147,7 +142,6 @@ jobs:
           curl -sL "https://github.com/gradle/gradle/raw/v8.2.0/gradle/wrapper/gradle-wrapper.jar" \
             -o gradle/wrapper/gradle-wrapper.jar
 
-          # AndroidManifest.xml
           cat > app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -171,7 +165,6 @@ jobs:
           </manifest>
           EOF
 
-          # strings.xml
           cat > app/src/main/res/values/strings.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
@@ -179,54 +172,167 @@ jobs:
           </resources>
           EOF
 
-          # MainActivity.java
           cat > app/src/main/java/io/github/cura4world/twa/MainActivity.java << 'EOF'
           package io.github.cura4world.twa;
 
           import android.app.Activity;
+          import android.content.Intent;
+          import android.net.Uri;
           import android.os.Bundle;
-          import android.view.View;
+          import android.speech.tts.TextToSpeech;
           import android.view.WindowManager;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
-          import android.webkit.WebChromeClient;
+          import java.util.Locale;
 
           public class MainActivity extends Activity {
+
               private WebView webView;
+              private TextToSpeech tts;
+              private boolean ttsReady = false;
+              private ValueCallback<Uri[]> fileCallback;
+              private static final int FILE_CHOOSER_REQUEST = 1001;
+
+              // JavaScript 인터페이스: 웹에서 window.AndroidTTS.speak() 호출
+              private class TTSInterface {
+                  @JavascriptInterface
+                  public void speak(String text, String langCode) {
+                      if (!ttsReady) return;
+                      Locale locale;
+                      if (langCode.startsWith("ko")) {
+                          locale = Locale.KOREAN;
+                      } else if (langCode.startsWith("id")) {
+                          locale = new Locale("id", "ID");
+                      } else {
+                          locale = Locale.getDefault();
+                      }
+                      int result = tts.setLanguage(locale);
+                      if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                          tts.setLanguage(Locale.getDefault());
+                      }
+                      tts.setSpeechRate(0.9f);
+                      tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "tts_" + System.currentTimeMillis());
+                  }
+
+                  @JavascriptInterface
+                  public void stop() {
+                      if (ttsReady) tts.stop();
+                  }
+
+                  @JavascriptInterface
+                  public boolean isReady() {
+                      return ttsReady;
+                  }
+              }
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
 
-                  // 풀스크린 (상태바 숨김)
-                  getWindow().setFlags(
-                      WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                      WindowManager.LayoutParams.FLAG_FULLSCREEN
-                  );
+                  // 화면 켜짐 유지 (자동플레이 중 화면 꺼짐 방지)
+                  getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+                  // 네이티브 TTS 초기화
+                  tts = new TextToSpeech(this, status -> {
+                      if (status == TextToSpeech.SUCCESS) {
+                          ttsReady = true;
+                      }
+                  });
 
                   webView = new WebView(this);
                   WebSettings settings = webView.getSettings();
                   settings.setJavaScriptEnabled(true);
                   settings.setDomStorageEnabled(true);
-                  settings.setAllowFileAccess(false);
+                  settings.setAllowFileAccess(true);
+                  settings.setAllowContentAccess(true);
                   settings.setCacheMode(WebSettings.LOAD_DEFAULT);
                   settings.setMediaPlaybackRequiresUserGesture(false);
 
-                  webView.setWebViewClient(new WebViewClient());
-                  webView.setWebChromeClient(new WebChromeClient());
-                  webView.loadUrl("https://cura4world.github.io/idkr-buddy/");
+                  // TTS JavaScript 인터페이스 등록
+                  webView.addJavascriptInterface(new TTSInterface(), "AndroidTTS");
 
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                          // 앱 내부 URL만 허용 (외부 링크 방지)
+                          if (url.startsWith("https://cura4world.github.io/idkr-buddy")) {
+                              return false;
+                          }
+                          return true;
+                      }
+                  });
+
+                  // 파일 선택 지원 (CSV 불러오기)
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public boolean onShowFileChooser(WebView webView,
+                              ValueCallback<Uri[]> filePathCallback,
+                              FileChooserParams fileChooserParams) {
+                          if (fileCallback != null) {
+                              fileCallback.onReceiveValue(null);
+                          }
+                          fileCallback = filePathCallback;
+                          Intent intent = fileChooserParams.createIntent();
+                          try {
+                              startActivityForResult(intent, FILE_CHOOSER_REQUEST);
+                          } catch (Exception e) {
+                              fileCallback = null;
+                              return false;
+                          }
+                          return true;
+                      }
+                  });
+
+                  webView.loadUrl("https://cura4world.github.io/idkr-buddy/");
                   setContentView(webView);
               }
 
               @Override
-              public void onBackPressed() {
-                  if (webView.canGoBack()) {
-                      webView.goBack();
-                  } else {
-                      super.onBackPressed();
+              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  if (requestCode == FILE_CHOOSER_REQUEST) {
+                      if (fileCallback == null) return;
+                      Uri[] results = null;
+                      if (resultCode == Activity.RESULT_OK && data != null) {
+                          String dataString = data.getDataString();
+                          if (dataString != null) {
+                              results = new Uri[]{Uri.parse(dataString)};
+                          }
+                      }
+                      fileCallback.onReceiveValue(results);
+                      fileCallback = null;
                   }
+              }
+
+              @Override
+              public void onBackPressed() {
+                  // 화면 잠금 오버레이가 있으면 뒤로가기 무시
+                  // 웹 앱 내 history가 있으면 앱 뒤로가기
+                  if (webView.canGoBack()) {
+                      webView.evaluateJavascript(
+                          "(function(){ return window.location.pathname; })()",
+                          value -> {
+                              // 홈 경로가 아니면 뒤로가기
+                              if (value != null && !value.contains("/idkr-buddy/"")) {
+                                  runOnUiThread(() -> webView.goBack());
+                              }
+                              // 홈이면 아무것도 안 함 (앱 종료 방지)
+                          }
+                      );
+                  }
+                  // super.onBackPressed() 호출 안 함 → 앱 종료 방지
+              }
+
+              @Override
+              protected void onDestroy() {
+                  if (tts != null) {
+                      tts.stop();
+                      tts.shutdown();
+                  }
+                  super.onDestroy();
               }
           }
           EOF
