@@ -60,7 +60,7 @@ jobs:
           mkdir -p app/src/main/res/values
           mkdir -p gradle/wrapper
 
-          cat > settings.gradle << 'EOF'
+          cat > settings.gradle << 'GRADLE'
           pluginManagement {
               repositories {
                   google()
@@ -77,21 +77,21 @@ jobs:
           }
           rootProject.name = "KataKata"
           include ':app'
-          EOF
+          GRADLE
 
-          cat > build.gradle << 'EOF'
+          cat > build.gradle << 'GRADLE'
           plugins {
               id 'com.android.application' version '8.2.2' apply false
           }
-          EOF
+          GRADLE
 
-          cat > gradle.properties << 'EOF'
+          cat > gradle.properties << 'GRADLE'
           android.useAndroidX=true
           android.enableJetifier=true
           org.gradle.jvmargs=-Xmx2048m
-          EOF
+          GRADLE
 
-          cat > app/build.gradle << 'EOF'
+          cat > app/build.gradle << 'GRADLE'
           plugins {
               id 'com.android.application'
           }
@@ -127,22 +127,22 @@ jobs:
           dependencies {
               implementation 'androidx.appcompat:appcompat:1.6.1'
           }
-          EOF
+          GRADLE
 
-          cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          cat > gradle/wrapper/gradle-wrapper.properties << 'GRADLE'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
           distributionUrl=https\://services.gradle.org/distributions/gradle-8.2-bin.zip
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
-          EOF
+          GRADLE
 
           curl -s https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradlew -o gradlew
           chmod +x gradlew
           curl -sL "https://github.com/gradle/gradle/raw/v8.2.0/gradle/wrapper/gradle-wrapper.jar" \
             -o gradle/wrapper/gradle-wrapper.jar
 
-          cat > app/src/main/AndroidManifest.xml << 'EOF'
+          cat > app/src/main/AndroidManifest.xml << 'XML'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
@@ -163,16 +163,16 @@ jobs:
                   </activity>
               </application>
           </manifest>
-          EOF
+          XML
 
-          cat > app/src/main/res/values/strings.xml << 'EOF'
+          cat > app/src/main/res/values/strings.xml << 'XML'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <string name="app_name">Kata kata</string>
           </resources>
-          EOF
+          XML
 
-          cat > app/src/main/java/io/github/cura4world/twa/MainActivity.java << 'EOF'
+          cat > app/src/main/java/io/github/cura4world/twa/MainActivity.java << 'JAVA'
           package io.github.cura4world.twa;
 
           import android.app.Activity;
@@ -197,7 +197,6 @@ jobs:
               private ValueCallback<Uri[]> fileCallback;
               private static final int FILE_CHOOSER_REQUEST = 1001;
 
-              // JavaScript 인터페이스: 웹에서 window.AndroidTTS.speak() 호출
               private class TTSInterface {
                   @JavascriptInterface
                   public void speak(String text, String langCode) {
@@ -232,11 +231,8 @@ jobs:
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-
-                  // 화면 켜짐 유지 (자동플레이 중 화면 꺼짐 방지)
                   getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-                  // 네이티브 TTS 초기화
                   tts = new TextToSpeech(this, status -> {
                       if (status == TextToSpeech.SUCCESS) {
                           ttsReady = true;
@@ -252,13 +248,11 @@ jobs:
                   settings.setCacheMode(WebSettings.LOAD_DEFAULT);
                   settings.setMediaPlaybackRequiresUserGesture(false);
 
-                  // TTS JavaScript 인터페이스 등록
                   webView.addJavascriptInterface(new TTSInterface(), "AndroidTTS");
 
                   webView.setWebViewClient(new WebViewClient() {
                       @Override
                       public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                          // 앱 내부 URL만 허용 (외부 링크 방지)
                           if (url.startsWith("https://cura4world.github.io/idkr-buddy")) {
                               return false;
                           }
@@ -266,7 +260,6 @@ jobs:
                       }
                   });
 
-                  // 파일 선택 지원 (CSV 불러오기)
                   webView.setWebChromeClient(new WebChromeClient() {
                       @Override
                       public boolean onShowFileChooser(WebView webView,
@@ -309,21 +302,9 @@ jobs:
 
               @Override
               public void onBackPressed() {
-                  // 화면 잠금 오버레이가 있으면 뒤로가기 무시
-                  // 웹 앱 내 history가 있으면 앱 뒤로가기
                   if (webView.canGoBack()) {
-                      webView.evaluateJavascript(
-                          "(function(){ return window.location.pathname; })()",
-                          value -> {
-                              // 홈 경로가 아니면 뒤로가기
-                              if (value != null && !value.contains("/idkr-buddy/"")) {
-                                  runOnUiThread(() -> webView.goBack());
-                              }
-                              // 홈이면 아무것도 안 함 (앱 종료 방지)
-                          }
-                      );
+                      webView.goBack();
                   }
-                  // super.onBackPressed() 호출 안 함 → 앱 종료 방지
               }
 
               @Override
@@ -335,7 +316,7 @@ jobs:
                   super.onDestroy();
               }
           }
-          EOF
+          JAVA
 
       - name: Build APK
         run: ./gradlew assembleRelease --no-daemon
