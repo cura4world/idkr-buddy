@@ -1,21 +1,36 @@
 name: Deploy to GitHub Pages
+
 on:
   push:
     branches: [main]
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-node@v3
         with:
           node-version: 18
+
       - run: npm install
+
       - run: npm run build
+
+      - name: Copy .well-known to dist
+        run: |
+          mkdir -p dist/.well-known
+          cp -r public/.well-known/. dist/.well-known/
+          echo "=== dist/.well-known contents ==="
+          ls -la dist/.well-known/
+          cat dist/.well-known/assetlinks.json
+
       - run: cp dist/index.html dist/404.html
-      - run: ls -la dist/
+
       - uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
