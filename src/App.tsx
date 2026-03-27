@@ -16,7 +16,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Sonner />
+      <Sonner duration={2000} />
       <BrowserRouter basename="/idkr-buddy">
         <Routes>
           <Route path="/" element={<Index />} />
