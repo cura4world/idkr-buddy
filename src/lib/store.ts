@@ -252,3 +252,10 @@ export function reorderWords(categoryId: string, fromIndex: number, toIndex: num
   catWords.splice(toIndex, 0, moved);
   saveWords([...otherWords, ...catWords]);
 }
+
+export function reorderCategories(fromIndex: number, toIndex: number) {
+  const categories = getCategories();
+  const [moved] = categories.splice(fromIndex, 1);
+  categories.splice(toIndex, 0, moved);
+  saveCategories(categories);
+}
