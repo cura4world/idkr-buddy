@@ -182,6 +182,9 @@ jobs:
                   android:icon="@mipmap/ic_launcher"
                   android:roundIcon="@mipmap/ic_launcher"
                   android:theme="@style/Theme.AppCompat.NoActionBar">
+                  <meta-data
+                      android:name="asset_statements"
+                      android:resource="@string/asset_statements" />
                   <activity
                       android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
                       android:exported="true">
