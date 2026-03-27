@@ -27,13 +27,16 @@ export default function StudyMode() {
   const isLoopingRef = useRef(false);
   const isAutoPlayingRef = useRef(false);
   const autoRandomRef = useRef(false);
+
   const shuffledWords = useMemo(() => {
     if (!isRandom) return words;
     return [...words].sort(() => Math.random() - 0.5);
   }, [isRandom, words.length]);
+
   const displayWords = isRandom ? shuffledWords : words;
   const currentWord: Word | undefined = isAutoPlaying ? autoCurrentWord : displayWords[currentIndex];
   const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
+
   const requestWakeLock = async () => {
     try {
       if ("wakeLock" in navigator) {
@@ -41,12 +44,14 @@ export default function StudyMode() {
       }
     } catch (e) {}
   };
+
   const releaseWakeLock = async () => {
     if (wakeLockRef.current) {
       try { await wakeLockRef.current.release(); } catch (e) {}
       wakeLockRef.current = null;
     }
   };
+
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (document.visibilityState === "visible" && isAutoPlayingRef.current) {
@@ -56,15 +61,17 @@ export default function StudyMode() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
+
   const handleToggleSave = () => {
     if (!currentWord) return;
     const nowSaved = toggleSavedWord(currentWord.id);
     setSavedIds(getSavedWordIds());
-    toast(nowSaved ? "ë¨ì´ë¥¼ ë³´ê´íìµëë¤ ð" : "ë³´ê´í¨ìì ì ê±°íìµëë¤");
+    toast(nowSaved ? "단어를 보관했습니다 📌" : "보관함에서 제거했습니다");
   };
+
   const speak = (text: string, lang: "id" | "ko") => {
     return new Promise<void>((resolve) => {
-      const cleanText = text.replace(/~/g, "ë¬´ìë¬´ì").replace(/\s*\/\s*/g, ", ");
+      const cleanText = text.replace(/~/g, "무엇무엇").replace(/\s*\/\s*/g, ", ");
       if ((window as any).AndroidTTS) {
         (window as any).AndroidTTS.speak(cleanText, lang === "ko" ? "ko-KR" : "id-ID");
         setTimeout(() => resolve(), cleanText.length * 80 + 500);
@@ -84,6 +91,7 @@ export default function StudyMode() {
       setTimeout(() => { try { speechSynthesis?.speak?.(warmup); } catch(e) {} }, 150);
     });
   };
+
   const getSpeakTarget = (word: Word, flipped: boolean): { text: string; lang: "id" | "ko" } => {
     if (frontLang === "id") {
       return flipped ? { text: word.meaning, lang: "ko" } : { text: word.word, lang: "id" };
@@ -91,21 +99,25 @@ export default function StudyMode() {
       return flipped ? { text: word.word, lang: "id" } : { text: word.meaning, lang: "ko" };
     }
   };
+
   useEffect(() => {
     if (isFlipped) { setIsBreathing(false); return; }
     const timer = setTimeout(() => setIsBreathing(true), 2000);
     return () => clearTimeout(timer);
   }, [currentIndex, isFlipped]);
+
   const goNext = useCallback(() => {
     if (currentIndex < displayWords.length - 1) {
       setIsFlipped(false); setIsBreathing(false); setCurrentIndex((i) => i + 1);
     }
   }, [currentIndex, displayWords.length]);
+
   const goPrev = useCallback(() => {
     if (currentIndex > 0) {
       setIsFlipped(false); setIsBreathing(false); setCurrentIndex((i) => i - 1);
     }
   }, [currentIndex]);
+
   const cancelOperations = () => {
     isAutoPlayingRef.current = false;
     if (autoPlayRef.current) { clearTimeout(autoPlayRef.current); autoPlayRef.current = null; }
@@ -113,6 +125,7 @@ export default function StudyMode() {
     try { (window as any).AndroidTTS?.stop?.(); } catch(e) {}
     releaseWakeLock();
   };
+
   const stopAutoPlay = useCallback(() => {
     isAutoPlayingRef.current = false;
     setIsAutoPlaying(false); setIsAutoRandom(false); setIsScreenLocked(false);
@@ -122,6 +135,7 @@ export default function StudyMode() {
     setIsFlipped(false); setCurrentIndex(0); setAutoCurrentWord(undefined);
     releaseWakeLock();
   }, []);
+
   const runAutoPlay = useCallback(async (index: number, playWords: Word[], lang: "id" | "ko") => {
     if (!isAutoPlayingRef.current) return;
     if (index >= playWords.length) {
@@ -132,7 +146,9 @@ export default function StudyMode() {
       isAutoPlayingRef.current = false;
       setIsAutoPlaying(false); setIsAutoRandom(false); setIsScreenLocked(false);
       setIsFlipped(false); setCurrentIndex(0); setAutoCurrentWord(undefined);
-      releaseWakeLock(); toast("ìëíë ì´ê° ìë£ëìµëë¤ ð"); return;
+      releaseWakeLock();
+      toast("자동플레이가 완료되었습니다 🎉");
+      return;
     }
     setIsFlipped(false); setIsBreathing(false); setCurrentIndex(index);
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(() => { setAutoCurrentWord(playWords[index]); resolve(); }, 650); });
@@ -145,22 +161,20 @@ export default function StudyMode() {
     if (!isAutoPlayingRef.current) return;
     autoPlayRef.current = setTimeout(() => { runAutoPlay(index + 1, playWords, lang); }, 1500);
   }, []);
+
   const startAutoPlay = (random: boolean) => {
     if (isAutoPlaying) { stopAutoPlay(); return; }
     const playWords = random ? [...words].sort(() => Math.random() - 0.5) : [...words];
-    autoRandomRef.current = random;
-    isAutoPlayingRef.current = true;
+    autoRandomRef.current = random; isAutoPlayingRef.current = true;
     setIsAutoRandom(random); setIsAutoPlaying(true); setCurrentIndex(0); setIsFlipped(false);
-    setAutoCurrentWord(playWords[0]);
-    requestWakeLock();
-    runAutoPlay(0, playWords, frontLang);
+    setAutoCurrentWord(playWords[0]); requestWakeLock(); runAutoPlay(0, playWords, frontLang);
   };
+
   const toggleLoop = () => {
-    const next = !isLooping;
-    isLoopingRef.current = next;
-    setIsLooping(next);
-    toast(next ? "ë°ë³µ ì¬ì ì¼ì§ ð" : "ë°ë³µ ì¬ì êº¼ì§");
+    const next = !isLooping; isLoopingRef.current = next; setIsLooping(next);
+    toast(next ? "반복 재생 켜짐 🔁" : "반복 재생 꺼짐");
   };
+
   useEffect(() => {
     return () => {
       if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
@@ -168,6 +182,7 @@ export default function StudyMode() {
       releaseWakeLock();
     };
   }, []);
+
   const handleTouchStart = (e: React.TouchEvent) => { setTouchStart(e.touches[0].clientX); };
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStart === null) return;
@@ -175,21 +190,23 @@ export default function StudyMode() {
     if (Math.abs(diff) > 60) { if (diff > 0) goNext(); else goPrev(); }
     setTouchStart(null);
   };
+
   if (!category || displayWords.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
-        <p className="text-muted-foreground">íìµí  ë¨ì´ê° ììµëë¤.</p>
-        <button onClick={() => navigate("/")} className="mt-4 text-primary underline underline-offset-4">ëìê°ê¸°</button>
+        <p className="text-muted-foreground">학습할 단어가 없습니다.</p>
+        <button onClick={() => navigate("/")} className="mt-4 text-primary underline underline-offset-4">돌아가기</button>
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
       {isScreenLocked && (
         <div className="fixed inset-0 z-50 bg-black/50" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
-          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '72px' }}>
+          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: "72px" }}>
             <button onClick={() => setIsScreenLocked(false)} className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/20 border border-white/40 text-white font-body text-sm">
-              <Unlock size={18} /> ì ê¸ í´ì 
+              <Unlock size={18} /> 잠금 해제
             </button>
           </div>
         </div>
@@ -200,7 +217,7 @@ export default function StudyMode() {
         </button>
         <span className="text-sm text-white font-body">
           {currentIndex + 1} / {isAutoPlaying ? words.length : displayWords.length}
-          {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">â¶</span>}
+          {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">{"\u25B6"}</span>}
         </span>
         {isAutoPlaying ? (
           <button onClick={() => setIsScreenLocked(true)} className="text-white hover:text-white/80"><Lock size={20} /></button>
@@ -236,7 +253,6 @@ export default function StudyMode() {
           </div>
         </div>
       </div>
-      {/* ì¤ê° ë²í¼ 4ê°: ëª¨ë w-12 h-12 */}
       <div className="flex justify-center gap-3 py-2">
         <button onClick={handleToggleSave} disabled={isAutoPlaying}
           className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isSaved ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"} disabled:opacity-30`}>
@@ -251,14 +267,12 @@ export default function StudyMode() {
           className="w-12 h-12 flex items-center justify-center rounded-full transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30">
           <Volume2 size={20} />
         </button>
-        {/* (2) IN/KO ë²í¼: í­ì í°ì ë°°ê²½+í°ì íì¤í¸, active ì primary íëë¦¬ë§ */}
         <button onClick={() => { if (isAutoPlaying) return; setFrontLang((l) => (l === "id" ? "ko" : "id")); setIsFlipped(false); setCurrentIndex(0); }}
           disabled={isAutoPlaying}
           className={`w-12 h-12 flex items-center justify-center rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 bg-card text-gray-900 border-border/50 hover:border-primary/50 ${frontLang === "ko" ? "border-primary" : ""}`}>
           {frontLang === "id" ? "IN" : "KO"}
         </button>
       </div>
-      {/* íë¨ ë²í¼ 5ê°: ëª¨ë w-12 h-12 ëì¼ í¬ê¸° */}
       <div className="flex items-center justify-center gap-3 py-4">
         <button onClick={goPrev} disabled={currentIndex === 0 || isAutoPlaying}
           className="w-12 h-12 flex items-center justify-center rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity">
@@ -283,4 +297,4 @@ export default function StudyMode() {
       </div>
     </div>
   );
-}
+      }
