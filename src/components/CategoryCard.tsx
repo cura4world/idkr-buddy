@@ -44,7 +44,7 @@ export default function CategoryCard({
       <div
         ref={cardRef}
         data-cat-index={index}
-        className={`rounded-lg bg-card px-5 py-4 shadow-sm border border-border/50 text-card-foreground select-none ${
+        className={`rounded-lg bg-card px-6 py-5 shadow-sm border border-border/50 text-card-foreground select-none ${
           isDragging ? "opacity-20 cursor-grabbing" : "cursor-grab"
         }`}
         onTouchStart={onTouchStart}
@@ -52,7 +52,6 @@ export default function CategoryCard({
         onMouseDown={onMouseDown}
         onContextMenu={(e) => e.preventDefault()}
       >
-        {/* 상단: 이모지+이름 + 톱니바퀴 */}
         <div className="flex items-center justify-between">
           <div
             className="flex items-center gap-2 flex-1 cursor-pointer"
@@ -107,8 +106,7 @@ export default function CategoryCard({
           />
         )}
 
-        {/* 하단: 단어 수 + 퀴즈/플래시카드 같은 줄 */}
-        <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center justify-between mt-3">
           <p className="text-sm text-muted-foreground">{words.length}개의 단어</p>
           <div className="flex gap-3">
             <button
