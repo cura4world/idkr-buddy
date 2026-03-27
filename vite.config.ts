@@ -3,6 +3,26 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+import fs from "fs";
+import type { Plugin } from "vite";
+
+// .well-known 폴더를 빌드 output에 복사하는 플러그인
+function copyWellKnown(): Plugin {
+  return {
+    name: "copy-well-known",
+    closeBundle() {
+      const src = "public/.well-known";
+      const dest = "dist/.well-known";
+      if (fs.existsSync(src)) {
+        fs.mkdirSync(dest, { recursive: true });
+        fs.readdirSync(src).forEach((file) => {
+          fs.copyFileSync(`${src}/${file}`, `${dest}/${file}`);
+        });
+      }
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => ({
   base: '/idkr-buddy/',
   server: {
@@ -15,6 +35,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
+    copyWellKnown(),
     VitePWA({
       registerType: "autoUpdate",
       workbox: {
