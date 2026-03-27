@@ -16,31 +16,15 @@ interface Props {
 }
 
 const emojis = [
-  "📚", "✈️", "🏠", "💼", "🎵", "🛒", "💬", "🌏",
-  "👋", "🍜", "🔢", "☀️", "❤️", "⭐", "🎮", "🏃",
-  "🐱", "🌸", "🎨", "📱", "🚗", "🏫", "🏥", "⚽",
-  "🎬", "📖", "🧳", "🍕", "☕", "🌙", "🔥", "💡",
-  "🎓", "💪", "🧠", "🗣️", "✍️", "🛫", "🏖️", "🎉",
-  "🐶", "🐻", "🦁", "🐸", "🦋", "🌺", "🌴", "🍎",
-  "🍰", "🎂", "🍷", "🥤", "🏀", "🎾", "🏈", "🎯",
-  "🎪", "🎭", "🎤", "🎧", "📷", "🔑", "💎", "👑",
-  "🌈", "⚡", "❄️", "🌊", "🏔️", "🌻", "🍀", "🌵",
-  "🦄", "🐧", "🐼", "🦊", "🐝", "🐳", "🦀", "🐙",
-  "🚀", "🛸", "⛵", "🚲", "🏍️", "🚁", "🚂", "⛺",
-  "🗽", "🗼", "🏰", "⛩️", "💊", "🔬", "🧪", "📐",
-  "🧩", "🎲", "♟️", "🪁",
-  // 기독교 관련
-  "✝️", "⛪", "🙏", "📿", "🕊️", "👼", "😇", "🕯️",
-  "📖", "🔔", "💒", "🌟", "✨", "🫒", "🍞", "🍇",
-  "⭐", "🐑", "🐟", "🪽",
-  // 추가 아이콘
-  "🧭", "🪐", "🌍", "🌎", "🌏", "🏝️", "🗻", "🌋",
-  "🏜️", "🌾", "🍂", "🍁", "🌿", "☘️", "🪴", "🌹",
-  "🌷", "💐", "🪻", "🌼", "🥀", "🍄", "🐢", "🦅",
-  "🦈", "🐬", "🦎", "🦉", "🦩", "🐿️", "🦔", "🦗",
-  "🎻", "🥁", "🎺", "🎸", "🪗", "🎹", "🪈", "📯",
-  "🏋️", "🤸", "🧘", "🏄", "🏊", "🚴", "⛷️", "🤿",
-  "🛹", "🪂",
+  "📚", "✈️", "🏠", "💼", "🎵", "🛒", "💬", "🌏", "👋", "🍜", "🔢", "☀️",
+  "❤️", "⭐", "🎮", "🏃", "🐱", "🌸", "🎨", "📱", "🚗", "🏫", "🏥", "⚽",
+  "🎬", "📖", "🧳", "🍕", "☕", "🌙", "🔥", "💡", "🎓", "💪", "🧠", "🗣️",
+  "✍️", "🛫", "🏖️", "🎉", "🐶", "🐻", "🦁", "🐸", "🦋", "🌺", "🌴", "🍎",
+  "🍰", "🎂", "🍷", "🥤", "🏀", "🎾", "🏈", "🎯", "🎪", "🎭", "🎤", "🎧",
+  "📷", "🔑", "💎", "👑", "🌈", "⚡", "❄️", "🌊", "🏔️", "🌻", "🍀", "🌵",
+  "🦄", "🐧", "🐼", "🦊", "🐝", "🐳", "🦀", "🐙", "🚀", "🛸", "⛵", "🚲",
+  "✝️", "⛪", "🙏", "📿", "🕊️", "👼", "😇", "🕯️", "🔔", "💒", "🌟", "✨",
+  "🫒", "🍞", "🍇", "🐑", "🐟", "🪽", "🧭", "🪐", "🌍", "🌎",
 ];
 
 export default function EditCategoryDialog({ open, onOpenChange, onUpdated, categoryId, currentName, currentEmoji }: Props) {
@@ -64,15 +48,20 @@ export default function EditCategoryDialog({ open, onOpenChange, onUpdated, cate
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm mx-auto bg-card">
         <DialogHeader>
-          <DialogTitle className="font-body">카테고리 수정</DialogTitle>
+          <DialogTitle className="font-body text-gray-900">이름 변경</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label className="font-body text-sm">이름</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" autoFocus />
+            <Label className="font-body text-sm text-gray-900">이름</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 text-gray-900"
+              autoFocus
+            />
           </div>
           <div>
-            <Label className="font-body text-sm">아이콘</Label>
+            <Label className="font-body text-sm text-gray-900">아이콘</Label>
             <ScrollArea className="h-40 mt-1 rounded-md border">
               <div className="flex gap-2 flex-wrap p-2">
                 {emojis.map((e) => (
