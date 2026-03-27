@@ -91,7 +91,6 @@ const Index = () => {
     return () => document.removeEventListener("touchmove", onTouchMove);
   }, []);
 
-  // cancelLongPress를 CategoryCard에 전달 — 톱니바퀴 오버레이 터치 시 드래그 방지
   const makeTouchStart = (index: number, cat: Category) => (e: React.TouchEvent) => {
     const t = e.touches[0];
     isDragging.current = false;
@@ -150,24 +149,23 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
-      <header className="mb-6">
+      {/* 헤더 — Kata kata. 제목과 + 버튼을 같은 줄 (톱니바퀴와 세로 동일 위치) */}
+      <header className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold font-body tracking-tight text-foreground">
           Kata kata<span className="text-accent">.</span>
         </h1>
-      </header>
-
-      <div className="flex justify-end mb-4">
         <button
           onClick={() => setAddCatOpen(true)}
-          className="text-white hover:text-white/70 text-xl font-light leading-none"
+          className="text-white hover:text-white/70 text-2xl font-light leading-none w-9 h-9 flex items-center justify-center"
+          title="단어장 추가"
         >
           +
         </button>
-      </div>
+      </header>
 
       <div className="space-y-2">
         {savedCount > 0 && (
-          <div className="rounded-lg bg-card px-4 py-3 shadow-sm border border-border/50 text-card-foreground">
+          <div className="rounded-lg bg-card px-5 py-4 shadow-sm border border-border/50 text-card-foreground">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/saved")}>
               <span className="text-lg">📌</span>
               <h2 className="text-base font-medium font-body">단어보관함</h2>
@@ -211,7 +209,7 @@ const Index = () => {
 
       {floatCat && floatPos && (
         <div
-          className="fixed pointer-events-none z-50 rounded-lg bg-card px-4 py-3 shadow-lg border border-sky-400 shadow-sky-400/20"
+          className="fixed pointer-events-none z-50 rounded-lg bg-card px-5 py-4 shadow-lg border border-sky-400 shadow-sky-400/20"
           style={{ width: floatWidth, left: floatPos.x - floatWidth / 2, top: floatPos.y - floatOffsetY.current }}
         >
           <div className="flex items-center gap-2">
