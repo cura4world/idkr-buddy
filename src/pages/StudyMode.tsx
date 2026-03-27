@@ -39,7 +39,6 @@ export default function StudyMode() {
   const currentWord: Word | undefined = isAutoPlaying ? autoCurrentWord : displayWords[currentIndex];
   const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
 
-  // Wake Lock
   const requestWakeLock = async () => {
     try {
       if ("wakeLock" in navigator) {
@@ -78,24 +77,26 @@ export default function StudyMode() {
         .replace(/~/g, "무엇무엇")
         .replace(/\s*\/\s*/g, ", ");
 
+      // Android WebView 네이티브 TTS 지원
+      if ((window as any).AndroidTTS) {
+        (window as any).AndroidTTS.speak(cleanText, lang === "ko" ? "ko-KR" : "id-ID");
+        setTimeout(() => resolve(), cleanText.length * 80 + 500);
+        return;
+      }
+
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = lang === "ko" ? "ko-KR" : "id-ID";
       utterance.rate = 0.9;
       utterance.onend = () => resolve();
 
-      // 차량 오디오 워밍업: 무음 utterance로 오디오 출력을 먼저 깨운 후 실제 단어 재생
       speechSynthesis.cancel();
       const warmup = new SpeechSynthesisUtterance(" ");
       warmup.volume = 0;
       warmup.lang = utterance.lang;
       warmup.onend = () => {
-        setTimeout(() => {
-          speechSynthesis.speak(utterance);
-        }, 100);
+        setTimeout(() => { speechSynthesis.speak(utterance); }, 100);
       };
-      setTimeout(() => {
-        speechSynthesis.speak(warmup);
-      }, 150);
+      setTimeout(() => { speechSynthesis.speak(warmup); }, 150);
     });
   };
 
@@ -173,10 +174,7 @@ export default function StudyMode() {
     setCurrentIndex(index);
 
     await new Promise<void>((resolve) => {
-      autoPlayRef.current = setTimeout(() => {
-        setAutoCurrentWord(playWords[index]);
-        resolve();
-      }, 650);
+      autoPlayRef.current = setTimeout(() => { setAutoCurrentWord(playWords[index]); resolve(); }, 650);
     });
     if (!isAutoPlayingRef.current) return;
 
@@ -190,10 +188,7 @@ export default function StudyMode() {
     if (!isAutoPlayingRef.current) return;
 
     await new Promise<void>((resolve) => {
-      autoPlayRef.current = setTimeout(() => {
-        setIsFlipped(true);
-        resolve();
-      }, 1500);
+      autoPlayRef.current = setTimeout(() => { setIsFlipped(true); resolve(); }, 1500);
     });
     if (!isAutoPlayingRef.current) return;
 
@@ -207,16 +202,11 @@ export default function StudyMode() {
     });
     if (!isAutoPlayingRef.current) return;
 
-    autoPlayRef.current = setTimeout(() => {
-      runAutoPlay(index + 1, playWords, lang);
-    }, 1500);
+    autoPlayRef.current = setTimeout(() => { runAutoPlay(index + 1, playWords, lang); }, 1500);
   }, []);
 
   const startAutoPlay = (random: boolean) => {
-    if (isAutoPlaying) {
-      stopAutoPlay();
-      return;
-    }
+    if (isAutoPlaying) { stopAutoPlay(); return; }
     const playWords = random ? [...words].sort(() => Math.random() - 0.5) : [...words];
     autoRandomRef.current = random;
     isAutoPlayingRef.current = true;
@@ -239,22 +229,16 @@ export default function StudyMode() {
   useEffect(() => {
     return () => {
       if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
-      speechSynthesis.cancel();
+      speechSynthesis.cancel?.();
       releaseWakeLock();
     };
   }, []);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.touches[0].clientX);
-  };
-
+  const handleTouchStart = (e: React.TouchEvent) => { setTouchStart(e.touches[0].clientX); };
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStart === null) return;
     const diff = e.changedTouches[0].clientX - touchStart;
-    if (Math.abs(diff) > 60) {
-      if (diff < 0) goNext();
-      else goPrev();
-    }
+    if (Math.abs(diff) > 60) { if (diff < 0) goNext(); else goPrev(); }
     setTouchStart(null);
   };
 
@@ -301,12 +285,8 @@ export default function StudyMode() {
           {currentIndex + 1} / {isAutoPlaying ? words.length : displayWords.length}
           {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">▶</span>}
         </span>
-        {/* 화면 잠금 버튼 — 자동플레이 중에만 표시, 아니면 빈 공간 */}
         {isAutoPlaying ? (
-          <button
-            onClick={() => setIsScreenLocked(true)}
-            className="text-white hover:text-white/80"
-          >
+          <button onClick={() => setIsScreenLocked(true)} className="text-white hover:text-white/80">
             <Lock size={20} />
           </button>
         ) : (
@@ -315,15 +295,8 @@ export default function StudyMode() {
       </div>
 
       {/* 카드 */}
-      <div
-        className="flex-1 flex items-center justify-center px-6"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
-        <div
-          className="perspective w-full max-w-sm aspect-[3/4] cursor-pointer"
-          onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}
-        >
+      <div className="flex-1 flex items-center justify-center px-6" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <div className="perspective w-full max-w-sm aspect-[3/4] cursor-pointer" onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}>
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
             {/* 앞면 */}
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
@@ -331,14 +304,10 @@ export default function StudyMode() {
                 {frontLang === "id" ? currentWord?.word : currentWord?.meaning}
               </p>
               {frontLang === "id" && currentWord?.example && (
-                <p className="text-base text-muted-foreground font-word mt-4 text-center leading-relaxed">
-                  {currentWord.example}
-                </p>
+                <p className="text-base text-muted-foreground font-word mt-4 text-center leading-relaxed">{currentWord.example}</p>
               )}
               {frontLang === "ko" && currentWord?.exampleMeaning && (
-                <p className="text-base text-muted-foreground font-body mt-4 text-center leading-relaxed">
-                  {currentWord.exampleMeaning}
-                </p>
+                <p className="text-base text-muted-foreground font-body mt-4 text-center leading-relaxed">{currentWord.exampleMeaning}</p>
               )}
             </div>
             {/* 뒷면 */}
@@ -347,75 +316,48 @@ export default function StudyMode() {
                 {frontLang === "id" ? currentWord?.meaning : currentWord?.word}
               </p>
               {frontLang === "id" && currentWord?.exampleMeaning && (
-                <p className="text-base text-muted-foreground font-body text-center leading-relaxed">
-                  {currentWord.exampleMeaning}
-                </p>
+                <p className="text-base text-muted-foreground font-body text-center leading-relaxed">{currentWord.exampleMeaning}</p>
               )}
               {frontLang === "ko" && currentWord?.example && (
-                <p className="text-base text-muted-foreground font-word text-center leading-relaxed">
-                  {currentWord.example}
-                </p>
+                <p className="text-base text-muted-foreground font-word text-center leading-relaxed">{currentWord.example}</p>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* 중간 버튼: 보관, 랜덤, 스피커, KO/IN */}
+      {/* 중간 버튼: 보관, 랜덤, 스피커, KO/IN — 하단 버튼과 동일한 p-3 크기 */}
       <div className="flex justify-center gap-3 py-2">
-        {/* 보관 — 아이콘만 */}
         <button
           onClick={handleToggleSave}
           disabled={isAutoPlaying}
-          className={`flex items-center justify-center p-2.5 rounded-full transition-colors border ${
-            isSaved
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          className={`flex items-center justify-center p-3 rounded-full transition-colors border ${
+            isSaved ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           } disabled:opacity-30`}
         >
-          <Bookmark size={16} fill={isSaved ? "currentColor" : "none"} />
+          <Bookmark size={20} fill={isSaved ? "currentColor" : "none"} />
         </button>
-        {/* 랜덤 — 아이콘만 */}
         <button
-          onClick={() => {
-            setIsRandom((r) => !r);
-            setCurrentIndex(0);
-            setIsFlipped(false);
-          }}
+          onClick={() => { setIsRandom((r) => !r); setCurrentIndex(0); setIsFlipped(false); }}
           disabled={isAutoPlaying}
-          className={`flex items-center justify-center p-2.5 rounded-full transition-colors border ${
-            isRandom
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          className={`flex items-center justify-center p-3 rounded-full transition-colors border ${
+            isRandom ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           } disabled:opacity-30`}
         >
-          <Shuffle size={16} />
+          <Shuffle size={20} />
         </button>
-        {/* 스피커 */}
         <button
-          onClick={() => {
-            if (!currentWord) return;
-            const { text, lang } = getSpeakTarget(currentWord, isFlipped);
-            speak(text, lang);
-          }}
+          onClick={() => { if (!currentWord) return; const { text, lang } = getSpeakTarget(currentWord, isFlipped); speak(text, lang); }}
           disabled={!currentWord || isAutoPlaying}
-          className="flex items-center justify-center p-2.5 rounded-full transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30"
+          className="flex items-center justify-center p-3 rounded-full transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30"
         >
-          <Volume2 size={16} />
+          <Volume2 size={20} />
         </button>
-        {/* KO/IN 토글 */}
         <button
-          onClick={() => {
-            if (isAutoPlaying) return;
-            setFrontLang((l) => (l === "id" ? "ko" : "id"));
-            setIsFlipped(false);
-            setCurrentIndex(0);
-          }}
+          onClick={() => { if (isAutoPlaying) return; setFrontLang((l) => (l === "id" ? "ko" : "id")); setIsFlipped(false); setCurrentIndex(0); }}
           disabled={isAutoPlaying}
-          className={`flex items-center justify-center p-2.5 rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 ${
-            frontLang === "ko"
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          className={`flex items-center justify-center p-3 rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 ${
+            frontLang === "ko" ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
           {frontLang === "id" ? "IN" : "KO"}
@@ -431,35 +373,26 @@ export default function StudyMode() {
         >
           <ChevronLeft size={20} />
         </button>
-        {/* 순서 재생 */}
         <button
           onClick={() => startAutoPlay(false)}
           className={`p-3 rounded-full transition-colors border ${
-            isAutoPlaying && !isAutoRandom
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+            isAutoPlaying && !isAutoRandom ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
           {isAutoPlaying && !isAutoRandom ? <Square size={20} /> : <Play size={20} />}
         </button>
-        {/* 반복 재생 */}
         <button
           onClick={toggleLoop}
           className={`p-3 rounded-full transition-colors border ${
-            isLooping
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+            isLooping ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
           <RefreshCw size={20} />
         </button>
-        {/* 랜덤 재생 */}
         <button
           onClick={() => startAutoPlay(true)}
           className={`p-3 rounded-full transition-colors border ${
-            isAutoPlaying && isAutoRandom
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+            isAutoPlaying && isAutoRandom ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
           {isAutoPlaying && isAutoRandom ? <Square size={20} /> : <Shuffle size={20} />}
@@ -475,4 +408,4 @@ export default function StudyMode() {
 
     </div>
   );
-}
+                    }
