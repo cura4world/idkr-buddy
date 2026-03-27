@@ -16,7 +16,7 @@ interface CategoryCardProps {
   onTouchStart?: (e: React.TouchEvent) => void;
   onTouchEnd?: (e: React.TouchEvent) => void;
   onMouseDown?: (e: React.MouseEvent) => void;
-  onCancelDrag?: () => void; // 톱니바퀴 조작 시 드래그 취소
+  onCancelDrag?: () => void;
 }
 
 export default function CategoryCard({
@@ -36,13 +36,6 @@ export default function CategoryCard({
     setDeleteOpen(false);
   };
 
-  // 톱니바퀴 관련 터치 이벤트 — 드래그와 완전히 격리
-  const stopAll = (e: React.TouchEvent | React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    onCancelDrag?.(); // 혹시 시작된 롱프레스 취소
-  };
-
   return (
     <>
       {isDropTarget && (
@@ -51,8 +44,8 @@ export default function CategoryCard({
       <div
         ref={cardRef}
         data-cat-index={index}
-        className={`rounded-lg bg-card px-4 py-3 shadow-sm border border-border/50 text-card-foreground select-none ${
-          isDragging ? "opacity-20 cursor-grabbing" : "cursor-grab active:scale-[0.98]"
+        className={`rounded-lg bg-card px-5 py-4 shadow-sm border border-border/50 text-card-foreground select-none ${
+          isDragging ? "opacity-20 cursor-grabbing" : "cursor-grab"
         }`}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
@@ -69,7 +62,6 @@ export default function CategoryCard({
             <h2 className="text-base font-medium font-body">{category.name}</h2>
           </div>
 
-          {/* 톱니바퀴 버튼 — 터치/클릭 이벤트를 카드와 완전 격리 */}
           <div className="relative">
             <button
               onMouseDown={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
@@ -107,7 +99,6 @@ export default function CategoryCard({
           </div>
         </div>
 
-        {/* 톱니바퀴 닫기 오버레이 — onCancelDrag 호출로 드래그 방지 */}
         {gearOpen && (
           <div
             className="fixed inset-0 z-40"
@@ -116,7 +107,7 @@ export default function CategoryCard({
           />
         )}
 
-        {/* 하단: 단어 수 + 퀴즈/플래시카드 — 같은 줄 */}
+        {/* 하단: 단어 수 + 퀴즈/플래시카드 같은 줄 */}
         <div className="flex items-center justify-between mt-2">
           <p className="text-sm text-muted-foreground">{words.length}개의 단어</p>
           <div className="flex gap-3">
