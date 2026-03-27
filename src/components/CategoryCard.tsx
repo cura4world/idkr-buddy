@@ -16,12 +16,13 @@ interface CategoryCardProps {
   onTouchStart?: (e: React.TouchEvent) => void;
   onTouchEnd?: (e: React.TouchEvent) => void;
   onMouseDown?: (e: React.MouseEvent) => void;
+  onCancelDrag?: () => void; // 톱니바퀴 조작 시 드래그 취소
 }
 
 export default function CategoryCard({
   category, onAddWord, onChanged,
   cardRef, index, isDragging, isDropTarget,
-  onTouchStart, onTouchEnd, onMouseDown,
+  onTouchStart, onTouchEnd, onMouseDown, onCancelDrag,
 }: CategoryCardProps) {
   const navigate = useNavigate();
   const words = getWordsByCategory(category.id);
@@ -33,6 +34,13 @@ export default function CategoryCard({
     deleteCategory(category.id);
     onChanged?.();
     setDeleteOpen(false);
+  };
+
+  // 톱니바퀴 관련 터치 이벤트 — 드래그와 완전히 격리
+  const stopAll = (e: React.TouchEvent | React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onCancelDrag?.(); // 혹시 시작된 롱프레스 취소
   };
 
   return (
@@ -60,30 +68,36 @@ export default function CategoryCard({
             <span className="text-lg">{category.emoji}</span>
             <h2 className="text-base font-medium font-body">{category.name}</h2>
           </div>
+
+          {/* 톱니바퀴 버튼 — 터치/클릭 이벤트를 카드와 완전 격리 */}
           <div className="relative">
             <button
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => { e.stopPropagation(); e.preventDefault(); }}
+              onMouseDown={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
+              onTouchStart={(e) => { e.stopPropagation(); e.preventDefault(); onCancelDrag?.(); }}
+              onTouchEnd={(e) => { e.stopPropagation(); }}
               onClick={(e) => { e.stopPropagation(); setGearOpen((o) => !o); }}
-              className="p-1 text-card-foreground/40 hover:text-primary rounded"
+              className="p-1.5 text-card-foreground/40 hover:text-primary rounded"
             >
               <Settings size={18} />
             </button>
+
             {gearOpen && (
               <div
                 className="absolute right-0 top-8 z-50 min-w-[10rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+                onMouseDown={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
+                onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
                 onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => { e.stopPropagation(); }}
               >
                 <button
                   className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                  onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
                   onClick={() => { setGearOpen(false); setEditOpen(true); }}
                 >
                   <Pencil className="mr-2 h-4 w-4" /> 이름 변경
                 </button>
                 <button
                   className="flex w-full items-center rounded-sm px-2 py-2 text-sm text-destructive hover:bg-accent"
+                  onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
                   onClick={() => { setGearOpen(false); setDeleteOpen(true); }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" /> 단어장 삭제
@@ -93,30 +107,34 @@ export default function CategoryCard({
           </div>
         </div>
 
-        {/* 닫기 오버레이 */}
+        {/* 톱니바퀴 닫기 오버레이 — onCancelDrag 호출로 드래그 방지 */}
         {gearOpen && (
-          <div className="fixed inset-0 z-40" onClick={() => setGearOpen(false)} onTouchStart={() => setGearOpen(false)} />
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setGearOpen(false)}
+            onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); setGearOpen(false); }}
+          />
         )}
 
-        {/* 하단: 단어 수 + 퀴즈/플래시카드 버튼 — 같은 줄 */}
+        {/* 하단: 단어 수 + 퀴즈/플래시카드 — 같은 줄 */}
         <div className="flex items-center justify-between mt-2">
           <p className="text-sm text-muted-foreground">{words.length}개의 단어</p>
           <div className="flex gap-3">
             <button
               onClick={(e) => { e.stopPropagation(); navigate(`/quiz/${category.id}`); }}
-              className="text-sm text-primary font-medium hover:underline underline-offset-4"
-              disabled={words.length < 2}
               onMouseDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
+              className="text-sm text-primary font-medium hover:underline underline-offset-4"
+              disabled={words.length < 2}
             >
               퀴즈
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); navigate(`/study/${category.id}`); }}
-              className="text-sm text-primary font-medium hover:underline underline-offset-4"
-              disabled={words.length === 0}
               onMouseDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
+              className="text-sm text-primary font-medium hover:underline underline-offset-4"
+              disabled={words.length === 0}
             >
               플래시카드
             </button>
