@@ -60,11 +60,11 @@ export default function StudyMode() {
     if (!currentWord) return;
     const nowSaved = toggleSavedWord(currentWord.id);
     setSavedIds(getSavedWordIds());
-    toast(nowSaved ? "단어를 보관했습니다 📌" : "보관함에서 제거했습니다");
+    toast(nowSaved ? "ë¨ì´ë¥¼ ë³´ê´íìµëë¤ ð" : "ë³´ê´í¨ìì ì ê±°íìµëë¤");
   };
   const speak = (text: string, lang: "id" | "ko") => {
     return new Promise<void>((resolve) => {
-      const cleanText = text.replace(/~/g, "무엇무엇").replace(/\s*\/\s*/g, ", ");
+      const cleanText = text.replace(/~/g, "ë¬´ìë¬´ì").replace(/\s*\/\s*/g, ", ");
       if ((window as any).AndroidTTS) {
         (window as any).AndroidTTS.speak(cleanText, lang === "ko" ? "ko-KR" : "id-ID");
         setTimeout(() => resolve(), cleanText.length * 80 + 500);
@@ -132,7 +132,7 @@ export default function StudyMode() {
       isAutoPlayingRef.current = false;
       setIsAutoPlaying(false); setIsAutoRandom(false); setIsScreenLocked(false);
       setIsFlipped(false); setCurrentIndex(0); setAutoCurrentWord(undefined);
-      releaseWakeLock(); toast("자동플레이가 완료됐습니다 🎉"); return;
+      releaseWakeLock(); toast("ìëíë ì´ê° ìë£ëìµëë¤ ð"); return;
     }
     setIsFlipped(false); setIsBreathing(false); setCurrentIndex(index);
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(() => { setAutoCurrentWord(playWords[index]); resolve(); }, 650); });
@@ -159,7 +159,7 @@ export default function StudyMode() {
     const next = !isLooping;
     isLoopingRef.current = next;
     setIsLooping(next);
-    toast(next ? "반복 재생 켜짐 🔁" : "반복 재생 꺼짐");
+    toast(next ? "ë°ë³µ ì¬ì ì¼ì§ ð" : "ë°ë³µ ì¬ì êº¼ì§");
   };
   useEffect(() => {
     return () => {
@@ -178,8 +178,8 @@ export default function StudyMode() {
   if (!category || displayWords.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
-        <p className="text-muted-foreground">학습할 단어가 없습니다.</p>
-        <button onClick={() => navigate("/")} className="mt-4 text-primary underline underline-offset-4">돌아가기</button>
+        <p className="text-muted-foreground">íìµí  ë¨ì´ê° ììµëë¤.</p>
+        <button onClick={() => navigate("/")} className="mt-4 text-primary underline underline-offset-4">ëìê°ê¸°</button>
       </div>
     );
   }
@@ -189,7 +189,7 @@ export default function StudyMode() {
         <div className="fixed inset-0 z-50 bg-black/50" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
           <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '72px' }}>
             <button onClick={() => setIsScreenLocked(false)} className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/20 border border-white/40 text-white font-body text-sm">
-              <Unlock size={18} /> 잠금 해제
+              <Unlock size={18} /> ì ê¸ í´ì 
             </button>
           </div>
         </div>
@@ -200,7 +200,7 @@ export default function StudyMode() {
         </button>
         <span className="text-sm text-white font-body">
           {currentIndex + 1} / {isAutoPlaying ? words.length : displayWords.length}
-          {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">▶</span>}
+          {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">â¶</span>}
         </span>
         {isAutoPlaying ? (
           <button onClick={() => setIsScreenLocked(true)} className="text-white hover:text-white/80"><Lock size={20} /></button>
@@ -236,7 +236,7 @@ export default function StudyMode() {
           </div>
         </div>
       </div>
-      {/* 중간 버튼 4개: 모두 w-12 h-12 */}
+      {/* ì¤ê° ë²í¼ 4ê°: ëª¨ë w-12 h-12 */}
       <div className="flex justify-center gap-3 py-2">
         <button onClick={handleToggleSave} disabled={isAutoPlaying}
           className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isSaved ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"} disabled:opacity-30`}>
@@ -251,14 +251,14 @@ export default function StudyMode() {
           className="w-12 h-12 flex items-center justify-center rounded-full transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30">
           <Volume2 size={20} />
         </button>
-        {/* (2) IN/KO 버튼: 항상 흰색 배경+흰색 텍스트, active 시 primary 테두리만 */}
+        {/* (2) IN/KO ë²í¼: í­ì í°ì ë°°ê²½+í°ì íì¤í¸, active ì primary íëë¦¬ë§ */}
         <button onClick={() => { if (isAutoPlaying) return; setFrontLang((l) => (l === "id" ? "ko" : "id")); setIsFlipped(false); setCurrentIndex(0); }}
           disabled={isAutoPlaying}
-          className={`w-12 h-12 flex items-center justify-center rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 bg-card text-white border-border/50 hover:border-primary/50 ${frontLang === "ko" ? "border-primary" : ""}`}>
+          className={`w-12 h-12 flex items-center justify-center rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 bg-card text-gray-900 border-border/50 hover:border-primary/50 ${frontLang === "ko" ? "border-primary" : ""}`}>
           {frontLang === "id" ? "IN" : "KO"}
         </button>
       </div>
-      {/* 하단 버튼 5개: 모두 w-12 h-12 동일 크기 */}
+      {/* íë¨ ë²í¼ 5ê°: ëª¨ë w-12 h-12 ëì¼ í¬ê¸° */}
       <div className="flex items-center justify-center gap-3 py-4">
         <button onClick={goPrev} disabled={currentIndex === 0 || isAutoPlaying}
           className="w-12 h-12 flex items-center justify-center rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity">
