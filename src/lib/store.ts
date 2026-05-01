@@ -1,3 +1,23 @@
+import seedData from '@/data/seed.json';
+
+// 공용 단어장 초기화 (앱 시작 시 자동 실행)
+function initSharedCategories() {
+  const seed = seedData as { version: number; categories: Category[]; words: Word[] };
+  const storedVersion = localStorage.getItem('shared_seed_version');
+
+  // 버전이 같으면 스킵
+  if (storedVersion === String(seed.version)) return;
+
+  // 기존 공용 단어장/단어 제거 후 새로 삽입
+  const existingCats = getCategories().filter(c => !c.isShared);
+  const existingWords = getWords().filter(w => !w.isShared);
+
+  saveCategories([...seed.categories, ...existingCats]);
+  saveWords([...seed.words, ...existingWords]);
+  localStorage.setItem('shared_seed_version', String(seed.version));
+}
+
+initSharedCategories();
 export interface Word {
   id: string;
   word: string; // Indonesian
