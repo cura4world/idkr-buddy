@@ -1,23 +1,5 @@
 import seedData from '@/data/seed.json';
 
-// 공용 단어장 초기화 (앱 시작 시 자동 실행)
-function initSharedCategories() {
-  const seed = seedData as { version: number; categories: Category[]; words: Word[] };
-  const storedVersion = localStorage.getItem('shared_seed_version');
-
-  // 버전이 같으면 스킵
-  if (storedVersion === String(seed.version)) return;
-
-  // 기존 공용 단어장/단어 제거 후 새로 삽입
-  const existingCats = getCategories().filter(c => !c.isShared);
-  const existingWords = getWords().filter(w => !w.isShared);
-
-  saveCategories([...seed.categories, ...existingCats]);
-  saveWords([...seed.words, ...existingWords]);
-  localStorage.setItem('shared_seed_version', String(seed.version));
-}
-
-initSharedCategories();
 export interface Word {
   id: string;
   word: string; // Indonesian
@@ -26,12 +8,14 @@ export interface Word {
   exampleMeaning: string;
   categoryId: string;
   createdAt: number;
+  isShared?: boolean;
 }
 
 export interface Category {
   id: string;
   name: string;
   emoji: string;
+  isShared?: boolean;
 }
 
 const WORDS_KEY = "kata-words";
@@ -65,6 +49,36 @@ export function getCategories(): Category[] {
 export function saveCategories(categories: Category[]) {
   localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
 }
+
+export function getWords(): Word[] {
+  const stored = localStorage.getItem(WORDS_KEY);
+  if (stored) return JSON.parse(stored);
+  localStorage.setItem(WORDS_KEY, JSON.stringify(defaultWords));
+  return defaultWords;
+}
+
+export function saveWords(words: Word[]) {
+  localStorage.setItem(WORDS_KEY, JSON.stringify(words));
+}
+
+// 공용 단어장 초기화 (앱 시작 시 자동 실행)
+function initSharedCategories() {
+  const seed = seedData as { version: number; categories: Category[]; words: Word[] };
+  const storedVersion = localStorage.getItem('shared_seed_version');
+
+  // 버전이 같으면 스킵
+  if (storedVersion === String(seed.version)) return;
+
+  // 기존 공용 단어장/단어 제거 후 새로 삽입
+  const existingCats = getCategories().filter(c => !c.isShared);
+  const existingWords = getWords().filter(w => !w.isShared);
+
+  saveCategories([...seed.categories, ...existingCats]);
+  saveWords([...seed.words, ...existingWords]);
+  localStorage.setItem('shared_seed_version', String(seed.version));
+}
+
+initSharedCategories();
 
 export function addCategory(name: string, emoji: string): Category {
   const categories = getCategories();
@@ -127,17 +141,6 @@ export function moveCategoryToBottom(id: string) {
   const [item] = categories.splice(idx, 1);
   categories.push(item);
   saveCategories(categories);
-}
-
-export function getWords(): Word[] {
-  const stored = localStorage.getItem(WORDS_KEY);
-  if (stored) return JSON.parse(stored);
-  localStorage.setItem(WORDS_KEY, JSON.stringify(defaultWords));
-  return defaultWords;
-}
-
-export function saveWords(words: Word[]) {
-  localStorage.setItem(WORDS_KEY, JSON.stringify(words));
 }
 
 export function addWord(word: Omit<Word, "id" | "createdAt">): Word {
