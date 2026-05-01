@@ -62,7 +62,7 @@ export default function CategoryCard({
           onClick={() => navigate(`/category/${category.id}`)}
         >
           <span className="text-lg">{category.emoji}</span>
-          <h2 className="text-base font-medium font-body">{category.name}</h2>
+          <h2 className="text-base font-medium font-body text-card-foreground">{category.name}</h2>
         </div>
 
         <div className="absolute -top-2 -right-2">
@@ -84,23 +84,23 @@ export default function CategoryCard({
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent"
+                className="flex w-full items-center rounded-sm px-2 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                 onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
                 onClick={() => { setGearOpen(false); onMoveTop?.(); }}
               >
                 <ChevronsUp className="mr-2 h-4 w-4" />
-                맸 위로
+                맨 위로
               </button>
               <button
-                className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent"
+                className="flex w-full items-center rounded-sm px-2 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                 onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
                 onClick={() => { setGearOpen(false); onMoveBottom?.(); }}
               >
                 <ChevronsDown className="mr-2 h-4 w-4" />
-                맸 아래로
+                맨 아래로
               </button>
               <button
-                className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent"
+                className="flex w-full items-center rounded-sm px-2 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                 onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
                 onClick={() => { setGearOpen(false); setEditOpen(true); }}
               >
@@ -108,7 +108,7 @@ export default function CategoryCard({
                 이름 변경
               </button>
               <button
-                className="flex w-full items-center rounded-sm px-2 py-2 text-sm hover:bg-accent text-destructive"
+                className="flex w-full items-center rounded-sm px-2 py-2 text-sm text-destructive hover:bg-accent"
                 onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
                 onClick={() => { setGearOpen(false); setDeleteOpen(true); }}
               >
@@ -160,7 +160,7 @@ export default function CategoryCard({
           <AlertDialogHeader>
             <AlertDialogTitle className="font-body">단어장 삭제</AlertDialogTitle>
             <AlertDialogDescription>
-              ‘{category.name}’ 단어장과 포함된 단어 {words.length}개가 모두 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+              '{category.name}' 단어장과 포함된 단어 {words.length}개가 모두 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
