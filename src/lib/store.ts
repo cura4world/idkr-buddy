@@ -65,15 +65,27 @@ export function saveWords(words: Word[]) {
 function initSharedCategories() {
   const seed = seedData as { version: number; categories: Category[]; words: Word[] };
   const storedVersion = localStorage.getItem('shared_seed_version');
-
-  // 버전이 같으면 스킵
   if (storedVersion === String(seed.version)) return;
 
-  // 기존 공용 단어장/단어 제거 후 새로 삽입
-  const existingCats = getCategories().filter(c => !c.isShared);
+  const existingCats = getCategories();
   const existingWords = getWords().filter(w => !w.isShared);
 
-  saveCategories([...seed.categories, ...existingCats]);
+  // 기존 공용 단어장: 순서 유지 + 내용만 업데이트
+  const existingShared = existingCats.filter(c => c.isShared);
+  const personalCats = existingCats.filter(c => !c.isShared);
+
+  // 기존 공용 단어장 내용 업데이트 (이름/이모지 변경 반영)
+  const updatedShared = existingShared.map(
+    e => seed.categories.find(s => s.id === e.id) || e
+  );
+
+  // 새로 추가된 공용 단어장만 맨 뒤에 추가
+  const newShared = seed.categories.filter(
+    s => !existingShared.find(e => e.id === s.id)
+  );
+
+  // 최종 순서: 기존공용(순서유지) + 새공용(맨뒤) + 개인단어장
+  saveCategories([...updatedShared, ...newShared, ...personalCats]);
   saveWords([...seed.words, ...existingWords]);
   localStorage.setItem('shared_seed_version', String(seed.version));
 }
@@ -202,37 +214,23 @@ export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imp
       const char = line[i];
       if (inQuotes) {
         if (char === '"') {
-          if (line[i + 1] === '"') {
-            current += '"';
-            i += 2;
-          } else {
-            inQuotes = false;
-            i++;
-          }
-        } else {
-          current += char;
-          i++;
-        }
+          if (line[i + 1] === '"') { current += '"'; i += 2; }
+          else { inQuotes = false; i++; }
+        } else { current += char; i++; }
       } else {
-        if (char === '"') {
-          inQuotes = true;
-          i++;
-        } else if (char === ',') {
-          result.push(current.trim());
-          current = "";
-          i++;
-        } else {
-          current += char;
-          i++;
-        }
+        if (char === '"') { inQuotes = true; i++; }
+        else if (char === ',') { result.push(current.trim()); current = ""; i++; }
+        else { current += char; i++; }
       }
     }
     result.push(current.trim());
     return result;
   }
 
-  const cleanCsv = csv.replace(/^\uFEFF/, "");
-  const lines = cleanCsv.split(/\r?\n/).filter((l) => l.trim());
+  const cleanCsv = csv.replace(/^﻿/, "");
+  const lines = cleanCsv.split(/
+?
+/).filter((l) => l.trim());
   let imported = 0;
   let errors = 0;
   const words = getWords();
