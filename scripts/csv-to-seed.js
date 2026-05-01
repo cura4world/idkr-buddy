@@ -9,14 +9,14 @@ const outputFile = path.join(__dirname, '../src/data/seed.json');
 const outputDir = path.dirname(outputFile);
 if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
-// 디폴트 정렬 순서 (키워드 순서대로)
+// 디폴트 정렬 순서
 const SORT_ORDER = [
-  'kotbah', 'khotbah',
-  '명사',
-  '형용사',
-  '부사',
-  '동사', 'verb', 'kata kerja',
-  '기독교', 'ibadah', 'worship', 'doa', 'prayer', 'sermon',
+  'kotbah', 'khotbah', 'sermon',
+  '명사', 'noun',
+  '형용사', 'adjective',
+  '부사', 'adverb',
+  '동사', 'verb',
+  '기독교', 'ibadah', 'worship', 'doa', 'prayer',
 ];
 
 function getSortIndex(name) {
@@ -24,33 +24,53 @@ function getSortIndex(name) {
   for (let i = 0; i < SORT_ORDER.length; i++) {
     if (lower.includes(SORT_ORDER[i])) return i;
   }
-  return 9999; // 매치 없으면 맨 뒤
+  return 9999;
 }
 
-// 키워드 → 이모지 풀 매핑
+// 키워드별 이모지 풀 (문자 직접 사용)
 const emojiMap = [
-  { keywords: ['동사', 'verb', 'kata kerja'],       pool: ['🏃','💪','🤸','🙌','💟','🦵','🤾','🏔'] },
-  { keywords: ['형용사', 'adjective', 'kata sifat'], pool: ['🌈','🎨','✨','🌸','🌺','🦋','🌻','💫'] },
-  { keywords: ['명사', 'noun', 'kata benda'],        pool: ['📦','🗂️','🦺','🪣','🎁','🧸','🪆','📫'] },
-  { keywords: ['부사', 'adverb', 'kata keterangan'], pool: ['⚡','💨','🌀','🔥','☄️','🌊','✨','💥'] },
-  { keywords: ['인사', 'greeting', 'salam'],         pool: ['👋','🤝','😊','🙏','👐','🫶','💌','🫲'] },
-  { keywords: ['음식', 'food', 'makanan', 'makan'],  pool: ['🍜','🍚','🤘','🍱','🍛','🥗','🫕','🍲'] },
-  { keywords: ['숫자', 'number', 'angka'],           pool: ['🔢','1️⃣','🎲','🔟','💯','🧭','🃏','🎯'] },
-  { keywords: ['동물', 'animal', 'hewan'],           pool: ['🐾','🐘','🦁','🐬','🦊','🐧','🦜','🐢'] },
-  { keywords: ['가족', 'family', 'keluarga'],        pool: ['👨‍👩‍👧','👪','🏠','❤️','👶','👴','🫲','💑'] },
-  { keywords: ['날씨', 'weather', 'cuaca'],          pool: ['⛅','🌤️','🌧️','❄️','🌈','☀️','🌪️','🌊'] },
-  { keywords: ['여행', 'travel', 'perjalanan'],      pool: ['✈️','🗺️','🧓','🏖️','🚂','⛵','🏔️','🎒'] },
-  { keywords: ['직업', 'job', 'pekerjaan'],          pool: ['💼','👷','👨‍⚕️','👩‍🏫','👨‍🍳','🧑‍💻','👮','🧑‍🎨'] },
-  { keywords: ['시간', 'time', 'waktu'],             pool: ['⏰','🕐','📅','⌛','🗓️','⏱️','🌙','🌅'] },
-  { keywords: ['학교', 'school', 'sekolah'],         pool: ['🏫','📚','✏️','🎓','📐','📏','🖊️','🧑‍🏫'] },
-  { keywords: ['감정', 'emotion', 'perasaan'],       pool: ['😊','😢','😡','🥰','😱','😴','🤩','😌'] },
-  { keywords: ['교통', 'transport', 'kendaraan'],    pool: ['🚌','🚗','🚂','✈️','🛵','🚢','🚁','🚲'] },
-  { keywords: ['자연', 'nature', 'alam'],            pool: ['🌿','🌳','🌄','🌊','🦋','🌸','🍃','🌋'] },
-  { keywords: ['쇼핑', 'shopping', 'belanja'],       pool: ['🛍️','🛒','💳','🏪','👗','👟','💍','🎠'] },
-  { keywords: ['kotbah', 'khotbah', 'sermon', '설교'], pool: ['📖','✝️','🕊️','📜','🙌','⛪','📣','🕯️'] },
-  { keywords: ['doa', 'prayer', '기도'],             pool: ['🙏','💒','✨','🕊️','💫','🌟','🫶','📿'] },
-  { keywords: ['기독교', 'ibadah', 'worship', '예배'], pool: ['⛪','🎵','🙌','✝️','🌟','🕊️','💒','📖'] },
-  { keywords: ['lagu', 'song', 'music', '노래'],     pool: ['🎵','🎶','🎸','🎹','🎤','🥁','🎺','🎻'] },
+  { keywords: ['동사', 'verb', 'kata kerja'],
+    pool: ['🏃','💪','🤸','🙌','🦵','🤾','🏊','🚴'] },
+  { keywords: ['형용사', 'adjective', 'kata sifat'],
+    pool: ['🌈','🎨','✨','🌸','🌺','🦋','🌻','💫'] },
+  { keywords: ['명사', 'noun', 'kata benda'],
+    pool: ['📦','🗂️','🦺','🎁','🧸','📫','📌','📋'] },
+  { keywords: ['부사', 'adverb', 'kata keterangan'],
+    pool: ['⚡','💨','🌀','🔥','☄️','🌊','💥','🌬️'] },
+  { keywords: ['인사', 'greeting', 'salam'],
+    pool: ['👋','🤝','😊','🙏','👐','💌','🫲','🤗'] },
+  { keywords: ['음식', 'food', 'makanan', 'makan'],
+    pool: ['🍜','🍚','🍱','🍛','🥗','🍲','🍳','🍭'] },
+  { keywords: ['숫자', 'number', 'angka'],
+    pool: ['🔢','1️⃣','🎲','🔟','💯','🧭','🃏','🎯'] },
+  { keywords: ['동물', 'animal', 'hewan'],
+    pool: ['🐾','🐘','🦁','🐬','🦊','🐧','🦜','🐢'] },
+  { keywords: ['가족', 'family', 'keluarga'],
+    pool: ['👪','🏠','❤️','👶','👴','💑','👫','👨‍👧'] },
+  { keywords: ['날씨', 'weather', 'cuaca'],
+    pool: ['⛅','🌤️','🌧️','❄️','🌈','☀️','🌪️','🌊'] },
+  { keywords: ['여행', 'travel', 'perjalanan'],
+    pool: ['✈️','🗺️','🧓','🏖️','🚂','⛵','🏔️','🎒'] },
+  { keywords: ['직업', 'job', 'pekerjaan'],
+    pool: ['💼','👷','👨‍⚕️','👩‍🏫','👨‍🍳','👮','🧑‍💻','🧑‍🎨'] },
+  { keywords: ['시간', 'time', 'waktu'],
+    pool: ['⏰','🕐','📅','⌛','🗓️','⏱️','🌙','🌅'] },
+  { keywords: ['학교', 'school', 'sekolah'],
+    pool: ['🏫','📚','✏️','🎓','📐','📏','🖊️','🧑‍🏫'] },
+  { keywords: ['감정', 'emotion', 'perasaan'],
+    pool: ['😊','😢','😡','🥰','😱','😴','🤩','😌'] },
+  { keywords: ['교통', 'transport', 'kendaraan'],
+    pool: ['🚌','🚗','🚂','✈️','🛵','🚢','🚁','🚲'] },
+  { keywords: ['자연', 'nature', 'alam'],
+    pool: ['🌿','🌳','🌄','🌊','🦋','🌸','🍃','🌋'] },
+  { keywords: ['kotbah', 'khotbah', 'sermon', '설교'],
+    pool: ['📖','✝️','🕊️','📜','🙌','⛪','📣','🕯️'] },
+  { keywords: ['doa', 'prayer', '기도'],
+    pool: ['🙏','💒','✨','🕊️','💫','🌟','🫶','📿'] },
+  { keywords: ['기독교', 'ibadah', 'worship', '예배'],
+    pool: ['⛪','🎵','🙌','✝️','🌟','🕊️','💒','📖'] },
+  { keywords: ['lagu', 'song', 'music', '노래'],
+    pool: ['🎵','🎶','🎸','🎹','🎤','🥁','🎺','🎻'] },
 ];
 
 const poolIndex = new Map();
@@ -97,7 +117,6 @@ if (!fs.existsSync(categoriesDir)) {
   process.exit(0);
 }
 
-// 파일 읽기 후 정렬순서 적용
 const files = fs.readdirSync(categoriesDir)
   .filter(f => f.endsWith('.csv'))
   .sort((a, b) => {
@@ -106,7 +125,6 @@ const files = fs.readdirSync(categoriesDir)
     const idxA = getSortIndex(nameA);
     const idxB = getSortIndex(nameB);
     if (idxA !== idxB) return idxA - idxB;
-    // 같은 그룹 내에서는 파일명 순 (Kotbah0001, Kotbah0002...)
     return nameA.localeCompare(nameB);
   });
 
@@ -114,7 +132,6 @@ for (const file of files) {
   const categoryName = path.basename(file, '.csv');
   const categoryId = `shared_${categoryName.replace(/\s+/g, '_')}`;
   const emoji = getEmoji(categoryName);
-
   categories.push({ id: categoryId, name: categoryName, emoji, isShared: true });
 
   const content = fs.readFileSync(path.join(categoriesDir, file), 'utf-8');
@@ -125,16 +142,10 @@ for (const file of files) {
     if (cols.length < 2) continue;
     const [word, meaning, example = '', exampleMeaning = ''] = cols;
     if (!word || !meaning) continue;
-
     words.push({
       id: `shared_${categoryId}_${word}`,
-      word,
-      meaning,
-      example,
-      exampleMeaning,
-      categoryId,
-      createdAt: 0,
-      isShared: true,
+      word, meaning, example, exampleMeaning,
+      categoryId, createdAt: 0, isShared: true,
     });
   }
 }
