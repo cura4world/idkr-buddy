@@ -1,9 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCategories, getSavedWords, reorderCategories, Category } from "@/lib/store";
+import { getCategories, getSavedWords, reorderCategories, restoreSharedCategories, Category } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
+import { RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -132,28 +134,46 @@ const Index = () => {
     }, 600);
   };
 
+  const handleRestore = () => {
+    const restored = restoreSharedCategories();
+    if (restored) {
+      refresh();
+      toast("공용 단어장이 복구되었습니다.");
+    } else {
+      toast("복구할 단어장이 없습니다.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
-      {/* 헤더: Kata kata. 왼쪽 / + 버튼 오른쪽 (mr-2로 퇱니바퀴 라인보다 약간 안쪽) */}
       <header className="flex items-center justify-between mb-6 pr-2">
         <h1 className="text-2xl font-semibold font-body tracking-tight text-foreground">
           Kata kata<span className="text-accent">.</span>
         </h1>
-        <button
-          onClick={() => setAddCatOpen(true)}
-          className="text-white hover:text-white/70 text-3xl font-light leading-none w-10 h-10"
-          title="단어장 추가"
-        >
-          +
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRestore}
+            className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center"
+            title="공용 단어장 복구"
+          >
+            <RotateCcw size={18} />
+          </button>
+          <button
+            onClick={() => setAddCatOpen(true)}
+            className="text-white hover:text-white/70 text-3xl font-light leading-none w-10 h-10"
+            title="단어장 추가"
+          >
+            +
+          </button>
+        </div>
       </header>
 
       <div className="space-y-2">
         {savedCount > 0 && (
-          <div className="rounded-lg bg-card px-6 py-5 shadow-sm border border-border/50 t">
+          <div className="rounded-lg bg-card px-6 py-5 shadow-sm border border-border/50">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/saved")}>
               <span className="text-lg">📝</span>
-              <h2 className="text-base font-medium font-body">저장한 단어</h2>
+              <h2 className="text-base font-medium font-body text-card-foreground">저장한 단어</h2>
             </div>
             <div className="flex items-center justify-between mt-3">
               <span className="text-sm text-muted-foreground">{savedCount}개의 단어</span>
