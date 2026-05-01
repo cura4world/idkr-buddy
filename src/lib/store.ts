@@ -2,8 +2,8 @@ import seedData from '@/data/seed.json';
 
 export interface Word {
   id: string;
-  word: string; // Indonesian
-  meaning: string; // Korean
+  word: string;
+  meaning: string;
   example: string;
   exampleMeaning: string;
   categoryId: string;
@@ -61,30 +61,16 @@ export function saveWords(words: Word[]) {
   localStorage.setItem(WORDS_KEY, JSON.stringify(words));
 }
 
-// 공용 단어장 초기화 (앱 시작 시 자동 실행)
 function initSharedCategories() {
   const seed = seedData as { version: number; categories: Category[]; words: Word[] };
   const storedVersion = localStorage.getItem('shared_seed_version');
   if (storedVersion === String(seed.version)) return;
-
   const existingCats = getCategories();
   const existingWords = getWords().filter(w => !w.isShared);
-
-  // 기존 공용 단어장: 순서 유지 + 내용만 업데이트
   const existingShared = existingCats.filter(c => c.isShared);
   const personalCats = existingCats.filter(c => !c.isShared);
-
-  // 기존 공용 단어장 내용 업데이트 (이름/이모지 변경 반영)
-  const updatedShared = existingShared.map(
-    e => seed.categories.find(s => s.id === e.id) || e
-  );
-
-  // 새로 추가된 공용 단어장만 맨 뒤에 추가
-  const newShared = seed.categories.filter(
-    s => !existingShared.find(e => e.id === s.id)
-  );
-
-  // 최종 순서: 기존공용(순서유지) + 새공용(맨뒤) + 개인단어장
+  const updatedShared = existingShared.map(e => seed.categories.find(s => s.id === e.id) || e);
+  const newShared = seed.categories.filter(s => !existingShared.find(e => e.id === s.id));
   saveCategories([...updatedShared, ...newShared, ...personalCats]);
   saveWords([...seed.words, ...existingWords]);
   localStorage.setItem('shared_seed_version', String(seed.version));
@@ -101,16 +87,12 @@ export function addCategory(name: string, emoji: string): Category {
 }
 
 export function updateCategory(id: string, name: string, emoji: string) {
-  const categories = getCategories().map((c) =>
-    c.id === id ? { ...c, name, emoji } : c
-  );
+  const categories = getCategories().map((c) => c.id === id ? { ...c, name, emoji } : c);
   saveCategories(categories);
 }
 
 export function updateWord(id: string, updates: { word?: string; meaning?: string; example?: string; exampleMeaning?: string; categoryId?: string }) {
-  const words = getWords().map((w) =>
-    w.id === id ? { ...w, ...updates } : w
-  );
+  const words = getWords().map((w) => w.id === id ? { ...w, ...updates } : w);
   saveWords(words);
 }
 
@@ -195,8 +177,7 @@ export function toggleSavedWord(wordId: string): boolean {
 
 export function getSavedWords(): Word[] {
   const ids = getSavedWordIds();
-  const allWords = getWords();
-  return allWords.filter((w) => ids.includes(w.id));
+  return getWords().filter((w) => ids.includes(w.id));
 }
 
 export function removeSavedWord(wordId: string) {
@@ -226,15 +207,13 @@ export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imp
     result.push(current.trim());
     return result;
   }
-
-  const cleanCsv = csv.replace(/^﻿/, "");
-  const lines = cleanCsv.split(/
-?
-/).filter((l) => l.trim());
+  const bom = String.fromCharCode(0xFEFF);
+  const cleanCsv = csv.startsWith(bom) ? csv.slice(1) : csv;
+  const newline = new RegExp("\r?\n");
+  const lines = cleanCsv.split(newline).filter((l) => l.trim());
   let imported = 0;
   let errors = 0;
   const words = getWords();
-
   for (let i = 0; i < lines.length; i++) {
     const parts = parseCSVLine(lines[i]);
     if (parts.length >= 2 && parts[0].trim() !== "") {
@@ -246,21 +225,10 @@ export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imp
           ? (categories.find((c) => c.id === categoryId || c.name === categoryId)!.id)
           : (categories[0]?.id || "daily");
       }
-      words.push({
-        id: crypto.randomUUID(),
-        word,
-        meaning,
-        example: example || "",
-        exampleMeaning: exampleMeaning || "",
-        categoryId: catId,
-        createdAt: Date.now(),
-      });
+      words.push({ id: crypto.randomUUID(), word, meaning, example: example || "", exampleMeaning: exampleMeaning || "", categoryId: catId, createdAt: Date.now() });
       imported++;
-    } else {
-      errors++;
-    }
+    } else { errors++; }
   }
-
   saveWords(words);
   return { imported, errors };
 }
