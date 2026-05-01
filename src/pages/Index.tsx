@@ -38,14 +38,6 @@ const Index = () => {
   const stopAutoScroll = () => {
     if (autoScrollTimer.current) { clearInterval(autoScrollTimer.current); autoScrollTimer.current = null; }
   };
-  const startAutoScroll = (clientY: number) => {
-    stopAutoScroll();
-    autoScrollTimer.current = setInterval(() => {
-      const EDGE = 100, MAX = 18, vh = window.innerHeight;
-      if (clientY < EDGE) window.scrollBy(0, -Math.round(MAX * (1 - clientY / EDGE)));
-      else if (clientY > vh - EDGE) window.scrollBy(0, Math.round(MAX * (1 - (vh - clientY) / EDGE)));
-    }, 16);
-  };
 
   const cancelLongPress = () => {
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
@@ -81,11 +73,18 @@ const Index = () => {
       if (!isPendingLongPress.current && !isDragging.current) return;
       if (isPendingLongPress.current && !isDragging.current) { cancelLongPress(); return; }
       e.preventDefault();
-      const t = e.touches[0];
-      setFloatPos({ x: t.clientX, y: t.clientY });
-      startAutoScroll(t.clientY);
-      const over = getOverIndex(t.clientX, t.clientY);
-      if (over >= 0) setDragOverIdx(over);
+      const touch = e.touches[0];
+      const overIdx = getOverIndex(touch.clientX, touch.clientY);
+      if (overIdx !== -1) setDragOverIdx(overIdx);
+      setFloatPos({ x: touch.clientX, y: touch.clientY - floatOffsetY.current });
+      const margin = 100;
+      const speed = 8;
+      stopAutoScroll();
+      if (touch.clientY < margin) {
+        autoScrollTimer.current = setInterval(() => window.scrollBy(0, -speed), 16);
+      } else if (touch.clientY > window.innerHeight - margin) {
+        autoScrollTimer.current = setInterval(() => window.scrollBy(0, speed), 16);
+      }
     };
     document.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => document.removeEventListener("touchmove", onTouchMove);
@@ -101,21 +100,17 @@ const Index = () => {
       const cardEl = cardRefs.current[index];
       if (cardEl) {
         const rect = cardEl.getBoundingClientRect();
-        setFloatWidth(rect.width);
         floatOffsetY.current = t.clientY - rect.top;
+        setFloatWidth(rect.width);
       }
       setDraggingIdx(index);
       setDragOverIdx(index);
+      setFloatPos({ x: t.clientX, y: t.clientY - floatOffsetY.current });
       setFloatCat(cat);
-      setFloatPos({ x: t.clientX, y: t.clientY });
-      startAutoScroll(t.clientY);
     }, 600);
   };
 
-  const makeTouchEnd = () => (e: React.TouchEvent) => {
-    if (!isDragging.current) { cancelLongPress(); return; }
-    handleEnd();
-  };
+  const makeTouchEnd = () => handleEnd;
 
   const makeMouseDown = (index: number, cat: Category) => (e: React.MouseEvent) => {
     if (e.button !== 0) return;
@@ -127,36 +122,26 @@ const Index = () => {
       const cardEl = cardRefs.current[index];
       if (cardEl) {
         const rect = cardEl.getBoundingClientRect();
-        setFloatWidth(rect.width);
         floatOffsetY.current = e.clientY - rect.top;
+        setFloatWidth(rect.width);
       }
       setDraggingIdx(index);
       setDragOverIdx(index);
+      setFloatPos({ x: e.clientX, y: e.clientY - floatOffsetY.current });
       setFloatCat(cat);
-      setFloatPos({ x: e.clientX, y: e.clientY });
     }, 600);
-    const onMouseMove = (ev: MouseEvent) => {
-      if (!isDragging.current) { cancelLongPress(); return; }
-      setFloatPos({ x: ev.clientX, y: ev.clientY });
-      startAutoScroll(ev.clientY);
-      const over = getOverIndex(ev.clientX, ev.clientY);
-      if (over >= 0) setDragOverIdx(over);
-    };
-    const onMouseUp = () => { handleEnd(); window.removeEventListener("mousemove", onMouseMove); window.removeEventListener("mouseup", onMouseUp); };
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
   };
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
-      {/* 헤더: Kata kata. 왼쪽 / + 버튼 오른쪽 (mr-2로 톱니바퀴 라인보다 약간 안쪽) */}
+      {/* 헤더: Kata kata. 왼쪽 / + 버튼 오른쪽 (mr-2로 퇱니바퀴 라인보다 약간 안쪽) */}
       <header className="flex items-center justify-between mb-6 pr-2">
         <h1 className="text-2xl font-semibold font-body tracking-tight text-foreground">
           Kata kata<span className="text-accent">.</span>
         </h1>
         <button
           onClick={() => setAddCatOpen(true)}
-          className="text-white hover:text-white/70 text-3xl font-light leading-none w-10 h-10 flex items-center justify-center"
+          className="text-white hover:text-white/70 text-3xl font-light leading-none w-10 h-10"
           title="단어장 추가"
         >
           +
@@ -165,16 +150,16 @@ const Index = () => {
 
       <div className="space-y-2">
         {savedCount > 0 && (
-          <div className="rounded-lg bg-card px-6 py-5 shadow-sm border border-border/50 text-card-foreground">
+          <div className="rounded-lg bg-card px-6 py-5 shadow-sm border border-border/50 t">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/saved")}>
-              <span className="text-lg">📌</span>
-              <h2 className="text-base font-medium font-body">단어보관함</h2>
+              <span className="text-lg">📝</span>
+              <h2 className="text-base font-medium font-body">저장한 단어</h2>
             </div>
             <div className="flex items-center justify-between mt-3">
-              <p className="text-sm text-muted-foreground">{savedCount}개의 단어</p>
+              <span className="text-sm text-muted-foreground">{savedCount}개의 단어</span>
               <div className="flex gap-3">
-                <button onClick={() => navigate("/saved/quiz")} className="text-sm text-primary font-medium hover:underline underline-offset-4" disabled={savedCount < 2}>퀴즈</button>
-                <button onClick={() => navigate("/saved/study")} className="text-sm text-primary font-medium hover:underline underline-offset-4">플래시카드</button>
+                <button onClick={() => navigate("/saved/quiz")} className="text-sm text-primary hover:text-primary/80">퀴즈</button>
+                <button onClick={() => navigate("/saved/study")} className="text-sm text-primary hover:text-primary/80">플래시카드</button>
               </div>
             </div>
           </div>
@@ -194,33 +179,56 @@ const Index = () => {
             onTouchEnd={makeTouchEnd()}
             onMouseDown={makeMouseDown(idx, cat)}
             onCancelDrag={cancelLongPress}
+            onMoveTop={() => {
+              if (idx === 0) return;
+              reorderCategories(idx, 0);
+              refresh();
+            }}
+            onMoveBottom={() => {
+              if (idx === categories.length - 1) return;
+              reorderCategories(idx, categories.length - 1);
+              refresh();
+            }}
           />
         ))}
-      </div>
 
-      {categories.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground font-body">
-          <p>아직 카테고리가 없습니다.</p>
-          <button onClick={() => setAddCatOpen(true)} className="mt-2 text-primary underline underline-offset-4">
-            첫 카테고리를 만들어보세요
-          </button>
-        </div>
-      )}
+        {categories.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="text-lg mb-4">단어장이 없습니다</p>
+            <button
+              onClick={() => setAddCatOpen(true)}
+              className="text-primary hover:text-primary/80 text-sm"
+            >
+              첫 카테고리를 만들어보세요
+            </button>
+          </div>
+        )}
+      </div>
 
       {floatCat && floatPos && (
         <div
-          className="fixed pointer-events-none z-50 rounded-lg bg-card px-6 py-5 shadow-lg border border-sky-400 shadow-sky-400/20"
-          style={{ width: floatWidth, left: floatPos.x - floatWidth / 2, top: floatPos.y - floatOffsetY.current }}
+          className="fixed z-50 pointer-events-none opacity-90"
+          style={{ left: floatPos.x - floatWidth / 2, top: floatPos.y, width: floatWidth }}
         >
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{floatCat.emoji}</span>
-            <h2 className="text-base font-medium font-body text-muted-foreground">{floatCat.name}</h2>
-          </div>
+          <CategoryCard
+            category={floatCat}
+            onAddWord={() => {}}
+            isDragging={false}
+          />
         </div>
       )}
 
-      <AddWordDialog open={addWordOpen} onOpenChange={setAddWordOpen} defaultCategoryId={addWordCat} onAdded={refresh} />
-      <AddCategoryDialog open={addCatOpen} onOpenChange={setAddCatOpen} onAdded={refresh} />
+      <AddWordDialog
+        open={addWordOpen}
+        onOpenChange={setAddWordOpen}
+        categoryId={addWordCat}
+        onAdded={refresh}
+      />
+      <AddCategoryDialog
+        open={addCatOpen}
+        onOpenChange={setAddCatOpen}
+        onAdded={refresh}
+      />
     </div>
   );
 };
