@@ -9,22 +9,38 @@ const outputFile = path.join(__dirname, '../src/data/seed.json');
 const outputDir = path.dirname(outputFile);
 if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
-// 키워드 → 이모지 풀 매핑 (같은 키워드라도 순서대로 다른 이모지)
+// 디폴트 정렬 순서 (키워드 순서대로)
+const SORT_ORDER = [
+  'kotbah', 'khotbah',
+  '명사',
+  '형용사',
+  '부사',
+  '동사', 'verb', 'kata kerja',
+  '기독교', 'ibadah', 'worship', 'doa', 'prayer', 'sermon',
+];
+
+function getSortIndex(name) {
+  const lower = name.toLowerCase();
+  for (let i = 0; i < SORT_ORDER.length; i++) {
+    if (lower.includes(SORT_ORDER[i])) return i;
+  }
+  return 9999; // 매치 없으면 맨 뒤
+}
+
+// 키워드 → 이모지 풀 매핑
 const emojiMap = [
   { keywords: ['동사', 'verb', 'kata kerja'],       pool: ['🏃','💪','🤸','🙌','💟','🦵','🤾','🏔'] },
   { keywords: ['형용사', 'adjective', 'kata sifat'], pool: ['🌈','🎨','✨','🌸','🌺','🦋','🌻','💫'] },
   { keywords: ['명사', 'noun', 'kata benda'],        pool: ['📦','🗂️','🦺','🪣','🎁','🧸','🪆','📫'] },
+  { keywords: ['부사', 'adverb', 'kata keterangan'], pool: ['⚡','💨','🌀','🔥','☄️','🌊','✨','💥'] },
   { keywords: ['인사', 'greeting', 'salam'],         pool: ['👋','🤝','😊','🙏','👐','🫶','💌','🫲'] },
   { keywords: ['음식', 'food', 'makanan', 'makan'],  pool: ['🍜','🍚','🤘','🍱','🍛','🥗','🫕','🍲'] },
   { keywords: ['숫자', 'number', 'angka'],           pool: ['🔢','1️⃣','🎲','🔟','💯','🧭','🃏','🎯'] },
-  { keywords: ['색', 'color', 'colour', 'warna'],        pool: ['🎨','🖌️','🌈','🖍️','🎭','🟡','🔵','🟣'] },
   { keywords: ['동물', 'animal', 'hewan'],           pool: ['🐾','🐘','🦁','🐬','🦊','🐧','🦜','🐢'] },
   { keywords: ['가족', 'family', 'keluarga'],        pool: ['👨‍👩‍👧','👪','🏠','❤️','👶','👴','🫲','💑'] },
   { keywords: ['날씨', 'weather', 'cuaca'],          pool: ['⛅','🌤️','🌧️','❄️','🌈','☀️','🌪️','🌊'] },
   { keywords: ['여행', 'travel', 'perjalanan'],      pool: ['✈️','🗺️','🧓','🏖️','🚂','⛵','🏔️','🎒'] },
   { keywords: ['직업', 'job', 'pekerjaan'],          pool: ['💼','👷','👨‍⚕️','👩‍🏫','👨‍🍳','🧑‍💻','👮','🧑‍🎨'] },
-  { keywords: ['머', 'body', 'tubuh', 'badan'],          pool: ['🧍','💪','🦷','👁️','�ac️','🦴','🤲','�ad️'] },
-  { keywords: ['집', 'house', 'home', 'rumah'],          pool: ['🏠','🏡','🛋️','🪑','🚪','🛏️','🧹','🏗️'] },
   { keywords: ['시간', 'time', 'waktu'],             pool: ['⏰','🕐','📅','⌛','🗓️','⏱️','🌙','🌅'] },
   { keywords: ['학교', 'school', 'sekolah'],         pool: ['🏫','📚','✏️','🎓','📐','📏','🖊️','🧑‍🏫'] },
   { keywords: ['감정', 'emotion', 'perasaan'],       pool: ['😊','😢','😡','🥰','😱','😴','🤩','😌'] },
@@ -33,13 +49,13 @@ const emojiMap = [
   { keywords: ['쇼핑', 'shopping', 'belanja'],       pool: ['🛍️','🛒','💳','🏪','👗','👟','💍','🎠'] },
   { keywords: ['kotbah', 'khotbah', 'sermon', '설교'], pool: ['📖','✝️','🕊️','📜','🙌','⛪','📣','🕯️'] },
   { keywords: ['doa', 'prayer', '기도'],             pool: ['🙏','💒','✨','🕊️','💫','🌟','🫶','📿'] },
-  { keywords: ['ibadah', 'worship', '예배'],         pool: ['⛪','🎵','🙌','✝️','🌟','🕊️','💒','📖'] },
+  { keywords: ['기독교', 'ibadah', 'worship', '예배'], pool: ['⛪','🎵','🙌','✝️','🌟','🕊️','💒','📖'] },
   { keywords: ['lagu', 'song', 'music', '노래'],     pool: ['🎵','🎶','🎸','🎹','🎤','🥁','🎺','🎻'] },
 ];
 
 const poolIndex = new Map();
 const usedEmojis = new Set();
-const fallbackPool = ['📚','🌟','💡','🎯','🗂️','📝','🔖','💬','🧩','🌏','🔑','🎠','🧪','🔭','🎠'];
+const fallbackPool = ['📚','🌟','💡','🎯','🗂️','📝','🔖','💬','🧩','🌏','🔑','🎠','🧪','🔭','🎪'];
 let fallbackIndex = 0;
 
 function getEmoji(name) {
@@ -81,7 +97,18 @@ if (!fs.existsSync(categoriesDir)) {
   process.exit(0);
 }
 
-const files = fs.readdirSync(categoriesDir).filter(f => f.endsWith('.csv'));
+// 파일 읽기 후 정렬순서 적용
+const files = fs.readdirSync(categoriesDir)
+  .filter(f => f.endsWith('.csv'))
+  .sort((a, b) => {
+    const nameA = path.basename(a, '.csv');
+    const nameB = path.basename(b, '.csv');
+    const idxA = getSortIndex(nameA);
+    const idxB = getSortIndex(nameB);
+    if (idxA !== idxB) return idxA - idxB;
+    // 같은 그룹 내에서는 파일명 순 (Kotbah0001, Kotbah0002...)
+    return nameA.localeCompare(nameB);
+  });
 
 for (const file of files) {
   const categoryName = path.basename(file, '.csv');
