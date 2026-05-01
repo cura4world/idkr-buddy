@@ -6,9 +6,71 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const categoriesDir = path.join(__dirname, '../data/categories');
 const outputFile = path.join(__dirname, '../src/data/seed.json');
 
-// src/data 폴더 없으면 생성
 const outputDir = path.dirname(outputFile);
 if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+// 키워드 → 이모지 풀 매핑 (같은 키워드라도 순서대로 다른 이모지)
+const emojiMap = [
+  { keywords: ['동사', 'verb', 'kata kerja'],       pool: ['🏃','💪','🤸','🙌','💟','🦵','🤾','🏔'] },
+  { keywords: ['형용사', 'adjective', 'kata sifat'], pool: ['🌈','🎨','✨','🌸','🌺','🦋','🌻','💫'] },
+  { keywords: ['명사', 'noun', 'kata benda'],        pool: ['📦','🗂️','🦺','🪣','🎁','🧸','🪆','📫'] },
+  { keywords: ['인사', 'greeting', 'salam'],         pool: ['👋','🤝','😊','🙏','👐','🫶','💌','🫲'] },
+  { keywords: ['음식', 'food', 'makanan', 'makan'],  pool: ['🍜','🍚','🤘','🍱','🍛','🥗','🫕','🍲'] },
+  { keywords: ['숫자', 'number', 'angka'],           pool: ['🔢','1️⃣','🎲','🔟','💯','🧭','🃏','🎯'] },
+  { keywords: ['색', 'color', 'colour', 'warna'],        pool: ['🎨','🖌️','🌈','🖍️','🎭','🟡','🔵','🟣'] },
+  { keywords: ['동물', 'animal', 'hewan'],           pool: ['🐾','🐘','🦁','🐬','🦊','🐧','🦜','🐢'] },
+  { keywords: ['가족', 'family', 'keluarga'],        pool: ['👨‍👩‍👧','👪','🏠','❤️','👶','👴','🫲','💑'] },
+  { keywords: ['날씨', 'weather', 'cuaca'],          pool: ['⛅','🌤️','🌧️','❄️','🌈','☀️','🌪️','🌊'] },
+  { keywords: ['여행', 'travel', 'perjalanan'],      pool: ['✈️','🗺️','🧓','🏖️','🚂','⛵','🏔️','🎒'] },
+  { keywords: ['직업', 'job', 'pekerjaan'],          pool: ['💼','👷','👨‍⚕️','👩‍🏫','👨‍🍳','🧑‍💻','👮','🧑‍🎨'] },
+  { keywords: ['머', 'body', 'tubuh', 'badan'],          pool: ['🧍','💪','🦷','👁️','�ac️','🦴','🤲','�ad️'] },
+  { keywords: ['집', 'house', 'home', 'rumah'],          pool: ['🏠','🏡','🛋️','🪑','🚪','🛏️','🧹','🏗️'] },
+  { keywords: ['시간', 'time', 'waktu'],             pool: ['⏰','🕐','📅','⌛','🗓️','⏱️','🌙','🌅'] },
+  { keywords: ['학교', 'school', 'sekolah'],         pool: ['🏫','📚','✏️','🎓','📐','📏','🖊️','🧑‍🏫'] },
+  { keywords: ['감정', 'emotion', 'perasaan'],       pool: ['😊','😢','😡','🥰','😱','😴','🤩','😌'] },
+  { keywords: ['교통', 'transport', 'kendaraan'],    pool: ['🚌','🚗','🚂','✈️','🛵','🚢','🚁','🚲'] },
+  { keywords: ['자연', 'nature', 'alam'],            pool: ['🌿','🌳','🌄','🌊','🦋','🌸','🍃','🌋'] },
+  { keywords: ['쇼핑', 'shopping', 'belanja'],       pool: ['🛍️','🛒','💳','🏪','👗','👟','💍','🎠'] },
+  { keywords: ['kotbah', 'khotbah', 'sermon', '설교'], pool: ['📖','✝️','🕊️','📜','🙌','⛪','📣','🕯️'] },
+  { keywords: ['doa', 'prayer', '기도'],             pool: ['🙏','💒','✨','🕊️','💫','🌟','🫶','📿'] },
+  { keywords: ['ibadah', 'worship', '예배'],         pool: ['⛪','🎵','🙌','✝️','🌟','🕊️','💒','📖'] },
+  { keywords: ['lagu', 'song', 'music', '노래'],     pool: ['🎵','🎶','🎸','🎹','🎤','🥁','🎺','🎻'] },
+];
+
+const poolIndex = new Map();
+const usedEmojis = new Set();
+const fallbackPool = ['📚','🌟','💡','🎯','🗂️','📝','🔖','💬','🧩','🌏','🔑','🎠','🧪','🔭','🎠'];
+let fallbackIndex = 0;
+
+function getEmoji(name) {
+  const lower = name.toLowerCase();
+  for (const { keywords, pool } of emojiMap) {
+    if (keywords.some(k => lower.includes(k))) {
+      const key = keywords[0];
+      const idx = poolIndex.get(key) || 0;
+      for (let i = 0; i < pool.length; i++) {
+        const candidate = pool[(idx + i) % pool.length];
+        if (!usedEmojis.has(candidate)) {
+          poolIndex.set(key, (idx + i + 1) % pool.length);
+          usedEmojis.add(candidate);
+          return candidate;
+        }
+      }
+      const fallback = pool[idx % pool.length];
+      poolIndex.set(key, (idx + 1) % pool.length);
+      return fallback;
+    }
+  }
+  for (let i = 0; i < fallbackPool.length; i++) {
+    const candidate = fallbackPool[(fallbackIndex + i) % fallbackPool.length];
+    if (!usedEmojis.has(candidate)) {
+      fallbackIndex = (fallbackIndex + i + 1) % fallbackPool.length;
+      usedEmojis.add(candidate);
+      return candidate;
+    }
+  }
+  return fallbackPool[fallbackIndex++ % fallbackPool.length];
+}
 
 const categories = [];
 const words = [];
@@ -24,7 +86,7 @@ const files = fs.readdirSync(categoriesDir).filter(f => f.endsWith('.csv'));
 for (const file of files) {
   const categoryName = path.basename(file, '.csv');
   const categoryId = `shared_${categoryName.replace(/\s+/g, '_')}`;
-  const emoji = '📚';
+  const emoji = getEmoji(categoryName);
 
   categories.push({ id: categoryId, name: categoryName, emoji, isShared: true });
 
