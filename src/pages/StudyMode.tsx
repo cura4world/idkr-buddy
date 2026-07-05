@@ -11,6 +11,7 @@ export default function StudyMode() {
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
   const [isRandom, setIsRandom] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isBreathing, setIsBreathing] = useState(false);
@@ -33,9 +34,11 @@ export default function StudyMode() {
     return [...words].sort(() => Math.random() - 0.5);
   }, [isRandom, words.length]);
 
-  const displayWords = isRandom ? shuffledWords : words;
+  const orderedWords = isRandom ? shuffledWords : words;
+  // 노란 리본(다시 외울 단어) 필터가 켜져 있으면 표시된 단어만 학습
+  const displayWords = reviewFilter ? orderedWords.filter((w) => savedIds.includes(w.id)) : orderedWords;
   const currentWord: Word | undefined = isAutoPlaying ? autoCurrentWord : displayWords[currentIndex];
-  const isSaved = currentWord ? savedIds.includes(currentWord.id) : false;
+  const isMarked = currentWord ? savedIds.includes(currentWord.id) : false;
 
   const requestWakeLock = async () => {
     try {
@@ -62,11 +65,32 @@ export default function StudyMode() {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
-  const handleToggleSave = () => {
+  // 카드 오른쪽 위 리본: 현재 단어를 '다시 외울 단어'로 표시/해제
+  const handleToggleMark = () => {
     if (!currentWord) return;
-    const nowSaved = toggleSavedWord(currentWord.id);
+    const nowMarked = toggleSavedWord(currentWord.id);
     setSavedIds(getSavedWordIds());
-    toast(nowSaved ? "단어를 보관했습니다 📌" : "보관함에서 제거했습니다");
+    toast(nowMarked ? "다시 외울 단어로 표시했습니다" : "표시를 해제했습니다");
+  };
+
+  // 아래 동그라미 리본 버튼: 표시된 단어만 보기 <-> 전체 보기
+  const handleToggleFilter = () => {
+    if (reviewFilter) {
+      setReviewFilter(false);
+      setCurrentIndex(0);
+      setIsFlipped(false);
+      toast("전체 단어를 표시합니다");
+      return;
+    }
+    const marked = words.filter((w) => savedIds.includes(w.id));
+    if (marked.length === 0) {
+      toast("표시된 단어가 없습니다");
+      return;
+    }
+    setReviewFilter(true);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    toast("표시된 단어 " + marked.length + "개만 학습합니다");
   };
 
   const speak = (text: string, lang: "id" | "ko") => {
@@ -105,6 +129,25 @@ export default function StudyMode() {
     const timer = setTimeout(() => setIsBreathing(true), 2000);
     return () => clearTimeout(timer);
   }, [currentIndex, isFlipped]);
+
+  // 필터로 목록이 줄었을 때 인덱스가 범위를 벗어나면 보정
+  useEffect(() => {
+    if (isAutoPlaying) return;
+    if (displayWords.length > 0 && currentIndex > displayWords.length - 1) {
+      setCurrentIndex(displayWords.length - 1);
+      setIsFlipped(false);
+    }
+  }, [displayWords.length, currentIndex, isAutoPlaying]);
+
+  // 필터 중 표시 단어가 모두 해제되면 자동으로 전체 보기로 복귀
+  useEffect(() => {
+    if (reviewFilter && words.length > 0 && displayWords.length === 0) {
+      setReviewFilter(false);
+      setCurrentIndex(0);
+      setIsFlipped(false);
+      toast("표시된 단어가 없어 전체 단어를 표시합니다");
+    }
+  }, [reviewFilter, displayWords.length, words.length]);
 
   const goNext = useCallback(() => {
     if (currentIndex < displayWords.length - 1) {
@@ -164,7 +207,9 @@ export default function StudyMode() {
 
   const startAutoPlay = (random: boolean) => {
     if (isAutoPlaying) { stopAutoPlay(); return; }
-    const playWords = random ? [...words].sort(() => Math.random() - 0.5) : [...words];
+    const sourceWords = reviewFilter ? words.filter((w) => savedIds.includes(w.id)) : words;
+    if (sourceWords.length === 0) return;
+    const playWords = random ? [...sourceWords].sort(() => Math.random() - 0.5) : [...sourceWords];
     autoRandomRef.current = random; isAutoPlayingRef.current = true;
     setIsAutoRandom(random); setIsAutoPlaying(true); setCurrentIndex(0); setIsFlipped(false);
     setAutoCurrentWord(playWords[0]); requestWakeLock(); runAutoPlay(0, playWords, frontLang);
@@ -191,7 +236,7 @@ export default function StudyMode() {
     setTouchStart(null);
   };
 
-  if (!category || displayWords.length === 0) {
+  if (!category || words.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
         <p className="text-muted-foreground">학습할 단어가 없습니다.</p>
@@ -216,7 +261,7 @@ export default function StudyMode() {
           <ArrowLeft size={20} />
         </button>
         <span className="text-sm text-white font-body">
-          {currentIndex + 1} / {isAutoPlaying ? words.length : displayWords.length}
+          {currentIndex + 1} / {displayWords.length}
           {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">{"\u25B6"}</span>}
         </span>
         {isAutoPlaying ? (
@@ -226,7 +271,13 @@ export default function StudyMode() {
         )}
       </div>
       <div className="flex-1 flex items-center justify-center px-6" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        <div className="perspective w-full max-w-sm aspect-[3/4] cursor-pointer" onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}>
+        <div className="relative perspective w-full max-w-sm aspect-[3/4] cursor-pointer" onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleToggleMark(); }}
+            className={`absolute top-2 right-2 z-20 p-2 transition-colors ${isMarked ? "text-yellow-500" : "text-muted-foreground/50 hover:text-gray-900"}`}
+          >
+            <Bookmark size={22} fill={isMarked ? "currentColor" : "none"} />
+          </button>
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
               <p className={`text-center leading-relaxed text-gray-900 ${frontLang === "id" ? "font-word text-2xl" : "font-body text-xl"}`}>
@@ -254,9 +305,10 @@ export default function StudyMode() {
         </div>
       </div>
       <div className="flex justify-center gap-3 py-2">
-        <button onClick={handleToggleSave} disabled={isAutoPlaying}
-          className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isSaved ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"} disabled:opacity-30`}>
-          <Bookmark size={20} fill={isSaved ? "currentColor" : "none"} />
+        <button onClick={() => { if (isAutoPlaying) return; setFrontLang((l) => (l === "id" ? "ko" : "id")); setIsFlipped(false); setCurrentIndex(0); }}
+          disabled={isAutoPlaying}
+          className={`w-12 h-12 flex items-center justify-center rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 bg-card text-gray-900 border-border/50 hover:border-primary/50 ${frontLang === "ko" ? "border-primary" : ""}`}>
+          {frontLang === "id" ? "IN" : "KO"}
         </button>
         <button onClick={() => { setIsRandom((r) => !r); setCurrentIndex(0); setIsFlipped(false); }} disabled={isAutoPlaying}
           className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isRandom ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"} disabled:opacity-30`}>
@@ -267,10 +319,9 @@ export default function StudyMode() {
           className="w-12 h-12 flex items-center justify-center rounded-full transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30">
           <Volume2 size={20} />
         </button>
-        <button onClick={() => { if (isAutoPlaying) return; setFrontLang((l) => (l === "id" ? "ko" : "id")); setIsFlipped(false); setCurrentIndex(0); }}
-          disabled={isAutoPlaying}
-          className={`w-12 h-12 flex items-center justify-center rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 bg-card text-gray-900 border-border/50 hover:border-primary/50 ${frontLang === "ko" ? "border-primary" : ""}`}>
-          {frontLang === "id" ? "IN" : "KO"}
+        <button onClick={handleToggleFilter} disabled={isAutoPlaying}
+          className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border disabled:opacity-30 ${reviewFilter ? "bg-card text-yellow-500 border-yellow-500" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"}`}>
+          <Bookmark size={20} fill={reviewFilter ? "currentColor" : "none"} />
         </button>
       </div>
       <div className="flex items-center justify-center gap-3 py-4">
@@ -297,4 +348,4 @@ export default function StudyMode() {
       </div>
     </div>
   );
-      }
+}
