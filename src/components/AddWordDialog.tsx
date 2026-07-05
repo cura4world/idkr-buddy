@@ -1,25 +1,63 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { addWord, getCategories } from "@/lib/store";
+import { fillWordWithGemini, hasGeminiApiKey } from "@/lib/gemini";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sparkles, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AddWordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultCategoryId?: string;
+  categoryId?: string;
   onAdded: (newWordId: string) => void;
 }
 
-export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, onAdded }: AddWordDialogProps) {
+export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, categoryId: categoryIdProp, onAdded }: AddWordDialogProps) {
   const [word, setWord] = useState("");
   const [meaning, setMeaning] = useState("");
   const [example, setExample] = useState("");
   const [exampleMeaning, setExampleMeaning] = useState("");
-  const [categoryId, setCategoryId] = useState(defaultCategoryId || "");
+  const [categoryId, setCategoryId] = useState(categoryIdProp || defaultCategoryId || "");
+  const [filling, setFilling] = useState(false);
   const categories = getCategories();
+  const canAutoFill = hasGeminiApiKey();
+
+  useEffect(() => {
+    if (open) setCategoryId(categoryIdProp || defaultCategoryId || "");
+  }, [open, categoryIdProp, defaultCategoryId]);
+
+  const handleAutoFill = async () => {
+    if (!word.trim()) {
+      toast("먼저 인도네시아어 단어를 입력하세요");
+      return;
+    }
+    setFilling(true);
+    try {
+      const result = await fillWordWithGemini(word);
+      if (result.meaning) setMeaning(result.meaning);
+      if (result.example) setExample(result.example);
+      if (result.exampleMeaning) setExampleMeaning(result.exampleMeaning);
+      toast("자동 채우기 완료 (내용을 확인하세요)");
+    } catch (err) {
+      const msg = (err as Error)?.message || "";
+      if (msg === "INVALID_API_KEY") {
+        toast("API 키가 올바르지 않습니다. 설정에서 확인하세요");
+      } else if (msg === "RATE_LIMIT") {
+        toast("잠시 후 다시 시도하세요 (요청 한도)");
+      } else if (msg === "NO_API_KEY") {
+        toast("설정에서 Gemini API 키를 먼저 입력하세요");
+      } else {
+        toast("자동 채우기에 실패했습니다");
+      }
+    } finally {
+      setFilling(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +85,24 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, o
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label className="font-body text-sm text-gray-900">인도네시아어</Label>
+            <div className="flex items-center justify-between">
+              <Label className="font-body text-sm text-gray-900">인도네시아어</Label>
+              {canAutoFill && (
+                <button
+                  type="button"
+                  onClick={handleAutoFill}
+                  disabled={filling}
+                  className="flex items-center gap-1 text-xs text-primary font-body disabled:opacity-50"
+                >
+                  {filling ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5" />
+                  )}
+                  자동 채우기
+                </button>
+              )}
+            </div>
             <Input
               value={word}
               onChange={(e) => setWord(e.target.value)}
