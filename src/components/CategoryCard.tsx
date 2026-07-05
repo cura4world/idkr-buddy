@@ -135,13 +135,13 @@ export default function CategoryCard({
             onClick={() => navigate(`/quiz/${category.id}`)}
             className="text-sm text-primary hover:text-primary/80"
           >
-            퀴즈
+            Quiz
           </button>
           <button
             onClick={() => navigate(`/study/${category.id}`)}
             className="text-sm text-primary hover:text-primary/80"
           >
-            플래시카드
+            Card
           </button>
         </div>
       </div>
