@@ -20,6 +20,19 @@ export interface Category {
 
 const WORDS_KEY = "kata-words";
 const CATEGORIES_KEY = "kata-categories";
+const MY_WORDBOOK_ID = "my-wordbook";
+const MY_WORDBOOK_FLAG = "my_wordbook_created";
+
+// 손상된 localStorage 데이터로 앱 전체가 죽지 않도록 안전 파싱
+function safeParse<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw);
+    return (parsed as T) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 const defaultCategories: Category[] = [
   { id: "greetings", name: "인사", emoji: "👋" },
@@ -40,25 +53,35 @@ const defaultWords: Word[] = [
 ];
 
 export function getCategories(): Category[] {
-  const stored = localStorage.getItem(CATEGORIES_KEY);
-  if (stored) return JSON.parse(stored);
-  localStorage.setItem(CATEGORIES_KEY, JSON.stringify(defaultCategories));
+  try {
+    const stored = localStorage.getItem(CATEGORIES_KEY);
+    if (stored) {
+      const parsed = safeParse<Category[]>(stored, defaultCategories);
+      return Array.isArray(parsed) ? parsed : defaultCategories;
+    }
+    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(defaultCategories));
+  } catch (e) {}
   return defaultCategories;
 }
 
 export function saveCategories(categories: Category[]) {
-  localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+  try { localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories)); } catch (e) {}
 }
 
 export function getWords(): Word[] {
-  const stored = localStorage.getItem(WORDS_KEY);
-  if (stored) return JSON.parse(stored);
-  localStorage.setItem(WORDS_KEY, JSON.stringify(defaultWords));
+  try {
+    const stored = localStorage.getItem(WORDS_KEY);
+    if (stored) {
+      const parsed = safeParse<Word[]>(stored, defaultWords);
+      return Array.isArray(parsed) ? parsed : defaultWords;
+    }
+    localStorage.setItem(WORDS_KEY, JSON.stringify(defaultWords));
+  } catch (e) {}
   return defaultWords;
 }
 
 export function saveWords(words: Word[]) {
-  localStorage.setItem(WORDS_KEY, JSON.stringify(words));
+  try { localStorage.setItem(WORDS_KEY, JSON.stringify(words)); } catch (e) {}
 }
 
 function initSharedCategories() {
@@ -71,12 +94,32 @@ function initSharedCategories() {
   const personalCats = existingCats.filter(c => !c.isShared);
   const updatedShared = existingShared.map(e => seed.categories.find(s => s.id === e.id) || e);
   const newShared = seed.categories.filter(s => !existingShared.find(e => e.id === s.id));
-  saveCategories([...updatedShared, ...newShared, ...personalCats]);
+  const merged = [...updatedShared, ...newShared, ...personalCats];
+  // '내 단어장'은 항상 맨 위 유지
+  const myIdx = merged.findIndex(c => c.id === MY_WORDBOOK_ID);
+  if (myIdx > 0) {
+    const [my] = merged.splice(myIdx, 1);
+    merged.unshift(my);
+  }
+  saveCategories(merged);
   saveWords([...seed.words, ...existingWords]);
   localStorage.setItem('shared_seed_version', String(seed.version));
 }
 
+// 기본 '내 단어장'을 최초 1회 맨 위에 생성 (사용자가 삭제하면 다시 만들지 않음)
+function ensureMyWordbook() {
+  try {
+    if (localStorage.getItem(MY_WORDBOOK_FLAG) === "1") return;
+    const cats = getCategories();
+    if (!cats.find(c => c.id === MY_WORDBOOK_ID)) {
+      saveCategories([{ id: MY_WORDBOOK_ID, name: "내 단어장", emoji: "⭐" }, ...cats]);
+    }
+    localStorage.setItem(MY_WORDBOOK_FLAG, "1");
+  } catch (e) {}
+}
+
 initSharedCategories();
+ensureMyWordbook();
 
 // 공용 단어장 복구 (리프레시 버튼용)
 export function restoreSharedCategories() {
@@ -177,21 +220,29 @@ export function getWordsByCategory(categoryId: string): Word[] {
 const SAVED_KEY = "kata-saved";
 
 export function getSavedWordIds(): string[] {
-  const stored = localStorage.getItem(SAVED_KEY);
-  return stored ? JSON.parse(stored) : [];
+  try {
+    const parsed = safeParse<string[]>(localStorage.getItem(SAVED_KEY), []);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
 }
 
 export function toggleSavedWord(wordId: string): boolean {
   const ids = getSavedWordIds();
   const idx = ids.indexOf(wordId);
-  if (idx >= 0) {
-    ids.splice(idx, 1);
-    localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
-    return false;
-  } else {
-    ids.push(wordId);
-    localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
-    return true;
+  try {
+    if (idx >= 0) {
+      ids.splice(idx, 1);
+      localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
+      return false;
+    } else {
+      ids.push(wordId);
+      localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
+      return true;
+    }
+  } catch (e) {
+    return idx < 0;
   }
 }
 
@@ -201,8 +252,10 @@ export function getSavedWords(): Word[] {
 }
 
 export function removeSavedWord(wordId: string) {
-  const ids = getSavedWordIds().filter((id) => id !== wordId);
-  localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
+  try {
+    const ids = getSavedWordIds().filter((id) => id !== wordId);
+    localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
+  } catch (e) {}
 }
 
 export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imported: number; errors: number } {
@@ -229,7 +282,7 @@ export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imp
   }
   const bom = String.fromCharCode(0xFEFF);
   const cleanCsv = csv.startsWith(bom) ? csv.slice(1) : csv;
-  const newline = new RegExp("\r?\n");
+  const newline = new RegExp("\\r?\\n");
   const lines = cleanCsv.split(newline).filter((l) => l.trim());
   let imported = 0;
   let errors = 0;
