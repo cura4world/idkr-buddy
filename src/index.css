@@ -6,42 +6,42 @@
 
 @layer base {
   :root {
-    /* Ocean deep palette */
-    --background: 196 99% 23%; /* #015F78 */
+    /* Ocean deep palette — refined */
+    --background: 196 72% 22%; /* Deep Lagoon */
     --foreground: 0 0% 100%; /* White text */
 
-    --card: 30 20% 96%;
+    --card: 38 36% 97%; /* Rice Paper */
     --card-foreground: 24 8% 17%;
 
-    --popover: 30 23% 93%;
+    --popover: 36 28% 94%;
     --popover-foreground: 24 8% 17%;
 
-    --primary: 150 14% 33%; /* #4A5D52 */
-    --primary-foreground: 30 23% 96%;
+    --primary: 172 42% 30%; /* Sea Pine */
+    --primary-foreground: 36 30% 97%;
 
-    --secondary: 30 15% 87%;
+    --secondary: 32 16% 88%;
     --secondary-foreground: 24 8% 17%;
 
-    --muted: 30 12% 88%;
-    --muted-foreground: 24 6% 50%;
+    --muted: 34 14% 89%;
+    --muted-foreground: 24 6% 46%;
 
-    --accent: 18 72% 65%; /* #E58A64 */
-    --accent-foreground: 30 23% 96%;
+    --accent: 18 80% 62%; /* Tangerine */
+    --accent-foreground: 36 30% 97%;
 
     --destructive: 0 60% 50%;
-    --destructive-foreground: 30 23% 96%;
+    --destructive-foreground: 36 30% 97%;
 
-    --border: 30 15% 85%;
-    --input: 30 15% 85%;
-    --ring: 150 14% 33%;
+    --border: 32 18% 85%;
+    --input: 32 18% 85%;
+    --ring: 172 42% 30%;
 
     --radius: 0.75rem;
 
     /* Custom tokens */
-    --surface-elevated: 30 25% 98%;
-    --pulse-glow: 150 14% 33%;
-    --correct: 18 72% 65%;
-    --incorrect: 30 12% 75%;
+    --surface-elevated: 36 30% 98%;
+    --pulse-glow: 172 42% 34%;
+    --correct: 18 80% 62%;
+    --incorrect: 32 12% 75%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -79,6 +79,16 @@
 /* Korean body font */
 .font-body {
   font-family: 'Gowun Dodum', sans-serif;
+}
+
+/* App background: deep-sea depth gradient (page roots only, inputs unaffected) */
+.min-h-screen.bg-background {
+  background-image: linear-gradient(180deg, hsl(195 68% 26%) 0%, hsl(196 72% 22%) 38%, hsl(201 76% 14%) 100%);
+}
+
+/* Soft layered lift for cards sitting on the deep background */
+.card-lift {
+  box-shadow: 0 1px 2px hsl(200 60% 8% / 0.18), 0 12px 28px -14px hsl(202 65% 6% / 0.55);
 }
 
 /* Breathing card pulse animation */
