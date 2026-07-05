@@ -271,15 +271,15 @@ export default function StudyMode() {
         )}
       </div>
       <div className="flex-1 flex items-center justify-center px-6" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        <div className="relative perspective w-full max-w-sm aspect-[3/4] cursor-pointer" onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleToggleMark(); }}
-            className={`absolute top-2 right-2 z-20 p-2 transition-colors ${isMarked ? "text-yellow-500" : "text-muted-foreground/50 hover:text-gray-900"}`}
-          >
-            <Bookmark size={22} fill={isMarked ? "currentColor" : "none"} />
-          </button>
+        <div className="perspective w-full max-w-sm aspect-[3/4] cursor-pointer" onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}>
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleToggleMark(); }}
+                className={`absolute top-2 right-2 p-2 transition-colors ${isMarked ? "text-yellow-500" : "text-muted-foreground/50"}`}
+              >
+                <Bookmark size={22} fill={isMarked ? "currentColor" : "none"} />
+              </button>
               <p className={`text-center leading-relaxed text-gray-900 ${frontLang === "id" ? "font-word text-2xl" : "font-body text-xl"}`}>
                 {frontLang === "id" ? currentWord?.word : currentWord?.meaning}
               </p>
@@ -291,6 +291,12 @@ export default function StudyMode() {
               )}
             </div>
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
+              <button
+                onClick={(e) => { e.stopPropagation(); handleToggleMark(); }}
+                className={`absolute top-2 right-2 p-2 transition-colors ${isMarked ? "text-yellow-500" : "text-muted-foreground/50"}`}
+              >
+                <Bookmark size={22} fill={isMarked ? "currentColor" : "none"} />
+              </button>
               <p className={`font-normal text-center mb-3 text-gray-900 ${frontLang === "id" ? "font-body text-xl" : "font-word text-2xl"}`}>
                 {frontLang === "id" ? currentWord?.meaning : currentWord?.word}
               </p>
