@@ -258,6 +258,44 @@ export function removeSavedWord(wordId: string) {
   } catch (e) {}
 }
 
+// CSV 필드 이스케이프 (쉼표/따옴표/줄바꿈 포함 시 따옴표로 감싸고 따옴표는 두 번)
+function csvField(value: string): string {
+  const s = (value ?? "").toString();
+  const NL = String.fromCharCode(10);
+  const CR = String.fromCharCode(13);
+  if (s.indexOf('"') !== -1 || s.indexOf(",") !== -1 || s.indexOf(NL) !== -1 || s.indexOf(CR) !== -1) {
+    return '"' + s.split('"').join('""') + '"';
+  }
+  return s;
+}
+
+// 전체 단어를 CSV로 내보내기 (백업용)
+// 형식: 단어,뜻,예문,예문뜻,카테고리이름,카테고리이모지,다시외울표시(1)
+export function exportWordsToCSV(): { csv: string; count: number } {
+  const categories = getCategories();
+  const words = getWords();
+  const savedIds = getSavedWordIds();
+  const NL = String.fromCharCode(10);
+  const CR = String.fromCharCode(13);
+  const lines: string[] = [];
+  for (const cat of categories) {
+    const catWords = words.filter((w) => w.categoryId === cat.id);
+    for (const w of catWords) {
+      lines.push([
+        csvField(w.word),
+        csvField(w.meaning),
+        csvField(w.example),
+        csvField(w.exampleMeaning),
+        csvField(cat.name),
+        csvField(cat.emoji),
+        savedIds.includes(w.id) ? "1" : "",
+      ].join(","));
+    }
+  }
+  const bom = String.fromCharCode(0xFEFF);
+  return { csv: bom + lines.join(CR + NL) + (lines.length > 0 ? CR + NL : ""), count: lines.length };
+}
+
 export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imported: number; errors: number } {
   function parseCSVLine(line: string): string[] {
     const result: string[] = [];
@@ -287,22 +325,43 @@ export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imp
   let imported = 0;
   let errors = 0;
   const words = getWords();
+  const categories = getCategories();
+  const newSavedIds: string[] = [];
+  let categoriesChanged = false;
   for (let i = 0; i < lines.length; i++) {
     const parts = parseCSVLine(lines[i]);
     if (parts.length >= 2 && parts[0].trim() !== "") {
-      const [word, meaning, example, exampleMeaning, categoryId] = parts;
+      const [word, meaning, example, exampleMeaning, categoryName, categoryEmoji, marked] = parts;
       let catId = forceCategoryId;
       if (!catId) {
-        const categories = getCategories();
-        catId = categoryId && categories.find((c) => c.id === categoryId || c.name === categoryId)
-          ? (categories.find((c) => c.id === categoryId || c.name === categoryId)!.id)
-          : (categories[0]?.id || "daily");
+        const name = (categoryName || "").trim();
+        if (name) {
+          let cat = categories.find((c) => c.id === name || c.name === name);
+          if (!cat) {
+            // 백업 복원 시 없는 카테고리는 자동 생성
+            cat = { id: crypto.randomUUID(), name: name, emoji: (categoryEmoji || "").trim() || "📁" };
+            categories.push(cat);
+            categoriesChanged = true;
+          }
+          catId = cat.id;
+        } else {
+          catId = categories[0]?.id || "daily";
+        }
       }
-      words.push({ id: crypto.randomUUID(), word, meaning, example: example || "", exampleMeaning: exampleMeaning || "", categoryId: catId, createdAt: Date.now() });
+      const newWord: Word = { id: crypto.randomUUID(), word, meaning, example: example || "", exampleMeaning: exampleMeaning || "", categoryId: catId, createdAt: Date.now() };
+      words.push(newWord);
+      if ((marked || "").trim() === "1") newSavedIds.push(newWord.id);
       imported++;
     } else { errors++; }
   }
+  if (categoriesChanged) saveCategories(categories);
   saveWords(words);
+  if (newSavedIds.length > 0) {
+    try {
+      const ids = getSavedWordIds();
+      localStorage.setItem(SAVED_KEY, JSON.stringify(ids.concat(newSavedIds)));
+    } catch (e) {}
+  }
   return { imported, errors };
 }
 
