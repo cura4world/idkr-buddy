@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCategories, getSavedWords, reorderCategories, restoreSharedCategories, Category } from "@/lib/store";
+import { getCategories, reorderCategories, restoreSharedCategories, Category } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
@@ -13,7 +13,6 @@ const Index = () => {
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const categories = getCategories();
-  const savedCount = getSavedWords().length;
   const [addWordOpen, setAddWordOpen] = useState(false);
   const [addWordCat, setAddWordCat] = useState<string | undefined>();
   const [addCatOpen, setAddCatOpen] = useState(false);
@@ -211,22 +210,6 @@ const Index = () => {
       </header>
 
       <div className="space-y-2">
-        {savedCount > 0 && (
-          <div className="rounded-lg bg-card px-6 py-5 shadow-sm border border-border/50">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/saved")}>
-              <span className="text-lg">📝</span>
-              <h2 className="text-base font-medium font-body text-card-foreground">저장한 단어</h2>
-            </div>
-            <div className="flex items-center justify-between mt-3">
-              <span className="text-sm text-muted-foreground">{savedCount}개의 단어</span>
-              <div className="flex gap-3">
-                <button onClick={() => navigate("/saved/quiz")} className="text-sm text-primary hover:text-primary/80">퀴즈</button>
-                <button onClick={() => navigate("/saved/study")} className="text-sm text-primary hover:text-primary/80">플래시카드</button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {categories.map((cat, idx) => (
           <CategoryCard
             key={cat.id}
