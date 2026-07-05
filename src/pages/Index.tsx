@@ -4,7 +4,8 @@ import { getCategories, getSavedWords, reorderCategories, restoreSharedCategorie
 import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
-import { RotateCcw } from "lucide-react";
+import SettingsDialog from "@/components/SettingsDialog";
+import { RotateCcw, Settings } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
@@ -16,6 +17,7 @@ const Index = () => {
   const [addWordOpen, setAddWordOpen] = useState(false);
   const [addWordCat, setAddWordCat] = useState<string | undefined>();
   const [addCatOpen, setAddCatOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -152,6 +154,13 @@ const Index = () => {
         </h1>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setSettingsOpen(true)}
+            className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center"
+            title="설정"
+          >
+            <Settings size={18} />
+          </button>
+          <button
             onClick={handleRestore}
             className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center"
             title="공용 단어장 복구"
@@ -238,6 +247,7 @@ const Index = () => {
         </div>
       )}
 
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <AddWordDialog
         open={addWordOpen}
         onOpenChange={setAddWordOpen}
