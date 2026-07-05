@@ -90,8 +90,41 @@ const Index = () => {
         autoScrollTimer.current = setInterval(() => window.scrollBy(0, speed), 16);
       }
     };
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isPendingLongPress.current && !isDragging.current) return;
+      if (isPendingLongPress.current && !isDragging.current) { cancelLongPress(); return; }
+      const overIdx = getOverIndex(e.clientX, e.clientY);
+      if (overIdx !== -1) setDragOverIdx(overIdx);
+      setFloatPos({ x: e.clientX, y: e.clientY - floatOffsetY.current });
+      const margin = 100;
+      const speed = 8;
+      stopAutoScroll();
+      if (e.clientY < margin) {
+        autoScrollTimer.current = setInterval(() => window.scrollBy(0, -speed), 16);
+      } else if (e.clientY > window.innerHeight - margin) {
+        autoScrollTimer.current = setInterval(() => window.scrollBy(0, speed), 16);
+      }
+    };
+    // 어떤 경로로든 터치/마우스가 끝나거나 취소되면 반드시 드래그 상태를 정리
+    // (touchcancel, 합성 mousedown 타이머 누수 등으로 유령 카드가 남는 버그 방지)
+    const onGlobalEnd = () => handleEnd();
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") handleEnd();
+    };
     document.addEventListener("touchmove", onTouchMove, { passive: false });
-    return () => document.removeEventListener("touchmove", onTouchMove);
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("touchend", onGlobalEnd, true);
+    document.addEventListener("touchcancel", onGlobalEnd, true);
+    document.addEventListener("mouseup", onGlobalEnd, true);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("touchend", onGlobalEnd, true);
+      document.removeEventListener("touchcancel", onGlobalEnd, true);
+      document.removeEventListener("mouseup", onGlobalEnd, true);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 
   const makeTouchStart = (index: number, cat: Category) => (e: React.TouchEvent) => {
