@@ -126,3 +126,22 @@
 .flip-transition {
   transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Subtle card slide-in when moving between words */
+@keyframes card-in-next {
+  from { opacity: 0; transform: translateX(26px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes card-in-prev {
+  from { opacity: 0; transform: translateX(-26px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.card-enter-next {
+  animation: card-in-next 0.28s ease-out;
+}
+
+.card-enter-prev {
+  animation: card-in-prev 0.28s ease-out;
+}
