@@ -12,6 +12,7 @@ export default function StudyMode() {
   const words = id ? getWordsByCategory(id) : [];
   const [isRandom, setIsRandom] = useState(false);
   const [reviewFilter, setReviewFilter] = useState(false);
+  const [slideDir, setSlideDir] = useState<1 | -1>(1);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isBreathing, setIsBreathing] = useState(false);
@@ -151,13 +152,13 @@ export default function StudyMode() {
 
   const goNext = useCallback(() => {
     if (currentIndex < displayWords.length - 1) {
-      setIsFlipped(false); setIsBreathing(false); setCurrentIndex((i) => i + 1);
+      setSlideDir(1); setIsFlipped(false); setIsBreathing(false); setCurrentIndex((i) => i + 1);
     }
   }, [currentIndex, displayWords.length]);
 
   const goPrev = useCallback(() => {
     if (currentIndex > 0) {
-      setIsFlipped(false); setIsBreathing(false); setCurrentIndex((i) => i - 1);
+      setSlideDir(-1); setIsFlipped(false); setIsBreathing(false); setCurrentIndex((i) => i - 1);
     }
   }, [currentIndex]);
 
@@ -211,7 +212,7 @@ export default function StudyMode() {
     if (sourceWords.length === 0) return;
     const playWords = random ? [...sourceWords].sort(() => Math.random() - 0.5) : [...sourceWords];
     autoRandomRef.current = random; isAutoPlayingRef.current = true;
-    setIsAutoRandom(random); setIsAutoPlaying(true); setCurrentIndex(0); setIsFlipped(false);
+    setSlideDir(1); setIsAutoRandom(random); setIsAutoPlaying(true); setCurrentIndex(0); setIsFlipped(false);
     setAutoCurrentWord(playWords[0]); requestWakeLock(); runAutoPlay(0, playWords, frontLang);
   };
 
@@ -271,7 +272,7 @@ export default function StudyMode() {
         )}
       </div>
       <div className="flex-1 flex items-center justify-center px-6" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        <div className="perspective w-full max-w-sm aspect-[3/4] cursor-pointer" onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}>
+        <div key={(currentWord && currentWord.id) || "empty"} className={`perspective w-full max-w-sm aspect-[3/4] cursor-pointer ${slideDir === 1 ? "card-enter-next" : "card-enter-prev"}`} onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}>
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
               <button
