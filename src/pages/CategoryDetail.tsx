@@ -225,6 +225,7 @@ export default function CategoryDetail() {
       const now = Date.now();
       const timeSinceLastTap = now - lastTapTime.current;
       if (timeSinceLastTap < 300 && lastTapIndex.current === index) {
+        if (selectedIndex !== index) toast("새 단어가 이 단어 바로 아래에 추가됩니다");
         setSelectedIndex((prev) => (prev === index ? null : index));
         lastTapTime.current = 0;
         lastTapIndex.current = null;
@@ -268,6 +269,7 @@ export default function CategoryDetail() {
 
   const handleMouseClick = (index: number) => {
     if (isDragging.current) return;
+    if (selectedIndex !== index) toast("새 단어가 이 단어 바로 아래에 추가됩니다");
     setSelectedIndex((prev) => (prev === index ? null : index));
   };
 
