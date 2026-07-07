@@ -194,8 +194,8 @@ export default function StudyMode() {
       toast("자동플레이가 완료되었습니다 🎉");
       return;
     }
-    setIsFlipped(false); setIsBreathing(false); setCurrentIndex(index);
-    await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(() => { setAutoCurrentWord(playWords[index]); resolve(); }, 650); });
+    setIsFlipped(false); setIsBreathing(false); setCurrentIndex(index); setAutoCurrentWord(playWords[index]);
+    await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(() => { resolve(); }, 650); });
     if (!isAutoPlayingRef.current) return;
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(async () => { const frontText = lang === "id" ? playWords[index].word : playWords[index].meaning; await speak(frontText, lang); resolve(); }, 1000); });
     if (!isAutoPlayingRef.current) return;
@@ -272,7 +272,7 @@ export default function StudyMode() {
         )}
       </div>
       <div className="flex-1 flex items-center justify-center px-6" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        <div key={(currentWord && currentWord.id) || "empty"} className={`perspective w-full max-w-sm aspect-[3/4] cursor-pointer ${slideDir === 1 ? "card-enter-next" : "card-enter-prev"}`} onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}>
+        <div key={(currentWord && currentWord.id) || "empty"} className={`perspective w-full max-w-sm aspect-[3/4] cursor-pointer ${isAutoPlaying ? "" : slideDir === 1 ? "card-enter-next" : "card-enter-prev"}`} onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}>
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
             <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
               <button
