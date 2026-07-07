@@ -365,6 +365,15 @@ export default function CategoryDetail() {
                   >
                     <Volume2 size={16} />
                   </button>
+                  {w.example && (
+                    <button
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); speak(w.example); }}
+                      className="text-sky-400 hover:text-sky-500 p-1"
+                    >
+                      <Volume2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -394,6 +403,7 @@ export default function CategoryDetail() {
           <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
             <Settings size={16} className="text-muted-foreground" />
             <Volume2 size={16} className="text-muted-foreground" />
+            {draggingWord.example && <Volume2 size={16} className="text-sky-400/70" />}
           </div>
         </div>
       )}
