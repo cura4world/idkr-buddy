@@ -92,9 +92,16 @@ function initSharedCategories() {
   const existingWords = getWords().filter(w => !w.isShared);
   const existingShared = existingCats.filter(c => c.isShared);
   const personalCats = existingCats.filter(c => !c.isShared);
-  const updatedShared = existingShared.map(e => seed.categories.find(s => s.id === e.id) || e);
+  // 시드에서 사라진 공용 단어장: 직접 추가한 단어가 있으면 개인 단어장으로 전환, 없으면 제거
+  const keptShared: Category[] = [];
+  for (const e of existingShared) {
+    const inSeed = seed.categories.find(s => s.id === e.id);
+    if (inSeed) { keptShared.push(inSeed); continue; }
+    const hasPersonalWords = existingWords.some(w => w.categoryId === e.id);
+    if (hasPersonalWords) keptShared.push({ ...e, isShared: false });
+  }
   const newShared = seed.categories.filter(s => !existingShared.find(e => e.id === s.id));
-  const merged = [...updatedShared, ...newShared, ...personalCats];
+  const merged = [...keptShared, ...newShared, ...personalCats];
   // '내 단어장'은 항상 맨 위 유지
   const myIdx = merged.findIndex(c => c.id === MY_WORDBOOK_ID);
   if (myIdx > 0) {
