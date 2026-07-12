@@ -114,9 +114,9 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               <Input
                 value={privateFolder}
                 onChange={(e) => setPrivateFolder(e.target.value)}
-                placeholder="폴더 이름 (예: arga)"
+                placeholder="폴더 이름"
                 autoComplete="off"
-                className="flex-1"
+                className="flex-1 text-sm"
               />
               <Button type="button" variant="outline" onClick={handleApplyPrivateFolder}>
                 적용
