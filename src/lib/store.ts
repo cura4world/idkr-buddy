@@ -16,12 +16,31 @@ export interface Category {
   name: string;
   emoji: string;
   isShared?: boolean;
+  owner?: string;
 }
 
 const WORDS_KEY = "kata-words";
 const CATEGORIES_KEY = "kata-categories";
 const MY_WORDBOOK_ID = "my-wordbook";
 const MY_WORDBOOK_FLAG = "my_wordbook_created";
+const PRIVATE_FOLDER_KEY = "private_folder_name";
+
+// 이 기기에서만 보이는 개인 단어장 폴더 이름 (GitHub data/private/<이름>)
+export function getPrivateFolderName(): string {
+  try {
+    return (localStorage.getItem(PRIVATE_FOLDER_KEY) || "").trim();
+  } catch (e) {
+    return "";
+  }
+}
+
+export function setPrivateFolderName(name: string) {
+  try {
+    const v = (name || "").trim();
+    if (v) localStorage.setItem(PRIVATE_FOLDER_KEY, v);
+    else localStorage.removeItem(PRIVATE_FOLDER_KEY);
+  } catch (e) {}
+}
 
 // 손상된 localStorage 데이터로 앱 전체가 죽지 않도록 안전 파싱
 function safeParse<T>(raw: string | null, fallback: T): T {
@@ -86,8 +105,15 @@ export function saveWords(words: Word[]) {
 
 function initSharedCategories() {
   const seed = seedData as { version: number; categories: Category[]; words: Word[] };
+  // 공용 단어장 + (설정된 경우) 내 개인 폴더 단어장만 반영
+  const myFolder = getPrivateFolderName();
+  const seedCats = seed.categories.filter(c => !c.owner || c.owner === myFolder);
+  const seedCatIds = seedCats.map(c => c.id);
+  const seedWords = seed.words.filter(w => seedCatIds.includes(w.categoryId));
+  // 폴더 이름을 바꾸면 같은 시드 버전이라도 다시 동기화되도록 키에 포함
+  const syncKey = String(seed.version) + "|" + myFolder;
   const storedVersion = localStorage.getItem('shared_seed_version');
-  if (storedVersion === String(seed.version)) return;
+  if (storedVersion === syncKey) return;
   const existingCats = getCategories();
   const existingWords = getWords().filter(w => !w.isShared);
   const existingShared = existingCats.filter(c => c.isShared);
@@ -95,12 +121,12 @@ function initSharedCategories() {
   // 시드에서 사라진 공용 단어장: 직접 추가한 단어가 있으면 개인 단어장으로 전환, 없으면 제거
   const keptShared: Category[] = [];
   for (const e of existingShared) {
-    const inSeed = seed.categories.find(s => s.id === e.id);
+    const inSeed = seedCats.find(s => s.id === e.id);
     if (inSeed) { keptShared.push(inSeed); continue; }
     const hasPersonalWords = existingWords.some(w => w.categoryId === e.id);
     if (hasPersonalWords) keptShared.push({ ...e, isShared: false });
   }
-  const newShared = seed.categories.filter(s => !existingShared.find(e => e.id === s.id));
+  const newShared = seedCats.filter(s => !existingShared.find(e => e.id === s.id));
   const merged = [...keptShared, ...newShared, ...personalCats];
   // '내 단어장'은 항상 맨 위 유지
   const myIdx = merged.findIndex(c => c.id === MY_WORDBOOK_ID);
@@ -109,8 +135,8 @@ function initSharedCategories() {
     merged.unshift(my);
   }
   saveCategories(merged);
-  saveWords([...seed.words, ...existingWords]);
-  localStorage.setItem('shared_seed_version', String(seed.version));
+  saveWords([...seedWords, ...existingWords]);
+  localStorage.setItem('shared_seed_version', syncKey);
 }
 
 // 기본 '내 단어장'을 최초 1회 맨 위에 생성 (사용자가 삭제하면 다시 만들지 않음)
@@ -131,13 +157,17 @@ ensureMyWordbook();
 // 공용 단어장 복구 (리프레시 버튼용)
 export function restoreSharedCategories() {
   const seed = seedData as { version: number; categories: Category[]; words: Word[] };
-  if (seed.categories.length === 0) return false;
+  const myFolder = getPrivateFolderName();
+  const seedCats = seed.categories.filter(c => !c.owner || c.owner === myFolder);
+  const seedCatIds = seedCats.map(c => c.id);
+  const seedWords = seed.words.filter(w => seedCatIds.includes(w.categoryId));
+  if (seedCats.length === 0) return false;
   const existingCats = getCategories();
   const existingWords = getWords();
-  const missingCats = seed.categories.filter(
+  const missingCats = seedCats.filter(
     s => !existingCats.find(e => e.id === s.id)
   );
-  const missingWords = seed.words.filter(
+  const missingWords = seedWords.filter(
     s => !existingWords.find(e => e.id === s.id)
   );
   if (missingCats.length === 0 && missingWords.length === 0) return false;
