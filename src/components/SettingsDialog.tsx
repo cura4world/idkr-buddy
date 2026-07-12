@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { getGeminiApiKey, setGeminiApiKey } from "@/lib/gemini";
-import { exportWordsToCSV } from "@/lib/store";
+import { exportWordsToCSV, getPrivateFolderName, setPrivateFolderName } from "@/lib/store";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,15 +17,28 @@ interface SettingsDialogProps {
 export default function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [apiKey, setApiKey] = useState("");
   const [importOpen, setImportOpen] = useState(false);
+  const [privateFolder, setPrivateFolder] = useState("");
 
   useEffect(() => {
-    if (open) setApiKey(getGeminiApiKey());
+    if (open) {
+      setApiKey(getGeminiApiKey());
+      setPrivateFolder(getPrivateFolderName());
+    }
   }, [open]);
 
   const handleSave = () => {
     setGeminiApiKey(apiKey);
     toast(apiKey.trim() ? "API 키가 저장되었습니다" : "API 키가 삭제되었습니다");
     onOpenChange(false);
+  };
+
+  // 개인 단어장 폴더 적용: 저장 후 새로고침해 즉시 동기화
+  const handleApplyPrivateFolder = () => {
+    setPrivateFolderName(privateFolder);
+    toast(privateFolder.trim() ? "개인 단어장을 적용합니다" : "개인 단어장 설정을 해제했습니다");
+    setTimeout(() => {
+      try { window.location.reload(); } catch (e) {}
+    }, 700);
   };
 
   // 백업: 클립보드 복사 (WebView 앱에서 권장 경로)
@@ -92,6 +105,24 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
           <Button onClick={handleSave} className="w-full">
             저장
           </Button>
+          <div className="pt-3 border-t border-border/60">
+            <Label className="font-body text-sm text-gray-900">개인 단어장 (선택)</Label>
+            <p className="mt-1 text-xs text-muted-foreground font-body">
+              GitHub의 data/private/폴더이름 단어장을 이 기기에서만 추가로 불러옵니다. 비워두고 적용하면 해제됩니다.
+            </p>
+            <div className="flex gap-2 mt-2">
+              <Input
+                value={privateFolder}
+                onChange={(e) => setPrivateFolder(e.target.value)}
+                placeholder="폴더 이름 (예: arga)"
+                autoComplete="off"
+                className="flex-1"
+              />
+              <Button type="button" variant="outline" onClick={handleApplyPrivateFolder}>
+                적용
+              </Button>
+            </div>
+          </div>
           <div className="pt-3 border-t border-border/60">
             <Label className="font-body text-sm text-gray-900">데이터 백업</Label>
             <p className="mt-1 text-xs text-muted-foreground font-body">
