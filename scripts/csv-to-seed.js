@@ -150,6 +150,42 @@ for (const file of files) {
   }
 }
 
+// 개인 단어장: data/private/<owner>/*.csv -> owner 필드를 붙여 시드에 포함
+// (앱은 설정에 해당 owner 이름을 입력한 기기에서만 이 단어장들을 반영)
+const privateRoot = path.join(__dirname, '../data/private');
+if (fs.existsSync(privateRoot)) {
+  const owners = fs.readdirSync(privateRoot, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => d.name)
+    .sort();
+  for (const owner of owners) {
+    const ownerDir = path.join(privateRoot, owner);
+    const ownerFiles = fs.readdirSync(ownerDir)
+      .filter(f => f.endsWith('.csv'))
+      .sort((a, b) => path.basename(a, '.csv').localeCompare(path.basename(b, '.csv')));
+    for (const file of ownerFiles) {
+      const categoryName = path.basename(file, '.csv');
+      const categoryId = `private_${owner}_${categoryName.replace(/\s+/g, '_')}`;
+      const emoji = getEmoji(categoryName);
+      categories.push({ id: categoryId, name: categoryName, emoji, isShared: true, owner });
+
+      const content = fs.readFileSync(path.join(ownerDir, file), 'utf-8');
+      const lines = content.split('\n').filter(l => l.trim());
+      for (const line of lines) {
+        const cols = line.split(',').map(c => c.trim());
+        if (cols.length < 2) continue;
+        const [word, meaning, example = '', exampleMeaning = ''] = cols;
+        if (!word || !meaning) continue;
+        words.push({
+          id: `${categoryId}_${word}`,
+          word, meaning, example, exampleMeaning,
+          categoryId, createdAt: 0, isShared: true,
+        });
+      }
+    }
+  }
+}
+
 const seed = { version: Date.now(), categories, words };
 fs.writeFileSync(outputFile, JSON.stringify(seed, null, 2));
 console.log(`Seed generated: ${categories.length} categories, ${words.length} words.`);
