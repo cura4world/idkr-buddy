@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getCategories, getWordsByCategory, Word, reorderWords } from "@/lib/store";
+import { getCategories, getWordsByCategory, Word, reorderWords, deleteWord } from "@/lib/store";
 import AddWordDialog from "@/components/AddWordDialog";
 import EditWordDialog from "@/components/EditWordDialog";
 import CSVImportDialog from "@/components/CSVImportDialog";
-import { ArrowLeft, Volume2, Settings, Copy } from "lucide-react";
+import { ArrowLeft, Volume2, Settings, Copy, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 export default function CategoryDetail() {
@@ -15,7 +16,11 @@ export default function CategoryDetail() {
   const [addOpen, setAddOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
   const [editWord, setEditWord] = useState<Word | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const lastSelectedId = useRef<string | null>(null);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
+  const swipeDir = useRef<1 | -1>(1);
+  const [swipeDirState, setSwipeDirState] = useState<1 | -1>(1);
   const [swipingIndex, setSwipingIndex] = useState<number | null>(null);
   const [swipeX, setSwipeX] = useState(0);
   const swipeXRef = useRef(0);
@@ -143,9 +148,11 @@ export default function CategoryDetail() {
 
       if (touchIntent.current === "none") {
         if (adx > 12 || ady > 12) {
-          if (dx > 0 && adx > ady * 1.5) {
+          if (adx > ady * 1.5) {
             touchIntent.current = "swipe";
             isSwipe.current = true;
+            swipeDir.current = dx >= 0 ? 1 : -1;
+            setSwipeDirState(dx >= 0 ? 1 : -1);
             cancelLongPress();
             setSwipingIndex(swipeIndexRef.current);
           } else if (ady > adx) {
@@ -160,7 +167,9 @@ export default function CategoryDetail() {
 
       if (touchIntent.current === "swipe") {
         e.preventDefault();
-        const clampedX = Math.max(0, Math.min(dx, SWIPE_THRESHOLD + 30));
+        const clampedX = swipeDir.current === 1
+          ? Math.max(0, Math.min(dx, SWIPE_THRESHOLD + 30))
+          : Math.min(0, Math.max(dx, -(SWIPE_THRESHOLD + 30)));
         swipeXRef.current = clampedX;
         setSwipeX(clampedX);
         return;
@@ -208,8 +217,12 @@ export default function CategoryDetail() {
     const wasDragging = isDragging.current;
     const wasSwipe = touchIntent.current === "swipe";
     if (wasSwipe) {
-      if (swipeXRef.current >= SWIPE_THRESHOLD) {
+      if (swipeDir.current === 1 && swipeXRef.current >= SWIPE_THRESHOLD) {
         copyToClipboard(word);
+      } else if (swipeDir.current === -1 && swipeXRef.current <= -SWIPE_THRESHOLD) {
+        // 밀린 단어가 선택 집합에 있으면 선택 전체, 아니면 이 단어 하나만 삭제 대상
+        const targetIds = selectedIds.includes(word.id) ? selectedIds : [word.id];
+        setPendingDeleteIds(targetIds);
       }
       setSwipingIndex(null);
       setSwipeX(0);
@@ -225,8 +238,7 @@ export default function CategoryDetail() {
       const now = Date.now();
       const timeSinceLastTap = now - lastTapTime.current;
       if (timeSinceLastTap < 300 && lastTapIndex.current === index) {
-        if (selectedIndex !== index) toast("새 단어가 이 단어 바로 아래에 추가됩니다");
-        setSelectedIndex((prev) => (prev === index ? null : index));
+        toggleSelect(word.id);
         lastTapTime.current = 0;
         lastTapIndex.current = null;
       } else {
@@ -269,8 +281,37 @@ export default function CategoryDetail() {
 
   const handleMouseClick = (index: number) => {
     if (isDragging.current) return;
-    if (selectedIndex !== index) toast("새 단어가 이 단어 바로 아래에 추가됩니다");
-    setSelectedIndex((prev) => (prev === index ? null : index));
+    const w = words[index];
+    if (w) toggleSelect(w.id);
+  };
+
+  // 단어 선택 토글 (복수 선택). 새로 선택하면 마지막 선택으로 기억 -> 단어 추가 위치
+  const toggleSelect = (wordId: string) => {
+    setSelectedIds((prev) => {
+      if (prev.includes(wordId)) {
+        const next = prev.filter((x) => x !== wordId);
+        if (lastSelectedId.current === wordId) {
+          lastSelectedId.current = next.length > 0 ? next[next.length - 1] : null;
+        }
+        return next;
+      }
+      lastSelectedId.current = wordId;
+      toast("새 단어가 이 단어 바로 아래에 추가됩니다");
+      return [...prev, wordId];
+    });
+  };
+
+  // 삭제 확정 실행
+  const confirmDelete = () => {
+    const ids = pendingDeleteIds;
+    ids.forEach((wid) => deleteWord(wid));
+    setSelectedIds((prev) => prev.filter((x) => !ids.includes(x)));
+    if (lastSelectedId.current && ids.includes(lastSelectedId.current)) {
+      lastSelectedId.current = null;
+    }
+    setPendingDeleteIds([]);
+    toast(ids.length > 1 ? ids.length + "개의 단어를 삭제했습니다" : "단어를 삭제했습니다");
+    refresh();
   };
 
   if (!category) {
@@ -309,16 +350,28 @@ export default function CategoryDetail() {
         {words.map((w, index) => {
           const isDraggingThis = draggingIndex === index;
           const isDropTarget = dragOverIndex === index && draggingIndex !== index;
-          const isSelected = selectedIndex === index;
+          const isSelected = selectedIds.includes(w.id);
           const isSwiping = swipingIndex === index;
           const currentSwipeX = isSwiping ? swipeX : 0;
-          const showCopyConfirm = isSwiping && currentSwipeX >= SWIPE_THRESHOLD;
+          const swipingRight = isSwiping && swipeDirState === 1;
+          const swipingLeft = isSwiping && swipeDirState === -1;
+          const showCopyConfirm = swipingRight && currentSwipeX >= SWIPE_THRESHOLD;
+          const showDeleteConfirm = swipingLeft && currentSwipeX <= -SWIPE_THRESHOLD;
+          // 왼쪽 스와이프 시 몇 개가 지워질지 미리 표시
+          const deleteCount = selectedIds.includes(w.id) ? selectedIds.length : 1;
           return (
             <div key={w.id} className="relative overflow-hidden rounded-lg">
-              <div className={`absolute inset-0 flex items-center px-5 rounded-lg transition-colors duration-100 ${showCopyConfirm ? "bg-sky-500" : "bg-sky-400/70"}`}>
-                <Copy size={18} className="text-white" />
-                <span className="text-white text-sm font-body ml-2">{showCopyConfirm ? "복사!" : "복사"}</span>
-              </div>
+              {swipingLeft ? (
+                <div className={`absolute inset-0 flex items-center justify-end px-5 rounded-lg transition-colors duration-100 ${showDeleteConfirm ? "bg-red-600" : "bg-red-500/70"}`}>
+                  <span className="text-white text-sm font-body mr-2">{showDeleteConfirm ? (deleteCount > 1 ? deleteCount + "개 삭제!" : "삭제!") : "삭제"}</span>
+                  <Trash2 size={18} className="text-white" />
+                </div>
+              ) : (
+                <div className={`absolute inset-0 flex items-center px-5 rounded-lg transition-colors duration-100 ${showCopyConfirm ? "bg-sky-500" : "bg-sky-400/70"}`}>
+                  <Copy size={18} className="text-white" />
+                  <span className="text-white text-sm font-body ml-2">{showCopyConfirm ? "복사!" : "복사"}</span>
+                </div>
+              )}
               {isDropTarget && (
                 <div className="h-0.5 bg-sky-400 rounded-full mx-1 mb-1 shadow-sm shadow-sky-400/50" />
               )}
@@ -409,19 +462,22 @@ export default function CategoryDetail() {
       )}
       <AddWordDialog
         open={addOpen}
-        onOpenChange={(o) => { setAddOpen(o); if (!o) setSelectedIndex(null); }}
+        onOpenChange={(o) => { setAddOpen(o); if (!o) { setSelectedIds([]); lastSelectedId.current = null; } }}
         defaultCategoryId={id}
         onAdded={(newWordId) => {
           refresh();
-          if (selectedIndex !== null && newWordId) {
+          const anchorId = lastSelectedId.current;
+          if (anchorId && newWordId) {
             const currentWords = getWordsByCategory(id!);
+            const anchorIdx = currentWords.findIndex((w) => w.id === anchorId);
             const newIdx = currentWords.findIndex((w) => w.id === newWordId);
-            if (newIdx !== -1 && newIdx !== selectedIndex + 1) {
-              reorderWords(id!, newIdx, selectedIndex + 1);
+            if (anchorIdx !== -1 && newIdx !== -1 && newIdx !== anchorIdx + 1) {
+              reorderWords(id!, newIdx, anchorIdx + 1);
               refresh();
             }
           }
-          setSelectedIndex(null);
+          setSelectedIds([]);
+          lastSelectedId.current = null;
         }}
       />
       <EditWordDialog
@@ -431,6 +487,22 @@ export default function CategoryDetail() {
         onUpdated={refresh}
       />
       <CSVImportDialog open={csvOpen} onOpenChange={setCsvOpen} onImported={refresh} categoryId={id} />
+      <AlertDialog open={pendingDeleteIds.length > 0} onOpenChange={(o) => { if (!o) setPendingDeleteIds([]); }}>
+        <AlertDialogContent className="bg-card">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-body text-gray-900">
+              {pendingDeleteIds.length > 1 ? pendingDeleteIds.length + "개의 단어를 삭제할까요?" : "이 단어를 삭제할까요?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-body">
+              삭제한 단어는 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-body">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="font-body bg-red-600 hover:bg-red-700 text-white">삭제</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
         }
