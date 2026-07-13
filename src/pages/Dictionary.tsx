@@ -81,6 +81,7 @@ const Dictionary = () => {
     try {
       const r = await lookupWord(w);
       setResult(r);
+      loadImage(r.word, r.meaning); // 이미지 자동 생성 (완료를 기다리지 않음)
     } catch (e: any) {
       setError(errorMessage(e?.message || ""));
     } finally {
@@ -88,18 +89,29 @@ const Dictionary = () => {
     }
   };
 
-  const handleGenImage = async () => {
-    if (!result) return;
+  const imgReqId = useRef(0);
+
+  const imgErrorMessage = (code: string): string => {
+    if (code === "RATE_LIMIT") return "요청이 많습니다. 잠시 후 다시 시도해주세요.";
+    if (code === "NO_IMAGE") return "모델이 이미지를 만들지 못했어요.";
+    if (code === "IMAGE_FAILED_-1") return "네트워크 오류로 이미지를 불러오지 못했어요.";
+    if (code.indexOf("IMAGE_FAILED_") === 0) return "이미지 생성에 실패했습니다 (오류 " + code.replace("IMAGE_FAILED_", "") + ")";
+    return "이미지 생성에 실패했습니다.";
+  };
+
+  // 검색 직후 자동 호출. 실패 시 "다시 만들기" 버튼에서도 사용.
+  const loadImage = async (word: string, meaning: string) => {
+    const reqId = ++imgReqId.current;
     setImgLoading(true);
+    setImgUrl("");
     setImgError("");
     try {
-      const url = await generateWordImage(result.word, result.meaning);
-      setImgUrl(url);
+      const url = await generateWordImage(word, meaning);
+      if (imgReqId.current === reqId) setImgUrl(url);
     } catch (e: any) {
-      const code = e?.message || "";
-      setImgError(code === "RATE_LIMIT" ? "요청이 많습니다. 잠시 후 다시 시도해주세요." : "이미지 생성에 실패했습니다.");
+      if (imgReqId.current === reqId) setImgError(imgErrorMessage(e?.message || ""));
     } finally {
-      setImgLoading(false);
+      if (imgReqId.current === reqId) setImgLoading(false);
     }
   };
 
@@ -186,7 +198,7 @@ const Dictionary = () => {
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
             {/* 표제어 + 기본뜻 */}
             <div className="flex items-start justify-between gap-2 mb-1 min-w-0">
-              <h2 className="text-xl font-bold text-gray-900 break-words min-w-0">{result.word} 기본뜻</h2>
+              <h2 className="text-xl font-bold text-gray-900 break-words min-w-0">{result.word}</h2>
               <button
                 onClick={() => speak(result.word, "id")}
                 className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
@@ -200,26 +212,26 @@ const Dictionary = () => {
               <p className="text-sm text-gray-500 mt-1 break-words">→ {result.meaningDetail}</p>
             )}
 
-            {/* 이미지로 단어 이해하기 */}
+            {/* 단어 이미지 (자동 생성) */}
             <div className="mt-4">
-              {!imgUrl && !imgLoading && (
-                <button
-                  onClick={handleGenImage}
-                  className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 rounded-lg py-3 text-sm text-gray-500 hover:bg-black/5"
-                >
-                  <ImageIcon size={16} /> 이미지로 이해하기
-                </button>
-              )}
               {imgLoading && (
                 <div className="w-full flex flex-col items-center justify-center border border-dashed border-gray-300 rounded-lg py-8 text-gray-400">
                   <Loader2 size={22} className="animate-spin mb-2" />
                   <span className="text-xs">이미지를 그리고 있어요...</span>
                 </div>
               )}
-              {imgUrl && (
+              {!imgLoading && imgUrl && (
                 <img src={imgUrl} alt={result.word} className="w-full rounded-lg border border-gray-200" />
               )}
-              {imgError && <p className="text-xs text-gray-400 mt-2 text-center">{imgError}</p>}
+              {!imgLoading && !imgUrl && imgError && (
+                <button
+                  onClick={() => loadImage(result.word, result.meaning)}
+                  className="w-full flex flex-col items-center justify-center gap-1 border border-dashed border-gray-300 rounded-lg py-4 text-gray-500 hover:bg-black/5"
+                >
+                  <span className="text-xs text-gray-400">{imgError}</span>
+                  <span className="flex items-center gap-1.5 text-sm"><ImageIcon size={15} /> 이미지 다시 만들기</span>
+                </button>
+              )}
             </div>
 
             {/* 예문 */}
@@ -389,7 +401,7 @@ const Dictionary = () => {
                 {saved ? <><Check size={16} /> 저장됨</> : <><Plus size={16} /> 내 단어장에 보내기</>}
               </button>
               <p className="text-xs text-gray-400 text-center mt-2">
-                단어·뜻·예문이 내 단어장에 저장됩니다 (이미지는 볼 때 다시 생성돼요)
+                단어·뜻·예문이 내 단어장에 저장됩니다
               </p>
             </div>
           </div>
