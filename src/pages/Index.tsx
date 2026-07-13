@@ -5,7 +5,7 @@ import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import SettingsDialog from "@/components/SettingsDialog";
-import { RotateCcw, Settings } from "lucide-react";
+import { RotateCcw, Settings, BookOpen, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
@@ -210,6 +210,23 @@ const Index = () => {
       </header>
 
       <div className="space-y-2">
+        {/* AI 사전 박스 - 단어장 목록 맨 위 */}
+        <button
+          onClick={() => navigate("/dictionary")}
+          className="w-full text-left relative rounded-xl bg-card px-5 py-4 card-lift border border-border/60"
+        >
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-lg shrink-0">
+              <BookOpen size={18} className="text-primary" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-medium text-foreground">AI 사전</p>
+              <p className="text-xs text-muted-foreground">인도네시아어 단어를 검색하고 내 단어장에 담기</p>
+            </div>
+            <ChevronRight size={18} className="text-muted-foreground shrink-0" />
+          </div>
+        </button>
+
         {categories.map((cat, idx) => (
           <CategoryCard
             key={cat.id}
