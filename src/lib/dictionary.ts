@@ -8,8 +8,13 @@ import { getGeminiApiKey } from "@/lib/gemini";
 
 // 텍스트 모델 (저렴/빠름). 필요시 이 값만 교체.
 const TEXT_MODEL = "gemini-flash-lite-latest";
-// 이미지 생성 모델. 필요시 이 값만 교체.
-const IMAGE_MODEL = "gemini-flash-image";
+
+// 이미지 생성 모델 후보 (순서대로 시도, 실패하면 다음 후보로 폴백).
+// 참고: https://ai.google.dev/gemini-api/docs/image-generation
+const IMAGE_MODEL_CANDIDATES = [
+  "gemini-3.1-flash-image", // Nano Banana 2 (최신 범용)
+  "gemini-2.5-flash-image", // 구형 폴백 (무료 티어 지원)
+];
 
 export interface DictExample {
   id: string;      // 인도네시아어 예문
@@ -187,6 +192,7 @@ export async function lookupWord(word: string): Promise<DictResult> {
 
 // 단어를 설명하는 이미지를 실시간 생성합니다. 결과는 data URL(base64).
 // 저장하지 않고 화면 표시용으로만 사용합니다.
+// 모델 후보를 순서대로 시도해, 하나가 실패(모델명 변경/권한/한도)해도 다음 후보로 넘어갑니다.
 export async function generateWordImage(word: string, meaning: string): Promise<string> {
   const apiKey = getGeminiApiKey();
   if (!apiKey) throw new Error("NO_API_KEY");
@@ -200,34 +206,47 @@ export async function generateWordImage(word: string, meaning: string): Promise<
     (meaning ? " (meaning: " + meaning + ")" : "") +
     ". Minimal flat style, soft colors, no text or letters in the image, easy to understand at a glance.";
 
-  const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    IMAGE_MODEL +
-    ":generateContent?key=" +
-    encodeURIComponent(apiKey);
+  let lastStatus = 0;
 
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: imgPrompt }] }],
-    }),
-  });
+  for (const model of IMAGE_MODEL_CANDIDATES) {
+    const endpoint =
+      "https://generativelanguage.googleapis.com/v1beta/models/" +
+      model +
+      ":generateContent?key=" +
+      encodeURIComponent(apiKey);
 
-  if (!res.ok) {
-    if (res.status === 400 || res.status === 403) throw new Error("INVALID_API_KEY");
-    if (res.status === 429) throw new Error("RATE_LIMIT");
-    throw new Error("IMAGE_FAILED_" + res.status);
-  }
-
-  const data = await res.json();
-  const parts = data?.candidates?.[0]?.content?.parts ?? [];
-  for (const p of parts) {
-    const inline = p?.inlineData || p?.inline_data;
-    if (inline?.data) {
-      const mime = inline.mimeType || inline.mime_type || "image/png";
-      return "data:" + mime + ";base64," + inline.data;
+    let res: Response;
+    try {
+      res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: imgPrompt }] }],
+        }),
+      });
+    } catch (e) {
+      lastStatus = -1; // 네트워크 오류
+      continue;
     }
+
+    if (!res.ok) {
+      lastStatus = res.status;
+      continue; // 다음 후보 모델로
+    }
+
+    const data = await res.json();
+    const parts = data?.candidates?.[0]?.content?.parts ?? [];
+    for (const p of parts) {
+      const inline = p?.inlineData || p?.inline_data;
+      if (inline?.data) {
+        const mime = inline.mimeType || inline.mime_type || "image/png";
+        return "data:" + mime + ";base64," + inline.data;
+      }
+    }
+    lastStatus = 200; // 응답은 왔지만 이미지가 없음 → 다음 후보 시도
   }
-  throw new Error("NO_IMAGE");
+
+  if (lastStatus === 429) throw new Error("RATE_LIMIT");
+  if (lastStatus === 200) throw new Error("NO_IMAGE");
+  throw new Error("IMAGE_FAILED_" + lastStatus);
 }
