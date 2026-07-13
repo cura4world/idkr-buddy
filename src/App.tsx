@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
+import Dictionary from "./pages/Dictionary";
 import CategoryDetail from "./pages/CategoryDetail";
 import StudyMode from "./pages/StudyMode";
 import QuizMode from "./pages/QuizMode";
@@ -20,6 +21,7 @@ const App = () => (
       <BrowserRouter basename="/idkr-buddy">
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/dictionary" element={<Dictionary />} />
           <Route path="/category/:id" element={<CategoryDetail />} />
           <Route path="/study/:id" element={<StudyMode />} />
           <Route path="/quiz/:id" element={<QuizMode />} />
