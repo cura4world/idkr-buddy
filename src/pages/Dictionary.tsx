@@ -24,15 +24,21 @@ const speak = (text: string, lang: "id" | "ko") => {
   } catch (e) {}
 };
 
+// 별점 (채움: 포인트색, 빈칸: 연회색)
 const Stars = ({ n }: { n: number }) => {
   const full = Math.max(0, Math.min(5, n));
-  return <span className="text-accent">{"★".repeat(full)}<span className="text-muted-foreground">{"☆".repeat(5 - full)}</span></span>;
+  return (
+    <span>
+      <span className="text-accent">{"★".repeat(full)}</span>
+      <span className="text-gray-300">{"☆".repeat(5 - full)}</span>
+    </span>
+  );
 };
 
-const Divider = () => <div className="border-t border-border/60 my-5" />;
+const Divider = () => <div className="border-t border-gray-200 my-5" />;
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-  <h3 className="text-sm font-semibold text-foreground mb-2.5">{children}</h3>
+  <h3 className="text-sm font-semibold text-gray-900 mb-2.5">{children}</h3>
 );
 
 const Dictionary = () => {
@@ -113,31 +119,32 @@ const Dictionary = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background max-w-lg mx-auto">
+    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-primary text-white px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => navigate("/")}
-          className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1"
+          className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-lg font-semibold">AI 사전</h1>
+        <h1 className="text-lg font-semibold truncate">인도네시아어 사전</h1>
       </header>
 
       <div className="px-4 py-4">
         {/* 검색창 */}
-        <div className="flex items-center gap-2 mb-4">
-          <div className="flex-1 flex items-center gap-2 bg-card border border-border rounded-full px-4 py-2.5">
-            <Search size={18} className="text-muted-foreground shrink-0" />
+        <div className="flex items-center gap-2 mb-4 min-w-0">
+          <div className="flex-1 min-w-0 flex items-center gap-2 bg-card border border-border rounded-full px-4 py-2.5">
+            <Search size={18} className="text-gray-400 shrink-0" />
             <input
               ref={inputRef}
+              size={1}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
-              placeholder="인도네시아어 단어를 검색하세요"
-              className="flex-1 bg-transparent outline-none text-base"
+              placeholder="단어 검색"
+              className="flex-1 min-w-0 w-full bg-transparent outline-none text-base text-gray-900 placeholder:text-gray-400"
               autoCapitalize="none"
               autoCorrect="off"
             />
@@ -153,7 +160,7 @@ const Dictionary = () => {
 
         {/* 로딩 */}
         {loading && (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-16 text-white/70">
             <Loader2 size={28} className="animate-spin mb-3" />
             <p className="text-sm">사전을 찾고 있어요...</p>
           </div>
@@ -161,15 +168,15 @@ const Dictionary = () => {
 
         {/* 에러 */}
         {!loading && error && (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-12 text-white/80">
             <p className="text-sm">{error}</p>
           </div>
         )}
 
         {/* 초기 안내 */}
         {!loading && !error && !result && (
-          <div className="text-center py-16 text-muted-foreground">
-            <Search size={32} className="mx-auto mb-3 opacity-40" />
+          <div className="text-center py-16 text-white/60">
+            <Search size={32} className="mx-auto mb-3 opacity-60" />
             <p className="text-sm">궁금한 인도네시아어 단어를 검색해보세요</p>
           </div>
         )}
@@ -178,8 +185,8 @@ const Dictionary = () => {
         {!loading && result && (
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
             {/* 표제어 + 기본뜻 */}
-            <div className="flex items-start justify-between gap-2 mb-1">
-              <h2 className="text-xl font-bold text-foreground">{result.word} 기본뜻</h2>
+            <div className="flex items-start justify-between gap-2 mb-1 min-w-0">
+              <h2 className="text-xl font-bold text-gray-900 break-words min-w-0">{result.word} 기본뜻</h2>
               <button
                 onClick={() => speak(result.word, "id")}
                 className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
@@ -188,9 +195,9 @@ const Dictionary = () => {
                 <Volume2 size={18} />
               </button>
             </div>
-            <p className="text-base font-medium text-foreground">{result.meaning}</p>
+            <p className="text-base font-medium text-gray-900 break-words">{result.meaning}</p>
             {result.meaningDetail && (
-              <p className="text-sm text-muted-foreground mt-1">→ {result.meaningDetail}</p>
+              <p className="text-sm text-gray-500 mt-1 break-words">→ {result.meaningDetail}</p>
             )}
 
             {/* 이미지로 단어 이해하기 */}
@@ -198,21 +205,21 @@ const Dictionary = () => {
               {!imgUrl && !imgLoading && (
                 <button
                   onClick={handleGenImage}
-                  className="w-full flex items-center justify-center gap-2 border border-dashed border-border rounded-lg py-3 text-sm text-muted-foreground hover:bg-secondary/40"
+                  className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 rounded-lg py-3 text-sm text-gray-500 hover:bg-black/5"
                 >
                   <ImageIcon size={16} /> 이미지로 이해하기
                 </button>
               )}
               {imgLoading && (
-                <div className="w-full flex flex-col items-center justify-center border border-dashed border-border rounded-lg py-8 text-muted-foreground">
+                <div className="w-full flex flex-col items-center justify-center border border-dashed border-gray-300 rounded-lg py-8 text-gray-400">
                   <Loader2 size={22} className="animate-spin mb-2" />
                   <span className="text-xs">이미지를 그리고 있어요...</span>
                 </div>
               )}
               {imgUrl && (
-                <img src={imgUrl} alt={result.word} className="w-full rounded-lg border border-border/60" />
+                <img src={imgUrl} alt={result.word} className="w-full rounded-lg border border-gray-200" />
               )}
-              {imgError && <p className="text-xs text-muted-foreground mt-2 text-center">{imgError}</p>}
+              {imgError && <p className="text-xs text-gray-400 mt-2 text-center">{imgError}</p>}
             </div>
 
             {/* 예문 */}
@@ -222,11 +229,11 @@ const Dictionary = () => {
                 <SectionTitle>예문</SectionTitle>
                 <ol className="space-y-3">
                   {result.examples.map((ex, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span className="text-muted-foreground text-sm shrink-0">{i + 1}.</span>
-                      <div className="flex-1">
-                        <div className="flex items-start gap-2">
-                          <p className="text-sm text-foreground flex-1">{ex.id}</p>
+                    <li key={i} className="flex gap-2 min-w-0">
+                      <span className="text-gray-400 text-sm shrink-0">{i + 1}.</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-2 min-w-0">
+                          <p className="text-sm text-gray-900 flex-1 min-w-0 break-words">{ex.id}</p>
                           <button
                             onClick={() => speak(ex.id, "id")}
                             className="shrink-0 text-primary/70 hover:text-primary"
@@ -235,7 +242,7 @@ const Dictionary = () => {
                             <Volume2 size={15} />
                           </button>
                         </div>
-                        <p className="text-sm text-muted-foreground">{ex.ko}</p>
+                        <p className="text-sm text-gray-500 break-words">{ex.ko}</p>
                       </div>
                     </li>
                   ))}
@@ -248,10 +255,10 @@ const Dictionary = () => {
               <>
                 <Divider />
                 <SectionTitle>단어 분석</SectionTitle>
-                <ul className="space-y-1.5 text-sm">
-                  {result.root && <li className="flex gap-2"><span className="text-muted-foreground">•</span><span><span className="font-medium">어근:</span> {result.root}</span></li>}
-                  {result.affix && <li className="flex gap-2"><span className="text-muted-foreground">•</span><span><span className="font-medium">접사:</span> {result.affix}</span></li>}
-                  {result.register && <li className="flex gap-2"><span className="text-muted-foreground">•</span><span><span className="font-medium">문어체/구어체:</span> {result.register}</span></li>}
+                <ul className="space-y-1.5 text-sm text-gray-800">
+                  {result.root && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">어근:</span> {result.root}</span></li>}
+                  {result.affix && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">접사:</span> {result.affix}</span></li>}
+                  {result.register && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">문어체/구어체:</span> {result.register}</span></li>}
                 </ul>
               </>
             )}
@@ -261,9 +268,9 @@ const Dictionary = () => {
               <>
                 <Divider />
                 <SectionTitle>단어 관련 배경</SectionTitle>
-                <ul className="space-y-1.5 text-sm">
+                <ul className="space-y-1.5 text-sm text-gray-800">
                   {result.etymology.map((e, i) => (
-                    <li key={i} className="flex gap-2"><span className="text-muted-foreground">•</span><span>{e}</span></li>
+                    <li key={i} className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words">{e}</span></li>
                   ))}
                 </ul>
               </>
@@ -276,12 +283,12 @@ const Dictionary = () => {
                 <SectionTitle>능동형</SectionTitle>
                 <ul className="space-y-3">
                   {result.activeForms.map((f, i) => (
-                    <li key={i}>
-                      <p className="text-sm"><span className="font-semibold text-foreground">{f.form}</span> — {f.meaning}</p>
+                    <li key={i} className="min-w-0">
+                      <p className="text-sm text-gray-800 break-words"><span className="font-semibold text-gray-900">{f.form}</span> — {f.meaning}</p>
                       {f.example && (
                         <div className="mt-0.5 pl-1">
-                          <p className="text-sm text-foreground">예문: {f.example}</p>
-                          <p className="text-sm text-muted-foreground">{f.exampleKo}</p>
+                          <p className="text-sm text-gray-800 break-words">예문: {f.example}</p>
+                          <p className="text-sm text-gray-500 break-words">{f.exampleKo}</p>
                         </div>
                       )}
                     </li>
@@ -297,12 +304,12 @@ const Dictionary = () => {
                 <SectionTitle>수동형</SectionTitle>
                 <ul className="space-y-3">
                   {result.passiveForms.map((f, i) => (
-                    <li key={i}>
-                      <p className="text-sm"><span className="font-semibold text-foreground">{f.form}</span> — {f.meaning}</p>
+                    <li key={i} className="min-w-0">
+                      <p className="text-sm text-gray-800 break-words"><span className="font-semibold text-gray-900">{f.form}</span> — {f.meaning}</p>
                       {f.example && (
                         <div className="mt-0.5 pl-1">
-                          <p className="text-sm text-foreground">예문: {f.example}</p>
-                          <p className="text-sm text-muted-foreground">{f.exampleKo}</p>
+                          <p className="text-sm text-gray-800 break-words">예문: {f.example}</p>
+                          <p className="text-sm text-gray-500 break-words">{f.exampleKo}</p>
                         </div>
                       )}
                     </li>
@@ -318,12 +325,12 @@ const Dictionary = () => {
                 <SectionTitle>반대 단어</SectionTitle>
                 <ul className="space-y-3">
                   {result.opposites.map((o, i) => (
-                    <li key={i}>
-                      <p className="text-sm"><span className="font-semibold text-foreground">{o.word}</span> — {o.meaning}</p>
+                    <li key={i} className="min-w-0">
+                      <p className="text-sm text-gray-800 break-words"><span className="font-semibold text-gray-900">{o.word}</span> — {o.meaning}</p>
                       {o.example && (
                         <div className="mt-0.5 pl-1">
-                          <p className="text-sm text-foreground">예문: {o.example}</p>
-                          <p className="text-sm text-muted-foreground">{o.exampleKo}</p>
+                          <p className="text-sm text-gray-800 break-words">예문: {o.example}</p>
+                          <p className="text-sm text-gray-500 break-words">{o.exampleKo}</p>
                         </div>
                       )}
                     </li>
@@ -337,15 +344,15 @@ const Dictionary = () => {
               <>
                 <Divider />
                 <SectionTitle>비슷한 단어</SectionTitle>
-                <div className="rounded-lg border border-border/60 overflow-hidden">
-                  <div className="grid grid-cols-[100px_1fr] bg-secondary/40 text-xs font-medium text-muted-foreground">
+                <div className="rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="grid grid-cols-[5.5rem_1fr] bg-black/5 text-xs font-medium text-gray-500">
                     <div className="px-3 py-2">단어</div>
                     <div className="px-3 py-2">뉘앙스</div>
                   </div>
                   {result.similar.map((s, i) => (
-                    <div key={i} className="grid grid-cols-[100px_1fr] text-sm border-t border-border/60">
-                      <div className="px-3 py-2 font-medium">{s.word}</div>
-                      <div className="px-3 py-2 text-muted-foreground">{s.nuance}</div>
+                    <div key={i} className="grid grid-cols-[5.5rem_1fr] text-sm border-t border-gray-200">
+                      <div className="px-3 py-2 font-medium text-gray-900 break-words min-w-0">{s.word}</div>
+                      <div className="px-3 py-2 text-gray-500 break-words min-w-0">{s.nuance}</div>
                     </div>
                   ))}
                 </div>
@@ -354,7 +361,7 @@ const Dictionary = () => {
 
             {/* 사용빈도 / 난이도 */}
             <Divider />
-            <div className="space-y-1 text-sm">
+            <div className="space-y-1 text-sm text-gray-900">
               <p><span className="font-semibold">실제 회화 사용빈도</span> <Stars n={result.frequency} /></p>
               <p><span className="font-semibold">난이도</span> <Stars n={result.difficulty} /></p>
             </div>
@@ -364,7 +371,7 @@ const Dictionary = () => {
               <>
                 <Divider />
                 <SectionTitle>같이 외우면 좋은 표현</SectionTitle>
-                <p className="text-sm flex gap-2"><span className="text-muted-foreground">•</span><span>{result.wordFamily}</span></p>
+                <p className="text-sm text-gray-800 flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words">{result.wordFamily}</span></p>
               </>
             )}
 
@@ -375,13 +382,13 @@ const Dictionary = () => {
                 disabled={saved}
                 className={`w-full flex items-center justify-center gap-2 rounded-full py-3 text-sm font-medium transition-colors ${
                   saved
-                    ? "bg-secondary text-muted-foreground"
+                    ? "bg-gray-100 text-gray-400"
                     : "bg-primary text-white hover:bg-primary/90"
                 }`}
               >
                 {saved ? <><Check size={16} /> 저장됨</> : <><Plus size={16} /> 내 단어장에 보내기</>}
               </button>
-              <p className="text-xs text-muted-foreground text-center mt-2">
+              <p className="text-xs text-gray-400 text-center mt-2">
                 단어·뜻·예문이 내 단어장에 저장됩니다 (이미지는 볼 때 다시 생성돼요)
               </p>
             </div>
