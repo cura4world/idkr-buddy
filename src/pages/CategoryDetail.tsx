@@ -328,7 +328,7 @@ export default function CategoryDetail() {
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
       <button onClick={() => navigate("/")} className="flex items-center gap-2 text-sm text-white mb-4 hover:text-white/80">
         <ArrowLeft size={16} />
-        <span className="font-body">돌아가기</span>
+        <span className="font-gothic">돌아가기</span>
       </button>
       <div className="sticky top-0 z-30 bg-background -mx-4 px-4 pt-2 pb-3 mb-3">
         <header className="mb-2">
@@ -338,10 +338,10 @@ export default function CategoryDetail() {
           </h1>
         </header>
         <div className="flex justify-end gap-4">
-          <button onClick={() => setCsvOpen(true)} className="text-sm text-white hover:underline underline-offset-4 font-body">
+          <button onClick={() => setCsvOpen(true)} className="text-sm text-white hover:underline underline-offset-4 font-gothic">
             CSV 가져오기
           </button>
-          <button onClick={() => setAddOpen(true)} className="text-sm text-white hover:underline underline-offset-4 font-body">
+          <button onClick={() => setAddOpen(true)} className="text-sm text-white hover:underline underline-offset-4 font-gothic">
             + 단어 추가
           </button>
         </div>
