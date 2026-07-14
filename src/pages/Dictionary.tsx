@@ -19,6 +19,7 @@ import {
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { addWord } from "@/lib/store";
 import { getStoredImage, saveStoredImage } from "@/lib/imageStore";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 
@@ -113,6 +114,12 @@ function pushHistory(term: string): string[] {
   if (!t) return loadHistory();
   const prev = loadHistory().filter((x) => x.toLowerCase() !== t.toLowerCase());
   const next = [t, ...prev].slice(0, HISTORY_MAX);
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch {}
+  return next;
+}
+
+function removeHistory(term: string): string[] {
+  const next = loadHistory().filter((x) => x.toLowerCase() !== term.trim().toLowerCase());
   try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch {}
   return next;
 }
@@ -213,6 +220,33 @@ const Dictionary = () => {
   // 초기(홈) 화면 여부: 결과·로딩·에러가 전혀 없는 상태
   const isHome = !loading && !error && !result && !idSentence && !koWord && !koSentence;
 
+  // 최근 검색 항목 길게 누르기 → 삭제 확인 (600ms, 앱 공통 롱프레스 시간)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const lpTimer = useRef<number | null>(null);
+  const lpFiredRef = useRef(false);
+
+  const cancelLongPress = () => {
+    if (lpTimer.current) { clearTimeout(lpTimer.current); lpTimer.current = null; }
+  };
+
+  const startLongPress = (term: string) => {
+    cancelLongPress();
+    lpFiredRef.current = false;
+    lpTimer.current = window.setTimeout(() => {
+      lpFiredRef.current = true;
+      setDeleteTarget(term);
+      try { (navigator as any).vibrate?.(15); } catch (e) {}
+    }, 600);
+  };
+
+  const confirmDeleteHistory = () => {
+    if (deleteTarget) {
+      setHistory(removeHistory(deleteTarget));
+      toast("최근 검색에서 삭제되었습니다");
+    }
+    setDeleteTarget(null);
+  };
+
   const imgReqId = useRef(0);
 
   const imgErrorMessage = (code: string): string => {
@@ -276,7 +310,7 @@ const Dictionary = () => {
   };
 
   return (
-    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background flex flex-col">
+    <div className={`w-full max-w-lg mx-auto overflow-x-hidden bg-background flex flex-col ${isHome ? "h-[100dvh]" : "min-h-screen"}`}>
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-primary text-white px-4 py-3 flex items-center gap-3">
         <button
@@ -295,6 +329,22 @@ const Dictionary = () => {
           <Home size={20} />
         </button>
       </header>
+
+      {/* 최근 검색 항목 삭제 확인 */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent className="max-w-sm bg-card">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-body text-gray-900">검색 기록 삭제</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 break-words">
+              "{deleteTarget}" 을(를) 최근 검색에서 삭제할까요?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteHistory}>삭제</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className={isHome ? "px-4 pt-4 pb-0 flex-1 min-h-0 flex flex-col" : "px-4 py-4"}>
         {/* 검색창 */}
@@ -361,8 +411,18 @@ const Dictionary = () => {
                     {history.map((h, i) => (
                       <li key={i}>
                         <button
-                          onClick={() => handleSearch(h)}
-                          className={`w-full text-left px-4 py-2 flex items-center gap-2 hover:bg-black/5 ${i > 0 ? "border-t border-gray-100" : ""}`}
+                          onClick={() => {
+                            if (lpFiredRef.current) { lpFiredRef.current = false; return; }
+                            handleSearch(h);
+                          }}
+                          onTouchStart={() => startLongPress(h)}
+                          onTouchMove={cancelLongPress}
+                          onTouchEnd={cancelLongPress}
+                          onMouseDown={() => startLongPress(h)}
+                          onMouseUp={cancelLongPress}
+                          onMouseLeave={cancelLongPress}
+                          onContextMenu={(e) => e.preventDefault()}
+                          className={`w-full text-left px-4 py-2 flex items-center gap-2 hover:bg-black/5 select-none ${i > 0 ? "border-t border-gray-100" : ""}`}
                         >
                           <Search size={14} className="text-gray-400 shrink-0" />
                           <span className="text-sm text-gray-900 break-words min-w-0 font-gothic">{h}</span>
