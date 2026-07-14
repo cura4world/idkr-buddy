@@ -5,7 +5,7 @@ import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import SettingsDialog from "@/components/SettingsDialog";
-import { RotateCcw, Settings, BookOpen } from "lucide-react";
+import { RotateCcw, Settings, BookOpen, ScrollText } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
@@ -221,6 +221,20 @@ const Index = () => {
               <BookOpen size={19} className="text-white" />
             </span>
             <p className="flex-1 min-w-0 text-base font-semibold text-gray-900">인도네시아어 사전</p>
+          </div>
+        </button>
+
+        {/* 인도네시아 이야기 박스 - 사전 박스 아래 */}
+        <button
+          onClick={() => navigate("/story")}
+          className="w-full text-left relative overflow-hidden rounded-xl bg-card bg-gradient-to-br from-transparent to-accent/20 px-5 py-4 card-lift border border-accent/25"
+        >
+          <ScrollText size={88} className="absolute -right-3 -bottom-7 text-accent/5 rotate-12 pointer-events-none" />
+          <div className="relative flex items-center gap-3">
+            <span className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center shrink-0">
+              <ScrollText size={19} className="text-white" />
+            </span>
+            <p className="flex-1 min-w-0 text-base font-semibold text-gray-900">인도네시아 이야기</p>
           </div>
         </button>
 
