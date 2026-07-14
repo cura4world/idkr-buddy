@@ -146,3 +146,12 @@
 .card-enter-prev {
   animation: card-in-prev 0.28s ease-out;
 }
+
+/* 콘텐츠 글자 한 단계 크게: 사전 결과 카드, 단어장 단어 박스 등
+   내부 Tailwind 텍스트 유틸리티를 한 단계씩 올려 적용합니다.
+   (제목/메뉴/플래시카드/퀴즈에는 이 클래스를 붙이지 않으므로 영향 없음) */
+.content-bump .text-xs   { font-size: 0.875rem; line-height: 1.25rem; }  /* xs → sm */
+.content-bump .text-sm   { font-size: 1rem;     line-height: 1.5rem;  }  /* sm → base */
+.content-bump .text-base { font-size: 1.125rem; line-height: 1.75rem; }  /* base → lg */
+.content-bump .text-lg   { font-size: 1.25rem;  line-height: 1.75rem; }  /* lg → xl */
+.content-bump .text-xl   { font-size: 1.5rem;   line-height: 2rem;    }  /* xl → 2xl */
