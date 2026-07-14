@@ -227,7 +227,7 @@ const Dictionary = () => {
         {!loading && idSentence && (
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
             <div className="flex items-start justify-between gap-2 min-w-0">
-              <h2 className="text-sm font-semibold text-gray-900 break-words min-w-0">{idSentence.original}</h2>
+              <h2 className="text-base font-semibold text-gray-900 break-words min-w-0">{idSentence.original}</h2>
               <button
                 onClick={() => speak(idSentence.original, "id")}
                 className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
@@ -281,12 +281,10 @@ const Dictionary = () => {
                     <Volume2 size={15} />
                   </button>
                 </div>
-                <p className="text-sm text-gray-900 mt-1 break-words pl-5">
-                  {c.meaning}
-                  {(c.nuance || c.situation) && (
-                    <span className="text-gray-500"> ({[c.nuance, c.situation].filter(Boolean).join(", ")})</span>
-                  )}
-                </p>
+                <p className="text-sm font-bold text-gray-900 mt-1 break-words pl-5">{c.meaning}</p>
+                {(c.nuance || c.situation) && (
+                  <p className="text-sm text-gray-500 mt-0.5 break-words pl-5">{[c.nuance, c.situation].filter(Boolean).join(", ")}</p>
+                )}
               </div>
             ))}
           </div>
@@ -296,7 +294,7 @@ const Dictionary = () => {
         {!loading && koSentence && (
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
             <h2 className="text-sm font-medium text-gray-500 break-words">{koSentence.query}</h2>
-            {[{ label: "문어체", v: koSentence.formal }, { label: "구어체", v: koSentence.casual }].map((row, i) => (
+            {[{ label: "구어체", v: koSentence.casual }, { label: "문어체", v: koSentence.formal }].map((row, i) => (
               row.v.id ? (
                 <div key={i} className={i === 0 ? "mt-3" : "mt-3 pt-3 border-t border-gray-200"}>
                   <span className="inline-block text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 mb-1.5">{row.label}</span>
