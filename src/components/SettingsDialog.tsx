@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import CSVImportDialog from "@/components/CSVImportDialog";
-import { Copy, Download, Upload, Trash2 } from "lucide-react";
+import { Copy, Download, Upload, Trash2, Minus, Plus, Type } from "lucide-react";
 import { toast } from "sonner";
 import { clearStoredImages, countStoredImages } from "@/lib/imageStore";
+import { getFontStep, getStepCount, stepFont } from "@/lib/fontScale";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -19,13 +20,19 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const [apiKey, setApiKey] = useState("");
   const [importOpen, setImportOpen] = useState(false);
   const [privateFolder, setPrivateFolder] = useState("");
+  const [fontStep, setFontStepState] = useState(2);
 
   useEffect(() => {
     if (open) {
       setApiKey(getGeminiApiKey());
       setPrivateFolder(getPrivateFolderName());
+      setFontStepState(getFontStep());
     }
   }, [open]);
+
+  const changeFont = (delta: number) => {
+    setFontStepState(stepFont(delta));
+  };
 
   const handleSave = () => {
     setGeminiApiKey(apiKey);
@@ -99,6 +106,44 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
           <DialogTitle className="font-body text-gray-900">설정</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          <div>
+            <Label className="font-body text-sm text-gray-900 flex items-center gap-1.5">
+              <Type className="w-4 h-4" /> 글자 크기
+            </Label>
+            <div className="mt-2 flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => changeFont(-1)}
+                disabled={fontStep <= 0}
+                aria-label="글자 작게"
+              >
+                <Minus className="w-4 h-4" />
+              </Button>
+              <div className="flex-1 flex items-center justify-center gap-1">
+                {Array.from({ length: getStepCount() }).map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all ${i === fontStep ? "w-5 bg-primary" : "w-1.5 bg-gray-300"}`}
+                  />
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => changeFont(1)}
+                disabled={fontStep >= getStepCount() - 1}
+                aria-label="글자 크게"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground font-body">
+              앱 전체 글자 크기를 조절합니다. 이 기기에만 적용됩니다.
+            </p>
+          </div>
           <div>
             <Label className="font-body text-sm text-gray-900">Gemini API 키</Label>
             <Input
