@@ -241,7 +241,6 @@ const Dictionary = () => {
             {idSentence.chunks.length > 0 && (
               <>
                 <Divider />
-                <SectionTitle>끊어읽기</SectionTitle>
                 <p className="text-sm text-gray-800 break-words leading-relaxed">
                   {idSentence.chunks.map((c) => c.id).join(" / ")}
                 </p>
@@ -251,7 +250,6 @@ const Dictionary = () => {
             {idSentence.hardWords.length > 0 && (
               <>
                 <Divider />
-                <SectionTitle>단어 학습</SectionTitle>
                 <ul className="space-y-1.5 text-sm text-gray-800">
                   {idSentence.hardWords.map((h, i) => (
                     <li key={i} className="flex gap-2 min-w-0">
@@ -281,9 +279,9 @@ const Dictionary = () => {
                     <Volume2 size={15} />
                   </button>
                 </div>
-                <p className="text-sm font-bold text-gray-900 mt-1 break-words pl-5">{c.meaning}</p>
+                <p className="text-sm font-bold text-gray-900 mt-1 break-words pl-5 font-gothic">{c.meaning}</p>
                 {(c.nuance || c.situation) && (
-                  <p className="text-sm text-gray-500 mt-0.5 break-words pl-5">{[c.nuance, c.situation].filter(Boolean).join(", ")}</p>
+                  <p className="text-sm text-gray-500 mt-0.5 break-words pl-5 font-gothic">{[c.nuance, c.situation].filter(Boolean).join(", ")}</p>
                 )}
                 {c.example && (
                   <div className="mt-1.5 pl-5">
@@ -330,7 +328,6 @@ const Dictionary = () => {
             {koSentence.hardWords.length > 0 && (
               <>
                 <Divider />
-                <SectionTitle>학습 단어</SectionTitle>
                 <ul className="space-y-1.5 text-sm text-gray-800">
                   {koSentence.hardWords.map((h, i) => (
                     <li key={i} className="flex gap-2 min-w-0">
