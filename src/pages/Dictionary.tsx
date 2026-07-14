@@ -250,7 +250,7 @@ const Dictionary = () => {
             {idSentence.hardWords.length > 0 && (
               <>
                 <Divider />
-                <ul className="space-y-1.5 text-sm text-gray-800">
+                <ul className="space-y-1.5 text-sm text-gray-800 font-gothic">
                   {idSentence.hardWords.map((h, i) => (
                     <li key={i} className="flex gap-2 min-w-0">
                       <span className="text-gray-400">•</span>
@@ -279,9 +279,9 @@ const Dictionary = () => {
                     <Volume2 size={15} />
                   </button>
                 </div>
-                <p className="text-sm font-bold text-gray-900 mt-1 break-words pl-5 font-gothic">{c.meaning}</p>
+                <p className="text-sm font-bold text-gray-900 mt-1 break-words pl-5">{c.meaning}</p>
                 {(c.nuance || c.situation) && (
-                  <p className="text-sm text-gray-500 mt-0.5 break-words pl-5 font-gothic">{[c.nuance, c.situation].filter(Boolean).join(", ")}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 break-words pl-5 font-gothic">{[c.nuance, c.situation].filter(Boolean).join(", ")}</p>
                 )}
                 {c.example && (
                   <div className="mt-1.5 pl-5">
@@ -328,7 +328,7 @@ const Dictionary = () => {
             {koSentence.hardWords.length > 0 && (
               <>
                 <Divider />
-                <ul className="space-y-1.5 text-sm text-gray-800">
+                <ul className="space-y-1.5 text-sm text-gray-800 font-gothic">
                   {koSentence.hardWords.map((h, i) => (
                     <li key={i} className="flex gap-2 min-w-0">
                       <span className="text-gray-400">•</span>
