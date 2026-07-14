@@ -20,7 +20,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const [apiKey, setApiKey] = useState("");
   const [importOpen, setImportOpen] = useState(false);
   const [privateFolder, setPrivateFolder] = useState("");
-  const [fontStep, setFontStepState] = useState(2);
+  const [fontStep, setFontStepState] = useState(3);
 
   useEffect(() => {
     if (open) {
@@ -101,7 +101,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm mx-auto bg-card">
+      <DialogContent className="max-w-sm mx-auto bg-card max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-body text-gray-900">설정</DialogTitle>
         </DialogHeader>
@@ -201,6 +201,11 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             <Button type="button" variant="outline" className="w-full mt-2" onClick={handleClearImages}>
               <Trash2 className="w-4 h-4 mr-1.5" />
               저장된 사전 이미지 비우기
+            </Button>
+          </div>
+          <div className="border-t border-gray-200 pt-3">
+            <Button type="button" className="w-full" onClick={() => onOpenChange(false)}>
+              닫기
             </Button>
           </div>
         </div>
