@@ -129,19 +129,21 @@ export async function generateStory(
 export async function quickLookupWord(
   word: string,
   sentence: string
-): Promise<{ meaning: string; sentenceKo: string }> {
+): Promise<{ meaning: string; info: string; sentenceKo: string }> {
   const prompt =
-    "한국인 학습자를 위해 인도네시아어 단어의 뜻을 JSON으로만 출력하세요.\n\n" +
+    "한국인 학습자를 위해 인도네시아어 단어를 JSON으로만 설명하세요.\n\n" +
     '단어: "' + word + '"\n' +
     '문맥 문장: "' + sentence + '"\n\n' +
     "{\n" +
     '  "meaning": "문맥에 맞는 간략한 한국어 뜻",\n' +
+    '  "info": "단어 자체에 대한 짧은 설명 (어근·활용형·비슷한 말·파생어 중 학습에 유용한 것만 골라 한두 문장)",\n' +
     '  "sentenceKo": "문맥 문장의 자연스러운 한국어 번역"\n' +
     "}\n";
 
   const parsed = await callGeminiJSON(prompt, 0.3);
   return {
     meaning: (parsed.meaning || "").toString().trim(),
+    info: (parsed.info || "").toString().trim(),
     sentenceKo: (parsed.sentenceKo || "").toString().trim(),
   };
 }
