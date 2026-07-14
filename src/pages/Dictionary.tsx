@@ -2,7 +2,19 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { lookupWord, generateWordImage, DictResult } from "@/lib/dictionary";
+import {
+  lookupWord,
+  generateWordImage,
+  detectInputKind,
+  analyzeIdSentence,
+  lookupKoWord,
+  translateKoSentence,
+  DictResult,
+  IdSentenceResult,
+  KoWordResult,
+  KoSentenceResult,
+  InputKind,
+} from "@/lib/dictionary";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { addWord } from "@/lib/store";
 
@@ -45,7 +57,11 @@ const Dictionary = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [kind, setKind] = useState<InputKind | null>(null);
   const [result, setResult] = useState<DictResult | null>(null);
+  const [idSentence, setIdSentence] = useState<IdSentenceResult | null>(null);
+  const [koWord, setKoWord] = useState<KoWordResult | null>(null);
+  const [koSentence, setKoSentence] = useState<KoSentenceResult | null>(null);
   const [error, setError] = useState("");
 
   const [imgUrl, setImgUrl] = useState("");
@@ -72,16 +88,29 @@ const Dictionary = () => {
       return;
     }
     inputRef.current?.blur();
+    const detected = detectInputKind(w);
     setLoading(true);
     setError("");
     setResult(null);
+    setIdSentence(null);
+    setKoWord(null);
+    setKoSentence(null);
     setImgUrl("");
     setImgError("");
     setSaved(false);
+    setKind(detected);
     try {
-      const r = await lookupWord(w);
-      setResult(r);
-      loadImage(r.word, r.meaning); // 이미지 자동 생성 (완료를 기다리지 않음)
+      if (detected === "id_word") {
+        const r = await lookupWord(w);
+        setResult(r);
+        loadImage(r.word, r.meaning); // 이미지는 인니어 단어일 때만
+      } else if (detected === "id_sentence") {
+        setIdSentence(await analyzeIdSentence(w));
+      } else if (detected === "ko_word") {
+        setKoWord(await lookupKoWord(w));
+      } else {
+        setKoSentence(await translateKoSentence(w));
+      }
     } catch (e: any) {
       setError(errorMessage(e?.message || ""));
     } finally {
@@ -155,7 +184,7 @@ const Dictionary = () => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
-              placeholder="단어 검색"
+              placeholder="단어·문장 (인니어/한국어)"
               className="flex-1 min-w-0 w-full bg-transparent outline-none text-base text-gray-900 placeholder:text-gray-400"
               autoCapitalize="none"
               autoCorrect="off"
@@ -186,14 +215,126 @@ const Dictionary = () => {
         )}
 
         {/* 초기 안내 */}
-        {!loading && !error && !result && (
+        {!loading && !error && !result && !idSentence && !koWord && !koSentence && (
           <div className="text-center py-16 text-white/60">
             <Search size={32} className="mx-auto mb-3 opacity-60" />
-            <p className="text-sm">궁금한 인도네시아어 단어를 검색해보세요</p>
+            <p className="text-sm">인니어·한국어 단어나 문장을 검색해보세요</p>
+            <p className="text-xs mt-2 text-white/40">단어를 넣으면 사전, 문장을 넣으면 번역·분석이 나와요</p>
           </div>
         )}
 
-        {/* 결과 */}
+        {/* (2) 인도네시아어 문장 결과 */}
+        {!loading && idSentence && (
+          <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
+            <div className="flex items-start justify-between gap-2 min-w-0">
+              <h2 className="text-lg font-bold text-gray-900 break-words min-w-0">{idSentence.original}</h2>
+              <button
+                onClick={() => speak(idSentence.original, "id")}
+                className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
+                title="문장 듣기"
+              >
+                <Volume2 size={18} />
+              </button>
+            </div>
+            <p className="text-base text-gray-900 mt-2 break-words">{idSentence.translation}</p>
+
+            {idSentence.chunks.length > 0 && (
+              <>
+                <Divider />
+                <SectionTitle>끊어읽기</SectionTitle>
+                <ul className="space-y-2">
+                  {idSentence.chunks.map((c, i) => (
+                    <li key={i} className="rounded-lg bg-black/5 px-3 py-2 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 break-words min-w-0">{c.id}</p>
+                        <button
+                          onClick={() => speak(c.id, "id")}
+                          className="shrink-0 text-primary/70 hover:text-primary"
+                          title="듣기"
+                        >
+                          <Volume2 size={14} />
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-500 break-words mt-0.5">{c.ko}</p>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {idSentence.hardWords.length > 0 && (
+              <>
+                <Divider />
+                <SectionTitle>어려운 단어</SectionTitle>
+                <ul className="space-y-1.5 text-sm text-gray-800">
+                  {idSentence.hardWords.map((h, i) => (
+                    <li key={i} className="flex gap-2 min-w-0">
+                      <span className="text-gray-400">•</span>
+                      <span className="min-w-0 break-words"><span className="font-semibold text-gray-900">{h.word}</span> — {h.meaning}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* (3) 한국어 단어 결과 → 인니어 단어들 (빈도순) */}
+        {!loading && koWord && (
+          <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
+            <h2 className="text-lg font-bold text-gray-900 break-words">"{koWord.query}"에 해당하는 인도네시아어</h2>
+            <p className="text-xs text-gray-400 mt-1">자주 쓰이는 순서</p>
+            <div className="mt-3 space-y-3">
+              {koWord.candidates.map((c, i) => (
+                <div key={i} className="rounded-lg bg-black/5 px-4 py-3 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                    <p className="text-base font-bold text-gray-900 break-words min-w-0">{c.id}</p>
+                    <button
+                      onClick={() => speak(c.id, "id")}
+                      className="shrink-0 text-primary/70 hover:text-primary"
+                      title="발음 듣기"
+                    >
+                      <Volume2 size={15} />
+                    </button>
+                  </div>
+                  {c.pron && <p className="text-xs text-gray-400 mt-0.5 pl-7">[{c.pron}]</p>}
+                  <p className="text-sm text-gray-900 mt-1.5 break-words"><span className="font-medium">뜻</span> · {c.meaning}</p>
+                  {c.nuance && <p className="text-sm text-gray-500 mt-0.5 break-words"><span className="font-medium">뉘앙스</span> · {c.nuance}</p>}
+                  {c.situation && <p className="text-sm text-gray-500 mt-0.5 break-words"><span className="font-medium">상황</span> · {c.situation}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* (4) 한국어 문장 결과 → 인니어 (문어체/구어체) */}
+        {!loading && koSentence && (
+          <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
+            <h2 className="text-base font-medium text-gray-500 break-words">{koSentence.query}</h2>
+            {[{ label: "문어체", v: koSentence.formal }, { label: "구어체", v: koSentence.casual }].map((row, i) => (
+              row.v.id ? (
+                <div key={i} className={i === 0 ? "mt-3" : "mt-3 pt-3 border-t border-gray-200"}>
+                  <span className="inline-block text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 mb-1.5">{row.label}</span>
+                  <div className="flex items-start gap-2 min-w-0">
+                    <p className="text-base font-semibold text-gray-900 break-words min-w-0 flex-1">{row.v.id}</p>
+                    <button
+                      onClick={() => speak(row.v.id, "id")}
+                      className="shrink-0 text-primary/70 hover:text-primary mt-0.5"
+                      title="문장 듣기"
+                    >
+                      <Volume2 size={16} />
+                    </button>
+                  </div>
+                  {row.v.pron && <p className="text-xs text-gray-400 mt-0.5 break-words">[{row.v.pron}]</p>}
+                  {row.v.note && <p className="text-sm text-gray-500 mt-1 break-words">{row.v.note}</p>}
+                </div>
+              ) : null
+            ))}
+          </div>
+        )}
+
+        {/* (1) 인도네시아어 단어 결과 */}
         {!loading && result && (
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
             {/* 표제어 + 기본뜻 */}
@@ -356,18 +497,23 @@ const Dictionary = () => {
               <>
                 <Divider />
                 <SectionTitle>비슷한 단어</SectionTitle>
-                <div className="rounded-lg border border-gray-200 overflow-hidden">
-                  <div className="grid grid-cols-[5.5rem_1fr] bg-black/5 text-xs font-medium text-gray-500">
-                    <div className="px-3 py-2">단어</div>
-                    <div className="px-3 py-2">뉘앙스</div>
-                  </div>
+                <ul className="space-y-2.5">
                   {result.similar.map((s, i) => (
-                    <div key={i} className="grid grid-cols-[5.5rem_1fr] text-sm border-t border-gray-200">
-                      <div className="px-3 py-2 font-medium text-gray-900 break-words min-w-0">{s.word}</div>
-                      <div className="px-3 py-2 text-gray-500 break-words min-w-0">{s.nuance}</div>
-                    </div>
+                    <li key={i} className="rounded-lg bg-black/5 px-3 py-2.5 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="font-semibold text-gray-900 break-words min-w-0">{s.word}</p>
+                        <button
+                          onClick={() => speak(s.word, "id")}
+                          className="shrink-0 text-primary/70 hover:text-primary"
+                          title="발음 듣기"
+                        >
+                          <Volume2 size={14} />
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-500 break-words mt-0.5">{s.nuance}</p>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </>
             )}
 
