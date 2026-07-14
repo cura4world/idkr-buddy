@@ -43,4 +43,5 @@ export function setFontStep(step: number): number {
 
 // 한 단계 올리기/내리기 (범위를 벗어나면 그대로)
 export function stepFont(delta: number): number {
-  return setFontStep(getFont
+  return setFontStep(getFontStep() + delta);
+}
