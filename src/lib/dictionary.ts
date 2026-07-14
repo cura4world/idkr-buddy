@@ -21,23 +21,12 @@ export interface DictExample {
   ko: string;      // 한국어 번역
 }
 
-export interface DictFormItem {
-  form: string;    // 활용형 (예: bercerita)
-  meaning: string; // 뜻 (예: 이야기하다)
-  example: string; // 인도네시아어 예문
-  exampleKo: string; // 예문 한국어 번역
-}
-
-export interface DictSimilarItem {
-  word: string;
-  nuance: string;  // 뉘앙스 설명 (한국어)
-}
-
-export interface DictOppositeItem {
-  word: string;
-  meaning: string; // 한국어 뜻
-  example: string;
-  exampleKo: string;
+// 능동형/수동형/반대/비슷한/파생 단어 모두 이 통일 구조를 사용합니다.
+export interface DictRelatedItem {
+  word: string;      // 인도네시아어 단어/활용형
+  meaning: string;   // 한국어 뜻(또는 뉘앙스 설명)
+  example: string;   // 인도네시아어 예문
+  exampleKo: string; // 예문 한국어 해석
 }
 
 export interface DictResult {
@@ -49,13 +38,13 @@ export interface DictResult {
   affix: string;             // 접사
   register: string;          // 문어체/구어체
   etymology: string[];       // 단어 관련 배경 (여러 줄)
-  activeForms: DictFormItem[];   // 능동형
-  passiveForms: DictFormItem[];  // 수동형
-  opposites: DictOppositeItem[]; // 반대 단어
-  similar: DictSimilarItem[];    // 비슷한 단어
+  activeForms: DictRelatedItem[];   // 능동형
+  passiveForms: DictRelatedItem[];  // 수동형
+  opposites: DictRelatedItem[];     // 반대 단어
+  similar: DictRelatedItem[];       // 비슷한 단어
+  derived: DictRelatedItem[];       // 파생 단어 (구 wordFamily)
   frequency: number;         // 실제 회화 사용빈도 (1~5)
   difficulty: number;        // 난이도 (1~5)
-  wordFamily: string;        // 같이 외우면 좋은 표현 (한 줄)
 }
 
 const PROMPT_HEADER =
@@ -78,19 +67,21 @@ function buildPrompt(word: string): string {
     '  "affix": "접사 활용 설명",\n' +
     '  "register": "문어체/구어체 사용 설명",\n' +
     '  "etymology": ["단어 관련 배경/어원/문화적 쓰임 (짧은 문장 여러 개)"],\n' +
-    '  "activeForms": [{"form": "활용형", "meaning": "뜻", "example": "인니어 예문", "exampleKo": "한국어 번역"}],\n' +
-    '  "passiveForms": [{"form": "활용형", "meaning": "뜻", "example": "인니어 예문", "exampleKo": "한국어 번역"}],\n' +
+    '  "activeForms": [{"word": "활용형", "meaning": "뜻", "example": "인니어 예문", "exampleKo": "한국어 번역"}],\n' +
+    '  "passiveForms": [{"word": "활용형", "meaning": "뜻", "example": "인니어 예문", "exampleKo": "한국어 번역"}],\n' +
     '  "opposites": [{"word": "반대어", "meaning": "한국어 뜻", "example": "인니어 예문", "exampleKo": "한국어 번역"}],\n' +
-    '  "similar": [{"word": "비슷한 단어", "nuance": "뉘앙스 차이 (한국어)"}],\n' +
+    '  "similar": [{"word": "비슷한 단어", "meaning": "뉘앙스 차이 (한국어)", "example": "인니어 예문", "exampleKo": "한국어 번역"}],\n' +
+    '  "derived": [{"word": "파생 단어", "meaning": "한국어 뜻", "example": "인니어 예문", "exampleKo": "한국어 번역"}],\n' +
     '  "frequency": 5,\n' +
-    '  "difficulty": 2,\n' +
-    '  "wordFamily": "같이 외우면 좋은 표현들을 — 로 이은 한 줄"\n' +
+    '  "difficulty": 2\n' +
     "}\n\n" +
     "주의:\n" +
     "- examples는 2개 정도, 자연스럽고 일상적인 문장으로.\n" +
+    "- activeForms/passiveForms/opposites/similar/derived의 각 항목마다 word, meaning, example, exampleKo를 모두 채우세요.\n" +
     "- activeForms/passiveForms는 해당 단어에 실제로 존재하는 활용형만. 없으면 빈 배열 [].\n" +
     "- opposites는 명확한 반대어가 없으면 문맥상 대조되는 단어. 없으면 빈 배열.\n" +
-    "- similar는 헷갈리기 쉬운 유의어 2~4개.\n" +
+    "- similar는 헷갈리기 쉬운 유의어 2~4개. meaning에는 뉘앙스 차이를 적으세요.\n" +
+    "- derived는 어근이 같은 파생어(접두/접미 파생) 2~4개.\n" +
     "- frequency와 difficulty는 1~5 사이 정수.\n"
   );
 }
@@ -103,6 +94,17 @@ function num(v: unknown, fallback: number): number {
 
 function arr<T>(v: unknown): T[] {
   return Array.isArray(v) ? (v as T[]) : [];
+}
+
+// 능동형/수동형/반대/비슷한/파생 단어를 통일 구조로 파싱.
+// (구버전 호환: form/nuance 필드도 word/meaning으로 흡수)
+function relatedItems(v: unknown): DictRelatedItem[] {
+  return arr<any>(v).map((r) => ({
+    word: (r?.word || r?.form || "").toString().trim(),
+    meaning: (r?.meaning || r?.nuance || "").toString().trim(),
+    example: (r?.example || "").toString().trim(),
+    exampleKo: (r?.exampleKo || "").toString().trim(),
+  })).filter((r) => r.word);
 }
 
 // 인도네시아어 단어를 받아 풍성한 사전 데이터를 생성합니다.
@@ -180,31 +182,13 @@ export async function lookupWord(word: string): Promise<DictResult> {
     affix: (parsed.affix || "").toString().trim(),
     register: (parsed.register || "").toString().trim(),
     etymology: arr<string>(parsed.etymology).map((s) => (s || "").toString().trim()).filter(Boolean),
-    activeForms: arr<DictFormItem>(parsed.activeForms).map((f) => ({
-      form: (f?.form || "").toString().trim(),
-      meaning: (f?.meaning || "").toString().trim(),
-      example: (f?.example || "").toString().trim(),
-      exampleKo: (f?.exampleKo || "").toString().trim(),
-    })),
-    passiveForms: arr<DictFormItem>(parsed.passiveForms).map((f) => ({
-      form: (f?.form || "").toString().trim(),
-      meaning: (f?.meaning || "").toString().trim(),
-      example: (f?.example || "").toString().trim(),
-      exampleKo: (f?.exampleKo || "").toString().trim(),
-    })),
-    opposites: arr<DictOppositeItem>(parsed.opposites).map((o) => ({
-      word: (o?.word || "").toString().trim(),
-      meaning: (o?.meaning || "").toString().trim(),
-      example: (o?.example || "").toString().trim(),
-      exampleKo: (o?.exampleKo || "").toString().trim(),
-    })),
-    similar: arr<DictSimilarItem>(parsed.similar).map((s) => ({
-      word: (s?.word || "").toString().trim(),
-      nuance: (s?.nuance || "").toString().trim(),
-    })),
+    activeForms: relatedItems(parsed.activeForms),
+    passiveForms: relatedItems(parsed.passiveForms),
+    opposites: relatedItems(parsed.opposites),
+    similar: relatedItems(parsed.similar),
+    derived: relatedItems(parsed.derived),
     frequency: num(parsed.frequency, 3),
     difficulty: num(parsed.difficulty, 3),
-    wordFamily: (parsed.wordFamily || "").toString().trim(),
   };
 }
 
