@@ -438,7 +438,7 @@ const Dictionary = () => {
 
         {/* (2) 인도네시아어 문장 결과 */}
         {!loading && idSentence && (
-          <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
+          <div className="bg-card border border-border/60 rounded-xl px-5 py-5 content-bump">
             <div className="flex items-start justify-between gap-2 min-w-0">
               <h2 className="text-base font-semibold text-gray-900 break-words min-w-0">{idSentence.original}</h2>
               <button
@@ -478,7 +478,7 @@ const Dictionary = () => {
 
         {/* (3) 한국어 단어 결과 → 인니어 단어들 (빈도순) */}
         {!loading && koWord && (
-          <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
+          <div className="bg-card border border-border/60 rounded-xl px-5 py-5 content-bump">
             {koWord.candidates.map((c, i) => (
               <div key={i} className={i === 0 ? "min-w-0" : "min-w-0 mt-4 pt-4 border-t border-gray-200"}>
                 <div className="flex items-center gap-2 min-w-0">
@@ -518,7 +518,7 @@ const Dictionary = () => {
 
         {/* (4) 한국어 문장 결과 → 인니어 (문어체/구어체) */}
         {!loading && koSentence && (
-          <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
+          <div className="bg-card border border-border/60 rounded-xl px-5 py-5 content-bump">
             <h2 className="text-sm font-medium text-gray-500 break-words">{koSentence.query}</h2>
             {[{ label: "구어체", v: koSentence.casual }, { label: "문어체", v: koSentence.formal }].map((row, i) => (
               row.v.id ? (
@@ -556,7 +556,7 @@ const Dictionary = () => {
 
         {/* (1) 인도네시아어 단어 결과 */}
         {!loading && result && (
-          <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
+          <div className="bg-card border border-border/60 rounded-xl px-5 py-5 content-bump">
             {/* 표제어 + 기본뜻 */}
             <div className="flex items-start justify-between gap-2 mb-1 min-w-0">
               <h2 className="text-xl font-bold text-gray-900 break-words min-w-0">{result.word}</h2>
