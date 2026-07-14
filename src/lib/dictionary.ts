@@ -331,6 +331,8 @@ export interface KoWordCandidate {
   meaning: string;    // 간략한 뜻
   nuance: string;     // 뉘앙스
   situation: string;  // 사용 상황
+  example: string;    // 인도네시아어 예문
+  exampleKo: string;  // 예문 한국어 해석
 }
 export interface KoWordResult {
   query: string;              // 입력 한국어 단어
@@ -349,12 +351,13 @@ export async function lookupKoWord(word: string): Promise<KoWordResult> {
     "{\n" +
     '  "query": "입력 단어",\n' +
     '  "candidates": [\n' +
-    '    {"id": "인니어 단어", "pron": "발음(한글 근사 표기)", "meaning": "간략한 뜻", "nuance": "뉘앙스", "situation": "이 단어를 쓰는 상황"}\n' +
+    '    {"id": "인니어 단어", "pron": "발음(한글 근사 표기)", "meaning": "간략한 뜻", "nuance": "뉘앙스", "situation": "이 단어를 쓰는 상황", "example": "그 단어를 쓴 인니어 예문", "exampleKo": "예문 한국어 해석"}\n' +
     "  ]\n" +
     "}\n\n" +
     "주의:\n" +
     "- candidates는 실제 인도네시아에서 많이 쓰이는 순서(빈도순)로 정렬하세요.\n" +
     "- 2~5개 정도. 뜻이 갈리면 각각의 뉘앙스/상황을 분명히 구분해 설명하세요.\n" +
+    "- 각 단어마다 자연스러운 예문 1개와 한국어 해석을 꼭 넣으세요.\n" +
     "- pron은 한국인이 읽기 쉽게 한글로 근사 표기 (예: bicara → 비짜라).\n";
 
   const parsed = await callGeminiJSON(prompt);
@@ -366,6 +369,8 @@ export async function lookupKoWord(word: string): Promise<KoWordResult> {
       meaning: (c?.meaning || "").toString().trim(),
       nuance: (c?.nuance || "").toString().trim(),
       situation: (c?.situation || "").toString().trim(),
+      example: (c?.example || "").toString().trim(),
+      exampleKo: (c?.exampleKo || "").toString().trim(),
     })).filter((c) => c.id),
   };
 }
