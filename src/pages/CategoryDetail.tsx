@@ -393,7 +393,7 @@ export default function CategoryDetail() {
                 onClick={() => handleMouseClick(index)}
                 onContextMenu={(e) => e.preventDefault()}
               >
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 content-bump">
                   <p className="font-word text-base font-medium truncate">{w.word}</p>
                   <p className="text-sm text-muted-foreground font-body">{w.meaning}</p>
                   {w.example && (
@@ -443,7 +443,7 @@ export default function CategoryDetail() {
           className="fixed pointer-events-none z-50 flex items-start gap-3 bg-card rounded-lg p-4 border border-sky-400 shadow-lg shadow-sky-400/20"
           style={{ width: floatWidth, left: floatPos.x - floatWidth / 2, top: floatPos.y - floatOffsetY.current }}
         >
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 content-bump">
             <p className="font-word text-base font-medium truncate text-muted-foreground">{draggingWord.word}</p>
             <p className="text-sm text-muted-foreground font-body">{draggingWord.meaning}</p>
             {draggingWord.example && (
