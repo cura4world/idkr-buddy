@@ -96,7 +96,7 @@ const imageCache = new Map<string, string>();
 
 // 검색 히스토리 (localStorage, 최신순, 최대 30개)
 const HISTORY_KEY = "dict-search-history";
-const HISTORY_MAX = 30;
+const HISTORY_MAX = 50;
 
 function loadHistory(): string[] {
   try {
@@ -334,31 +334,35 @@ const Dictionary = () => {
           </div>
         )}
 
-        {/* 초기 화면: 히스토리 or 안내 */}
+        {/* 초기 화면: 안내 문구 + 최근 검색 리스트 */}
         {!loading && !error && !result && !idSentence && !koWord && !koSentence && (
-          history.length > 0 ? (
-            <div>
-              <p className="text-xs text-white/50 mb-2 px-1">최근 검색</p>
-              <ul className="bg-card rounded-xl overflow-hidden border border-border/60">
-                {history.map((h, i) => (
-                  <li key={i}>
-                    <button
-                      onClick={() => handleSearch(h)}
-                      className={`w-full text-left px-4 py-3 flex items-center gap-2 hover:bg-black/5 ${i > 0 ? "border-t border-gray-100" : ""}`}
-                    >
-                      <Search size={15} className="text-gray-400 shrink-0" />
-                      <span className="text-sm text-gray-900 break-words min-w-0">{h}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <div className="text-center py-16 text-white/60">
+          <div>
+            <div className="text-center py-8 text-white/60">
               <Search size={32} className="mx-auto mb-3 opacity-60" />
               <p className="text-sm">인니어·한국어 단어나 문장을 검색해보세요</p>
             </div>
-          )
+            {history.length > 0 && (
+              <div>
+                <p className="text-xs text-white/50 mb-2 px-1">최근 검색</p>
+                <ul
+                  className="bg-card rounded-xl border border-border/60 max-h-[55vh] overflow-y-auto scroll-smooth"
+                  style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+                >
+                  {history.map((h, i) => (
+                    <li key={i}>
+                      <button
+                        onClick={() => handleSearch(h)}
+                        className={`w-full text-left px-4 py-2 flex items-center gap-2 hover:bg-black/5 ${i > 0 ? "border-t border-gray-100" : ""}`}
+                      >
+                        <Search size={14} className="text-gray-400 shrink-0" />
+                        <span className="text-sm text-gray-900 break-words min-w-0 font-gothic">{h}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         )}
 
         {/* (2) 인도네시아어 문장 결과 */}
