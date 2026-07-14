@@ -347,22 +347,30 @@ const Dictionary = () => {
             {history.length > 0 && (
               <>
                 <p className="text-xs text-white mb-2 px-1 font-gothic">최근 검색</p>
-                <ul
-                  className="flex-1 min-h-0 -mx-4 bg-card rounded-t-2xl overflow-y-auto scroll-smooth"
-                  style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
-                >
-                  {history.map((h, i) => (
-                    <li key={i}>
-                      <button
-                        onClick={() => handleSearch(h)}
-                        className={`w-full text-left px-5 py-2 flex items-center gap-2 hover:bg-black/5 ${i > 0 ? "border-t border-gray-100" : ""}`}
-                      >
-                        <Search size={14} className="text-gray-400 shrink-0" />
-                        <span className="text-sm text-gray-900 break-words min-w-0 font-gothic">{h}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                {/* 바깥: 바닥까지 이어지는 흰 시트 / 안쪽: 리스트만 스크롤 + 아래로 갈수록 흐려지는 페이드 */}
+                <div className="flex-1 min-h-0 bg-card rounded-t-xl overflow-hidden flex flex-col">
+                  <ul
+                    className="flex-1 min-h-0 overflow-y-auto scroll-smooth overscroll-contain pb-16"
+                    style={{
+                      scrollbarWidth: "none",
+                      WebkitOverflowScrolling: "touch",
+                      maskImage: "linear-gradient(to bottom, black 68%, rgba(0,0,0,0.35) 88%, transparent 100%)",
+                      WebkitMaskImage: "linear-gradient(to bottom, black 68%, rgba(0,0,0,0.35) 88%, transparent 100%)",
+                    } as React.CSSProperties}
+                  >
+                    {history.map((h, i) => (
+                      <li key={i}>
+                        <button
+                          onClick={() => handleSearch(h)}
+                          className={`w-full text-left px-4 py-2 flex items-center gap-2 hover:bg-black/5 ${i > 0 ? "border-t border-gray-100" : ""}`}
+                        >
+                          <Search size={14} className="text-gray-400 shrink-0" />
+                          <span className="text-sm text-gray-900 break-words min-w-0 font-gothic">{h}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </>
             )}
           </div>
