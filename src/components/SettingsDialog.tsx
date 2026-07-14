@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import CSVImportDialog from "@/components/CSVImportDialog";
-import { Copy, Download, Upload } from "lucide-react";
+import { Copy, Download, Upload, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { clearStoredImages, countStoredImages } from "@/lib/imageStore";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -30,6 +31,16 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     setGeminiApiKey(apiKey);
     toast(apiKey.trim() ? "API 키가 저장되었습니다" : "API 키가 삭제되었습니다");
     onOpenChange(false);
+  };
+
+  const handleClearImages = async () => {
+    const n = await countStoredImages();
+    if (n === 0) {
+      toast("저장된 사전 이미지가 없습니다");
+      return;
+    }
+    await clearStoredImages();
+    toast(n + "장의 저장된 사전 이미지를 비웠습니다");
   };
 
   // 개인 단어장 폴더 적용: 저장 후 새로고침해 즉시 동기화
@@ -141,6 +152,10 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             <Button type="button" variant="outline" className="w-full mt-2" onClick={() => setImportOpen(true)}>
               <Upload className="w-4 h-4 mr-1.5" />
               CSV 가져오기 (복원)
+            </Button>
+            <Button type="button" variant="outline" className="w-full mt-2" onClick={handleClearImages}>
+              <Trash2 className="w-4 h-4 mr-1.5" />
+              저장된 사전 이미지 비우기
             </Button>
           </div>
         </div>
