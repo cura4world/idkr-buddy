@@ -213,14 +213,15 @@ const Index = () => {
         {/* 인도네시아어 사전 박스 - 단어장 목록 맨 위 */}
         <button
           onClick={() => navigate("/dictionary")}
-          className="w-full text-left relative rounded-xl bg-card bg-gradient-to-b from-primary/10 to-primary/10 px-5 py-4 card-lift border border-primary/20"
+          className="w-full text-left relative overflow-hidden rounded-xl bg-card bg-gradient-to-br from-transparent to-primary/15 px-5 py-4 card-lift border border-primary/25"
         >
-          <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <BookOpen size={19} className="text-primary" />
+          <BookOpen size={88} className="absolute -right-3 -bottom-7 text-primary/5 rotate-12 pointer-events-none" />
+          <div className="relative flex items-center gap-3">
+            <span className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shrink-0">
+              <BookOpen size={19} className="text-white" />
             </span>
             <p className="flex-1 min-w-0 text-base font-semibold text-gray-900">인도네시아어 사전</p>
-            <ChevronRight size={18} className="text-gray-400 shrink-0" />
+            <ChevronRight size={18} className="text-primary/60 shrink-0" />
           </div>
         </button>
 
