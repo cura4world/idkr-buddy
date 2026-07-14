@@ -88,6 +88,7 @@ const Dictionary = () => {
       return;
     }
     inputRef.current?.blur();
+    setQuery("");
     const detected = detectInputKind(w);
     setLoading(true);
     setError("");
@@ -185,7 +186,7 @@ const Dictionary = () => {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
               placeholder="단어·문장 (인니어/한국어)"
-              className="flex-1 min-w-0 w-full bg-transparent outline-none text-base text-gray-900 placeholder:text-gray-400"
+              className="flex-1 min-w-0 w-full bg-transparent outline-none text-sm text-gray-900 placeholder:text-gray-400"
               autoCapitalize="none"
               autoCorrect="off"
             />
@@ -219,7 +220,6 @@ const Dictionary = () => {
           <div className="text-center py-16 text-white/60">
             <Search size={32} className="mx-auto mb-3 opacity-60" />
             <p className="text-sm">인니어·한국어 단어나 문장을 검색해보세요</p>
-            <p className="text-xs mt-2 text-white/40">단어를 넣으면 사전, 문장을 넣으면 번역·분석이 나와요</p>
           </div>
         )}
 
@@ -227,7 +227,7 @@ const Dictionary = () => {
         {!loading && idSentence && (
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
             <div className="flex items-start justify-between gap-2 min-w-0">
-              <h2 className="text-lg font-bold text-gray-900 break-words min-w-0">{idSentence.original}</h2>
+              <h2 className="text-sm font-semibold text-gray-900 break-words min-w-0">{idSentence.original}</h2>
               <button
                 onClick={() => speak(idSentence.original, "id")}
                 className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
@@ -236,36 +236,22 @@ const Dictionary = () => {
                 <Volume2 size={18} />
               </button>
             </div>
-            <p className="text-base text-gray-900 mt-2 break-words">{idSentence.translation}</p>
+            <p className="text-sm text-gray-500 mt-1 break-words">{idSentence.translation}</p>
 
             {idSentence.chunks.length > 0 && (
               <>
                 <Divider />
                 <SectionTitle>끊어읽기</SectionTitle>
-                <ul className="space-y-2">
-                  {idSentence.chunks.map((c, i) => (
-                    <li key={i} className="rounded-lg bg-black/5 px-3 py-2 min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 break-words min-w-0">{c.id}</p>
-                        <button
-                          onClick={() => speak(c.id, "id")}
-                          className="shrink-0 text-primary/70 hover:text-primary"
-                          title="듣기"
-                        >
-                          <Volume2 size={14} />
-                        </button>
-                      </div>
-                      <p className="text-sm text-gray-500 break-words mt-0.5">{c.ko}</p>
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-sm text-gray-800 break-words leading-relaxed">
+                  {idSentence.chunks.map((c) => c.id).join(" / ")}
+                </p>
               </>
             )}
 
             {idSentence.hardWords.length > 0 && (
               <>
                 <Divider />
-                <SectionTitle>어려운 단어</SectionTitle>
+                <SectionTitle>단어 학습</SectionTitle>
                 <ul className="space-y-1.5 text-sm text-gray-800">
                   {idSentence.hardWords.map((h, i) => (
                     <li key={i} className="flex gap-2 min-w-0">
@@ -282,42 +268,40 @@ const Dictionary = () => {
         {/* (3) 한국어 단어 결과 → 인니어 단어들 (빈도순) */}
         {!loading && koWord && (
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
-            <h2 className="text-lg font-bold text-gray-900 break-words">"{koWord.query}"에 해당하는 인도네시아어</h2>
-            <p className="text-xs text-gray-400 mt-1">자주 쓰이는 순서</p>
-            <div className="mt-3 space-y-3">
-              {koWord.candidates.map((c, i) => (
-                <div key={i} className="rounded-lg bg-black/5 px-4 py-3 min-w-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="shrink-0 w-5 h-5 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
-                    <p className="text-base font-bold text-gray-900 break-words min-w-0">{c.id}</p>
-                    <button
-                      onClick={() => speak(c.id, "id")}
-                      className="shrink-0 text-primary/70 hover:text-primary"
-                      title="발음 듣기"
-                    >
-                      <Volume2 size={15} />
-                    </button>
-                  </div>
-                  {c.pron && <p className="text-xs text-gray-400 mt-0.5 pl-7">[{c.pron}]</p>}
-                  <p className="text-sm text-gray-900 mt-1.5 break-words"><span className="font-medium">뜻</span> · {c.meaning}</p>
-                  {c.nuance && <p className="text-sm text-gray-500 mt-0.5 break-words"><span className="font-medium">뉘앙스</span> · {c.nuance}</p>}
-                  {c.situation && <p className="text-sm text-gray-500 mt-0.5 break-words"><span className="font-medium">상황</span> · {c.situation}</p>}
+            {koWord.candidates.map((c, i) => (
+              <div key={i} className={i === 0 ? "min-w-0" : "min-w-0 mt-4 pt-4 border-t border-gray-200"}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="shrink-0 text-primary font-bold">{i + 1}</span>
+                  <p className="text-base font-bold text-gray-900 break-words min-w-0">{c.id}</p>
+                  <button
+                    onClick={() => speak(c.id, "id")}
+                    className="shrink-0 text-primary/70 hover:text-primary"
+                    title="발음 듣기"
+                  >
+                    <Volume2 size={15} />
+                  </button>
                 </div>
-              ))}
-            </div>
+                <p className="text-sm text-gray-900 mt-1 break-words pl-5">
+                  {c.meaning}
+                  {(c.nuance || c.situation) && (
+                    <span className="text-gray-500"> ({[c.nuance, c.situation].filter(Boolean).join(", ")})</span>
+                  )}
+                </p>
+              </div>
+            ))}
           </div>
         )}
 
         {/* (4) 한국어 문장 결과 → 인니어 (문어체/구어체) */}
         {!loading && koSentence && (
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
-            <h2 className="text-base font-medium text-gray-500 break-words">{koSentence.query}</h2>
+            <h2 className="text-sm font-medium text-gray-500 break-words">{koSentence.query}</h2>
             {[{ label: "문어체", v: koSentence.formal }, { label: "구어체", v: koSentence.casual }].map((row, i) => (
               row.v.id ? (
                 <div key={i} className={i === 0 ? "mt-3" : "mt-3 pt-3 border-t border-gray-200"}>
                   <span className="inline-block text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 mb-1.5">{row.label}</span>
                   <div className="flex items-start gap-2 min-w-0">
-                    <p className="text-base font-semibold text-gray-900 break-words min-w-0 flex-1">{row.v.id}</p>
+                    <p className="text-sm font-semibold text-gray-900 break-words min-w-0 flex-1">{row.v.id}</p>
                     <button
                       onClick={() => speak(row.v.id, "id")}
                       className="shrink-0 text-primary/70 hover:text-primary mt-0.5"
@@ -326,7 +310,6 @@ const Dictionary = () => {
                       <Volume2 size={16} />
                     </button>
                   </div>
-                  {row.v.pron && <p className="text-xs text-gray-400 mt-0.5 break-words">[{row.v.pron}]</p>}
                   {row.v.note && <p className="text-sm text-gray-500 mt-1 break-words">{row.v.note}</p>}
                 </div>
               ) : null
