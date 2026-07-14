@@ -271,7 +271,7 @@ const Dictionary = () => {
             {koWord.candidates.map((c, i) => (
               <div key={i} className={i === 0 ? "min-w-0" : "min-w-0 mt-4 pt-4 border-t border-gray-200"}>
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="shrink-0 text-primary font-bold">{i + 1}</span>
+                  <span className="shrink-0 text-gray-900 font-bold">{i + 1}</span>
                   <p className="text-base font-bold text-primary break-words min-w-0">{c.id}</p>
                   <button
                     onClick={() => speak(c.id, "id")}
@@ -323,10 +323,24 @@ const Dictionary = () => {
                       <Volume2 size={16} />
                     </button>
                   </div>
-                  {row.v.note && <p className="text-sm text-gray-500 mt-1 break-words">{row.v.note}</p>}
                 </div>
               ) : null
             ))}
+
+            {koSentence.hardWords.length > 0 && (
+              <>
+                <Divider />
+                <SectionTitle>학습 단어</SectionTitle>
+                <ul className="space-y-1.5 text-sm text-gray-800">
+                  {koSentence.hardWords.map((h, i) => (
+                    <li key={i} className="flex gap-2 min-w-0">
+                      <span className="text-gray-400">•</span>
+                      <span className="min-w-0 break-words"><span className="font-semibold text-gray-900">{h.word}</span> — {h.meaning}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
         )}
 
