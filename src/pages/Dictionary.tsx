@@ -357,7 +357,7 @@ const Dictionary = () => {
             </div>
             <p className="text-base font-medium text-gray-900 break-words">{result.meaning}</p>
             {result.meaningDetail && (
-              <p className="text-sm text-gray-500 mt-1 break-words">→ {result.meaningDetail}</p>
+              <p className="text-xs text-gray-500 mt-1 break-words font-gothic">{result.meaningDetail}</p>
             )}
 
             {/* 단어 이미지 (자동 생성) */}
@@ -517,7 +517,7 @@ const Dictionary = () => {
                           <Volume2 size={14} />
                         </button>
                       </div>
-                      <p className="text-sm text-gray-500 break-words mt-0.5">{s.nuance}</p>
+                      <p className="text-xs text-gray-500 break-words mt-0.5 font-gothic">{s.nuance}</p>
                     </li>
                   ))}
                 </ul>
@@ -536,7 +536,14 @@ const Dictionary = () => {
               <>
                 <Divider />
                 <SectionTitle>같이 외우면 좋은 표현</SectionTitle>
-                <p className="text-sm text-gray-800 flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words">{result.wordFamily}</span></p>
+                <ul className="space-y-1">
+                  {result.wordFamily.split(new RegExp("\\s+[—–-]\\s+")).map((w) => w.trim()).filter(Boolean).map((w, i) => (
+                    <li key={i} className="text-sm text-gray-800 flex gap-2">
+                      <span className="text-gray-400">•</span>
+                      <span className="min-w-0 break-words">{w}</span>
+                    </li>
+                  ))}
+                </ul>
               </>
             )}
 
