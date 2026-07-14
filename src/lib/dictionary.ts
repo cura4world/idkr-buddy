@@ -387,6 +387,7 @@ export interface KoSentenceResult {
   query: string;         // 입력 한국어 문장
   formal: KoSentenceVariant;   // 문어체
   casual: KoSentenceVariant;   // 구어체
+  hardWords: HardWord[];       // 학습 단어 (예문에 나온 어려운 단어)
 }
 
 export async function translateKoSentence(sentence: string): Promise<KoSentenceResult> {
@@ -400,13 +401,14 @@ export async function translateKoSentence(sentence: string): Promise<KoSentenceR
     "출력 형식:\n" +
     "{\n" +
     '  "query": "입력 문장",\n' +
-    '  "formal": {"id": "문어체 인니어 문장", "pron": "발음(한글 근사)", "note": "짧은 설명"},\n' +
-    '  "casual": {"id": "구어체 인니어 문장", "pron": "발음(한글 근사)", "note": "짧은 설명"}\n' +
+    '  "formal": {"id": "문어체 인니어 문장", "pron": "발음(한글 근사)"},\n' +
+    '  "casual": {"id": "구어체 인니어 문장", "pron": "발음(한글 근사)"},\n' +
+    '  "hardWords": [{"word": "인니어 단어", "meaning": "간략한 한국어 뜻"}]\n' +
     "}\n\n" +
     "주의:\n" +
     "- formal은 격식체/문어체(뉴스·공식 상황), casual은 일상 대화체로 자연스럽게.\n" +
     "- pron은 한국인이 읽기 쉽게 한글로 근사 표기.\n" +
-    "- note는 한 줄 이내, 언제 쓰는지 간단히. 불필요하면 빈 문자열.\n";
+    "- hardWords는 위 두 문장에 나온 단어 중 초중급 학습자가 모를 만한 단어만 골라 넣으세요. 쉬운 단어는 제외.\n";
 
   const parsed = await callGeminiJSON(prompt);
   const variant = (v: any): KoSentenceVariant => ({
@@ -418,5 +420,9 @@ export async function translateKoSentence(sentence: string): Promise<KoSentenceR
     query: (parsed.query || trimmed).toString().trim(),
     formal: variant(parsed.formal),
     casual: variant(parsed.casual),
+    hardWords: arr<HardWord>(parsed.hardWords).map((h) => ({
+      word: (h?.word || "").toString().trim(),
+      meaning: (h?.meaning || "").toString().trim(),
+    })).filter((h) => h.word),
   };
 }
