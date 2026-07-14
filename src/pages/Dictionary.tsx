@@ -10,6 +10,7 @@ import {
   lookupKoWord,
   translateKoSentence,
   DictResult,
+  DictRelatedItem,
   IdSentenceResult,
   KoWordResult,
   KoSentenceResult,
@@ -52,6 +53,42 @@ const Divider = () => <div className="border-t border-gray-200 my-5" />;
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <h3 className="text-sm font-semibold text-gray-900 mb-2.5">{children}</h3>
 );
+
+// 능동형/수동형/반대/비슷한/파생 단어 공통 카드 섹션
+const RelatedSection = ({ title, items }: { title: string; items: DictRelatedItem[] }) => {
+  if (!items || items.length === 0) return null;
+  return (
+    <>
+      <Divider />
+      <SectionTitle>{title}</SectionTitle>
+      <ul className="space-y-2.5">
+        {items.map((it, i) => (
+          <li key={i} className="rounded-lg bg-black/5 px-3 py-2.5 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-base font-semibold text-gray-900 break-words min-w-0">{it.word}</p>
+              <button
+                onClick={() => speak(it.word, "id")}
+                className="shrink-0 text-primary/70 hover:text-primary"
+                title="발음 듣기"
+              >
+                <Volume2 size={14} />
+              </button>
+            </div>
+            {it.meaning && (
+              <p className="text-xs text-gray-500 break-words mt-0.5 font-gothic">{it.meaning}</p>
+            )}
+            {it.example && (
+              <div className="mt-1">
+                <p className="text-sm text-gray-800 break-words">{it.example}</p>
+                {it.exampleKo && <p className="text-xs text-gray-500 break-words">{it.exampleKo}</p>}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+};
 
 const Dictionary = () => {
   const navigate = useNavigate();
@@ -402,7 +439,7 @@ const Dictionary = () => {
                             <Volume2 size={15} />
                           </button>
                         </div>
-                        <p className="text-sm text-gray-500 break-words">{ex.ko}</p>
+                        <p className="text-xs text-gray-500 break-words">{ex.ko}</p>
                       </div>
                     </li>
                   ))}
@@ -436,93 +473,12 @@ const Dictionary = () => {
               </>
             )}
 
-            {/* 능동형 */}
-            {result.activeForms.length > 0 && (
-              <>
-                <Divider />
-                <SectionTitle>능동형</SectionTitle>
-                <ul className="space-y-3">
-                  {result.activeForms.map((f, i) => (
-                    <li key={i} className="min-w-0">
-                      <p className="text-sm text-gray-800 break-words"><span className="font-semibold text-gray-900">{f.form}</span> — {f.meaning}</p>
-                      {f.example && (
-                        <div className="mt-0.5 pl-1">
-                          <p className="text-sm text-gray-800 break-words">예문: {f.example}</p>
-                          <p className="text-sm text-gray-500 break-words">{f.exampleKo}</p>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-
-            {/* 수동형 */}
-            {result.passiveForms.length > 0 && (
-              <>
-                <Divider />
-                <SectionTitle>수동형</SectionTitle>
-                <ul className="space-y-3">
-                  {result.passiveForms.map((f, i) => (
-                    <li key={i} className="min-w-0">
-                      <p className="text-sm text-gray-800 break-words"><span className="font-semibold text-gray-900">{f.form}</span> — {f.meaning}</p>
-                      {f.example && (
-                        <div className="mt-0.5 pl-1">
-                          <p className="text-sm text-gray-800 break-words">예문: {f.example}</p>
-                          <p className="text-sm text-gray-500 break-words">{f.exampleKo}</p>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-
-            {/* 반대 단어 */}
-            {result.opposites.length > 0 && (
-              <>
-                <Divider />
-                <SectionTitle>반대 단어</SectionTitle>
-                <ul className="space-y-3">
-                  {result.opposites.map((o, i) => (
-                    <li key={i} className="min-w-0">
-                      <p className="text-sm text-gray-800 break-words"><span className="font-semibold text-gray-900">{o.word}</span> — {o.meaning}</p>
-                      {o.example && (
-                        <div className="mt-0.5 pl-1">
-                          <p className="text-sm text-gray-800 break-words">예문: {o.example}</p>
-                          <p className="text-sm text-gray-500 break-words">{o.exampleKo}</p>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-
-            {/* 비슷한 단어 */}
-            {result.similar.length > 0 && (
-              <>
-                <Divider />
-                <SectionTitle>비슷한 단어</SectionTitle>
-                <ul className="space-y-2.5">
-                  {result.similar.map((s, i) => (
-                    <li key={i} className="rounded-lg bg-black/5 px-3 py-2.5 min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <p className="font-semibold text-gray-900 break-words min-w-0">{s.word}</p>
-                        <button
-                          onClick={() => speak(s.word, "id")}
-                          className="shrink-0 text-primary/70 hover:text-primary"
-                          title="발음 듣기"
-                        >
-                          <Volume2 size={14} />
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-500 break-words mt-0.5 font-gothic">{s.nuance}</p>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
+            {/* 능동형·수동형·반대·비슷한·파생 단어 (통일 카드) */}
+            <RelatedSection title="능동형" items={result.activeForms} />
+            <RelatedSection title="수동형" items={result.passiveForms} />
+            <RelatedSection title="반대 단어" items={result.opposites} />
+            <RelatedSection title="비슷한 단어" items={result.similar} />
+            <RelatedSection title="파생 단어" items={result.derived} />
 
             {/* 사용빈도 / 난이도 */}
             <Divider />
@@ -530,22 +486,6 @@ const Dictionary = () => {
               <p><span className="font-semibold">실제 회화 사용빈도</span> <Stars n={result.frequency} /></p>
               <p><span className="font-semibold">난이도</span> <Stars n={result.difficulty} /></p>
             </div>
-
-            {/* 같이 외우면 좋은 표현 */}
-            {result.wordFamily && (
-              <>
-                <Divider />
-                <SectionTitle>같이 외우면 좋은 표현</SectionTitle>
-                <ul className="space-y-1">
-                  {result.wordFamily.split(new RegExp("\\s+[—–-]\\s+")).map((w) => w.trim()).filter(Boolean).map((w, i) => (
-                    <li key={i} className="text-sm text-gray-800 flex gap-2">
-                      <span className="text-gray-400">•</span>
-                      <span className="min-w-0 break-words">{w}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
 
             {/* 내 단어장에 보내기 */}
             <div className="mt-6">
