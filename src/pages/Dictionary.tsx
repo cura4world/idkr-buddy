@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home } from "lucide-react";
+import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home, Mic } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
@@ -220,6 +220,59 @@ const Dictionary = () => {
   // 초기(홈) 화면 여부: 결과·로딩·에러가 전혀 없는 상태
   const isHome = !loading && !error && !result && !idSentence && !koWord && !koSentence;
 
+  // ---- 음성 검색 ----
+  const [voiceLang, setVoiceLang] = useState<"ko" | "id">("ko"); // 듣기 언어
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  const speechSupported =
+    typeof window !== "undefined" &&
+    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+  const startVoice = () => {
+    if (!speechSupported) {
+      toast("이 기기에서는 음성 검색을 지원하지 않아요");
+      return;
+    }
+    // 이미 듣는 중이면 중지
+    if (listening) {
+      try { recognitionRef.current?.stop?.(); } catch (e) {}
+      setListening(false);
+      return;
+    }
+    try {
+      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const rec = new SR();
+      rec.lang = voiceLang === "ko" ? "ko-KR" : "id-ID";
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      rec.continuous = false;
+      rec.onresult = (ev: any) => {
+        const text = ev?.results?.[0]?.[0]?.transcript?.trim();
+        if (text) {
+          setQuery(text);
+          setListening(false);
+          handleSearch(text);
+        }
+      };
+      rec.onerror = (ev: any) => {
+        setListening(false);
+        if (ev?.error === "not-allowed" || ev?.error === "service-not-allowed") {
+          toast("마이크 권한이 필요해요. 설정에서 허용해주세요");
+        } else if (ev?.error === "no-speech") {
+          toast("음성이 들리지 않았어요. 다시 시도해주세요");
+        }
+      };
+      rec.onend = () => setListening(false);
+      recognitionRef.current = rec;
+      setListening(true);
+      rec.start();
+    } catch (e) {
+      setListening(false);
+      toast("음성 검색을 시작할 수 없어요");
+    }
+  };
+
   // 최근 검색 항목 길게 누르기 → 삭제 확인 (600ms, 앱 공통 롱프레스 시간)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const lpTimer = useRef<number | null>(null);
@@ -246,6 +299,19 @@ const Dictionary = () => {
     }
     setDeleteTarget(null);
   };
+
+  // /dictionary?q=단어 로 진입하면 자동 검색 (이야기 카드의 "사전에서 보기" 연결)
+  const autoQueryDone = useRef(false);
+  useEffect(() => {
+    if (autoQueryDone.current) return;
+    autoQueryDone.current = true;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("q");
+      if (q) handleSearch(q);
+    } catch (e) {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const imgReqId = useRef(0);
 
@@ -362,6 +428,22 @@ const Dictionary = () => {
               autoCapitalize="none"
               autoCorrect="off"
             />
+            {/* 음성 언어 토글 */}
+            <button
+              onClick={() => setVoiceLang((v) => (v === "ko" ? "id" : "ko"))}
+              className="shrink-0 text-[11px] font-bold text-primary border border-primary/40 rounded-full px-1.5 py-0.5 leading-none"
+              title="음성 인식 언어 전환"
+            >
+              {voiceLang === "ko" ? "한" : "IN"}
+            </button>
+            {/* 마이크 */}
+            <button
+              onClick={startVoice}
+              className={`shrink-0 ${listening ? "text-red-500" : "text-gray-400 hover:text-primary"}`}
+              title="음성 검색"
+            >
+              <Mic size={18} />
+            </button>
           </div>
           <button
             onClick={() => handleSearch()}
@@ -371,6 +453,26 @@ const Dictionary = () => {
             {loading ? <Loader2 size={18} className="animate-spin" /> : "검색"}
           </button>
         </div>
+
+        {/* 음성 듣는 중 오버레이 */}
+        {listening && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 flex flex-col items-center justify-center gap-5"
+            onClick={startVoice}
+          >
+            <div className="relative flex items-center justify-center">
+              <span className="absolute w-24 h-24 rounded-full bg-red-500/30 animate-ping" />
+              <span className="absolute w-20 h-20 rounded-full bg-red-500/40 animate-pulse" />
+              <span className="relative w-16 h-16 rounded-full bg-red-500 flex items-center justify-center">
+                <Mic size={26} className="text-white" />
+              </span>
+            </div>
+            <p className="text-white text-sm">
+              {voiceLang === "ko" ? "한국어" : "인도네시아어"}로 말해주세요...
+            </p>
+            <p className="text-white/60 text-xs">탭하면 중지</p>
+          </div>
+        )}
 
         {/* 로딩 */}
         {loading && (
