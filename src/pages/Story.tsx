@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles, Volume2, Loader2, Plus, Check, BookOpen } from "lucide-react";
+import { ArrowLeft, Sparkles, Volume2, Loader2, Plus, Check, BookOpen, X } from "lucide-react";
 import { toast } from "sonner";
 import { generateStory, quickLookupWord, StoryDifficulty } from "@/lib/story";
 import { saveStory, listStories, StoryRecord } from "@/lib/storyStore";
@@ -48,7 +48,8 @@ const Story = () => {
   const [popupSentence, setPopupSentence] = useState("");
   const [popupLoading, setPopupLoading] = useState(false);
   const [popupMeaning, setPopupMeaning] = useState("");
-  const [popupSentenceKo, setPopupSentenceKo] = useState("");
+  const [popupInfo, setPopupInfo] = useState("");
+  const [popupSentenceKo, setPopupSentenceKo] = useState(""); // 단어장 저장용 (표시 안 함)
   const [popupSaved, setPopupSaved] = useState(false);
   const popupReqId = useRef(0);
 
@@ -93,6 +94,7 @@ const Story = () => {
     setPopupWord(word);
     setPopupSentence(sentence);
     setPopupMeaning("");
+    setPopupInfo("");
     setPopupSentenceKo("");
     setPopupSaved(false);
     setPopupLoading(true);
@@ -100,6 +102,7 @@ const Story = () => {
       .then((r) => {
         if (popupReqId.current !== reqId) return;
         setPopupMeaning(r.meaning);
+        setPopupInfo(r.info);
         setPopupSentenceKo(r.sentenceKo);
       })
       .catch(() => {
@@ -108,6 +111,21 @@ const Story = () => {
       .finally(() => {
         if (popupReqId.current === reqId) setPopupLoading(false);
       });
+  };
+
+  const copyPopupWord = async () => {
+    if (!popupWord) return;
+    try {
+      await navigator.clipboard.writeText(popupWord);
+      toast("복사되었습니다");
+    } catch (e) {
+      toast("복사에 실패했어요");
+    }
+  };
+
+  const openInDictionary = () => {
+    if (!popupWord) return;
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord));
   };
 
   const savePopupWord = () => {
@@ -181,15 +199,8 @@ const Story = () => {
                   <span className="text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">{current.category}</span>
                   <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">난이도 {current.difficulty}</span>
                 </div>
-                <div className="flex items-start justify-between gap-2 mb-3 min-w-0">
+                <div className="mb-3 min-w-0">
                   <h2 className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">{current.title}</h2>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); speak(current.indonesian, "id"); }}
-                    className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
-                    title="본문 듣기"
-                  >
-                    <Volume2 size={18} />
-                  </button>
                 </div>
                 {renderIndonesian(current.indonesian)}
               </>
@@ -225,7 +236,7 @@ const Story = () => {
             )}
           </div>
           <p className="text-center text-white/50 text-xs mt-3">
-            카드를 탭하면 {flipped ? "원문이" : "해석이"} 보여요 · 단어를 탭하면 뜻이 떠요
+            {flipped ? "카드를 탭하면 원문이 보입니다" : "카드를 탭하면 해석이 보이고, 단어를 탭하면 뜻이 나옵니다"}
           </p>
         </div>
 
@@ -246,6 +257,14 @@ const Story = () => {
                 >
                   <Volume2 size={15} />
                 </button>
+                <span className="flex-1" />
+                <button
+                  onClick={() => setPopupWord(null)}
+                  className="shrink-0 w-8 h-8 rounded-full bg-black/5 text-gray-500 flex items-center justify-center"
+                  title="닫기"
+                >
+                  <X size={15} />
+                </button>
               </div>
               {popupLoading ? (
                 <div className="flex items-center gap-2 text-gray-400 mt-2 text-sm">
@@ -254,8 +273,8 @@ const Story = () => {
               ) : (
                 <>
                   <p className="text-sm font-bold text-gray-900 mt-1.5 break-words font-gothic">{popupMeaning}</p>
-                  {popupSentenceKo && (
-                    <p className="text-xs text-gray-500 mt-1 break-words font-gothic">{popupSentenceKo}</p>
+                  {popupInfo && (
+                    <p className="text-xs text-gray-500 mt-1 break-words font-gothic">{popupInfo}</p>
                   )}
                 </>
               )}
@@ -263,17 +282,23 @@ const Story = () => {
                 <button
                   onClick={savePopupWord}
                   disabled={popupSaved || popupLoading || !popupMeaning}
-                  className={`flex-1 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-medium ${
+                  className={`flex-1 min-w-0 flex items-center justify-center gap-1 rounded-full py-2 text-xs font-medium ${
                     popupSaved ? "bg-gray-100 text-gray-400" : "bg-primary text-white disabled:opacity-50"
                   }`}
                 >
-                  {popupSaved ? <><Check size={15} /> 저장됨</> : <><Plus size={15} /> 내 단어장에 담기</>}
+                  {popupSaved ? <><Check size={13} /> 저장됨</> : <><Plus size={13} /> 내 단어장에 담기</>}
                 </button>
                 <button
-                  onClick={() => setPopupWord(null)}
-                  className="shrink-0 rounded-full py-2.5 px-5 text-sm font-medium bg-black/5 text-gray-700"
+                  onClick={copyPopupWord}
+                  className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-gray-700"
                 >
-                  닫기
+                  복사
+                </button>
+                <button
+                  onClick={openInDictionary}
+                  className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-gray-700"
+                >
+                  사전에서 보기
                 </button>
               </div>
             </div>
@@ -327,7 +352,6 @@ const Story = () => {
               <><Sparkles size={16} /> 이야기 만들기</>
             )}
           </button>
-          <p className="text-xs text-gray-400 text-center mt-2">주제는 10가지 카테고리 중 랜덤으로 정해져요</p>
         </div>
 
         {/* 지난 이야기 */}
