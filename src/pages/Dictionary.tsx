@@ -272,7 +272,7 @@ const Dictionary = () => {
               <div key={i} className={i === 0 ? "min-w-0" : "min-w-0 mt-4 pt-4 border-t border-gray-200"}>
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="shrink-0 text-primary font-bold">{i + 1}</span>
-                  <p className="text-base font-bold text-gray-900 break-words min-w-0">{c.id}</p>
+                  <p className="text-base font-bold text-primary break-words min-w-0">{c.id}</p>
                   <button
                     onClick={() => speak(c.id, "id")}
                     className="shrink-0 text-primary/70 hover:text-primary"
@@ -284,6 +284,21 @@ const Dictionary = () => {
                 <p className="text-sm font-bold text-gray-900 mt-1 break-words pl-5">{c.meaning}</p>
                 {(c.nuance || c.situation) && (
                   <p className="text-sm text-gray-500 mt-0.5 break-words pl-5">{[c.nuance, c.situation].filter(Boolean).join(", ")}</p>
+                )}
+                {c.example && (
+                  <div className="mt-1.5 pl-5">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <p className="text-sm text-gray-800 flex-1 min-w-0 break-words">{c.example}</p>
+                      <button
+                        onClick={() => speak(c.example, "id")}
+                        className="shrink-0 text-primary/70 hover:text-primary"
+                        title="예문 듣기"
+                      >
+                        <Volume2 size={14} />
+                      </button>
+                    </div>
+                    {c.exampleKo && <p className="text-sm text-gray-500 break-words">{c.exampleKo}</p>}
+                  </div>
                 )}
               </div>
             ))}
@@ -299,7 +314,7 @@ const Dictionary = () => {
                 <div key={i} className={i === 0 ? "mt-3" : "mt-3 pt-3 border-t border-gray-200"}>
                   <span className="inline-block text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 mb-1.5">{row.label}</span>
                   <div className="flex items-start gap-2 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 break-words min-w-0 flex-1">{row.v.id}</p>
+                    <p className="text-base font-semibold text-gray-900 break-words min-w-0 flex-1">{row.v.id}</p>
                     <button
                       onClick={() => speak(row.v.id, "id")}
                       className="shrink-0 text-primary/70 hover:text-primary mt-0.5"
