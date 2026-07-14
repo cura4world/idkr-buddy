@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
@@ -94,9 +94,33 @@ const RelatedSection = ({ title, items }: { title: string; items: DictRelatedIte
 // 세션 메모리 캐시(빠른 재조회용). 영구 저장은 IndexedDB(imageStore).
 const imageCache = new Map<string, string>();
 
+// 검색 히스토리 (localStorage, 최신순, 최대 30개)
+const HISTORY_KEY = "dict-search-history";
+const HISTORY_MAX = 30;
+
+function loadHistory(): string[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function pushHistory(term: string): string[] {
+  const t = term.trim();
+  if (!t) return loadHistory();
+  const prev = loadHistory().filter((x) => x.toLowerCase() !== t.toLowerCase());
+  const next = [t, ...prev].slice(0, HISTORY_MAX);
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch {}
+  return next;
+}
+
 const Dictionary = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [history, setHistory] = useState<string[]>(() => loadHistory());
   const [loading, setLoading] = useState(false);
   const [kind, setKind] = useState<InputKind | null>(null);
   const [result, setResult] = useState<DictResult | null>(null);
@@ -120,8 +144,8 @@ const Dictionary = () => {
     return "검색에 실패했습니다. 잠시 후 다시 시도해주세요.";
   };
 
-  const handleSearch = async () => {
-    const w = query.trim();
+  const handleSearch = async (term?: string) => {
+    const w = (term ?? query).trim();
     if (!w) return;
     if (!hasGeminiApiKey()) {
       setError("Gemini API 키가 필요합니다. 설정에서 키를 입력해주세요.");
@@ -164,11 +188,26 @@ const Dictionary = () => {
       } else {
         setKoSentence(await translateKoSentence(w));
       }
+      setHistory(pushHistory(w)); // 검색 성공 시 히스토리 기록
     } catch (e: any) {
       setError(errorMessage(e?.message || ""));
     } finally {
       setLoading(false);
     }
+  };
+
+  // 홈(초기 화면)으로: 모든 결과 초기화
+  const goHome = () => {
+    setResult(null);
+    setIdSentence(null);
+    setKoWord(null);
+    setKoSentence(null);
+    setError("");
+    setImgUrl("");
+    setImgError("");
+    setKind(null);
+    setQuery("");
+    setHistory(loadHistory());
   };
 
   const imgReqId = useRef(0);
@@ -244,7 +283,14 @@ const Dictionary = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-lg font-semibold truncate">인도네시아어 사전</h1>
+        <h1 className="flex-1 text-lg font-semibold truncate">인도네시아어 사전</h1>
+        <button
+          onClick={goHome}
+          className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -mr-1 shrink-0"
+          title="처음으로"
+        >
+          <Home size={20} />
+        </button>
       </header>
 
       <div className="px-4 py-4">
@@ -265,7 +311,7 @@ const Dictionary = () => {
             />
           </div>
           <button
-            onClick={handleSearch}
+            onClick={() => handleSearch()}
             disabled={loading}
             className="shrink-0 bg-primary text-white rounded-full px-4 py-2.5 text-sm font-medium disabled:opacity-50"
           >
@@ -288,12 +334,31 @@ const Dictionary = () => {
           </div>
         )}
 
-        {/* 초기 안내 */}
+        {/* 초기 화면: 히스토리 or 안내 */}
         {!loading && !error && !result && !idSentence && !koWord && !koSentence && (
-          <div className="text-center py-16 text-white/60">
-            <Search size={32} className="mx-auto mb-3 opacity-60" />
-            <p className="text-sm">인니어·한국어 단어나 문장을 검색해보세요</p>
-          </div>
+          history.length > 0 ? (
+            <div>
+              <p className="text-xs text-white/50 mb-2 px-1">최근 검색</p>
+              <ul className="bg-card rounded-xl overflow-hidden border border-border/60">
+                {history.map((h, i) => (
+                  <li key={i}>
+                    <button
+                      onClick={() => handleSearch(h)}
+                      className={`w-full text-left px-4 py-3 flex items-center gap-2 hover:bg-black/5 ${i > 0 ? "border-t border-gray-100" : ""}`}
+                    >
+                      <Search size={15} className="text-gray-400 shrink-0" />
+                      <span className="text-sm text-gray-900 break-words min-w-0">{h}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="text-center py-16 text-white/60">
+              <Search size={32} className="mx-auto mb-3 opacity-60" />
+              <p className="text-sm">인니어·한국어 단어나 문장을 검색해보세요</p>
+            </div>
+          )
         )}
 
         {/* (2) 인도네시아어 문장 결과 */}
