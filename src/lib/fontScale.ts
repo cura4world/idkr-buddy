@@ -4,9 +4,9 @@
 
 const KEY = "app-font-scale-step";
 
-// 단계: 0~4 (기본 2). 한 단계 = 5%.
-const STEPS = [0.90, 0.95, 1.0, 1.05, 1.10];
-const DEFAULT_STEP = 2;
+// 단계: 0~6 (기본 3 = 100%). 한 단계 = 5%.
+const STEPS = [0.85, 0.90, 0.95, 1.0, 1.05, 1.10, 1.15];
+const DEFAULT_STEP = 3;
 const BASE_PX = 16; // 기본 루트 폰트 크기
 
 export function getFontStep(): number {
@@ -43,5 +43,4 @@ export function setFontStep(step: number): number {
 
 // 한 단계 올리기/내리기 (범위를 벗어나면 그대로)
 export function stepFont(delta: number): number {
-  return setFontStep(getFontStep() + delta);
-}
+  return setFontStep(getFont
