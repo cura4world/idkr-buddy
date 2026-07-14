@@ -636,7 +636,7 @@ const Dictionary = () => {
               <>
                 <Divider />
                 <SectionTitle>단어 분석</SectionTitle>
-                <ul className="space-y-1.5 text-sm text-gray-800">
+                <ul className="space-y-1.5 text-xs text-gray-800">
                   {result.root && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">어근:</span> {result.root}</span></li>}
                   {result.affix && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">접사:</span> {result.affix}</span></li>}
                   {result.register && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">문어체/구어체:</span> {result.register}</span></li>}
@@ -649,7 +649,7 @@ const Dictionary = () => {
               <>
                 <Divider />
                 <SectionTitle>단어 관련 배경</SectionTitle>
-                <ul className="space-y-1.5 text-sm text-gray-800">
+                <ul className="space-y-1.5 text-xs text-gray-800">
                   {result.etymology.map((e, i) => (
                     <li key={i} className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words">{e}</span></li>
                   ))}
