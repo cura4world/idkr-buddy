@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         word: ["Lora", "serif"],
         body: ["Gowun Dodum", "sans-serif"],
+        gothic: ["Pretendard", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
