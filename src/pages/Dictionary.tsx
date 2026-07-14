@@ -18,6 +18,7 @@ import {
 } from "@/lib/dictionary";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { addWord } from "@/lib/store";
+import { getStoredImage, saveStoredImage } from "@/lib/imageStore";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 
@@ -90,6 +91,9 @@ const RelatedSection = ({ title, items }: { title: string; items: DictRelatedIte
   );
 };
 
+// 세션 메모리 캐시(빠른 재조회용). 영구 저장은 IndexedDB(imageStore).
+const imageCache = new Map<string, string>();
+
 const Dictionary = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -141,7 +145,18 @@ const Dictionary = () => {
       if (detected === "id_word") {
         const r = await lookupWord(w);
         setResult(r);
-        loadImage(r.word, r.meaning); // 이미지는 인니어 단어일 때만
+        // 이미 본 단어면 저장된 이미지를 자동 표시. 안 본 단어면 버튼이 뜸(비용 절감).
+        const key = r.word.toLowerCase();
+        const mem = imageCache.get(key);
+        if (mem) {
+          setImgUrl(mem);
+        } else {
+          const stored = await getStoredImage(r.word);
+          if (stored) {
+            imageCache.set(key, stored);
+            setImgUrl(stored);
+          }
+        }
       } else if (detected === "id_sentence") {
         setIdSentence(await analyzeIdSentence(w));
       } else if (detected === "ko_word") {
@@ -166,15 +181,36 @@ const Dictionary = () => {
     return "이미지 생성에 실패했습니다.";
   };
 
-  // 검색 직후 자동 호출. 실패 시 "다시 만들기" 버튼에서도 사용.
+  // "이미지 보기" 버튼/재시도에서 호출. 저장소에 있으면 재사용, 없을 때만 생성 후 영구 저장.
   const loadImage = async (word: string, meaning: string) => {
+    const key = word.toLowerCase();
+
+    // 1) 세션 메모리
+    const mem = imageCache.get(key);
+    if (mem) { setImgUrl(mem); setImgError(""); return; }
+
+    // 2) 영구 저장(IndexedDB)
+    const stored = await getStoredImage(word);
+    if (stored) {
+      imageCache.set(key, stored);
+      setImgUrl(stored);
+      setImgError("");
+      return;
+    }
+
+    // 3) 새로 생성
     const reqId = ++imgReqId.current;
     setImgLoading(true);
     setImgUrl("");
     setImgError("");
     try {
       const url = await generateWordImage(word, meaning);
+      imageCache.set(key, url);
+      const { overflowed } = await saveStoredImage(word, url);
       if (imgReqId.current === reqId) setImgUrl(url);
+      if (overflowed) {
+        toast("저장된 사전 이미지가 5,000장을 넘어, 오래된 이미지부터 자동 정리됩니다.");
+      }
     } catch (e: any) {
       if (imgReqId.current === reqId) setImgError(imgErrorMessage(e?.message || ""));
     } finally {
@@ -397,7 +433,7 @@ const Dictionary = () => {
               <p className="text-xs text-gray-500 mt-1 break-words font-gothic">{result.meaningDetail}</p>
             )}
 
-            {/* 단어 이미지 (자동 생성) */}
+            {/* 단어 이미지 (수동 버튼으로 생성, 세션 캐시) */}
             <div className="mt-4">
               {imgLoading && (
                 <div className="w-full flex flex-col items-center justify-center border border-dashed border-gray-300 rounded-lg py-8 text-gray-400">
@@ -407,6 +443,14 @@ const Dictionary = () => {
               )}
               {!imgLoading && imgUrl && (
                 <img src={imgUrl} alt={result.word} className="w-full rounded-lg border border-gray-200" />
+              )}
+              {!imgLoading && !imgUrl && !imgError && (
+                <button
+                  onClick={() => loadImage(result.word, result.meaning)}
+                  className="w-full flex items-center justify-center gap-1.5 border border-dashed border-gray-300 rounded-lg py-3 text-sm text-gray-500 hover:bg-black/5"
+                >
+                  <ImageIcon size={15} /> 이미지 보기
+                </button>
               )}
               {!imgLoading && !imgUrl && imgError && (
                 <button
