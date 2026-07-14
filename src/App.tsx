@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import Dictionary from "./pages/Dictionary";
+import Story from "./pages/Story";
 import CategoryDetail from "./pages/CategoryDetail";
 import StudyMode from "./pages/StudyMode";
 import QuizMode from "./pages/QuizMode";
@@ -22,6 +23,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/dictionary" element={<Dictionary />} />
+          <Route path="/story" element={<Story />} />
           <Route path="/category/:id" element={<CategoryDetail />} />
           <Route path="/study/:id" element={<StudyMode />} />
           <Route path="/quiz/:id" element={<QuizMode />} />
