@@ -213,7 +213,7 @@ const Index = () => {
         {/* 인도네시아어 사전 박스 - 단어장 목록 맨 위 */}
         <button
           onClick={() => navigate("/dictionary")}
-          className="w-full text-left relative rounded-xl bg-card px-5 py-4 card-lift border border-border/60"
+          className="w-full text-left relative rounded-xl bg-sky-50 px-5 py-4 card-lift border border-sky-100"
         >
           <div className="flex items-center gap-3">
             <span className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shrink-0">
