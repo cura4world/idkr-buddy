@@ -414,7 +414,7 @@ export default function CategoryDetail() {
                   <button
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); speak(w.word); }}
-                    className="text-card-foreground/50 hover:text-primary p-1"
+                    className="text-card-foreground hover:text-card-foreground/70 p-1"
                   >
                     <Volume2 size={16} />
                   </button>
@@ -422,7 +422,7 @@ export default function CategoryDetail() {
                     <button
                       onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => { e.stopPropagation(); speak(w.example); }}
-                      className="text-sky-400 hover:text-sky-500 p-1"
+                      className="text-muted-foreground/70 hover:text-muted-foreground p-1"
                     >
                       <Volume2 size={16} />
                     </button>
