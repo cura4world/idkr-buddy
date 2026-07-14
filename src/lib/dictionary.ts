@@ -106,12 +106,24 @@ function arr<T>(v: unknown): T[] {
 }
 
 // 인도네시아어 단어를 받아 풍성한 사전 데이터를 생성합니다.
-export async function lookupWord(word: string): Promise<DictResult> {
+// ---- 입력 유형 판별 ----
+// 한글이 하나라도 있으면 한국어, 없으면 인도네시아어.
+// 공백으로 나눈 토큰이 2개 이하면 "단어", 3개 이상이면 "문장".
+export type InputKind = "id_word" | "id_sentence" | "ko_word" | "ko_sentence";
+
+export function detectInputKind(raw: string): InputKind {
+  const text = raw.trim();
+  const hasHangul = new RegExp("[\\uAC00-\\uD7A3\\u1100-\\u11FF\\u3130-\\u318F]").test(text);
+  const tokens = text.split(new RegExp("\\s+")).filter(Boolean);
+  const isSentence = tokens.length >= 3 || new RegExp("[.!?\\u2026]").test(text);
+  if (hasHangul) return isSentence ? "ko_sentence" : "ko_word";
+  return isSentence ? "id_sentence" : "id_word";
+}
+
+// ---- 공통 Gemini JSON 호출 ----
+async function callGeminiJSON(prompt: string, temperature = 0.4): Promise<Record<string, unknown>> {
   const apiKey = getGeminiApiKey();
   if (!apiKey) throw new Error("NO_API_KEY");
-
-  const trimmed = word.trim();
-  if (!trimmed) throw new Error("EMPTY_WORD");
 
   const endpoint =
     "https://generativelanguage.googleapis.com/v1beta/models/" +
@@ -123,9 +135,9 @@ export async function lookupWord(word: string): Promise<DictResult> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: buildPrompt(trimmed) }] }],
+      contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.4,
+        temperature,
         responseMimeType: "application/json",
       },
     }),
@@ -141,14 +153,20 @@ export async function lookupWord(word: string): Promise<DictResult> {
   const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   if (!text) throw new Error("EMPTY_RESPONSE");
 
-  let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(text);
+    return JSON.parse(text);
   } catch {
     const match = text.match(new RegExp("\\{[\\s\\S]*\\}"));
     if (!match) throw new Error("PARSE_FAILED");
-    parsed = JSON.parse(match[0]);
+    return JSON.parse(match[0]);
   }
+}
+
+export async function lookupWord(word: string): Promise<DictResult> {
+  const trimmed = word.trim();
+  if (!trimmed) throw new Error("EMPTY_WORD");
+
+  const parsed = await callGeminiJSON(buildPrompt(trimmed));
 
   return {
     word: (parsed.word || trimmed).toString().trim(),
@@ -249,4 +267,151 @@ export async function generateWordImage(word: string, meaning: string): Promise<
   if (lastStatus === 429) throw new Error("RATE_LIMIT");
   if (lastStatus === 200) throw new Error("NO_IMAGE");
   throw new Error("IMAGE_FAILED_" + lastStatus);
+}
+
+// ============================================================
+// (2) 인도네시아어 문장 → 한국어 번역 + 끊어읽기 + 어려운 단어
+// ============================================================
+export interface SentenceChunk {
+  id: string;   // 인니어 조각 (호흡 단위)
+  ko: string;   // 그 조각의 한국어 뜻
+}
+export interface HardWord {
+  word: string; // 인니어 단어
+  meaning: string; // 간략한 한국어 뜻
+}
+export interface IdSentenceResult {
+  original: string;    // 입력 문장 (정제)
+  translation: string; // 전체 한국어 번역
+  chunks: SentenceChunk[]; // 끊어읽기 (호흡 단위, 꼭 필요한 것만)
+  hardWords: HardWord[];   // 어려운 단어 간략 뜻
+}
+
+export async function analyzeIdSentence(sentence: string): Promise<IdSentenceResult> {
+  const trimmed = sentence.trim();
+  if (!trimmed) throw new Error("EMPTY_WORD");
+
+  const prompt =
+    "당신은 한국인 학습자를 위한 인도네시아어 문장 분석기입니다.\n" +
+    "아래 인도네시아어 문장을 분석해 JSON으로만 출력하세요. 설명은 모두 한국어.\n\n" +
+    '문장: "' + trimmed + '"\n\n' +
+    "출력 형식:\n" +
+    "{\n" +
+    '  "original": "입력 문장을 그대로(맞춤법만 정제)",\n' +
+    '  "translation": "자연스러운 한국어 전체 번역",\n' +
+    '  "chunks": [{"id": "인니어 조각", "ko": "그 조각의 한국어 뜻"}],\n' +
+    '  "hardWords": [{"word": "인니어 단어", "meaning": "간략한 한국어 뜻"}]\n' +
+    "}\n\n" +
+    "주의:\n" +
+    "- chunks는 '끊어읽기'입니다. 실제로 소리 내어 읽을 때 숨쉬는 호흡 단위로만 나누세요.\n" +
+    "- 절대 단어 하나하나로 쪼개지 마세요. 꼭 필요한 최소한의 의미 덩어리로만 (보통 문장당 2~4조각).\n" +
+    "- hardWords는 초중급 학습자가 모를 만한 단어만 골라 넣으세요. 쉬운 단어는 제외.\n";
+
+  const parsed = await callGeminiJSON(prompt);
+  return {
+    original: (parsed.original || trimmed).toString().trim(),
+    translation: (parsed.translation || "").toString().trim(),
+    chunks: arr<SentenceChunk>(parsed.chunks).map((c) => ({
+      id: (c?.id || "").toString().trim(),
+      ko: (c?.ko || "").toString().trim(),
+    })).filter((c) => c.id),
+    hardWords: arr<HardWord>(parsed.hardWords).map((h) => ({
+      word: (h?.word || "").toString().trim(),
+      meaning: (h?.meaning || "").toString().trim(),
+    })).filter((h) => h.word),
+  };
+}
+
+// ============================================================
+// (3) 한국어 단어 → 대응 인니어 단어들 (빈도순) + 뜻/뉘앙스/상황/발음
+// ============================================================
+export interface KoWordCandidate {
+  id: string;         // 인도네시아어 단어
+  pron: string;       // 발음(한글 근사 표기)
+  meaning: string;    // 간략한 뜻
+  nuance: string;     // 뉘앙스
+  situation: string;  // 사용 상황
+}
+export interface KoWordResult {
+  query: string;              // 입력 한국어 단어
+  candidates: KoWordCandidate[]; // 빈도순
+}
+
+export async function lookupKoWord(word: string): Promise<KoWordResult> {
+  const trimmed = word.trim();
+  if (!trimmed) throw new Error("EMPTY_WORD");
+
+  const prompt =
+    "당신은 한국인 학습자를 위한 한국어→인도네시아어 사전입니다.\n" +
+    "아래 한국어 단어에 대응하는 인도네시아어 단어들을 JSON으로만 출력하세요. 설명은 모두 한국어.\n\n" +
+    '단어: "' + trimmed + '"\n\n' +
+    "출력 형식:\n" +
+    "{\n" +
+    '  "query": "입력 단어",\n' +
+    '  "candidates": [\n' +
+    '    {"id": "인니어 단어", "pron": "발음(한글 근사 표기)", "meaning": "간략한 뜻", "nuance": "뉘앙스", "situation": "이 단어를 쓰는 상황"}\n' +
+    "  ]\n" +
+    "}\n\n" +
+    "주의:\n" +
+    "- candidates는 실제 인도네시아에서 많이 쓰이는 순서(빈도순)로 정렬하세요.\n" +
+    "- 2~5개 정도. 뜻이 갈리면 각각의 뉘앙스/상황을 분명히 구분해 설명하세요.\n" +
+    "- pron은 한국인이 읽기 쉽게 한글로 근사 표기 (예: bicara → 비짜라).\n";
+
+  const parsed = await callGeminiJSON(prompt);
+  return {
+    query: (parsed.query || trimmed).toString().trim(),
+    candidates: arr<KoWordCandidate>(parsed.candidates).map((c) => ({
+      id: (c?.id || "").toString().trim(),
+      pron: (c?.pron || "").toString().trim(),
+      meaning: (c?.meaning || "").toString().trim(),
+      nuance: (c?.nuance || "").toString().trim(),
+      situation: (c?.situation || "").toString().trim(),
+    })).filter((c) => c.id),
+  };
+}
+
+// ============================================================
+// (4) 한국어 문장 → 인니어 번역 (문어체 / 구어체, 발음 포함)
+// ============================================================
+export interface KoSentenceVariant {
+  id: string;   // 인니어 문장
+  pron: string; // 발음(한글 근사 표기)
+  note: string; // 짧은 설명 (선택)
+}
+export interface KoSentenceResult {
+  query: string;         // 입력 한국어 문장
+  formal: KoSentenceVariant;   // 문어체
+  casual: KoSentenceVariant;   // 구어체
+}
+
+export async function translateKoSentence(sentence: string): Promise<KoSentenceResult> {
+  const trimmed = sentence.trim();
+  if (!trimmed) throw new Error("EMPTY_WORD");
+
+  const prompt =
+    "당신은 한국인 학습자를 위한 한국어→인도네시아어 번역기입니다.\n" +
+    "아래 한국어 문장을 인도네시아어로 번역해 JSON으로만 출력하세요. 설명은 한국어.\n\n" +
+    '문장: "' + trimmed + '"\n\n' +
+    "출력 형식:\n" +
+    "{\n" +
+    '  "query": "입력 문장",\n' +
+    '  "formal": {"id": "문어체 인니어 문장", "pron": "발음(한글 근사)", "note": "짧은 설명"},\n' +
+    '  "casual": {"id": "구어체 인니어 문장", "pron": "발음(한글 근사)", "note": "짧은 설명"}\n' +
+    "}\n\n" +
+    "주의:\n" +
+    "- formal은 격식체/문어체(뉴스·공식 상황), casual은 일상 대화체로 자연스럽게.\n" +
+    "- pron은 한국인이 읽기 쉽게 한글로 근사 표기.\n" +
+    "- note는 한 줄 이내, 언제 쓰는지 간단히. 불필요하면 빈 문자열.\n";
+
+  const parsed = await callGeminiJSON(prompt);
+  const variant = (v: any): KoSentenceVariant => ({
+    id: (v?.id || "").toString().trim(),
+    pron: (v?.pron || "").toString().trim(),
+    note: (v?.note || "").toString().trim(),
+  });
+  return {
+    query: (parsed.query || trimmed).toString().trim(),
+    formal: variant(parsed.formal),
+    casual: variant(parsed.casual),
+  };
 }
