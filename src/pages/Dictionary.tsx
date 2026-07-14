@@ -254,7 +254,7 @@ const Dictionary = () => {
                   {idSentence.hardWords.map((h, i) => (
                     <li key={i} className="flex gap-2 min-w-0">
                       <span className="text-gray-400">•</span>
-                      <span className="min-w-0 break-words"><span className="font-semibold text-gray-900">{h.word}</span> — {h.meaning}</span>
+                      <span className="min-w-0 break-words"><span className="font-semibold text-gray-900">{h.word}</span> <span className="text-xs">{h.meaning}</span></span>
                     </li>
                   ))}
                 </ul>
@@ -295,7 +295,7 @@ const Dictionary = () => {
                         <Volume2 size={14} />
                       </button>
                     </div>
-                    {c.exampleKo && <p className="text-sm text-gray-500 break-words">{c.exampleKo}</p>}
+                    {c.exampleKo && <p className="text-xs text-gray-500 break-words">{c.exampleKo}</p>}
                   </div>
                 )}
               </div>
@@ -332,7 +332,7 @@ const Dictionary = () => {
                   {koSentence.hardWords.map((h, i) => (
                     <li key={i} className="flex gap-2 min-w-0">
                       <span className="text-gray-400">•</span>
-                      <span className="min-w-0 break-words"><span className="font-semibold text-gray-900">{h.word}</span> — {h.meaning}</span>
+                      <span className="min-w-0 break-words"><span className="font-semibold text-gray-900">{h.word}</span> <span className="text-xs">{h.meaning}</span></span>
                     </li>
                   ))}
                 </ul>
