@@ -210,6 +210,9 @@ const Dictionary = () => {
     setHistory(loadHistory());
   };
 
+  // 초기(홈) 화면 여부: 결과·로딩·에러가 전혀 없는 상태
+  const isHome = !loading && !error && !result && !idSentence && !koWord && !koSentence;
+
   const imgReqId = useRef(0);
 
   const imgErrorMessage = (code: string): string => {
@@ -273,7 +276,7 @@ const Dictionary = () => {
   };
 
   return (
-    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
+    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background flex flex-col">
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-primary text-white px-4 py-3 flex items-center gap-3">
         <button
@@ -293,7 +296,7 @@ const Dictionary = () => {
         </button>
       </header>
 
-      <div className="px-4 py-4">
+      <div className={isHome ? "px-4 pt-4 pb-0 flex-1 min-h-0 flex flex-col" : "px-4 py-4"}>
         {/* 검색창 */}
         <div className="flex items-center gap-2 mb-4 min-w-0">
           <div className="flex-1 min-w-0 flex items-center gap-2 bg-card border border-border rounded-full px-4 py-2.5">
@@ -334,25 +337,25 @@ const Dictionary = () => {
           </div>
         )}
 
-        {/* 초기 화면: 안내 문구 + 최근 검색 리스트 */}
-        {!loading && !error && !result && !idSentence && !koWord && !koSentence && (
-          <div>
+        {/* 초기 화면: 안내 문구 + 최근 검색 (바닥까지 이어지는 시트) */}
+        {isHome && (
+          <div className="flex-1 min-h-0 flex flex-col">
             <div className="text-center py-8 text-white/60">
               <Search size={32} className="mx-auto mb-3 opacity-60" />
               <p className="text-sm">인니어·한국어 단어나 문장을 검색해보세요</p>
             </div>
             {history.length > 0 && (
-              <div>
-                <p className="text-xs text-white/50 mb-2 px-1">최근 검색</p>
+              <>
+                <p className="text-xs text-white mb-2 px-1 font-gothic">최근 검색</p>
                 <ul
-                  className="bg-card rounded-xl border border-border/60 max-h-[55vh] overflow-y-auto scroll-smooth"
+                  className="flex-1 min-h-0 -mx-4 bg-card rounded-t-2xl overflow-y-auto scroll-smooth"
                   style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
                 >
                   {history.map((h, i) => (
                     <li key={i}>
                       <button
                         onClick={() => handleSearch(h)}
-                        className={`w-full text-left px-4 py-2 flex items-center gap-2 hover:bg-black/5 ${i > 0 ? "border-t border-gray-100" : ""}`}
+                        className={`w-full text-left px-5 py-2 flex items-center gap-2 hover:bg-black/5 ${i > 0 ? "border-t border-gray-100" : ""}`}
                       >
                         <Search size={14} className="text-gray-400 shrink-0" />
                         <span className="text-sm text-gray-900 break-words min-w-0 font-gothic">{h}</span>
@@ -360,7 +363,7 @@ const Dictionary = () => {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </>
             )}
           </div>
         )}
