@@ -417,3 +417,31 @@ export function reorderCategories(fromIndex: number, toIndex: number) {
   categories.splice(toIndex, 0, moved);
   saveCategories(categories);
 }
+
+// 필터된 목록(예: 폴더 안)에서 안전하게 순서를 바꾸기 위한 ID 기반 함수.
+// 전체 배열에서 두 단어장의 실제 위치를 찾아 이동하므로 인덱스가 어긋나지 않습니다.
+export function reorderCategoryById(movedId: string, targetId: string) {
+  if (movedId === targetId) return;
+  const categories = getCategories();
+  const from = categories.findIndex((c) => c.id === movedId);
+  const to = categories.findIndex((c) => c.id === targetId);
+  if (from < 0 || to < 0) return;
+  const [moved] = categories.splice(from, 1);
+  const insertAt = categories.findIndex((c) => c.id === targetId);
+  categories.splice(from < to ? insertAt + 1 : insertAt, 0, moved);
+  saveCategories(categories);
+}
+
+// 폴더 안에서 맨 위/맨 아래로 (주어진 목록 범위 안에서만 이동)
+export function moveCategoryToEdgeWithin(id: string, ids: string[], toTop: boolean) {
+  const categories = getCategories();
+  const from = categories.findIndex((c) => c.id === id);
+  if (from < 0) return;
+  const edgeId = toTop ? ids[0] : ids[ids.length - 1];
+  if (!edgeId || edgeId === id) return;
+  const [moved] = categories.splice(from, 1);
+  const edgeIdx = categories.findIndex((c) => c.id === edgeId);
+  if (edgeIdx < 0) { categories.splice(from, 0, moved); return; }
+  categories.splice(toTop ? edgeIdx : edgeIdx + 1, 0, moved);
+  saveCategories(categories);
+}
