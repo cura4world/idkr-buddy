@@ -89,6 +89,12 @@ jobs:
           plugins {
               id 'com.android.application'
           }
+
+          // 빌드할 때마다 versionCode를 올려야 폰에서 업데이트 설치가 됩니다.
+          // GitHub Actions의 실행 번호를 사용하고, 로컬 빌드 등에서는 1을 씁니다.
+          def runNumber = System.getenv('GITHUB_RUN_NUMBER')
+          def appVersionCode = runNumber ? runNumber.toInteger() : 1
+
           android {
               namespace 'io.github.cura4world.twa'
               compileSdk 34
@@ -96,8 +102,8 @@ jobs:
                   applicationId 'io.github.cura4world.twa'
                   minSdk 21
                   targetSdk 34
-                  versionCode 1
-                  versionName '1.0.0'
+                  versionCode appVersionCode
+                  versionName '1.0.' + appVersionCode
               }
               signingConfigs {
                   release {
@@ -375,6 +381,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK
