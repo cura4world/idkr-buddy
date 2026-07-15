@@ -191,24 +191,24 @@ const Wordbooks = () => {
       <header className="flex items-center gap-2 mb-6 pr-2">
         <button
           onClick={() => navigate("/")}
-          className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-2 shrink-0"
+          className="text-white hover:text-white/70 w-8 h-8 flex items-center justify-center -ml-2 shrink-0"
           title="뒤로"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={18} />
         </button>
-        <h1 className="flex-1 min-w-0 text-xl font-semibold font-body tracking-tight text-white truncate">
+        <h1 className="flex-1 min-w-0 text-lg font-semibold font-body tracking-tight text-white truncate">
           인도네시아어 단어장
         </h1>
         <button
           onClick={handleRestore}
-          className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center shrink-0"
+          className="text-white hover:text-white/70 w-8 h-8 flex items-center justify-center shrink-0"
           title="공용 단어장 복구"
         >
-          <RotateCcw size={18} />
+          <RotateCcw size={16} />
         </button>
         <button
           onClick={() => setAddCatOpen(true)}
-          className="text-white hover:text-white/70 text-3xl font-light leading-none w-10 h-10 shrink-0"
+          className="text-white hover:text-white/70 text-2xl font-light leading-none w-9 h-9 shrink-0"
           title="단어장 추가"
         >
           +
