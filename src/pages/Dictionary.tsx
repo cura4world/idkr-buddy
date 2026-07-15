@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home, Mic } from "lucide-react";
+import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home, Mic, ScrollText } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
@@ -126,6 +126,10 @@ function removeHistory(term: string): string[] {
 
 const Dictionary = () => {
   const navigate = useNavigate();
+  // 이야기 카드의 "사전에서 보기"로 진입했는지 (돌아가기 플로팅 버튼 표시)
+  const [fromStory] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get("from") === "story"; } catch (e) { return false; }
+  });
   const [query, setQuery] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory());
   const [loading, setLoading] = useState(false);
@@ -411,6 +415,16 @@ const Dictionary = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 이야기로 돌아가기 플로팅 버튼 */}
+      {fromStory && (
+        <button
+          onClick={() => navigate("/story")}
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
+        >
+          <ScrollText size={16} /> 이야기로
+        </button>
+      )}
 
       <div className={isHome ? "px-4 pt-4 pb-0 flex-1 min-h-0 flex flex-col" : "px-4 py-4"}>
         {/* 검색창 */}
@@ -778,23 +792,4 @@ const Dictionary = () => {
               <button
                 onClick={handleSaveToWordbook}
                 disabled={saved}
-                className={`w-full flex items-center justify-center gap-2 rounded-full py-3 text-sm font-medium transition-colors ${
-                  saved
-                    ? "bg-gray-100 text-gray-400"
-                    : "bg-primary text-white hover:bg-primary/90"
-                }`}
-              >
-                {saved ? <><Check size={16} /> 저장됨</> : <><Plus size={16} /> 내 단어장에 보내기</>}
-              </button>
-              <p className="text-xs text-gray-400 text-center mt-2">
-                단어·뜻·예문이 내 단어장에 저장됩니다
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default Dictionary;
+                className={`w-full flex items-center justi
