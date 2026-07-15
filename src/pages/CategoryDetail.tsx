@@ -332,7 +332,7 @@ export default function CategoryDetail() {
       </button>
       <div className="sticky top-0 z-30 bg-background -mx-4 px-4 pt-2 pb-3 mb-3">
         <header className="mb-2">
-          <h1 className="text-xl font-semibold font-body flex items-center gap-2">
+          <h1 className="text-lg font-semibold font-body flex items-center gap-2">
             <span>{category.emoji}</span>
             <span>{category.name}</span>
           </h1>
