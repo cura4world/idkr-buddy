@@ -1,0 +1,100 @@
+﻿pekerjaan,직업/일,Pekerjaannya membuatnya sibuk dari pagi hingga malam.,그의 일이 아침부터 밤까지 그를 바쁘게 만든다.
+kantor,사무실/회사,Kantor barunya terletak di pusat kota yang strategis.,그의 새 사무실은 전략적인 도심에 위치해 있다.
+pegawai,직원/사원,Pegawai baru itu bekerja dengan penuh semangat dan dedikasi.,그 신입 직원은 열정과 헌신으로 일한다.
+guru,선생님,Guru yang baik tidak hanya mengajar ilmu tetapi juga membentuk karakter.,좋은 선생님은 지식만 가르치는 게 아니라 인격도 형성시킨다.
+dokter,의사,Dokter itu melayani pasien dengan penuh kasih dan profesional.,그 의사는 사랑과 전문성으로 환자를 돌본다.
+perawat,간호사,Perawat yang baik selalu memberikan perhatian lebih kepada pasien.,좋은 간호사는 항상 환자에게 더 많은 관심을 기울인다.
+polisi,경찰,Polisi itu bertugas menjaga keamanan dan ketertiban masyarakat.,그 경찰은 사회의 안전과 질서를 유지하는 임무를 맡고 있다.
+tentara,군인,Tentara itu berjaga di perbatasan negara setiap hari.,그 군인은 매일 국경에서 경계 근무를 선다.
+petani,농부,Petani itu bekerja keras di sawah sejak subuh.,그 농부는 새벽부터 논에서 열심히 일한다.
+nelayan,어부,Nelayan itu melaut setiap hari untuk menghidupi keluarganya.,그 어부는 가족을 부양하기 위해 매일 바다로 나간다.
+pedagang,상인/장사꾼,Pedagang kaki lima itu menjual makanan di pinggir jalan.,그 노점상인은 길가에서 음식을 판다.
+pengusaha,기업인/사업가,Pengusaha muda itu berhasil membangun bisnisnya dari nol.,그 젊은 사업가는 맨손에서 사업을 일구는 데 성공했다.
+karyawan,직원/사원,Karyawan perusahaan itu mendapat bonus akhir tahun.,그 회사 직원은 연말 보너스를 받았다.
+manajer,매니저/관리자,Manajernya selalu mendukung ide-ide kreatif dari timnya.,그의 매니저는 항상 팀의 창의적인 아이디어를 지지한다.
+pemimpin,지도자/리더,Pemimpin yang baik melayani bukan memerintah.,좋은 지도자는 군림하지 않고 섬긴다.
+presiden,대통령,Presiden baru itu dilantik dengan upacara yang khidmat.,새 대통령은 엄숙한 의식과 함께 취임했다.
+menteri,장관,Menteri pendidikan itu mengumumkan kebijakan baru tentang kurikulum.,그 교육부 장관은 교육과정에 관한 새로운 정책을 발표했다.
+hakim,판사,Hakim itu memutuskan perkara dengan bijaksana dan adil.,그 판사는 사건을 지혜롭고 공정하게 판결했다.
+pengacara,변호사,Pengacara itu membela kliennya dengan sangat gigih.,그 변호사는 의뢰인을 매우 끈질기게 변호했다.
+wartawan,기자,Wartawan itu meliput berita dari daerah konflik yang berbahaya.,그 기자는 위험한 분쟁 지역의 뉴스를 취재했다.
+penulis,작가,Penulis itu menghabiskan waktu berjam-jam untuk menyempurnakan tulisannya.,그 작가는 글을 완성하기 위해 몇 시간씩 시간을 보낸다.
+seniman,예술가,Seniman itu mengekspresikan perasaannya melalui lukisan.,그 예술가는 그림을 통해 자신의 감정을 표현한다.
+musisi,음악가,Musisi berbakat itu tampil memukau di depan ribuan penonton.,그 재능 있는 음악가는 수천 명의 관중 앞에서 매혹적으로 공연했다.
+atlet,운동선수,Atlet itu berlatih keras setiap hari untuk meraih prestasi.,그 운동선수는 성취를 이루기 위해 매일 열심히 훈련한다.
+sopir,운전기사,Sopir taksi itu sangat sopan dan mengenal jalan dengan baik.,그 택시 기사는 매우 예의 바르고 길을 잘 안다.
+pilot,조종사/파일럿,Pilot berpengalaman itu mendaratkan pesawat dengan mulus.,그 경험 많은 조종사는 비행기를 부드럽게 착륙시켰다.
+chef,요리사,Chef berbintang itu menciptakan menu baru yang menakjubkan.,그 스타 셰프는 놀라운 새 메뉴를 만들어 냈다.
+arsitek,건축가,Arsitek itu merancang gedung yang indah dan fungsional.,그 건축가는 아름답고 기능적인 건물을 설계했다.
+insinyur,엔지니어,Insinyur muda itu berhasil memecahkan masalah teknis yang rumit.,그 젊은 엔지니어는 복잡한 기술 문제를 해결하는 데 성공했다.
+ilmuwan,과학자,Ilmuwan itu mendedikasikan hidupnya untuk penelitian.,그 과학자는 연구에 자신의 삶을 바쳤다.
+masyarakat,사회/대중,Masyarakat harus bersatu untuk menghadapi tantangan bersama.,사회는 공동의 도전에 맞서기 위해 단결해야 한다.
+warga,시민/주민,Warga setempat bergotong-royong membersihkan lingkungan.,지역 주민들이 환경 청소를 위해 협력했다.
+pemerintah,정부,Pemerintah mengeluarkan kebijakan baru untuk meningkatkan kesejahteraan.,정부는 복지 향상을 위한 새로운 정책을 발표했다.
+negara,국가/나라,Negara yang kuat adalah negara yang rakyatnya bersatu.,강한 나라는 국민이 단결된 나라이다.
+bangsa,민족/국민,Bangsa yang besar adalah bangsa yang menghargai sejarahnya.,위대한 민족은 자신의 역사를 소중히 여기는 민족이다.
+kota,도시,Kota Jakarta adalah kota terbesar di Indonesia.,자카르타 시는 인도네시아에서 가장 큰 도시이다.
+desa,마을/촌,Desa kecil itu menyimpan keindahan yang tersembunyi.,그 작은 마을은 숨겨진 아름다움을 간직하고 있다.
+jalan,길/도로,Jalan raya itu sangat macet di jam sibuk pagi hari.,그 대로는 아침 러시아워에 매우 막힌다.
+pasar,시장,Pasar tradisional itu ramai dengan aktivitas pedagang sejak subuh.,그 전통 시장은 새벽부터 상인들의 활동으로 북적인다.
+toko,가게,Toko buku itu menjual berbagai koleksi buku yang lengkap.,그 서점은 다양한 종류의 책 컬렉션을 판매한다.
+rumah sakit,병원,Rumah sakit itu dilengkapi dengan peralatan medis yang modern.,그 병원은 현대적인 의료 장비를 갖추고 있다.
+sekolah,학교,Sekolah adalah tempat menanamkan ilmu dan karakter.,학교는 지식과 인격을 심어주는 곳이다.
+masjid,모스크/이슬람 사원,Masjid itu selalu ramai pada waktu salat Jumat.,그 모스크는 금요 예배 시간에 항상 붐빈다.
+gereja,교회(건물),Gereja tua itu berdiri kokoh di tengah kota selama berabad-abad.,그 오래된 교회는 수백 년 동안 도심에 굳건히 서 있다.
+jembatan,다리(교량),Jembatan megah itu menghubungkan dua kota yang terpisah oleh sungai.,그 웅장한 다리는 강으로 분리된 두 도시를 연결한다.
+bandara,공항,Bandara internasional itu melayani jutaan penumpang setiap tahun.,그 국제공항은 매년 수백만 명의 승객을 처리한다.
+pelabuhan,항구,Pelabuhan itu sibuk dengan kapal-kapal besar yang bersandar.,그 항구는 정박한 대형 선박들로 분주하다.
+stasiun,역(기차/버스),Stasiun kereta itu dipenuhi penumpang yang hendak mudik.,그 기차역은 귀성하려는 승객들로 가득했다.
+terminal,터미널,Terminal bus itu direnovasi menjadi lebih modern dan nyaman.,그 버스 터미널은 더 현대적이고 편리하게 리모델링되었다.
+mobil,자동차,Mobil barunya sangat irit bahan bakar dan ramah lingkungan.,그의 새 자동차는 연료를 매우 적게 쓰고 친환경적이다.
+motor,오토바이,Motor adalah kendaraan paling umum di kota-kota Indonesia.,오토바이는 인도네시아 도시에서 가장 흔한 교통수단이다.
+bus,버스,Bus kota itu mengangkut ratusan penumpang setiap harinya.,그 시내버스는 매일 수백 명의 승객을 운송한다.
+kereta,기차,Kereta cepat itu menghubungkan dua kota dalam waktu singkat.,그 고속열차는 짧은 시간에 두 도시를 연결한다.
+pesawat,비행기,Pesawat itu lepas landas tepat waktu tanpa keterlambatan.,비행기는 지연 없이 정시에 이륙했다.
+kapal,배/선박,Kapal feri itu berlayar mengarungi selat setiap hari.,그 여객선은 매일 해협을 항해한다.
+sepeda,자전거,Ia bersepeda setiap pagi sebagai olahraga rutin.,그는 규칙적인 운동으로 매일 아침 자전거를 탄다.
+ilmu,학문/지식,Ilmu yang benar harus membawa manfaat bagi sesama.,올바른 학문은 이웃에게 유익을 가져와야 한다.
+pendidikan,교육,Pendidikan adalah investasi terbaik untuk masa depan.,교육은 미래를 위한 최고의 투자이다.
+universitas,대학교,Universitas itu dikenal sebagai salah satu yang terbaik di Asia.,그 대학교는 아시아 최고 중 하나로 알려져 있다.
+pelajaran,수업/과목,Pelajaran matematika adalah pelajaran favoritnya di sekolah.,수학 수업은 학교에서 그가 가장 좋아하는 과목이다.
+buku,책,Buku adalah jendela dunia yang membuka wawasan.,책은 시야를 열어주는 세상의 창이다.
+ujian,시험,Ia belajar keras untuk menghadapi ujian akhir semester.,그는 기말시험에 대비하기 위해 열심히 공부한다.
+nilai,성적/점수,Nilainya selalu tinggi karena ia rajin belajar setiap hari.,그는 매일 열심히 공부하기 때문에 성적이 항상 높다.
+perpustakaan,도서관,Perpustakaan adalah tempat paling tenang untuk belajar.,도서관은 공부하기에 가장 조용한 곳이다.
+kelas,교실/학급,Kelasnya selalu ramai dengan diskusi yang menarik.,그의 교실은 항상 흥미로운 토론으로 활기차다.
+bahasa,언어,Bahasa adalah alat komunikasi yang menghubungkan manusia.,언어는 사람들을 연결하는 소통 도구이다.
+budaya,문화,Budaya Indonesia sangat beragam dan kaya.,인도네시아 문화는 매우 다양하고 풍요롭다.
+tradisi,전통,Tradisi leluhur harus dilestarikan agar tidak hilang.,조상의 전통은 사라지지 않도록 보전되어야 한다.
+seni,예술,Seni adalah bahasa universal yang melampaui batas budaya.,예술은 문화의 경계를 초월하는 보편적인 언어이다.
+musik,음악,Musik dapat menyentuh hati dan mengobati luka jiwa.,음악은 마음을 감동시키고 영혼의 상처를 치유할 수 있다.
+tari,춤/무용,Tari tradisional Indonesia sangat anggun dan penuh makna.,인도네시아 전통 춤은 매우 우아하고 의미로 가득하다.
+lukisan,그림/회화,Lukisan itu mengisahkan kehidupan masyarakat pedesaan yang sederhana.,그 그림은 소박한 농촌 사람들의 삶을 이야기한다.
+film,영화,Film itu memenangkan banyak penghargaan bergengsi internasional.,그 영화는 많은 권위 있는 국제 상을 수상했다.
+berita,뉴스/소식,Berita terkini dapat diakses kapan saja melalui internet.,최신 뉴스는 인터넷을 통해 언제든지 접근할 수 있다.
+internet,인터넷,Internet mengubah cara manusia berkomunikasi dan bekerja.,인터넷은 인간이 소통하고 일하는 방식을 바꿨다.
+teknologi,기술,Teknologi terus berkembang dengan pesat mengubah dunia.,기술은 빠르게 발전하며 세상을 바꾸고 있다.
+komputer,컴퓨터,Komputer adalah alat yang sangat penting di era modern ini.,컴퓨터는 이 현대 시대에 매우 중요한 도구이다.
+ponsel,휴대폰,Ponsel pintar telah menjadi bagian tak terpisahkan dari kehidupan.,스마트폰은 삶에서 뗄 수 없는 부분이 되었다.
+media sosial,소셜 미디어,Media sosial memiliki dampak besar pada kehidupan generasi muda.,소셜 미디어는 젊은 세대의 삶에 큰 영향을 미친다.
+uang,돈/화폐,Uang adalah alat tukar tetapi bukan ukuran kebahagiaan sejati.,돈은 교환 수단이지만 진정한 행복의 척도는 아니다.
+harga,가격,Harga kebutuhan pokok naik drastis dalam beberapa bulan terakhir.,생필품 가격이 최근 몇 달 사이에 급격히 올랐다.
+pajak,세금,Pajak adalah kewajiban setiap warga negara yang bertanggung jawab.,세금은 책임 있는 모든 시민의 의무이다.
+pakaian,의복/옷,Pakaian adat setiap daerah di Indonesia sangat beragam.,인도네시아 각 지역의 전통 의복은 매우 다양하다.
+agama,종교,Agama mengajarkan nilai-nilai kebaikan dan kasih kepada sesama.,종교는 이웃을 향한 선함과 사랑의 가치를 가르친다.
+doa,기도,Doa adalah cara kita berbicara langsung kepada Tuhan.,기도는 우리가 하나님께 직접 말씀드리는 방법이다.
+ibadah,예배/신앙 행위,Ibadah yang sejati harus berasal dari hati yang tulus.,진정한 예배는 진실한 마음에서 나와야 한다.
+hukum,법/법률,Hukum harus ditegakkan secara adil bagi semua orang.,법은 모든 사람에게 공정하게 집행되어야 한다.
+aturan,규칙/규정,Aturan dibuat untuk menjaga ketertiban bersama.,규칙은 공동의 질서를 유지하기 위해 만들어진다.
+keadilan,정의/공의,Keadilan adalah fondasi dari masyarakat yang beradab.,정의는 문명 사회의 토대이다.
+kebebasan,자유,Kebebasan yang bertanggung jawab adalah kebebasan yang sejati.,책임 있는 자유가 진정한 자유이다.
+perdamaian,평화/화해,Perdamaian hanya bisa terwujud jika ada saling pengertian.,평화는 상호 이해가 있을 때만 실현될 수 있다.
+persatuan,단결/통합,Persatuan adalah kekuatan terbesar yang dimiliki suatu bangsa.,단결은 한 민족이 가진 가장 큰 힘이다.
+kemerdekaan,독립/자유,Kemerdekaan Indonesia diproklamasikan pada tanggal tujuh belas Agustus.,인도네시아 독립은 8월 17일에 선포되었다.
+sejarah,역사,Sejarah adalah cermin agar kita tidak mengulang kesalahan masa lalu.,역사는 우리가 과거의 실수를 반복하지 않기 위한 거울이다.
+kebudayaan,문화/문명,Kebudayaan yang kaya harus dijaga dan diwariskan kepada generasi berikutnya.,풍요로운 문화는 다음 세대에 보전되고 전승되어야 한다.
+penemuan,발견/발명,Penemuan vaksin telah menyelamatkan jutaan jiwa.,백신의 발명은 수백만 명의 생명을 구했다.
+penelitian,연구,Penelitian yang mendalam diperlukan sebelum mengambil kesimpulan.,결론을 내리기 전에 깊은 연구가 필요하다.
+kesimpulan,결론,Kesimpulan itu diambil berdasarkan bukti-bukti yang kuat.,그 결론은 강력한 증거들을 바탕으로 도출되었다.
+kebijakan,정책,Kebijakan baru itu mendapat sambutan positif dari masyarakat.,그 새 정책은 사회로부터 긍정적인 반응을 얻었다.
+tantangan,도전/과제,Setiap tantangan adalah kesempatan untuk tumbuh dan berkembang.,모든 도전은 성장하고 발전할 기회이다.
