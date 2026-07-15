@@ -760,11 +760,11 @@ const Dictionary = () => {
               </>
             )}
 
-            {/* 단어 관련 배경 */}
+            {/* 단어 배경 */}
             {result.etymology.length > 0 && (
               <>
                 <Divider />
-                <SectionTitle>단어 관련 배경</SectionTitle>
+                <SectionTitle>단어 배경</SectionTitle>
                 <ul className="space-y-1.5 text-xs text-gray-800">
                   {result.etymology.map((e, i) => (
                     <li key={i} className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words">{e}</span></li>
