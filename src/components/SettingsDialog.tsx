@@ -9,6 +9,7 @@ import CSVImportDialog from "@/components/CSVImportDialog";
 import { Copy, Download, Upload, Trash2, Minus, Plus, Type } from "lucide-react";
 import { toast } from "sonner";
 import { clearStoredImages, countStoredImages } from "@/lib/imageStore";
+import { clearLookupWords, countLookupWords } from "@/lib/wordStore";
 import { getFontStep, getStepCount, stepFont } from "@/lib/fontScale";
 
 interface SettingsDialogProps {
@@ -41,13 +42,18 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   };
 
   const handleClearImages = async () => {
-    const n = await countStoredImages();
-    if (n === 0) {
-      toast("저장된 사전 이미지가 없습니다");
+    const imgN = await countStoredImages();
+    const wordN = await countLookupWords();
+    if (imgN === 0 && wordN === 0) {
+      toast("저장된 사전 이미지·단어가 없습니다");
       return;
     }
     await clearStoredImages();
-    toast(n + "장의 저장된 사전 이미지를 비웠습니다");
+    await clearLookupWords();
+    const parts: string[] = [];
+    if (imgN > 0) parts.push("이미지 " + imgN + "장");
+    if (wordN > 0) parts.push("단어 " + wordN + "개");
+    toast(parts.join(", ") + "를 비웠습니다");
   };
 
   // 개인 단어장 폴더 적용: 저장 후 새로고침해 즉시 동기화
@@ -200,7 +206,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             </Button>
             <Button type="button" variant="outline" className="w-full mt-2" onClick={handleClearImages}>
               <Trash2 className="w-4 h-4 mr-1.5" />
-              저장된 사전 이미지 비우기
+              저장된 사전 이미지·단어 비우기
             </Button>
           </div>
           <div className="border-t border-gray-200 pt-3">
