@@ -4,6 +4,7 @@ import { ArrowLeft, Sparkles, Volume2, Loader2, Plus, Check, BookOpen, X } from 
 import { toast } from "sonner";
 import { generateStory, quickLookupWord, StoryDifficulty } from "@/lib/story";
 import { saveStory, listStories, StoryRecord } from "@/lib/storyStore";
+import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWord } from "@/lib/store";
 import { hasGeminiApiKey } from "@/lib/gemini";
 
@@ -100,17 +101,19 @@ const Story = () => {
     }
   };
 
-  // 단어 탭 → 미니 팝업 (문맥 문장과 함께 조회, 카드 안에서는 캐시 재사용)
-  const openWordPopup = (rawToken: string, sentence: string) => {
+  // 단어 탭 → 미니 팝업
+  // 조회 순서: 카드 메모리 캐시 → 폰 저장소(IndexedDB) → Gemini API
+  const openWordPopup = async (rawToken: string, sentence: string) => {
     const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
     if (!word) return;
+    const key = word.toLowerCase();
     const reqId = ++popupReqId.current;
     setPopupWord(word);
     setPopupSentence(sentence);
     setPopupSaved(false);
 
-    // 이 카드에서 이미 찾아본 단어면 바로 표시 (API 호출 없음)
-    const cached = wordCache.current.get(word.toLowerCase());
+    // 1) 이 카드에서 이미 찾아본 단어
+    const cached = wordCache.current.get(key);
     if (cached) {
       setPopupMeaning(cached.meaning);
       setPopupInfo(cached.info);
@@ -123,9 +126,23 @@ const Story = () => {
     setPopupInfo("");
     setPopupSentenceKo("");
     setPopupLoading(true);
+
+    // 2) 폰에 저장된 단어 (예전에 다른 이야기에서 찾아본 것)
+    const stored = await getLookupWord(word);
+    if (stored && popupReqId.current === reqId) {
+      const rec = { meaning: stored.meaning, info: stored.info, sentenceKo: "" };
+      wordCache.current.set(key, rec);
+      setPopupMeaning(rec.meaning);
+      setPopupInfo(rec.info);
+      setPopupLoading(false);
+      return;
+    }
+
+    // 3) 새로 조회
     quickLookupWord(word, sentence)
       .then((r) => {
-        wordCache.current.set(word.toLowerCase(), r);
+        wordCache.current.set(key, r);
+        saveLookupWord(word, r.meaning, r.info); // 폰에 영구 저장
         if (popupReqId.current !== reqId) return;
         setPopupMeaning(r.meaning);
         setPopupInfo(r.info);
