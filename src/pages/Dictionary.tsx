@@ -792,4 +792,23 @@ const Dictionary = () => {
               <button
                 onClick={handleSaveToWordbook}
                 disabled={saved}
-                className={`w-full flex items-center justi
+                className={`w-full flex items-center justify-center gap-2 rounded-full py-3 text-sm font-medium transition-colors ${
+                  saved
+                    ? "bg-gray-100 text-gray-400"
+                    : "bg-primary text-white hover:bg-primary/90"
+                }`}
+              >
+                {saved ? <><Check size={16} /> 저장됨</> : <><Plus size={16} /> 내 단어장에 보내기</>}
+              </button>
+              <p className="text-xs text-gray-400 text-center mt-2">
+                단어·뜻·예문이 내 단어장에 저장됩니다
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Dictionary;
