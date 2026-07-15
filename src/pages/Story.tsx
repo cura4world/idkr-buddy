@@ -52,6 +52,8 @@ const Story = () => {
   const [popupSentenceKo, setPopupSentenceKo] = useState(""); // 단어장 저장용 (표시 안 함)
   const [popupSaved, setPopupSaved] = useState(false);
   const popupReqId = useRef(0);
+  // 카드 단위 단어 캐시: 같은 카드를 보는 동안 눌러본 단어는 즉시 표시 (카드를 나가면 리셋)
+  const wordCache = useRef(new Map<string, { meaning: string; info: string; sentenceKo: string }>());
 
   useEffect(() => {
     listStories().then((all) => {
@@ -85,6 +87,7 @@ const Story = () => {
       const data = await generateStory(difficulty, recent);
       const rec = await saveStory(data);
       setStories((prev) => [rec, ...prev]);
+      wordCache.current.clear(); // 새 카드 → 단어 캐시 초기화
       setCurrent(rec);
       setFlipped(false);
     } catch (e: any) {
@@ -97,20 +100,32 @@ const Story = () => {
     }
   };
 
-  // 단어 탭 → 미니 팝업 (문맥 문장과 함께 조회)
+  // 단어 탭 → 미니 팝업 (문맥 문장과 함께 조회, 카드 안에서는 캐시 재사용)
   const openWordPopup = (rawToken: string, sentence: string) => {
     const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
     if (!word) return;
     const reqId = ++popupReqId.current;
     setPopupWord(word);
     setPopupSentence(sentence);
+    setPopupSaved(false);
+
+    // 이 카드에서 이미 찾아본 단어면 바로 표시 (API 호출 없음)
+    const cached = wordCache.current.get(word.toLowerCase());
+    if (cached) {
+      setPopupMeaning(cached.meaning);
+      setPopupInfo(cached.info);
+      setPopupSentenceKo(cached.sentenceKo);
+      setPopupLoading(false);
+      return;
+    }
+
     setPopupMeaning("");
     setPopupInfo("");
     setPopupSentenceKo("");
-    setPopupSaved(false);
     setPopupLoading(true);
     quickLookupWord(word, sentence)
       .then((r) => {
+        wordCache.current.set(word.toLowerCase(), r);
         if (popupReqId.current !== reqId) return;
         setPopupMeaning(r.meaning);
         setPopupInfo(r.info);
@@ -190,7 +205,7 @@ const Story = () => {
       <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
         <header className="sticky top-0 z-30 bg-primary text-white px-4 py-3 flex items-center gap-3">
           <button
-            onClick={() => { setCurrent(null); setFlipped(false); setPopupWord(null); }}
+            onClick={() => { setCurrent(null); setFlipped(false); setPopupWord(null); wordCache.current.clear(); }}
             className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
             title="목록으로"
           >
@@ -382,7 +397,7 @@ const Story = () => {
               {stories.map((s) => (
                 <li key={s.id}>
                   <button
-                    onClick={() => { setCurrent(s); setFlipped(false); }}
+                    onClick={() => { wordCache.current.clear(); setCurrent(s); setFlipped(false); }}
                     className="w-full text-left bg-card border border-border/60 rounded-xl px-4 py-3 min-w-0"
                   >
                     <p className="text-sm font-semibold text-gray-900 break-words font-word">{s.title}</p>
