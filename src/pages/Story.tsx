@@ -54,7 +54,18 @@ const Story = () => {
   const popupReqId = useRef(0);
 
   useEffect(() => {
-    listStories().then(setStories);
+    listStories().then((all) => {
+      setStories(all);
+      // 사전에서 "이야기로" 버튼으로 돌아온 경우, 보던 이야기 카드를 다시 연다
+      try {
+        const rid = sessionStorage.getItem("story-return-id");
+        if (rid) {
+          sessionStorage.removeItem("story-return-id");
+          const found = all.find((s) => s.id === rid);
+          if (found) { setCurrent(found); setFlipped(false); }
+        }
+      } catch (e) {}
+    });
   }, []);
 
   const pickDifficulty = (d: StoryDifficulty) => {
@@ -125,7 +136,8 @@ const Story = () => {
 
   const openInDictionary = () => {
     if (!popupWord) return;
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord));
+    try { if (current) sessionStorage.setItem("story-return-id", current.id); } catch (e) {}
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=story");
   };
 
   const savePopupWord = () => {
@@ -189,9 +201,10 @@ const Story = () => {
 
         <div className="px-4 py-4">
           <div
-            onClick={() => setFlipped((f) => !f)}
-            className="bg-card border border-border/60 rounded-xl px-5 py-5 min-h-[72vh] content-bump select-none"
+            onClick={() => { if (flipped) setFlipped(false); }}
+            className="bg-card border border-border/60 rounded-xl px-5 py-5 min-h-[72vh] content-bump select-none flex gap-3"
           >
+            <div className="flex-1 min-w-0">
             {!flipped ? (
               <>
                 {/* 앞면: 인니어 본문 */}
@@ -234,9 +247,17 @@ const Story = () => {
                 )}
               </>
             )}
+            </div>
+            {/* 뒤집기 바 */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setFlipped((f) => !f); }}
+              className="shrink-0 w-3 self-stretch rounded-full bg-primary/15 active:bg-primary/40"
+              aria-label="카드 뒤집기"
+              title="카드 뒤집기"
+            />
           </div>
           <p className="text-center text-white/50 text-xs mt-3">
-            {flipped ? "카드를 탭하면 원문이 보입니다" : "카드를 탭하면 해석이 보이고, 단어를 탭하면 뜻이 나옵니다"}
+            {flipped ? "카드를 탭하면 원문이 보입니다" : "오른쪽 바를 누르면 해석이 보이고, 단어를 탭하면 뜻이 나옵니다"}
           </p>
         </div>
 
@@ -366,26 +387,4 @@ const Story = () => {
                     className="w-full text-left bg-card border border-border/60 rounded-xl px-4 py-3 min-w-0"
                   >
                     <p className="text-sm font-semibold text-gray-900 break-words font-word">{s.title}</p>
-                    <p className="text-xs text-gray-500 break-words mt-0.5 font-gothic">{s.titleKo}</p>
-                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                      <span className="text-[11px] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">{s.category}</span>
-                      <span className="text-[11px] font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">난이도 {s.difficulty}</span>
-                      <span className="text-[11px] text-gray-400 ml-auto">{fmtDate(s.createdAt)}</span>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : (
-          <div className="text-center py-12 text-white/60">
-            <BookOpen size={30} className="mx-auto mb-3 opacity-60" />
-            <p className="text-sm">첫 이야기를 만들어보세요</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default Story;
+                    <p classNam
