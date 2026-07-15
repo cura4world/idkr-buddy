@@ -228,7 +228,7 @@ const Story = () => {
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="flex-1 text-base font-semibold truncate">{current.titleKo || current.title}</h1>
+          <h1 className="flex-1 min-w-0 text-base font-semibold leading-snug line-clamp-2 break-words">{current.titleKo || current.title}</h1>
         </header>
 
         <div className="px-4 py-4">
