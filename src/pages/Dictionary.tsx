@@ -17,7 +17,7 @@ import {
   InputKind,
 } from "@/lib/dictionary";
 import { hasGeminiApiKey } from "@/lib/gemini";
-import { addWord } from "@/lib/store";
+import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { getStoredImage, saveStoredImage } from "@/lib/imageStore";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -155,6 +155,9 @@ const Dictionary = () => {
     return "검색에 실패했습니다. 잠시 후 다시 시도해주세요.";
   };
 
+  // 검색 결과를 볼 때 히스토리를 한 칸 쌓아두었는지 여부
+  const resultStateRef = useRef(false);
+
   const handleSearch = async (term?: string) => {
     const w = (term ?? query).trim();
     if (!w) return;
@@ -180,6 +183,8 @@ const Dictionary = () => {
       if (detected === "id_word") {
         const r = await lookupWord(w);
         setResult(r);
+        // 이미 내 단어장에 있는 단어면 "저장됨"으로 표시
+        if (hasWordInCategory(MY_WORDBOOK_ID, r.word)) setSaved(true);
         // 이미 본 단어면 저장된 이미지를 자동 표시. 안 본 단어면 버튼이 뜸(비용 절감).
         const key = r.word.toLowerCase();
         const mem = imageCache.get(key);
@@ -200,6 +205,11 @@ const Dictionary = () => {
         setKoSentence(await translateKoSentence(w));
       }
       setHistory(pushHistory(w)); // 검색 성공 시 히스토리 기록
+      // 결과 화면 진입 시 히스토리를 한 칸 쌓아, 뒤로가기가 최근 검색 화면으로 오게 함
+      if (!resultStateRef.current) {
+        resultStateRef.current = true;
+        try { window.history.pushState({ dictResult: true }, ""); } catch (e) {}
+      }
     } catch (e: any) {
       setError(errorMessage(e?.message || ""));
     } finally {
@@ -207,8 +217,8 @@ const Dictionary = () => {
     }
   };
 
-  // 홈(초기 화면)으로: 모든 결과 초기화
-  const goHome = () => {
+  // 결과 화면 상태만 초기화 (히스토리는 건드리지 않음)
+  const resetToHome = () => {
     setResult(null);
     setIdSentence(null);
     setKoWord(null);
@@ -220,6 +230,28 @@ const Dictionary = () => {
     setQuery("");
     setHistory(loadHistory());
   };
+
+  // 홈 버튼: 결과를 보고 있었다면 쌓아둔 히스토리를 되돌려 뒤로가기와 동작을 일치시킴
+  const goHome = () => {
+    if (resultStateRef.current) {
+      window.history.back(); // popstate 핸들러가 resetToHome 처리
+    } else {
+      resetToHome();
+    }
+  };
+
+  // 폰의 뒤로가기: 결과 화면이면 최근 검색 화면으로만 이동 (사전을 벗어나지 않음)
+  useEffect(() => {
+    const onPop = () => {
+      if (resultStateRef.current) {
+        resultStateRef.current = false;
+        resetToHome();
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 초기(홈) 화면 여부: 결과·로딩·에러가 전혀 없는 상태
   const isHome = !loading && !error && !result && !idSentence && !koWord && !koSentence;
@@ -368,7 +400,7 @@ const Dictionary = () => {
   const handleSaveToWordbook = () => {
     if (!result || saved) return;
     const firstExample = result.examples[0];
-    addWord({
+    const { added } = addWordIfAbsent({
       word: result.word,
       meaning: result.meaning,
       example: firstExample?.id || "",
@@ -376,7 +408,7 @@ const Dictionary = () => {
       categoryId: MY_WORDBOOK_ID,
     });
     setSaved(true);
-    toast("내 단어장에 저장되었습니다");
+    toast(added ? "내 단어장에 저장되었습니다" : "이미 내 단어장에 있는 단어입니다");
   };
 
   return (
@@ -384,7 +416,7 @@ const Dictionary = () => {
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-primary text-white px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => { if (resultStateRef.current) { window.history.back(); } else { navigate("/"); } }}
           className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >
