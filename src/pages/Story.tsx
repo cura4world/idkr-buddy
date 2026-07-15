@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { generateStory, quickLookupWord, StoryDifficulty } from "@/lib/story";
 import { saveStory, listStories, StoryRecord } from "@/lib/storyStore";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
-import { addWord } from "@/lib/store";
+import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { hasGeminiApiKey } from "@/lib/gemini";
 
 const MY_WORDBOOK_ID = "my-wordbook";
@@ -56,6 +56,50 @@ const Story = () => {
   // 카드 단위 단어 캐시: 같은 카드를 보는 동안 눌러본 단어는 즉시 표시 (카드를 나가면 리셋)
   const wordCache = useRef(new Map<string, { meaning: string; info: string; sentenceKo: string }>());
 
+  // 카드 화면을 열었는지 (히스토리를 한 칸 쌓았는지)
+  const cardStateRef = useRef(false);
+
+  // 카드 열기: 히스토리를 쌓아 뒤로가기가 목록으로 오게 함
+  const openCard = (rec: StoryRecord) => {
+    wordCache.current.clear();
+    setCurrent(rec);
+    setFlipped(false);
+    if (!cardStateRef.current) {
+      cardStateRef.current = true;
+      try { window.history.pushState({ storyCard: true }, ""); } catch (e) {}
+    }
+  };
+
+  // 카드 상태만 정리 (히스토리는 건드리지 않음)
+  const resetToList = () => {
+    setCurrent(null);
+    setFlipped(false);
+    setPopupWord(null);
+    wordCache.current.clear();
+  };
+
+  // 헤더 화살표: 뒤로가기와 동작을 일치시킴
+  const closeCard = () => {
+    if (cardStateRef.current) {
+      window.history.back(); // popstate 핸들러가 resetToList 처리
+    } else {
+      resetToList();
+    }
+  };
+
+  // 폰의 뒤로가기: 카드 화면이면 목록으로만 이동 (이야기를 벗어나지 않음)
+  useEffect(() => {
+    const onPop = () => {
+      if (cardStateRef.current) {
+        cardStateRef.current = false;
+        resetToList();
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     listStories().then((all) => {
       setStories(all);
@@ -65,7 +109,7 @@ const Story = () => {
         if (rid) {
           sessionStorage.removeItem("story-return-id");
           const found = all.find((s) => s.id === rid);
-          if (found) { setCurrent(found); setFlipped(false); }
+          if (found) openCard(found);
         }
       } catch (e) {}
     });
@@ -88,9 +132,7 @@ const Story = () => {
       const data = await generateStory(difficulty, recent);
       const rec = await saveStory(data);
       setStories((prev) => [rec, ...prev]);
-      wordCache.current.clear(); // 새 카드 → 단어 캐시 초기화
-      setCurrent(rec);
-      setFlipped(false);
+      openCard(rec);
     } catch (e: any) {
       const code = e?.message || "";
       if (code === "RATE_LIMIT") toast("요청이 많습니다. 잠시 후 다시 시도해주세요");
@@ -110,7 +152,8 @@ const Story = () => {
     const reqId = ++popupReqId.current;
     setPopupWord(word);
     setPopupSentence(sentence);
-    setPopupSaved(false);
+    // 이미 내 단어장에 있는 단어면 처음부터 "저장됨"으로 표시
+    setPopupSaved(hasWordInCategory(MY_WORDBOOK_ID, word));
 
     // 1) 이 카드에서 이미 찾아본 단어
     const cached = wordCache.current.get(key);
@@ -174,7 +217,7 @@ const Story = () => {
 
   const savePopupWord = () => {
     if (!popupWord || popupSaved || popupLoading || !popupMeaning) return;
-    addWord({
+    const { added } = addWordIfAbsent({
       word: popupWord,
       meaning: popupMeaning,
       example: popupSentence,
@@ -182,7 +225,7 @@ const Story = () => {
       categoryId: MY_WORDBOOK_ID,
     });
     setPopupSaved(true);
-    toast("내 단어장에 저장되었습니다");
+    toast(added ? "내 단어장에 저장되었습니다" : "이미 내 단어장에 있는 단어입니다");
   };
 
   // 인니어 본문을 문단→문장→단어로 쪼개 탭 가능하게 렌더링
@@ -222,7 +265,7 @@ const Story = () => {
       <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
         <header className="sticky top-0 z-30 bg-primary text-white px-4 py-3 flex items-center gap-3">
           <button
-            onClick={() => { setCurrent(null); setFlipped(false); setPopupWord(null); wordCache.current.clear(); }}
+            onClick={closeCard}
             className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
             title="목록으로"
           >
@@ -414,7 +457,7 @@ const Story = () => {
               {stories.map((s) => (
                 <li key={s.id}>
                   <button
-                    onClick={() => { wordCache.current.clear(); setCurrent(s); setFlipped(false); }}
+                    onClick={() => openCard(s)}
                     className="w-full text-left bg-card border border-border/60 rounded-xl px-4 py-3 min-w-0"
                   >
                     <p className="text-sm font-semibold text-gray-900 break-words font-word">{s.title}</p>
