@@ -133,12 +133,14 @@ export async function quickLookupWord(
   const prompt =
     "한국인 학습자를 위해 인도네시아어 단어를 JSON으로만 설명하세요.\n\n" +
     '단어: "' + word + '"\n' +
-    '문맥 문장: "' + sentence + '"\n\n' +
+    '이 단어가 쓰인 문장: "' + sentence + '"\n\n' +
     "{\n" +
-    '  "meaning": "문맥에 맞는 간략한 한국어 뜻",\n' +
+    '  "meaning": "이 단어의 뜻. 뜻이 여러 개면 쉼표로 모두 나열 (예: 사과, 조회(집합))",\n' +
     '  "info": "단어 자체에 대한 짧은 설명 (어근·활용형·비슷한 말·파생어 중 학습에 유용한 것만 골라 한두 문장)",\n' +
-    '  "sentenceKo": "문맥 문장의 자연스러운 한국어 번역"\n' +
-    "}\n";
+    '  "sentenceKo": "위 문장의 자연스러운 한국어 번역"\n' +
+    "}\n\n" +
+    "주의:\n" +
+    "- meaning은 문맥에 한정하지 말고, 그 단어가 가진 주요 뜻을 모두 적으세요. 어떤 뜻인지는 읽는 사람이 문맥으로 판단합니다.\n";
 
   const parsed = await callGeminiJSON(prompt, 0.3);
   return {
