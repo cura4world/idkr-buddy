@@ -245,6 +245,22 @@ export function addWord(word: Omit<Word, "id" | "createdAt">): Word {
   return newWord;
 }
 
+// 해당 단어장에 같은 단어가 이미 있는지 (대소문자 무시)
+export function hasWordInCategory(categoryId: string, word: string): boolean {
+  const target = word.trim().toLowerCase();
+  if (!target) return false;
+  return getWords().some(
+    (w) => w.categoryId === categoryId && w.word.trim().toLowerCase() === target
+  );
+}
+
+// 중복이면 추가하지 않고 알려줍니다 (사전/이야기의 "단어장에 담기"용)
+export function addWordIfAbsent(word: Omit<Word, "id" | "createdAt">): { added: boolean } {
+  if (hasWordInCategory(word.categoryId, word.word)) return { added: false };
+  addWord(word);
+  return { added: true };
+}
+
 export function deleteWord(id: string) {
   const words = getWords().filter((w) => w.id !== id);
   saveWords(words);
