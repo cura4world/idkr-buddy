@@ -227,11 +227,11 @@ const Index = () => {
         {/* 인도네시아 이야기 박스 - 사전 박스 아래 */}
         <button
           onClick={() => navigate("/story")}
-          className="w-full text-left relative overflow-hidden rounded-xl bg-card bg-gradient-to-br from-transparent to-accent/20 px-5 py-4 card-lift border border-accent/25"
+          className="w-full text-left relative overflow-hidden rounded-xl bg-card bg-gradient-to-br from-transparent to-amber-300/35 px-5 py-4 card-lift border border-amber-300/50"
         >
-          <ScrollText size={88} className="absolute -right-3 -bottom-7 text-accent/5 rotate-12 pointer-events-none" />
+          <ScrollText size={88} className="absolute -right-3 -bottom-7 text-amber-500/10 rotate-12 pointer-events-none" />
           <div className="relative flex items-center gap-3">
-            <span className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center shrink-0">
+            <span className="w-10 h-10 rounded-lg bg-amber-500 flex items-center justify-center shrink-0">
               <ScrollText size={19} className="text-white" />
             </span>
             <p className="flex-1 min-w-0 text-base font-semibold text-gray-900">인도네시아 이야기</p>
