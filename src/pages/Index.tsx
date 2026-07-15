@@ -5,14 +5,19 @@ import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import SettingsDialog from "@/components/SettingsDialog";
-import { RotateCcw, Settings, BookOpen, ScrollText } from "lucide-react";
+import { RotateCcw, Settings, BookOpen, ScrollText, Library } from "lucide-react";
 import { toast } from "sonner";
+
+const MY_WORDBOOK_ID = "my-wordbook";
 
 const Index = () => {
   const navigate = useNavigate();
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
-  const categories = getCategories();
+  // 메인에는 "내 단어장"만 표시하고, 나머지는 인도네시아어 단어장 폴더 안으로 들어갑니다.
+  const allCategories = getCategories();
+  const categories = allCategories.filter((c) => c.id === MY_WORDBOOK_ID);
+  const folderCount = allCategories.length - categories.length;
   const [addWordOpen, setAddWordOpen] = useState(false);
   const [addWordCat, setAddWordCat] = useState<string | undefined>();
   const [addCatOpen, setAddCatOpen] = useState(false);
@@ -265,17 +270,23 @@ const Index = () => {
           />
         ))}
 
-        {categories.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-lg mb-4">단어장이 없습니다</p>
-            <button
-              onClick={() => setAddCatOpen(true)}
-              className="text-primary hover:text-primary/80 text-sm"
-            >
-              첫 카테고리를 만들어보세요
-            </button>
+        {/* 인도네시아어 단어장 폴더 - 내 단어장 아래 */}
+        <button
+          onClick={() => navigate("/wordbooks")}
+          className="w-full text-left relative overflow-hidden rounded-xl bg-card bg-gradient-to-br from-transparent to-sky-300/35 px-5 py-4 card-lift border border-sky-300/50"
+        >
+          <Library size={88} className="absolute -right-3 -bottom-7 text-sky-500/10 rotate-12 pointer-events-none" />
+          <div className="relative flex items-center gap-3">
+            <span className="w-10 h-10 rounded-lg bg-sky-500 flex items-center justify-center shrink-0">
+              <Library size={19} className="text-white" />
+            </span>
+            <p className="flex-1 min-w-0 text-base font-semibold text-gray-900">인도네시아어 단어장</p>
+            {folderCount > 0 && (
+              <span className="shrink-0 text-xs text-gray-500 font-gothic">{folderCount}권</span>
+            )}
           </div>
-        )}
+        </button>
+
       </div>
 
       {floatCat && floatPos && (
