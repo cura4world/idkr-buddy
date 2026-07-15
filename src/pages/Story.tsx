@@ -201,7 +201,7 @@ const Story = () => {
 
         <div className="px-4 py-4">
           <div
-            className="bg-card border border-border/60 rounded-xl px-5 py-5 min-h-[72vh] content-bump select-none flex gap-3"
+            className="bg-card border border-border/60 rounded-xl pl-5 pr-2 py-5 min-h-[72vh] content-bump select-none flex gap-2"
           >
             <div className="flex-1 min-w-0">
             {!flipped ? (
@@ -256,7 +256,7 @@ const Story = () => {
             />
           </div>
           <p className="text-center text-white/50 text-xs mt-3">
-            {flipped ? "오른쪽 바를 누르면 원문이 보입니다" : "오른쪽 바를 누르면 해석이 보이고, 단어를 탭하면 뜻이 나옵니다"}
+            {flipped ? "오른쪽 바를 누르면 원문이 보입니다" : "오른쪽 바를 누르면 해석, 단어를 탭하면 뜻이 나옵니다"}
           </p>
         </div>
 
