@@ -434,7 +434,7 @@ const Devotion = () => {
 
   // 한국어 절 렌더링 (단어 탭 없음 — 공인 번역본 원문 그대로 표시)
   const renderKoVerse = (v: BibleVerse) => (
-    <p key={"ko-v" + v.verse} className="mb-2 text-sm leading-relaxed text-gray-800 font-gothic">
+    <p key={"ko-v" + v.verse} className="mb-2 text-xs leading-relaxed text-gray-800 font-gothic">
       <span className="text-rose-500/70 text-xs align-super mr-1 select-none">{v.verse}</span>
       {v.text}
     </p>
@@ -537,15 +537,8 @@ const Devotion = () => {
                   <p className="text-xs text-gray-500 font-gothic mb-3">
                     {cBook ? cBook.ko : ""} {current.chapter}:{nasRef}
                   </p>
-                  {renderKorean(c.bodyKo)}
-                  {c.doaKo && (
-                    <p className="mt-2 mb-4 pl-3 border-l-2 border-rose-300 text-xs leading-relaxed text-gray-800 font-body">
-                      <span className="font-semibold text-rose-600 mr-1">기도.</span>
-                      {c.doaKo}
-                    </p>
-                  )}
 
-                  {/* 한국어 성경 본문(새번역) — 토글, 기본 접힘 */}
+                  {/* 한국어 성경 본문(새번역) — 앞면 Nas와 동일한 위치·형식, 토글(기본 접힘) */}
                   <div className="rounded-lg bg-rose-500/5 border border-rose-200/60 px-3 py-2.5 mb-4">
                     <button
                       onClick={(e) => {
@@ -596,6 +589,14 @@ const Devotion = () => {
                       </div>
                     )}
                   </div>
+
+                  {renderKorean(c.bodyKo)}
+                  {c.doaKo && (
+                    <p className="mt-2 mb-4 pl-3 border-l-2 border-rose-300 text-xs leading-relaxed text-gray-800 font-body">
+                      <span className="font-semibold text-rose-600 mr-1">기도.</span>
+                      {c.doaKo}
+                    </p>
+                  )}
 
                   <div className="border-t border-gray-200 my-4" />
 
