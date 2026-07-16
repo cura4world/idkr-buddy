@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getGeminiApiKey, setGeminiApiKey } from "@/lib/gemini";
+import { getClaudeApiKey, setClaudeApiKey } from "@/lib/claude";
 import { exportWordsToCSV, getPrivateFolderName, setPrivateFolderName } from "@/lib/store";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ interface SettingsDialogProps {
 
 export default function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [apiKey, setApiKey] = useState("");
+  const [claudeKey, setClaudeKey] = useState("");
   const [importOpen, setImportOpen] = useState(false);
   const [privateFolder, setPrivateFolder] = useState("");
   const [fontStep, setFontStepState] = useState(3);
@@ -26,6 +28,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   useEffect(() => {
     if (open) {
       setApiKey(getGeminiApiKey());
+      setClaudeKey(getClaudeApiKey());
       setPrivateFolder(getPrivateFolderName());
       setFontStepState(getFontStep());
     }
@@ -37,7 +40,8 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
 
   const handleSave = () => {
     setGeminiApiKey(apiKey);
-    toast(apiKey.trim() ? "API 키가 저장되었습니다" : "API 키가 삭제되었습니다");
+    setClaudeApiKey(claudeKey);
+    toast("API 키 설정이 저장되었습니다");
     onOpenChange(false);
   };
 
@@ -162,6 +166,20 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             />
             <p className="mt-2 text-xs text-muted-foreground font-body">
               단어 추가 시 뜻과 예문을 자동으로 채우는 데 사용됩니다. 키는 이 기기에만 저장되며, Google AI Studio에서 무료로 발급받을 수 있습니다. 비워두고 저장하면 키가 삭제됩니다.
+            </p>
+          </div>
+          <div>
+            <Label className="font-body text-sm text-gray-900">Claude API 키</Label>
+            <Input
+              type="password"
+              autoComplete="off"
+              value={claudeKey}
+              onChange={(e) => setClaudeKey(e.target.value)}
+              placeholder="sk-ant-..."
+              className="mt-1"
+            />
+            <p className="mt-2 text-xs text-muted-foreground font-body">
+              인도네시아어 묵상 생성에 사용됩니다. console.anthropic.com에서 발급받을 수 있습니다. 비워두고 저장하면 키가 삭제됩니다.
             </p>
           </div>
           <Button onClick={handleSave} className="w-full">
