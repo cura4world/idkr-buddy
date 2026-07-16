@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Volume2, Loader2, Plus, Check, X, Bookmark, Trash2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Volume2, Loader2, Plus, Minus, Check, X, Bookmark, Trash2, RefreshCw, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   PRAYER_CATEGORIES,
   getPrayerCategory,
   generatePrayer,
+  revisePrayer,
+  pickPrayerQuote,
   PrayerLength,
   MeetingPhase,
 } from "@/lib/prayer";
@@ -40,6 +42,10 @@ const fmtDate = (t: number) => {
   return d.getFullYear() + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + String(d.getDate()).padStart(2, "0");
 };
 
+// 인도네시아어 기도문 글자 크기 단계 (기본: text-sm)
+const ID_FONT_SIZES = ["text-xs", "text-sm", "text-base", "text-lg", "text-xl"];
+const ID_FONT_KEY = "prayer-id-font-step";
+
 const LENGTH_LABELS: { id: PrayerLength; label: string }[] = [
   { id: "short", label: "짧게" },
   { id: "medium", label: "보통" },
@@ -68,6 +74,25 @@ const Prayer = () => {
   const [current, setCurrent] = useState<PrayerRecord | null>(null);
   const [flipped, setFlipped] = useState(false); // 앞: 인니어 / 뒤: 한국어
   const [delConfirm, setDelConfirm] = useState(false);
+  const [customText, setCustomText] = useState(""); // 상황 "기타" 직접 입력
+  const [editingKo, setEditingKo] = useState(false); // 한국어 수정 모드
+  const [koDraft, setKoDraft] = useState("");
+  const [revising, setRevising] = useState(false);
+  const [idFontStep, setIdFontStep] = useState<number>(() => {
+    try {
+      const v = parseInt(localStorage.getItem(ID_FONT_KEY) || "1", 10);
+      if (v >= 0 && v < ID_FONT_SIZES.length) return v;
+    } catch (e) {}
+    return 1;
+  });
+
+  const changeIdFont = (delta: number) => {
+    setIdFontStep((s) => {
+      const n = Math.min(ID_FONT_SIZES.length - 1, Math.max(0, s + delta));
+      try { localStorage.setItem(ID_FONT_KEY, String(n)); } catch (e) {}
+      return n;
+    });
+  };
 
   // 단어 미니 팝업 (이야기·묵상과 동일한 3단 캐시 공유)
   const [popupWord, setPopupWord] = useState<string | null>(null);
@@ -102,6 +127,10 @@ const Prayer = () => {
     setCurrent(null);
     setFlipped(false);
     setDelConfirm(false);
+    setCustomText("");
+    setEditingKo(false);
+    setKoDraft("");
+    setRevising(false);
     setPopupWord(null);
     wordCache.current.clear();
   };
@@ -139,6 +168,7 @@ const Prayer = () => {
     setPhase(cat?.needsPhase ? "open" : null);
     setNameInput("");
     setNoteInput("");
+    setCustomText("");
     let saved: PrayerLength = "short";
     try {
       const v = localStorage.getItem(LENGTH_KEY_PREFIX + cid);
@@ -154,6 +184,7 @@ const Prayer = () => {
     setPopupWord(null);
     setFlipped(false);
     setDelConfirm(false);
+    setEditingKo(false);
     setCurrent(rec);
     setView("prayer");
     pushSub();
@@ -166,6 +197,7 @@ const Prayer = () => {
     phase?: MeetingPhase | null;
     name?: string;
     note?: string;
+    customText?: string;
     length: PrayerLength;
   }) => {
     if (generating) return;
@@ -183,8 +215,9 @@ const Prayer = () => {
     try {
       const data = await generatePrayer(opts);
       if (genToken.current !== token) return; // 뒤로가기로 이탈함
+      const baseLabel = opts.situationId === "custom" ? (opts.customText || "").trim() : sit.label;
       const situationLabel =
-        sit.label + (cat.needsPhase && opts.phase ? (opts.phase === "open" ? " 시작" : " 마침") : "") + " 기도";
+        baseLabel + (cat.needsPhase && opts.phase ? (opts.phase === "open" ? " 시작" : " 마침") : "") + " 기도";
       const rec = newPrayerRecord(data, {
         categoryId: opts.categoryId,
         situationId: opts.situationId,
@@ -192,6 +225,7 @@ const Prayer = () => {
         phase: opts.phase || null,
         name: opts.name || "",
         note: opts.note || "",
+        customText: opts.customText || "",
         length: opts.length,
         pinned: false,
       });
@@ -203,6 +237,7 @@ const Prayer = () => {
       setPopupWord(null);
       setFlipped(false);
       setDelConfirm(false);
+      setEditingKo(false);
       setCurrent(rec);
       setView("prayer");
       if (!subOpenRef.current) pushSub();
@@ -228,7 +263,8 @@ const Prayer = () => {
     if (!catId || !situationId) return;
     const cat = getPrayerCategory(catId);
     if (cat?.needsPhase && !phase) return;
-    doGenerate({ categoryId: catId, situationId, phase, name: nameInput, note: noteInput, length });
+    if (situationId === "custom" && !customText.trim()) return;
+    doGenerate({ categoryId: catId, situationId, phase, name: nameInput, note: noteInput, customText, length });
   };
 
   const regenerate = () => {
@@ -239,8 +275,49 @@ const Prayer = () => {
       phase: current.phase || null,
       name: current.name || "",
       note: current.note || "",
+      customText: current.customText || "",
       length: current.length,
     });
+  };
+
+  // 한국어 번역을 고치면 인도네시아어 기도문을 그에 맞게 수정
+  const applyKoEdit = async () => {
+    if (!current || revising) return;
+    const edited = koDraft.trim();
+    if (!edited) return;
+    if (!hasClaudeApiKey()) {
+      toast("Claude API 키가 필요합니다. 설정에서 입력해주세요");
+      setSettingsOpen(true);
+      return;
+    }
+    const token = ++genToken.current;
+    setRevising(true);
+    try {
+      const newIndonesian = await revisePrayer(current.indonesian, edited);
+      if (genToken.current !== token) return;
+      const upd = { ...current, indonesian: newIndonesian, korean: edited };
+      await savePrayer(upd);
+      setCurrent(upd);
+      setRecords(await listPrayers());
+      setEditingKo(false);
+      setFlipped(false); // 앞면으로 넘겨 고쳐진 기도문 확인
+      toast("기도문을 수정했습니다");
+    } catch (e: any) {
+      if (genToken.current !== token) return;
+      const code = (e && e.message) || "";
+      if (code === "NO_API_KEY" || code === "INVALID_API_KEY") {
+        toast("Claude API 키를 설정에서 확인해주세요");
+        setSettingsOpen(true);
+      } else if (code === "NO_CREDIT") {
+        toast("Claude 크레딧이 부족합니다. console.anthropic.com에서 충전해주세요");
+      } else if (code === "RATE_LIMIT" || code === "OVERLOADED") {
+        toast("지금 요청이 많아요. 잠시 후 다시 시도해주세요");
+      } else {
+        toast("수정에 실패했어요. 다시 시도해주세요");
+      }
+    } finally {
+      if (genToken.current === token) setRevising(false);
+    }
   };
 
   // ---------- 핀 / 삭제 ----------
@@ -359,7 +436,7 @@ const Prayer = () => {
     return paragraphs.map((para, pi) => {
       const sentences = para.split(new RegExp("(?<=[.!?])\\s+")).filter(Boolean);
       return (
-        <p key={pi} className="mb-4 text-sm leading-relaxed font-word text-gray-900">
+        <p key={pi} className={"mb-4 leading-relaxed font-word text-gray-900 " + ID_FONT_SIZES[idFontStep]}>
           {sentences.map((sent, si) => (
             <span key={si}>{renderTokens(sent, pi + "-" + si + "-")}</span>
           ))}
@@ -383,6 +460,7 @@ const Prayer = () => {
   // 기도문 보기
   // ================================================================
   if (view === "prayer" && current) {
+    const quote = pickPrayerQuote(current.id);
     return (
       <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
         <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
@@ -420,8 +498,28 @@ const Prayer = () => {
 
               {!flipped ? (
                 <>
-                  {/* 앞면: 인도네시아어 기도문 (단어 탭 가능) */}
-                  {renderIndoBody(current.indonesian)}
+                  {/* 앞면: 인도네시아어 기도문 (단어 탭 가능) + 글자 크기 조절 */}
+                  <div className="relative">
+                    <div className="absolute right-0 top-0 flex flex-col gap-1.5">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); changeIdFont(1); }}
+                        disabled={idFontStep >= ID_FONT_SIZES.length - 1}
+                        className="w-7 h-7 rounded-full bg-black/5 text-gray-500 flex items-center justify-center disabled:opacity-30"
+                        title="글자 크게"
+                      >
+                        <Plus size={13} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); changeIdFont(-1); }}
+                        disabled={idFontStep <= 0}
+                        className="w-7 h-7 rounded-full bg-black/5 text-gray-500 flex items-center justify-center disabled:opacity-30"
+                        title="글자 작게"
+                      >
+                        <Minus size={13} />
+                      </button>
+                    </div>
+                    <div className="pr-9">{renderIndoBody(current.indonesian)}</div>
+                  </div>
 
                   {/* 앞면 하단 액션 */}
                   <div className="flex items-center gap-2 pt-3">
@@ -433,7 +531,7 @@ const Prayer = () => {
                       {generating ? (
                         <><Loader2 size={12} className="animate-spin" /> 만드는 중...</>
                       ) : (
-                        <><RefreshCw size={12} /> 같은 설정으로 다시 만들기</>
+                        <><RefreshCw size={12} /> 같은 설정 다시 만들기</>
                       )}
                     </button>
                     {!delConfirm ? (
@@ -456,34 +554,65 @@ const Prayer = () => {
                     )}
                   </div>
                 </>
-              ) : (
+              ) : !editingKo ? (
                 <>
-                  {/* 뒷면: 한국어 번역 */}
+                  {/* 뒷면: 한국어 번역 + 수정(연필) 버튼 */}
+                  <div className="flex justify-end -mt-1 mb-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setKoDraft(current.korean); setEditingKo(true); }}
+                      className="w-8 h-8 rounded-full bg-black/5 text-gray-500 flex items-center justify-center"
+                      title="한국어 수정"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  </div>
                   <div>{renderKorean(current.korean)}</div>
 
-                  {/* 뒷면: 근거 성경말씀 */}
-                  {current.verseRef && current.verseKo && (
-                    <div className="rounded-lg bg-emerald-500/5 border border-emerald-200/60 px-3 py-2.5 mt-4">
-                      <p className="text-[11px] font-bold text-emerald-600 font-gothic mb-1.5">
-                        📖 {current.verseRef}
-                      </p>
-                      <p className="text-[11px] leading-relaxed text-gray-800 font-gothic">
-                        {current.verseKo}
-                      </p>
-                      {current.verseNote && (
-                        <p className="text-[11px] leading-relaxed text-gray-500 font-gothic mt-2 pt-2 border-t border-emerald-200/50">
-                          {current.verseNote}
-                        </p>
+                  {/* 뒷면: 기도에 관한 말씀·명언 */}
+                  <div className="rounded-lg bg-emerald-500/5 border border-emerald-200/60 px-3 py-2.5 mt-4">
+                    <p className="text-[11px] leading-relaxed text-gray-800 font-gothic">{quote.text}</p>
+                    <p className="text-[11px] text-gray-500 font-gothic mt-1">— {quote.source}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* 뒷면: 한국어 수정 모드 */}
+                  <p className="text-xs font-bold text-gray-900 font-gothic mb-2">
+                    한국어를 고치면 인도네시아어 기도문도 그에 맞게 고쳐집니다
+                  </p>
+                  <textarea
+                    value={koDraft}
+                    onChange={(e) => setKoDraft(e.target.value)}
+                    disabled={revising}
+                    rows={14}
+                    className="w-full rounded-lg border border-emerald-300/70 bg-white px-3 py-2.5 text-xs text-gray-900 font-gothic leading-relaxed outline-none focus:border-emerald-500 disabled:opacity-60"
+                  />
+                  <div className="flex items-center gap-2 mt-3">
+                    <button
+                      onClick={applyKoEdit}
+                      disabled={revising || !koDraft.trim()}
+                      className="flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-medium font-gothic bg-emerald-500 text-white disabled:opacity-50"
+                    >
+                      {revising ? (
+                        <><Loader2 size={13} className="animate-spin" /> 기도문을 고치는 중...</>
+                      ) : (
+                        "수정한 대로 기도문 고치기"
                       )}
-                    </div>
-                  )}
+                    </button>
+                    <button
+                      onClick={() => { if (!revising) setEditingKo(false); }}
+                      className="shrink-0 rounded-full py-2.5 px-4 text-xs font-medium font-gothic bg-black/5 text-gray-600"
+                    >
+                      취소
+                    </button>
+                  </div>
                 </>
               )}
             </div>
 
             {/* 오른쪽 세로 바: 누르면 뒤집기 */}
             <button
-              onClick={(e) => { e.stopPropagation(); setFlipped((f) => !f); }}
+              onClick={(e) => { e.stopPropagation(); if (editingKo || revising) return; setFlipped((f) => !f); }}
               className="shrink-0 w-2 self-stretch rounded-full bg-emerald-500/15 active:bg-emerald-500/40"
               title={flipped ? "원문 보기" : "번역 보기"}
             />
@@ -568,7 +697,11 @@ const Prayer = () => {
   // ================================================================
   if (view === "wizard" && catId) {
     const cat = getPrayerCategory(catId)!;
-    const canSubmit = !!situationId && (!cat.needsPhase || !!phase) && !generating;
+    const canSubmit =
+      !!situationId &&
+      (!cat.needsPhase || !!phase) &&
+      (situationId !== "custom" || !!customText.trim()) &&
+      !generating;
     return (
       <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
         <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
@@ -585,16 +718,38 @@ const Prayer = () => {
         <div className="px-4 py-4 pb-32">
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
             {/* 상황 선택 */}
-            <p className="text-sm font-bold text-gray-900 font-gothic mb-2.5">
-              {cat.needsPhase ? "어떤 모임인가요?" : "어떤 자리인가요?"}
-            </p>
-            <div className="flex flex-wrap gap-2 mb-5">
-              {cat.situations.map((s) => (
-                <button key={s.id} onClick={() => setSituationId(s.id)} className={chip(situationId === s.id)}>
-                  {s.label}
-                </button>
-              ))}
-            </div>
+            {cat.id === "etc" ? (
+              <>
+                <p className="text-sm font-bold text-gray-900 font-gothic mb-2.5">어떤 상황인가요?</p>
+                <input
+                  value={customText}
+                  onChange={(e) => setCustomText(e.target.value)}
+                  placeholder="예: 이사한 가정을 위한 기도"
+                  className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-white font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-white/40"
+                />
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-bold text-gray-900 font-gothic mb-2.5">
+                  {cat.needsPhase ? "어떤 모임인가요?" : "어떤 자리인가요?"}
+                </p>
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {cat.situations.map((s) => (
+                    <button key={s.id} onClick={() => setSituationId(s.id)} className={chip(situationId === s.id)}>
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+                {situationId === "custom" && (
+                  <input
+                    value={customText}
+                    onChange={(e) => setCustomText(e.target.value)}
+                    placeholder="상황을 직접 적어주세요"
+                    className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-white font-gothic -mt-2 mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-white/40"
+                  />
+                )}
+              </>
+            )}
 
             {/* 모임: 시작/마침 */}
             {cat.needsPhase && (
@@ -685,7 +840,7 @@ const Prayer = () => {
               <span className="text-2xl">{c.emoji}</span>
               <p className="mt-1.5 text-sm font-bold text-gray-900">{c.label}</p>
               <p className="text-[11px] text-gray-500 font-gothic mt-0.5">
-                {c.situations.length}가지 상황
+                {c.id === "etc" ? "상황 직접 입력" : c.situations.length + "가지 상황"}
               </p>
             </button>
           ))}
