@@ -84,6 +84,9 @@ export interface PrayerData {
   title: string;      // 짧은 한국어 제목 (히스토리 표시용)
   indonesian: string; // 기도문 (문단은 \n\n)
   korean: string;     // 한국어 번역 (문단 구분 동일)
+  verseRef?: string;  // 근거 성경 구절 (예: "빌립보서 4:6-7")
+  verseKo?: string;   // 그 구절 본문 (한국어)
+  verseNote?: string; // 이 기도문과 어떻게 연결되는지 짧은 설명
 }
 
 export interface GeneratePrayerOptions {
@@ -123,8 +126,12 @@ const SYSTEM_PROMPT =
   "- 문단은 빈 줄로 구분하세요.\n" +
   '- 이름이 주어지면 "saudara [이름]" 또는 "saudari [이름]"으로 자연스럽게 부르세요 (성별을 모르면 saudara/i 대신 이름만 불러도 됩니다). 이름이 없으면 이름 없이 자연스럽게.\n' +
   "- 구체적인 사정이 주어지면 기도에 자연스럽게 반영하세요.\n\n" +
+  "[근거 성경 구절]\n" +
+  "- 이 기도의 내용과 실제로 맞닿는 성경 구절 하나를 고르세요. 억지로 끼워 맞추지 말고 기도의 핵심과 자연스럽게 이어지는 구절로.\n" +
+  "- verseKo에는 그 구절의 한국어 본문을 적으세요 (새번역 계열의 현대어 문체).\n" +
+  "- verseNote에는 이 구절이 이 기도와 어떻게 연결되는지를 1~2문장으로 짧게 설명하세요.\n\n" +
   "반드시 아래 JSON 형식으로만 응답하세요:\n" +
-  '{"title": "짧은 한국어 제목 (예: 교회 점심 식사 기도)", "indonesian": "기도문 전체", "korean": "자연스러운 한국어 번역 (문단 구분 동일)"}';
+  '{"title": "짧은 한국어 제목 (예: 교회 점심 식사 기도)", "indonesian": "기도문 전체", "korean": "자연스러운 한국어 번역 (문단 구분 동일)", "verseRef": "빌립보서 4:6-7", "verseKo": "구절 본문 (한국어)", "verseNote": "이 구절이 이 기도와 어떻게 이어지는지 1~2문장"}';
 
 export async function generatePrayer(opts: GeneratePrayerOptions): Promise<PrayerData> {
   const cat = getPrayerCategory(opts.categoryId);
@@ -153,5 +160,9 @@ export async function generatePrayer(opts: GeneratePrayerOptions): Promise<Praye
   const korean = String(parsed.korean || "").trim();
   if (!indonesian || !korean) throw new Error("PARSE_FAILED");
 
-  return { title, indonesian, korean };
+  const verseRef = String(parsed.verseRef || "").trim();
+  const verseKo = String(parsed.verseKo || "").trim();
+  const verseNote = String(parsed.verseNote || "").trim();
+
+  return { title, indonesian, korean, verseRef, verseKo, verseNote };
 }
