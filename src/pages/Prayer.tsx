@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp, Star, Trash2, RefreshCw, Settings } from "lucide-react";
+import { ArrowLeft, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp, Star, Trash2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   PRAYER_CATEGORIES,
@@ -41,9 +41,9 @@ const fmtDate = (t: number) => {
 };
 
 const LENGTH_LABELS: { id: PrayerLength; label: string }[] = [
-  { id: "short", label: "짧게 (30초~1분)" },
-  { id: "medium", label: "보통 (1~2분)" },
-  { id: "long", label: "길게 (3~4분)" },
+  { id: "short", label: "짧게" },
+  { id: "medium", label: "보통" },
+  { id: "long", label: "길게" },
 ];
 
 const Prayer = () => {
@@ -371,7 +371,7 @@ const Prayer = () => {
     ));
 
   const chip = (selected: boolean) =>
-    "rounded-full px-3.5 py-2 text-sm font-medium border transition-colors " +
+    "rounded-full px-3.5 py-2 text-sm font-medium font-gothic border transition-colors " +
     (selected
       ? "bg-emerald-500 text-white border-emerald-500"
       : "bg-card text-gray-700 border-border/70 active:bg-emerald-500/10");
@@ -383,20 +383,24 @@ const Prayer = () => {
     return (
       <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
         <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
-          <button onClick={closeSub} className="shrink-0 w-9 h-9 rounded-full bg-card flex items-center justify-center text-foreground">
-            <ArrowLeft size={18} />
+          <button
+            onClick={closeSub}
+            className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+            title="뒤로"
+          >
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="flex-1 min-w-0 text-base font-semibold leading-snug line-clamp-2 break-words">
+          <h1 className="flex-1 min-w-0 text-base font-semibold leading-snug line-clamp-2 break-words font-gothic">
             {current.title}
           </h1>
           <button
             onClick={togglePin}
-            className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${
-              current.pinned ? "bg-amber-400/20 text-amber-500" : "bg-card text-gray-400"
+            className={`shrink-0 w-9 h-9 flex items-center justify-center ${
+              current.pinned ? "text-amber-400" : "text-white/50 hover:text-white/70"
             }`}
             title={current.pinned ? "핀 해제" : "핀 고정"}
           >
-            <Star size={17} fill={current.pinned ? "currentColor" : "none"} />
+            <Star size={18} fill={current.pinned ? "currentColor" : "none"} />
           </button>
         </header>
 
@@ -404,7 +408,7 @@ const Prayer = () => {
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5 min-h-[72vh] content-bump select-none">
             {/* 상황·날짜 + 전체 듣기 */}
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <span className="text-xs font-bold text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5">
+              <span className="text-xs font-bold text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5 font-gothic">
                 {current.situationLabel}
               </span>
               <span className="text-xs text-gray-400 font-gothic">{fmtDate(current.createdAt)}</span>
@@ -444,7 +448,7 @@ const Prayer = () => {
               <button
                 onClick={regenerate}
                 disabled={generating}
-                className="flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-medium bg-emerald-500/10 text-emerald-700 disabled:opacity-50"
+                className="flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-medium font-gothic bg-emerald-500/10 text-emerald-700 disabled:opacity-50"
               >
                 {generating ? (
                   <><Loader2 size={13} className="animate-spin" /> 만드는 중...</>
@@ -462,17 +466,17 @@ const Prayer = () => {
                 </button>
               ) : (
                 <div className="shrink-0 flex items-center gap-1.5">
-                  <button onClick={doDelete} className="rounded-full py-2 px-3 text-xs font-medium bg-red-500 text-white">
+                  <button onClick={doDelete} className="rounded-full py-2 px-3 text-xs font-medium font-gothic bg-red-500 text-white">
                     삭제
                   </button>
-                  <button onClick={() => setDelConfirm(false)} className="rounded-full py-2 px-3 text-xs font-medium bg-black/5 text-gray-600">
+                  <button onClick={() => setDelConfirm(false)} className="rounded-full py-2 px-3 text-xs font-medium font-gothic bg-black/5 text-gray-600">
                     취소
                   </button>
                 </div>
               )}
             </div>
           </div>
-          <p className="text-center text-white/50 text-xs mt-3">단어를 탭하면 뜻이 나옵니다</p>
+          <p className="text-center text-white/50 text-xs mt-3 font-gothic">단어를 탭하면 뜻이 나옵니다</p>
         </div>
 
         {/* 단어 미니 팝업 */}
@@ -554,10 +558,14 @@ const Prayer = () => {
     return (
       <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
         <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
-          <button onClick={closeSub} className="shrink-0 w-9 h-9 rounded-full bg-card flex items-center justify-center text-foreground">
-            <ArrowLeft size={18} />
+          <button
+            onClick={closeSub}
+            className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+            title="뒤로"
+          >
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="flex-1 min-w-0 text-base font-semibold">{cat.emoji} {cat.label}</h1>
+          <h1 className="flex-1 min-w-0 text-base font-semibold font-gothic">{cat.emoji} {cat.label}</h1>
         </header>
 
         <div className="px-4 py-4 pb-32">
@@ -591,7 +599,7 @@ const Prayer = () => {
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
               placeholder="예: Johan (비워두면 이름 없이)"
-              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-sm text-gray-900 font-gothic mb-5 outline-none focus:border-emerald-400"
+              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-gray-900 font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs"
             />
 
             {/* 사정 한 줄 (선택) */}
@@ -600,7 +608,7 @@ const Prayer = () => {
               value={noteInput}
               onChange={(e) => setNoteInput(e.target.value)}
               placeholder="예: 내일 수술 예정 / 비자 연장 심사 중"
-              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-sm text-gray-900 font-gothic mb-5 outline-none focus:border-emerald-400"
+              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-gray-900 font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs"
             />
 
             {/* 길이 */}
@@ -620,7 +628,7 @@ const Prayer = () => {
           <button
             onClick={submitWizard}
             disabled={!canSubmit}
-            className="w-full rounded-full py-3.5 text-sm font-bold bg-emerald-500 text-white disabled:opacity-40 flex items-center justify-center gap-2"
+            className="w-full rounded-full py-3.5 text-sm font-bold font-gothic bg-emerald-500 text-white disabled:opacity-40 flex items-center justify-center gap-2"
           >
             {generating ? (
               <><Loader2 size={16} className="animate-spin" /> 기도문을 만들고 있어요...</>
@@ -641,17 +649,14 @@ const Prayer = () => {
   return (
     <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
-        <button onClick={() => navigate("/")} className="shrink-0 w-9 h-9 rounded-full bg-card flex items-center justify-center text-foreground">
-          <ArrowLeft size={18} />
-        </button>
-        <h1 className="flex-1 min-w-0 text-base font-semibold">인도네시아어 기도</h1>
         <button
-          onClick={() => setSettingsOpen(true)}
-          className="shrink-0 w-9 h-9 rounded-full bg-card flex items-center justify-center text-gray-400"
-          title="설정"
+          onClick={() => navigate("/")}
+          className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+          title="홈으로"
         >
-          <Settings size={17} />
+          <ArrowLeft size={20} />
         </button>
+        <h1 className="flex-1 min-w-0 text-base font-semibold font-gothic">인도네시아어 기도</h1>
       </header>
 
       <div className="px-4 py-4">
@@ -664,7 +669,7 @@ const Prayer = () => {
               className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-4 py-4 text-left card-lift active:scale-[0.98] transition-transform"
             >
               <span className="text-2xl">{c.emoji}</span>
-              <p className="mt-1.5 text-sm font-bold text-gray-900">{c.label}</p>
+              <p className="mt-1.5 text-sm font-bold text-gray-900 font-gothic">{c.label}</p>
               <p className="text-[11px] text-gray-500 font-gothic mt-0.5">
                 {c.situations.length}가지 상황
               </p>
@@ -673,7 +678,7 @@ const Prayer = () => {
         </div>
 
         {/* 저장된 기도문 */}
-        <p className="text-sm font-bold text-white/90 mb-2 px-1">저장된 기도문</p>
+        <p className="text-sm font-bold text-white/90 mb-2 px-1 font-gothic">저장된 기도문</p>
         {records.length === 0 ? (
           <div className="bg-card/60 border border-border/40 rounded-xl px-5 py-8 text-center">
             <p className="text-sm text-gray-500 font-gothic">
@@ -694,7 +699,7 @@ const Prayer = () => {
                 >
                   <span className="shrink-0 text-lg">{cat ? cat.emoji : "🙏"}</span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-semibold text-gray-900 truncate">{r.title}</span>
+                    <span className="block text-sm font-semibold text-gray-900 truncate font-gothic">{r.title}</span>
                     <span className="block text-[11px] text-gray-500 font-gothic truncate">
                       {r.situationLabel}
                       {r.name ? " · " + r.name : ""} · {fmtDate(r.createdAt)}
