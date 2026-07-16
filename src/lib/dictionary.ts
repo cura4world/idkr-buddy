@@ -82,7 +82,9 @@ function buildPrompt(word: string): string {
     "- opposites는 명확한 반대어가 없으면 문맥상 대조되는 단어. 없으면 빈 배열.\n" +
     "- similar는 헷갈리기 쉬운 유의어 2~4개. meaning에는 뉘앙스 차이를 적으세요.\n" +
     "- derived는 어근이 같은 파생어(접두/접미 파생) 2~4개.\n" +
-    "- frequency와 difficulty는 1~5 사이 정수.\n"
+    "- frequency와 difficulty는 1~5 사이 정수.\n" +
+    "- word(표제어)는 반드시 소문자 기본형으로 출력하세요. 입력이 대문자로 시작해도 소문자로 바꿉니다.\n" +
+    "- 단, 고유명사(국가/도시/사람/요일/월/종교/언어 등 인도네시아어 맞춤법상 항상 대문자로 쓰는 단어)는 원래 표기를 유지하세요.\n"
   );
 }
 
@@ -107,7 +109,38 @@ function relatedItems(v: unknown): DictRelatedItem[] {
   })).filter((r) => r.word);
 }
 
-// 인도네시아어 단어를 받아 풍성한 사전 데이터를 생성합니다.
+// \uD45C\uC81C\uC5B4 \uC815\uADDC\uD654: \uACE0\uC720\uBA85\uC0AC\uAC00 \uC544\uB2C8\uBA74 \uC804\uBD80 \uC18C\uBB38\uC790\uB85C.
+// (Gemini\uAC00 1\uCC28\uB85C \uD310\uB2E8\uD558\uACE0, \uC5EC\uAE30\uC11C\uB294 "\uCCAB \uAE00\uC790\uB9CC \uB300\uBB38\uC790 + \uB098\uBA38\uC9C0 \uC18C\uBB38\uC790"\uB77C\uB294
+//  \uC785\uB825 \uC2B5\uAD00\uC5D0\uC11C \uC628 \uB300\uBB38\uC790\uB9CC \uB0B4\uB9BD\uB2C8\uB2E4. \uACE0\uC720\uBA85\uC0AC \uBAA9\uB85D\uC740 \uC790\uC8FC \uC4F0\uB294 \uAC83\uB9CC.)
+const PROPER_NOUNS = new Set([
+  "indonesia", "jakarta", "bali", "korea", "seoul", "jawa", "sumatera", "sulawesi",
+  "kalimantan", "papua", "bandung", "surabaya", "yogyakarta", "medan", "semarang",
+  "senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu",
+  "januari", "februari", "maret", "april", "mei", "juni", "juli",
+  "agustus", "september", "oktober", "november", "desember",
+  "islam", "kristen", "katolik", "hindu", "buddha", "allah", "tuhan",
+  "ramadan", "idul", "natal", "lebaran", "pancasila", "asia", "amerika", "eropa",
+]);
+
+function normalizeHeadword(w: string): string {
+  const t = w.trim();
+  if (!t) return t;
+  // \uC804\uBD80 \uB300\uBB38\uC790 \uC57D\uC5B4(RI, KTP \uB4F1)\uB294 \uADF8\uB300\uB85C \uB458\uB2E4.
+  if (t === t.toUpperCase() && t !== t.toLowerCase()) return t;
+  // \uACF5\uBC31 \uD3EC\uD568 \uD45C\uD604\uC740 \uB2E8\uC5B4\uBCC4\uB85C \uD310\uB2E8.
+  return t
+    .split(new RegExp("(\\s+)"))
+    .map((part) => {
+      if (!part.trim()) return part;
+      const lower = part.toLowerCase();
+      const bare = lower.replace(new RegExp("[^a-z\\u00E0-\\u024F-]", "g"), "");
+      if (PROPER_NOUNS.has(bare)) return part;
+      return lower;
+    })
+    .join("");
+}
+
+// \uC778\uB3C4\uB124\uC2DC\uC544\uC5B4 \uB2E8\uC5B4\uB97C \uBC1B\uC544 \uD48D\uC131\uD55C \uC0AC\uC804 \uB370\uC774\uD130\uB97C \uC0DD\uC131\uD569\uB2C8\uB2E4.
 // ---- 입력 유형 판별 ----
 // 한글이 하나라도 있으면 한국어, 없으면 인도네시아어.
 // 공백으로 나눈 토큰이 2개 이하면 "단어", 3개 이상이면 "문장".
@@ -171,7 +204,7 @@ export async function lookupWord(word: string): Promise<DictResult> {
   const parsed = await callGeminiJSON(buildPrompt(trimmed));
 
   return {
-    word: (parsed.word || trimmed).toString().trim(),
+    word: normalizeHeadword((parsed.word || trimmed).toString().trim()),
     meaning: (parsed.meaning || "").toString().trim(),
     meaningDetail: (parsed.meaningDetail || "").toString().trim(),
     examples: arr<DictExample>(parsed.examples).map((e) => ({
@@ -254,21 +287,40 @@ export async function generateWordImage(word: string, meaning: string): Promise<
 }
 
 // ============================================================
-// (2) 인도네시아어 문장 → 한국어 번역 + 끊어읽기 + 어려운 단어
+// (2) 인도네시아어 문장 → 끊어읽기 + 단어 분석 + 문장 구조
 // ============================================================
 export interface SentenceChunk {
   id: string;   // 인니어 조각 (호흡 단위)
   ko: string;   // 그 조각의 한국어 뜻
 }
-export interface HardWord {
-  word: string; // 인니어 단어
-  meaning: string; // 간략한 한국어 뜻
+
+// 단어 분석 항목
+export interface WordAnalysisItem {
+  word: string;      // Dia / berjalan / keliling kota ...
+  meaning: string;   // 그, 그녀 / 걷다, 걸어가다
+  points: string[];  // 불릿 설명 (기본형: jalan 길, 걷다 / ber- + jalan → berjalan 걷다)
+  note: string;      // 불릿 아래 보충 문장 (없으면 "")
 }
+
+// 문장 구조
+export interface SentenceStructure {
+  id: string;   // Dia + berjalan keliling kota + untuk mencari pekerjaan
+  ko: string;   // 그는 + 도시 곳곳을 걸어 다녔다 + 일자리를 찾기 위해
+}
+
+// 더 자연스러운 표현 (선택)
+export interface NaturalRewrite {
+  id: string;   // 인니어 문장
+  ko: string;   // 한국어 번역
+}
+
 export interface IdSentenceResult {
-  original: string;    // 입력 문장 (정제)
-  translation: string; // 전체 한국어 번역
-  chunks: SentenceChunk[]; // 끊어읽기 (호흡 단위, 꼭 필요한 것만)
-  hardWords: HardWord[];   // 어려운 단어 간략 뜻
+  original: string;                 // 입력 문장 (정제)
+  translation: string;              // 전체 한국어 번역
+  chunks: SentenceChunk[];          // 끊어읽기 (호흡 단위)
+  wordAnalysis: WordAnalysisItem[]; // 단어 분석
+  structure: SentenceStructure;     // 문장 구조
+  natural: NaturalRewrite;          // 더 자연스러운 표현 (없으면 빈 값)
 }
 
 export async function analyzeIdSentence(sentence: string): Promise<IdSentenceResult> {
@@ -276,20 +328,26 @@ export async function analyzeIdSentence(sentence: string): Promise<IdSentenceRes
   if (!trimmed) throw new Error("EMPTY_WORD");
 
   const prompt =
-    "당신은 한국인 학습자를 위한 인도네시아어 문장 분석기입니다.\n" +
-    "아래 인도네시아어 문장을 분석해 JSON으로만 출력하세요. 설명은 모두 한국어.\n\n" +
-    '문장: "' + trimmed + '"\n\n' +
-    "출력 형식:\n" +
+    "\uB2F9\uC2E0\uC740 \uD55C\uAD6D\uC778 \uD559\uC2B5\uC790\uB97C \uC704\uD55C \uC778\uB3C4\uB124\uC2DC\uC544\uC5B4 \uBB38\uC7A5 \uBD84\uC11D\uAE30\uC785\uB2C8\uB2E4.\n" +
+    "\uC544\uB798 \uC778\uB3C4\uB124\uC2DC\uC544\uC5B4 \uBB38\uC7A5\uC744 \uBD84\uC11D\uD574 JSON\uC73C\uB85C\uB9CC \uCD9C\uB825\uD558\uC138\uC694. \uC124\uBA85\uC740 \uBAA8\uB450 \uD55C\uAD6D\uC5B4.\n\n" +
+    '\uBB38\uC7A5: "' + trimmed + '"\n\n' +
+    "\uCD9C\uB825 \uD615\uC2DD:\n" +
     "{\n" +
-    '  "original": "입력 문장을 그대로(맞춤법만 정제)",\n' +
-    '  "translation": "자연스러운 한국어 전체 번역",\n' +
-    '  "chunks": [{"id": "인니어 조각", "ko": "그 조각의 한국어 뜻"}],\n' +
-    '  "hardWords": [{"word": "인니어 단어", "meaning": "간략한 한국어 뜻"}]\n' +
+    '  "original": "\uC785\uB825 \uBB38\uC7A5\uC744 \uADF8\uB300\uB85C(\uB9DE\uCDA4\uBC95\uB9CC \uC815\uC81C)",\n' +
+    '  "translation": "\uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uD55C\uAD6D\uC5B4 \uC804\uCCB4 \uBC88\uC5ED",\n' +
+    '  "chunks": [{"id": "\uC778\uB2C8\uC5B4 \uC870\uAC01", "ko": "\uADF8 \uC870\uAC01\uC758 \uD55C\uAD6D\uC5B4 \uB73B"}],\n' +
+    '  "wordAnalysis": [{"word": "\uB2E8\uC5B4/\uB369\uC5B4\uB9AC", "meaning": "\uD55C\uAD6D\uC5B4 \uB73B", "points": ["\uBD88\uB9BF \uC124\uBA85"], "note": "\uBCF4\uCDA9 \uC124\uBA85(\uC5C6\uC73C\uBA74 \uBE48 \uBB38\uC790\uC5F4)"}],\n' +
+    '  "structure": {"id": "\uC778\uB2C8\uC5B4 \uAD6C\uC131\uC744 +\uB85C \uC5F0\uACB0", "ko": "\uD55C\uAD6D\uC5B4 \uAD6C\uC131\uC744 +\uB85C \uC5F0\uACB0"},\n' +
+    '  "natural": {"id": "\uB354 \uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uC778\uB2C8\uC5B4 \uBB38\uC7A5", "ko": "\uADF8 \uD55C\uAD6D\uC5B4 \uBC88\uC5ED"}\n' +
     "}\n\n" +
-    "주의:\n" +
-    "- chunks는 '끊어읽기'입니다. 실제로 소리 내어 읽을 때 숨쉬는 호흡 단위로만 나누세요.\n" +
-    "- 절대 단어 하나하나로 쪼개지 마세요. 꼭 필요한 최소한의 의미 덩어리로만 (보통 문장당 2~4조각).\n" +
-    "- hardWords는 초중급 학습자가 모를 만한 단어만 골라 넣으세요. 쉬운 단어는 제외.\n";
+    "\uC8FC\uC758:\n" +
+    "- chunks\uB294 '\uB05D\uC5B4\uC77D\uAE30'\uC785\uB2C8\uB2E4. \uC18C\uB9AC \uB0B4\uC5B4 \uC77D\uC744 \uB54C \uD638\uD761 \uB2E8\uC704\uB85C\uB9CC \uB098\uB204\uC138\uC694 (\uBCF4\uD1B5 2~4\uC870\uAC01).\n" +
+    "- chunks\uC758 ko\uB294 \uD55C\uAD6D\uC5B4 \uC5B4\uC21C\uC73C\uB85C \uC77D\uC5C8\uC744 \uB54C \uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uC21C\uC11C\uB85C \uC791\uC131\uD558\uC138\uC694.\n" +
+    "- wordAnalysis\uB294 \uBB38\uC7A5\uC5D0 \uB098\uC624\uB294 \uC21C\uC11C\uB300\uB85C, \uB2E8\uC5B4 \uB610\uB294 \uC758\uBBF8 \uB369\uC5B4\uB9AC(\uC608: keliling kota) \uB2E8\uC704\uB85C \uBAA8\uB450 \uB123\uC73C\uC138\uC694.\n" +
+    "- points\uC5D0\uB294 \uAE30\uBCF8\uD615(\uC5B4\uADFC), \uC811\uC0AC \uACB0\uD569 \uACFC\uC815(\uC608: ber- + jalan \u2192 berjalan \uAC77\uB2E4), \uC5F0\uC5B4/\uD30C\uC0DD\uC5B4 \uB4F1\uC744 \uC9E7\uAC8C \uC801\uC73C\uC138\uC694. \uC124\uBA85\uD560 \uAC8C \uC5C6\uC73C\uBA74 \uBE48 \uBC30\uC5F4 [].\n" +
+    "- note\uB294 \uBB38\uBC95\uC801\uC73C\uB85C \uB354 \uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uB300\uC548 \uB4F1 \uBCF4\uCDA9 \uC124\uBA85\uC774 \uD544\uC694\uD560 \uB54C\uB9CC. \uC5C6\uC73C\uBA74 \uBE48 \uBB38\uC790\uC5F4.\n" +
+    "- structure\uB294 \uBB38\uC7A5\uC744 \uC8FC\uC5B4/\uC220\uC5B4/\uBAA9\uC801\uC5B4 \uB4F1 \uD070 \uB369\uC5B4\uB9AC\uB85C \uB098\uB204\uC5B4 \uD50C\uB7EC\uC2A4 \uAE30\uD638\uB85C \uC774\uC5B4\uC11C \uC801\uC73C\uC138\uC694. ko\uB294 \uAC19\uC740 \uC21C\uC11C\uB85C \uB300\uC751\uC2DC\uD0B5\uB2C8\uB2E4.\n" +
+    "- natural\uC740 \uC6D0\uBB38\uBCF4\uB2E4 \uB354 \uC790\uC5F0\uC2A4\uB7FD\uAC70\uB098 \uBB38\uBC95\uC801\uC73C\uB85C \uC644\uC804\uD55C \uD45C\uD604\uC774 \uC788\uC744 \uB54C\uB9CC \uCC44\uC6B0\uACE0, \uC6D0\uBB38\uC774 \uC774\uBBF8 \uC790\uC5F0\uC2A4\uB7FD\uB2E4\uBA74 id\uC640 ko \uBAA8\uB450 \uBE48 \uBB38\uC790\uC5F4\uB85C \uB450\uC138\uC694.\n";
 
   const parsed = await callGeminiJSON(prompt);
   return {
@@ -299,11 +357,26 @@ export async function analyzeIdSentence(sentence: string): Promise<IdSentenceRes
       id: (c?.id || "").toString().trim(),
       ko: (c?.ko || "").toString().trim(),
     })).filter((c) => c.id),
-    hardWords: arr<HardWord>(parsed.hardWords).map((h) => ({
-      word: (h?.word || "").toString().trim(),
-      meaning: (h?.meaning || "").toString().trim(),
-    })).filter((h) => h.word),
+    wordAnalysis: arr<any>(parsed.wordAnalysis).map((w) => ({
+      word: (w?.word || "").toString().trim(),
+      meaning: (w?.meaning || "").toString().trim(),
+      points: arr<string>(w?.points).map((p) => (p || "").toString().trim()).filter(Boolean),
+      note: (w?.note || "").toString().trim(),
+    })).filter((w) => w.word),
+    structure: {
+      id: ((parsed.structure as any)?.id || "").toString().trim(),
+      ko: ((parsed.structure as any)?.ko || "").toString().trim(),
+    },
+    natural: {
+      id: ((parsed.natural as any)?.id || "").toString().trim(),
+      ko: ((parsed.natural as any)?.ko || "").toString().trim(),
+    },
   };
+}
+
+export interface HardWord {
+  word: string;    // 인니어 단어
+  meaning: string; // 간략한 한국어 뜻
 }
 
 // ============================================================
