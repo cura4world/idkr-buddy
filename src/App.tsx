@@ -6,6 +6,7 @@ import Index from "./pages/Index";
 import Dictionary from "./pages/Dictionary";
 import Story from "./pages/Story";
 import Devotion from "./pages/Devotion";
+import Prayer from "./pages/Prayer";
 import Wordbooks from "./pages/Wordbooks";
 import CategoryDetail from "./pages/CategoryDetail";
 import StudyMode from "./pages/StudyMode";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/dictionary" element={<Dictionary />} />
           <Route path="/story" element={<Story />} />
           <Route path="/devotion" element={<Devotion />} />
+          <Route path="/prayer" element={<Prayer />} />
           <Route path="/wordbooks" element={<Wordbooks />} />
           <Route path="/category/:id" element={<CategoryDetail />} />
           <Route path="/study/:id" element={<StudyMode />} />
