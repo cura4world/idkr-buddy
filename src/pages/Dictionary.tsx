@@ -164,6 +164,7 @@ const Dictionary = () => {
     if (!hasGeminiApiKey()) {
       setError("Gemini API 키가 필요합니다. 설정에서 키를 입력해주세요.");
       setResult(null);
+      setQuery(w); // 입력한 내용 유지
       return;
     }
     inputRef.current?.blur();
@@ -212,6 +213,7 @@ const Dictionary = () => {
       }
     } catch (e: any) {
       setError(errorMessage(e?.message || ""));
+      setQuery(w); // 검색 실패 시 입력한 내용을 검색창에 되돌려 둠 (다시 타이핑할 필요 없음)
     } finally {
       setLoading(false);
     }
@@ -587,8 +589,20 @@ const Dictionary = () => {
         {/* (2) 인도네시아어 문장 결과 */}
         {!loading && idSentence && (
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5 content-bump">
+            {/* 끊어읽기: 인니어 / 한국어 */}
             <div className="flex items-start justify-between gap-2 min-w-0">
-              <h2 className="text-base font-semibold text-gray-900 break-words min-w-0">{idSentence.original}</h2>
+              <div className="min-w-0">
+                <p className="text-base font-semibold text-gray-900 break-words font-word leading-relaxed">
+                  {idSentence.chunks.length > 0
+                    ? idSentence.chunks.map((c) => c.id).join(" / ")
+                    : idSentence.original}
+                </p>
+                <p className="text-sm text-gray-600 mt-1.5 break-words leading-relaxed font-gothic">
+                  {idSentence.chunks.length > 0 && idSentence.chunks.some((c) => c.ko)
+                    ? idSentence.chunks.map((c) => c.ko).join(" / ")
+                    : idSentence.translation}
+                </p>
+              </div>
               <button
                 onClick={() => speak(idSentence.original, "id")}
                 className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
@@ -597,28 +611,89 @@ const Dictionary = () => {
                 <Volume2 size={18} />
               </button>
             </div>
-            <p className="text-sm text-gray-500 mt-1 break-words">{idSentence.translation}</p>
 
-            {idSentence.chunks.length > 0 && (
+            {/* 단어 분석 */}
+            {idSentence.wordAnalysis.length > 0 && (
               <>
                 <Divider />
-                <p className="text-sm text-gray-800 break-words leading-relaxed">
-                  {idSentence.chunks.map((c) => c.id).join(" / ")}
-                </p>
+                <SectionTitle>단어 분석</SectionTitle>
+                <div className="space-y-3.5">
+                  {idSentence.wordAnalysis.map((w, i) => (
+                    <div key={i} className="min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                        <span className="font-semibold text-primary break-words font-word">{w.word}</span>
+                        <button
+                          onClick={() => speak(w.word, "id")}
+                          className="shrink-0 text-primary/70 hover:text-primary"
+                          title="발음 듣기"
+                        >
+                          <Volume2 size={14} />
+                        </button>
+                        {w.meaning && (
+                          <span className="text-sm text-gray-800 break-words font-gothic">{w.meaning}</span>
+                        )}
+                      </div>
+                      {w.points.length > 0 && (
+                        <ul className="mt-1 space-y-1 pl-1">
+                          {w.points.map((pt, j) => (
+                            <li key={j} className="flex gap-2 min-w-0 text-xs text-gray-600 font-gothic">
+                              <span className="text-gray-400 shrink-0">•</span>
+                              <span className="min-w-0 break-words">{pt}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {w.note && (
+                        <p className="mt-1 text-xs text-gray-500 break-words font-gothic leading-relaxed">{w.note}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </>
             )}
 
-            {idSentence.hardWords.length > 0 && (
+            {/* 문장 구조 */}
+            {idSentence.structure.id && (
               <>
                 <Divider />
-                <ul className="space-y-1.5 text-sm text-gray-800 font-gothic">
-                  {idSentence.hardWords.map((h, i) => (
-                    <li key={i} className="flex gap-2 min-w-0">
-                      <span className="text-gray-400">•</span>
-                      <span className="min-w-0 break-words"><span className="font-semibold text-gray-900">{h.word}</span> <span className="text-xs">{h.meaning}</span></span>
-                    </li>
-                  ))}
-                </ul>
+                <SectionTitle>문장 구조</SectionTitle>
+                <div className="rounded-lg bg-gray-50 border border-gray-200 px-3.5 py-3 min-w-0">
+                  <p className="text-sm text-gray-900 break-words font-word leading-relaxed">
+                    {idSentence.structure.id}
+                  </p>
+                  {idSentence.structure.ko && (
+                    <p className="text-sm text-gray-600 mt-1.5 break-words font-gothic leading-relaxed">
+                      {idSentence.structure.ko}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* 더 자연스러운 표현 */}
+            {idSentence.natural.id && (
+              <>
+                <Divider />
+                <SectionTitle>좀 더 자연스럽게</SectionTitle>
+                <div className="rounded-lg bg-gray-50 border border-gray-200 px-3.5 py-3 min-w-0">
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 break-words font-word leading-relaxed min-w-0">
+                      {idSentence.natural.id}
+                    </p>
+                    <button
+                      onClick={() => speak(idSentence.natural.id, "id")}
+                      className="shrink-0 text-primary/70 hover:text-primary"
+                      title="발음 듣기"
+                    >
+                      <Volume2 size={15} />
+                    </button>
+                  </div>
+                  {idSentence.natural.ko && (
+                    <p className="text-sm text-gray-600 mt-1.5 break-words font-gothic leading-relaxed">
+                      {idSentence.natural.ko}
+                    </p>
+                  )}
+                </div>
               </>
             )}
           </div>
