@@ -46,6 +46,29 @@ const fmtDate = (t: number) => {
 const ID_FONT_SIZES = ["text-xs", "text-sm", "text-base", "text-lg", "text-xl"];
 const ID_FONT_KEY = "prayer-id-font-step";
 
+// 주기도문 (고정 카드 — 저장/삭제/재생성 없음)
+const LORDS_PRAYER: PrayerRecord = {
+  id: "lords-prayer",
+  createdAt: 0,
+  categoryId: "lords",
+  situationId: "lords",
+  situationLabel: "주기도문",
+  length: "short",
+  title: "주기도문 · Doa Bapa Kami",
+  indonesian:
+    "Bapa kami yang di sorga, dikuduskanlah nama-Mu, datanglah Kerajaan-Mu, jadilah kehendak-Mu di bumi seperti di sorga.\n\n" +
+    "Berikanlah kami pada hari ini makanan kami yang secukupnya.\n\n" +
+    "Dan ampunilah kami akan kesalahan kami, seperti kami juga mengampuni orang yang bersalah kepada kami.\n\n" +
+    "Dan janganlah membawa kami ke dalam pencobaan, tetapi lepaskanlah kami dari pada yang jahat.\n\n" +
+    "Karena Engkaulah yang empunya Kerajaan dan kuasa dan kemuliaan sampai selama-lamanya. Amin.",
+  korean:
+    "하늘에 계신 우리 아버지, 아버지의 이름을 거룩하게 하시며, 아버지의 나라가 오게 하시며, 아버지의 뜻이 하늘에서와 같이 땅에서도 이루어지게 하소서.\n\n" +
+    "오늘 우리에게 일용할 양식을 주시고,\n\n" +
+    "우리가 우리에게 잘못한 사람을 용서하여 준 것같이 우리 죄를 용서하여 주시고,\n\n" +
+    "우리를 시험에 빠지지 않게 하시고 악에서 구하소서.\n\n" +
+    "나라와 권능과 영광이 영원히 아버지의 것입니다. 아멘.",
+};
+
 const LENGTH_LABELS: { id: PrayerLength; label: string }[] = [
   { id: "short", label: "짧게" },
   { id: "medium", label: "보통" },
@@ -461,6 +484,7 @@ const Prayer = () => {
   // ================================================================
   if (view === "prayer" && current) {
     const quote = pickPrayerQuote(current.id);
+    const isLords = current.id === "lords-prayer";
     return (
       <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
         <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
@@ -474,41 +498,33 @@ const Prayer = () => {
           <h1 className="flex-1 min-w-0 text-base font-semibold leading-snug line-clamp-2 break-words">
             {current.title}
           </h1>
-          <button
-            onClick={togglePin}
-            className={`shrink-0 w-9 h-9 flex items-center justify-center ${
-              current.pinned ? "text-amber-400" : "text-white/50 hover:text-white/70"
-            }`}
-            title={current.pinned ? "고정 해제" : "고정"}
-          >
-            <Bookmark size={18} fill={current.pinned ? "currentColor" : "none"} />
-          </button>
+          {!isLords && (
+            <button
+              onClick={togglePin}
+              className={`shrink-0 w-9 h-9 flex items-center justify-center ${
+                current.pinned ? "text-amber-400" : "text-white/50 hover:text-white/70"
+              }`}
+              title={current.pinned ? "고정 해제" : "고정"}
+            >
+              <Bookmark size={18} fill={current.pinned ? "currentColor" : "none"} />
+            </button>
+          )}
         </header>
 
         <div className="px-4 py-4">
           <div className="flex items-stretch gap-2">
             <div className="flex-1 min-w-0 bg-card border border-border/60 rounded-xl px-5 py-5 min-h-[72vh] content-bump select-none">
-              {/* 상황·날짜 */}
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5">
+              {/* 제목(상황) 한 줄, 다음 줄 우측: 날짜 + 글자크기(-,+) 또는 연필 */}
+              <div className="mb-3">
+                <span className="inline-block max-w-full truncate text-xs font-bold text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5">
                   {current.situationLabel}
                 </span>
-                <span className="text-xs text-gray-400 font-gothic">{fmtDate(current.createdAt)}</span>
-              </div>
-
-              {!flipped ? (
-                <>
-                  {/* 앞면: 인도네시아어 기도문 (단어 탭 가능) + 글자 크기 조절 */}
-                  <div className="relative">
-                    <div className="absolute right-0 top-0 flex flex-col gap-1.5">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); changeIdFont(1); }}
-                        disabled={idFontStep >= ID_FONT_SIZES.length - 1}
-                        className="w-7 h-7 rounded-full bg-black/5 text-gray-500 flex items-center justify-center disabled:opacity-30"
-                        title="글자 크게"
-                      >
-                        <Plus size={13} />
-                      </button>
+                <div className="flex items-center justify-end gap-2 mt-1.5">
+                  {!isLords && (
+                    <span className="text-xs text-gray-400 font-gothic">{fmtDate(current.createdAt)}</span>
+                  )}
+                  {!flipped ? (
+                    <>
                       <button
                         onClick={(e) => { e.stopPropagation(); changeIdFont(-1); }}
                         disabled={idFontStep <= 0}
@@ -517,11 +533,36 @@ const Prayer = () => {
                       >
                         <Minus size={13} />
                       </button>
-                    </div>
-                    <div className="pr-9">{renderIndoBody(current.indonesian)}</div>
-                  </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); changeIdFont(1); }}
+                        disabled={idFontStep >= ID_FONT_SIZES.length - 1}
+                        className="w-7 h-7 rounded-full bg-black/5 text-gray-500 flex items-center justify-center disabled:opacity-30"
+                        title="글자 크게"
+                      >
+                        <Plus size={13} />
+                      </button>
+                    </>
+                  ) : (
+                    !isLords && !editingKo && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setKoDraft(current.korean); setEditingKo(true); }}
+                        className="w-7 h-7 rounded-full bg-black/5 text-gray-500 flex items-center justify-center"
+                        title="한국어 수정"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
 
-                  {/* 앞면 하단 액션 */}
+              {!flipped ? (
+                <>
+                  {/* 앞면: 인도네시아어 기도문 (단어 탭 가능) */}
+                  {renderIndoBody(current.indonesian)}
+
+                  {/* 앞면 하단 액션 (주기도문 제외) */}
+                  {!isLords && (
                   <div className="flex items-center gap-2 pt-3">
                     <button
                       onClick={regenerate}
@@ -544,42 +585,33 @@ const Prayer = () => {
                       </button>
                     ) : (
                       <div className="shrink-0 flex items-center gap-1.5">
-                        <button onClick={doDelete} className="rounded-full py-2 px-3 text-xs font-medium bg-red-500 text-white">
+                        <button onClick={doDelete} className="rounded-full py-2 px-3 text-xs font-medium font-gothic bg-red-500 text-white">
                           삭제
                         </button>
-                        <button onClick={() => setDelConfirm(false)} className="rounded-full py-2 px-3 text-xs font-medium bg-black/5 text-gray-600">
+                        <button onClick={() => setDelConfirm(false)} className="rounded-full py-2 px-3 text-xs font-medium font-gothic bg-black/5 text-gray-600">
                           취소
                         </button>
                       </div>
                     )}
                   </div>
+                  )}
                 </>
               ) : !editingKo ? (
                 <>
-                  {/* 뒷면: 한국어 번역 + 수정(연필) 버튼 */}
-                  <div className="flex justify-end -mt-1 mb-1">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setKoDraft(current.korean); setEditingKo(true); }}
-                      className="w-8 h-8 rounded-full bg-black/5 text-gray-500 flex items-center justify-center"
-                      title="한국어 수정"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  </div>
+                  {/* 뒷면: 한국어 번역 */}
                   <div>{renderKorean(current.korean)}</div>
 
-                  {/* 뒷면: 기도에 관한 말씀·명언 */}
-                  <div className="rounded-lg bg-emerald-500/5 border border-emerald-200/60 px-3 py-2.5 mt-4">
-                    <p className="text-[11px] leading-relaxed text-gray-800 font-gothic">{quote.text}</p>
-                    <p className="text-[11px] text-gray-500 font-gothic mt-1">— {quote.source}</p>
-                  </div>
+                  {/* 뒷면: 기도에 관한 말씀·명언 (주기도문 제외) */}
+                  {!isLords && (
+                    <div className="rounded-lg bg-emerald-500/5 border border-emerald-200/60 px-3 py-2.5 mt-4">
+                      <p className="text-xs leading-relaxed text-gray-800 font-gothic">{quote.text}</p>
+                      <p className="text-[11px] text-gray-500 font-gothic mt-1">— {quote.source}</p>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
                   {/* 뒷면: 한국어 수정 모드 */}
-                  <p className="text-xs font-bold text-gray-900 font-gothic mb-2">
-                    한국어를 고치면 인도네시아어 기도문도 그에 맞게 고쳐집니다
-                  </p>
                   <textarea
                     value={koDraft}
                     onChange={(e) => setKoDraft(e.target.value)}
@@ -844,6 +876,16 @@ const Prayer = () => {
               </p>
             </button>
           ))}
+
+          {/* 주기도문 — 고정 카드 */}
+          <button
+            onClick={() => openPrayer(LORDS_PRAYER)}
+            className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-4 py-4 text-left card-lift active:scale-[0.98] transition-transform"
+          >
+            <span className="text-2xl">✝️</span>
+            <p className="mt-1.5 text-sm font-bold text-gray-900">주기도문</p>
+            <p className="text-[11px] text-gray-500 font-gothic mt-0.5">Doa Bapa Kami</p>
+          </button>
         </div>
 
         {/* 저장된 기도문 */}
