@@ -44,6 +44,56 @@ const Story = () => {
   const [current, setCurrent] = useState<StoryRecord | null>(null);
   const [flipped, setFlipped] = useState(false);
 
+  // 앞/뒤 문단 DOM 참조 (뒤집을 때 읽던 문단으로 스크롤 맞추기)
+  const paraRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
+  const pendingPara = useRef<number | null>(null);
+
+  // 화면 상단 기준으로 지금 보고 있는 문단 번호를 찾음
+  const currentParaIndex = (side: "id" | "ko") => {
+    const marker = 140; // 헤더 아래 기준선
+    let best = 0;
+    let bestDist = Infinity;
+    Object.keys(paraRefs.current).forEach((k) => {
+      if (!k.startsWith(side + "-")) return;
+      const el = paraRefs.current[k];
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      const dist = Math.abs(top - marker);
+      // 기준선을 이미 지난 문단을 우선하되, 가장 가까운 것을 고름
+      if (top <= marker + 40 && dist < bestDist) {
+        bestDist = dist;
+        best = Number(k.split("-")[1]) || 0;
+      }
+    });
+    return best;
+  };
+
+  // 뒤집기: 지금 문단 번호를 기억해두고 반대편에서 같은 번호로 스크롤
+  const handleFlip = () => {
+    const side = flipped ? "ko" : "id";
+    pendingPara.current = currentParaIndex(side);
+    setFlipped((f) => !f);
+  };
+
+  // 뒤집힌 뒤 기억해둔 문단 위치로 이동
+  useEffect(() => {
+    const idx = pendingPara.current;
+    if (idx === null) return;
+    pendingPara.current = null;
+    if (idx <= 0) {
+      window.scrollTo({ top: 0 });
+      return;
+    }
+    const side = flipped ? "ko" : "id";
+    const el = paraRefs.current[side + "-" + idx];
+    if (!el) {
+      window.scrollTo({ top: 0 });
+      return;
+    }
+    const top = window.scrollY + el.getBoundingClientRect().top - 140;
+    window.scrollTo({ top: Math.max(0, top) });
+  }, [flipped]);
+
   // 단어 미니 팝업
   const [popupWord, setPopupWord] = useState<string | null>(null);
   const [popupSentence, setPopupSentence] = useState("");
@@ -64,6 +114,8 @@ const Story = () => {
     wordCache.current.clear();
     setCurrent(rec);
     setFlipped(false);
+    paraRefs.current = {};
+    pendingPara.current = null;
     if (!cardStateRef.current) {
       cardStateRef.current = true;
       try { window.history.pushState({ storyCard: true }, ""); } catch (e) {}
@@ -74,6 +126,8 @@ const Story = () => {
   const resetToList = () => {
     setCurrent(null);
     setFlipped(false);
+    paraRefs.current = {};
+    pendingPara.current = null;
     setPopupWord(null);
     wordCache.current.clear();
   };
@@ -234,7 +288,11 @@ const Story = () => {
     return paragraphs.map((para, pi) => {
       const sentences = para.split(new RegExp("(?<=[.!?])\\s+")).filter(Boolean);
       return (
-        <p key={pi} className="mb-4 text-base leading-relaxed font-word text-gray-900">
+        <p
+          key={pi}
+          ref={(el) => { paraRefs.current["id-" + pi] = el; }}
+          className="mb-4 text-base leading-relaxed font-word text-gray-900"
+        >
           {sentences.map((sent, si) => (
             <span key={si}>
               {sent.split(" ").map((tok, ti) => (
@@ -256,7 +314,13 @@ const Story = () => {
 
   const renderKorean = (text: string) =>
     text.split(new RegExp("\\n{2,}")).filter((p) => p.trim()).map((para, i) => (
-      <p key={i} className="mb-4 text-sm leading-relaxed text-gray-800 font-body">{para}</p>
+      <p
+        key={i}
+        ref={(el) => { paraRefs.current["ko-" + i] = el; }}
+        className="mb-4 text-sm leading-relaxed text-gray-800 font-body"
+      >
+        {para}
+      </p>
     ));
 
   // ---------- 카드 뷰 ----------
@@ -324,7 +388,7 @@ const Story = () => {
             </div>
             {/* 뒤집기 바 */}
             <button
-              onClick={(e) => { e.stopPropagation(); setFlipped((f) => !f); }}
+              onClick={(e) => { e.stopPropagation(); handleFlip(); }}
               className="shrink-0 w-2 self-stretch rounded-full bg-primary/15 active:bg-primary/40"
               aria-label="카드 뒤집기"
               title="카드 뒤집기"
