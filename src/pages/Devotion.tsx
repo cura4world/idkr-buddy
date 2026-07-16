@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Sunrise, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
-import { BIBLE_BOOKS, getBook, fetchChapter, BibleVerse } from "@/lib/bible";
+import { BIBLE_BOOKS, getBook, fetchChapter, fetchChapterKo, BibleVerse } from "@/lib/bible";
 import { generateDevotion } from "@/lib/devotion";
 import { saveDevotion, listDevotions, DevotionRecord } from "@/lib/devotionStore";
 import { quickLookupWord } from "@/lib/story";
@@ -126,10 +126,16 @@ const Devotion = () => {
     const top = window.scrollY + el.getBoundingClientRect().top - 140;
     window.scrollTo({ top: Math.max(0, top) });
   }, [flipped]);
-  const [fullOpen, setFullOpen] = useState(false); // 본문 전체 토글
+  const [fullOpen, setFullOpen] = useState(false); // 본문 전체 토글 (인니어, 앞면)
   const [cardVerses, setCardVerses] = useState<BibleVerse[] | null>(null);
   const [cardLoading, setCardLoading] = useState(false);
   const [cardError, setCardError] = useState(false);
+
+  // 한국어 본문(새번역) 토글 (뒷면)
+  const [koOpen, setKoOpen] = useState(false);
+  const [koVerses, setKoVerses] = useState<BibleVerse[] | null>(null);
+  const [koLoading, setKoLoading] = useState(false);
+  const [koError, setKoError] = useState(false);
 
   // 단어 미니 팝업 (이야기와 동일한 3단 캐시 공유)
   const [popupWord, setPopupWord] = useState<string | null>(null);
@@ -162,6 +168,9 @@ const Devotion = () => {
     setPopupWord(null);
     setCardVerses(null);
     setCardError(false);
+    setKoOpen(false);
+    setKoVerses(null);
+    setKoError(false);
     wordCache.current.clear();
   };
 
@@ -206,6 +215,17 @@ const Devotion = () => {
       .finally(() => setCardLoading(false));
   };
 
+  // 한국어(새번역) 본문 로드 — 토글을 처음 열 때만 불러옴
+  const loadKoVerses = (rec: DevotionRecord) => {
+    if (koVerses || koLoading) return;
+    setKoLoading(true);
+    setKoError(false);
+    fetchChapterKo(rec.bookId, rec.chapter)
+      .then((v) => setKoVerses(v))
+      .catch(() => setKoError(true))
+      .finally(() => setKoLoading(false));
+  };
+
   const openCard = (rec: DevotionRecord, verses?: BibleVerse[]) => {
     wordCache.current.clear();
     setSelectOpen(false);
@@ -213,6 +233,9 @@ const Devotion = () => {
     paraRefs.current = {};
     pendingPara.current = null;
     setFullOpen(false);
+    setKoOpen(false);
+    setKoVerses(null);
+    setKoError(false);
     setPopupWord(null);
     setCurrent(rec);
     if (verses) {
@@ -409,6 +432,14 @@ const Devotion = () => {
     </p>
   );
 
+  // 한국어 절 렌더링 (단어 탭 없음 — 공인 번역본 원문 그대로 표시)
+  const renderKoVerse = (v: BibleVerse) => (
+    <p key={"ko-v" + v.verse} className="mb-2 text-sm leading-relaxed text-gray-800 font-gothic">
+      <span className="text-rose-500/70 text-xs align-super mr-1 select-none">{v.verse}</span>
+      {v.text}
+    </p>
+  );
+
   // ---------- 카드 뷰 ----------
   if (current) {
     const c = current.content;
@@ -513,6 +544,58 @@ const Devotion = () => {
                       {c.doaKo}
                     </p>
                   )}
+
+                  {/* 한국어 성경 본문(새번역) — 토글, 기본 접힘 */}
+                  <div className="rounded-lg bg-rose-500/5 border border-rose-200/60 px-3 py-2.5 mb-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const next = !koOpen;
+                        setKoOpen(next);
+                        if (next) loadKoVerses(current);
+                      }}
+                      className="w-full flex items-center gap-2 text-left"
+                    >
+                      <span className="flex-1 min-w-0 text-xs font-semibold text-rose-600 font-gothic truncate">
+                        본문 · {cBook ? cBook.ko : ""} {current.chapter}:{nasRef} (새번역)
+                      </span>
+                      {koOpen ? (
+                        <ChevronUp size={15} className="shrink-0 text-rose-500" />
+                      ) : (
+                        <ChevronDown size={15} className="shrink-0 text-rose-500" />
+                      )}
+                    </button>
+
+                    {koOpen && (
+                      <div className="mt-2.5">
+                        {koLoading && (
+                          <div className="flex items-center gap-2 text-gray-400 text-sm py-1">
+                            <Loader2 size={14} className="animate-spin" /> 본문을 불러오는 중...
+                          </div>
+                        )}
+                        {koError && (
+                          <div className="text-xs text-gray-500 font-gothic py-1">
+                            본문을 불러오지 못했어요. 네트워크를 확인해주세요.{" "}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); loadKoVerses(current); }}
+                              className="text-rose-600 font-medium underline"
+                            >
+                              다시 시도
+                            </button>
+                          </div>
+                        )}
+                        {koVerses &&
+                          koVerses
+                            .filter((v) => v.verse >= c.nasStart && v.verse <= c.nasEnd)
+                            .map(renderKoVerse)}
+                        {koVerses && (
+                          <p className="mt-2 text-[11px] text-gray-400 font-gothic">
+                            새번역 · (c) 대한성서공회. 허락을 받아 사용.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="border-t border-gray-200 my-4" />
 
