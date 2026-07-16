@@ -132,9 +132,11 @@ const Prayer = () => {
 
   // ---------- 화면 이동 ----------
   const openWizard = (cid: string) => {
+    const cat = getPrayerCategory(cid);
     setCatId(cid);
-    setSituationId(null);
-    setPhase(null);
+    // 첫 상황을 기본 선택해 두면 바로 만들 수 있습니다 (원하면 다른 상황을 탭해서 변경)
+    setSituationId(cat?.situations[0]?.id || null);
+    setPhase(cat?.needsPhase ? "open" : null);
     setNameInput("");
     setNoteInput("");
     let saved: PrayerLength = "short";
