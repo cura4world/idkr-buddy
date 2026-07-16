@@ -35,9 +35,9 @@ const ChurchCross = ({ size = 24, className = "" }: { size?: number; className?:
   </svg>
 );
 
-// 5개 박스 공통 골격 (높이 통일: 4.75rem — 글자크기 설정에 따라 함께 커짐)
+// 5개 박스 공통 골격 (높이 통일: 5.5rem — 글자크기 설정에 따라 함께 커짐)
 const CARD_BASE =
-  "w-full relative overflow-hidden rounded-2xl bg-card h-[4.75rem] px-4 card-lift border transition-transform duration-150 active:scale-[0.98]";
+  "w-full relative overflow-hidden rounded-2xl bg-card h-[5.5rem] px-4 card-lift border transition-transform duration-150 active:scale-[0.98]";
 
 type MenuCardProps = {
   onClick: () => void;
@@ -59,8 +59,8 @@ const MenuCard = ({ onClick, icon: Icon, grad, border, tile, mark, title, sub, b
   >
     <Icon size={92} className={`absolute -right-4 -bottom-8 ${mark} rotate-12 pointer-events-none`} />
     <div className="relative h-full flex items-center gap-3.5">
-      <span className={`w-11 h-11 rounded-xl ${tile} flex items-center justify-center shrink-0 shadow-sm`}>
-        <Icon size={21} className="text-white" />
+      <span className={`w-12 h-12 rounded-xl ${tile} flex items-center justify-center shrink-0 shadow-sm`}>
+        <Icon size={23} className="text-white" />
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -196,8 +196,8 @@ const Index = () => {
                 onClick={() => navigate(`/category/${MY_WORDBOOK_ID}`)}
                 className="flex-1 min-w-0 h-full flex items-center gap-3.5 text-left"
               >
-                <span className="w-11 h-11 rounded-xl bg-violet-500 flex items-center justify-center shrink-0 shadow-sm">
-                  <Star size={21} className="text-white" />
+                <span className="w-12 h-12 rounded-xl bg-violet-500 flex items-center justify-center shrink-0 shadow-sm">
+                  <Star size={23} className="text-white" />
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-semibold text-gray-900 truncate">내 단어장</p>
