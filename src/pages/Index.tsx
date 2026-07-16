@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, restoreSharedCategories } from "@/lib/store";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import SettingsDialog from "@/components/SettingsDialog";
-import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, ChevronRight } from "lucide-react";
+import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, ChevronRight, HandHeart } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -174,6 +174,17 @@ const Index = () => {
           mark="text-rose-500/10"
           title="인도네시아어 묵상"
           sub="Saat Teduh"
+        />
+
+        <MenuCard
+          onClick={() => navigate("/prayer")}
+          icon={HandHeart}
+          grad="to-emerald-300/35"
+          border="border-emerald-300/50"
+          tile="bg-emerald-500"
+          mark="text-emerald-500/10"
+          title="인도네시아어 기도"
+          sub="Doa"
         />
         <MenuCard
           onClick={() => navigate("/wordbooks")}
