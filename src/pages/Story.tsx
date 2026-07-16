@@ -282,6 +282,19 @@ const Story = () => {
     toast(added ? "내 단어장에 저장되었습니다" : "이미 내 단어장에 있는 단어입니다");
   };
 
+  // 인니어 텍스트를 단어 단위로 쪼개 탭 가능하게 렌더링 (제목/본문 공용)
+  const renderTokens = (text: string, keyPrefix: string) =>
+    text.split(" ").map((tok, ti) => (
+      <span key={keyPrefix + ti}>
+        <span
+          onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
+          className="cursor-pointer rounded active:bg-primary/20"
+        >
+          {tok}
+        </span>{" "}
+      </span>
+    ));
+
   // 인니어 본문을 문단→문장→단어로 쪼개 탭 가능하게 렌더링
   const renderIndonesian = (text: string) => {
     const paragraphs = text.split(new RegExp("\\n{2,}")).filter((p) => p.trim());
@@ -294,18 +307,7 @@ const Story = () => {
           className="mb-4 text-base leading-relaxed font-word text-gray-900"
         >
           {sentences.map((sent, si) => (
-            <span key={si}>
-              {sent.split(" ").map((tok, ti) => (
-                <span key={ti}>
-                  <span
-                    onClick={(e) => { e.stopPropagation(); openWordPopup(tok, sent); }}
-                    className="cursor-pointer rounded active:bg-primary/20"
-                  >
-                    {tok}
-                  </span>{" "}
-                </span>
-              ))}
-            </span>
+            <span key={si}>{renderTokens(sent, pi + "-" + si + "-")}</span>
           ))}
         </p>
       );
@@ -351,7 +353,9 @@ const Story = () => {
                   <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">난이도 {current.difficulty}</span>
                 </div>
                 <div className="mb-3 min-w-0">
-                  <h2 className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">{current.title}</h2>
+                  <h2 className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">
+                    {renderTokens(current.title, "title-")}
+                  </h2>
                 </div>
                 {renderIndonesian(current.indonesian)}
               </>
