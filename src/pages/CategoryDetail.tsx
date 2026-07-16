@@ -395,7 +395,7 @@ export default function CategoryDetail() {
               >
                 <div className="flex-1 min-w-0 content-bump">
                   <p className="font-word text-base font-medium truncate">{w.word}</p>
-                  <p className="text-sm text-muted-foreground font-body">{w.meaning}</p>
+                  <p className="text-sm text-muted-foreground font-gothic">{w.meaning}</p>
                   {w.example && (
                     <p className="text-xs text-muted-foreground/70 font-word mt-0.5">{w.example}</p>
                   )}
@@ -404,13 +404,6 @@ export default function CategoryDetail() {
                   )}
                 </div>
                 <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
-                  <button
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => { e.stopPropagation(); setEditWord(w); }}
-                    className="text-card-foreground/40 hover:text-primary p-1"
-                  >
-                    <Settings size={16} />
-                  </button>
                   <button
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); speak(w.word); }}
@@ -427,6 +420,13 @@ export default function CategoryDetail() {
                       <Volume2 size={16} />
                     </button>
                   )}
+                  <button
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => { e.stopPropagation(); setEditWord(w); }}
+                    className="text-card-foreground/40 hover:text-primary p-1"
+                  >
+                    <Settings size={16} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -445,7 +445,7 @@ export default function CategoryDetail() {
         >
           <div className="flex-1 min-w-0 content-bump">
             <p className="font-word text-base font-medium truncate text-muted-foreground">{draggingWord.word}</p>
-            <p className="text-sm text-muted-foreground font-body">{draggingWord.meaning}</p>
+            <p className="text-sm text-muted-foreground font-gothic">{draggingWord.meaning}</p>
             {draggingWord.example && (
               <p className="text-xs text-muted-foreground font-word mt-0.5">{draggingWord.example}</p>
             )}
@@ -454,9 +454,9 @@ export default function CategoryDetail() {
             )}
           </div>
           <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
-            <Settings size={16} className="text-muted-foreground" />
             <Volume2 size={16} className="text-muted-foreground" />
             {draggingWord.example && <Volume2 size={16} className="text-sky-400/70" />}
+            <Settings size={16} className="text-muted-foreground" />
           </div>
         </div>
       )}
