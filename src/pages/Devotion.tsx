@@ -487,7 +487,7 @@ const Devotion = () => {
                       className="w-full flex items-center gap-2 text-left"
                     >
                       <span className="flex-1 min-w-0 text-xs font-semibold text-rose-600 font-gothic truncate">
-                        Nas · {cBook ? cBook.idName : ""} {current.chapter}:{nasRef}
+                        {cBook ? cBook.idName : ""} {current.chapter}:{nasRef}
                       </span>
                       {fullOpen ? (
                         <ChevronUp size={15} className="shrink-0 text-rose-500" />
@@ -525,7 +525,7 @@ const Devotion = () => {
                   {/* 기도 */}
                   {c.doa && (
                     <p className="mt-2 mb-2 pl-3 border-l-2 border-rose-300 text-base leading-relaxed font-word text-gray-800 italic">
-                      <span className="not-italic font-semibold text-rose-600 text-sm mr-1">Doa.</span>
+                      <span className="not-italic font-semibold text-rose-600 text-sm mr-1">Doa</span>
                       {renderTokens(c.doa, "doa-")}
                     </p>
                   )}
@@ -533,12 +533,9 @@ const Devotion = () => {
               ) : (
                 <>
                   {/* 뒷면: 한국어 번역 + 큰 그림 */}
-                  <h2 className="text-base font-bold text-gray-900 break-words mb-1">{c.titleKo}</h2>
-                  <p className="text-xs text-gray-500 font-gothic mb-3">
-                    {cBook ? cBook.ko : ""} {current.chapter}:{nasRef}
-                  </p>
+                  <h2 className="text-base font-bold text-gray-900 break-words mb-3">{c.titleKo}</h2>
 
-                  {/* 한국어 성경 본문(새번역) — 앞면 Nas와 동일한 위치·형식, 토글(기본 접힘) */}
+                  {/* 한국어 성경 본문(새번역) — 앞면과 동일한 위치·형식, 토글(기본 접힘) */}
                   <div className="rounded-lg bg-rose-500/5 border border-rose-200/60 px-3 py-2.5 mb-4">
                     <button
                       onClick={(e) => {
@@ -550,7 +547,7 @@ const Devotion = () => {
                       className="w-full flex items-center gap-2 text-left"
                     >
                       <span className="flex-1 min-w-0 text-xs font-semibold text-rose-600 font-gothic truncate">
-                        본문 · {cBook ? cBook.ko : ""} {current.chapter}:{nasRef} (새번역)
+                        {cBook ? cBook.ko : ""} {current.chapter}:{nasRef} (새번역)
                       </span>
                       {koOpen ? (
                         <ChevronUp size={15} className="shrink-0 text-rose-500" />
@@ -581,11 +578,6 @@ const Devotion = () => {
                           koVerses
                             .filter((v) => v.verse >= c.nasStart && v.verse <= c.nasEnd)
                             .map(renderKoVerse)}
-                        {koVerses && (
-                          <p className="mt-2 text-[11px] text-gray-400 font-gothic">
-                            새번역 · (c) 대한성서공회. 허락을 받아 사용.
-                          </p>
-                        )}
                       </div>
                     )}
                   </div>
@@ -593,7 +585,7 @@ const Devotion = () => {
                   {renderKorean(c.bodyKo)}
                   {c.doaKo && (
                     <p className="mt-2 mb-4 pl-3 border-l-2 border-rose-300 text-xs leading-relaxed text-gray-800 font-body">
-                      <span className="font-semibold text-rose-600 mr-1">기도.</span>
+                      <span className="font-semibold text-rose-600 mr-1">기도</span>
                       {c.doaKo}
                     </p>
                   )}
@@ -624,7 +616,7 @@ const Devotion = () => {
                   {/* 이 장의 자리 (큰 그림 도구) */}
                   <div className="rounded-lg bg-black/[0.04] px-3 py-3">
                     <p className="text-xs font-bold text-gray-900 font-gothic mb-2">
-                      🧭 {cBook ? cBook.ko : ""} {current.chapter}장 — 이 장의 자리
+                      🧭 {cBook ? cBook.ko : ""} {current.chapter}장
                     </p>
                     <p className="text-xs text-gray-700 font-gothic mb-1.5 leading-relaxed">
                       <span className="font-semibold text-gray-900">요지 · </span>{c.overview.summary}
