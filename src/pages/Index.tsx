@@ -166,16 +166,6 @@ const Index = () => {
           sub="Cerita"
         />
         <MenuCard
-          onClick={() => navigate("/wordbooks")}
-          icon={Library}
-          grad="to-sky-300/35"
-          border="border-sky-300/50"
-          tile="bg-sky-500"
-          mark="text-sky-500/10"
-          title="인도네시아어 단어장"
-          sub={folderCount > 0 ? `Kosakata · ${folderCount}권` : "Kosakata"}
-        />
-        <MenuCard
           onClick={() => navigate("/devotion")}
           icon={ChurchCross}
           grad="to-rose-300/35"
@@ -184,6 +174,16 @@ const Index = () => {
           mark="text-rose-500/10"
           title="인도네시아어 묵상"
           sub="Saat Teduh"
+        />
+        <MenuCard
+          onClick={() => navigate("/wordbooks")}
+          icon={Library}
+          grad="to-sky-300/35"
+          border="border-sky-300/50"
+          tile="bg-sky-500"
+          mark="text-sky-500/10"
+          title="인도네시아어 단어장"
+          sub={folderCount > 0 ? `Kosakata · ${folderCount}권` : "Kosakata"}
         />
 
         {/* 내 단어장 - 같은 높이, 오른쪽에 Quiz/Card */}
