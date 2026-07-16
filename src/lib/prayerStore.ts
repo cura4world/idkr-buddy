@@ -15,6 +15,7 @@ export interface PrayerRecord extends PrayerData {
   phase?: MeetingPhase | null;
   name?: string;
   note?: string;
+  customText?: string; // 상황 "기타" 선택 시 직접 적은 내용
   length: PrayerLength;
   pinned?: boolean;
 }
