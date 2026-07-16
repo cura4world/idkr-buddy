@@ -317,7 +317,7 @@ const Story = () => {
       <p
         key={i}
         ref={(el) => { paraRefs.current["ko-" + i] = el; }}
-        className="mb-4 text-sm leading-relaxed text-gray-800 font-body"
+        className="mb-4 text-xs leading-relaxed text-gray-800 font-body"
       >
         {para}
       </p>
@@ -358,18 +358,40 @@ const Story = () => {
             ) : (
               <>
                 {/* 뒷면: 한국어 번역 + 단어 학습 */}
-                <h2 className="text-lg font-bold text-gray-900 break-words mb-3">{current.titleKo}</h2>
+                <h2 className="text-base font-bold text-gray-900 break-words mb-3">{current.titleKo}</h2>
                 {renderKorean(current.korean)}
-                {current.hardWords.length > 0 && (
+                {current.background && current.background.length > 0 ? (
                   <>
                     <div className="border-t border-gray-200 my-4" />
-                    <ul className="space-y-1.5 text-sm text-gray-800 font-gothic">
+                    <div className="rounded-lg bg-black/[0.04] px-3 py-3">
+                      <p className="text-xs font-bold text-gray-900 font-gothic mb-2">💡 이 글을 더 이해하려면</p>
+                      {current.background.map((b, i) => (
+                        <p
+                          key={i}
+                          className={
+                            "text-xs text-gray-700 font-gothic leading-relaxed" +
+                            (i < current.background!.length - 1 ? " mb-2" : "")
+                          }
+                        >
+                          {b.heading && (
+                            <span className="font-semibold text-gray-900">{b.heading} · </span>
+                          )}
+                          {b.body}
+                        </p>
+                      ))}
+                    </div>
+                  </>
+                ) : current.hardWords && current.hardWords.length > 0 ? (
+                  <>
+                    {/* 예전에 만든 이야기 (단어 정리) */}
+                    <div className="border-t border-gray-200 my-4" />
+                    <ul className="space-y-1.5 text-xs text-gray-800 font-gothic">
                       {current.hardWords.map((h, i) => (
                         <li key={i} className="flex gap-2 min-w-0 items-center">
                           <span className="text-gray-400">•</span>
                           <span className="min-w-0 break-words">
                             <span className="font-semibold text-gray-900">{h.word}</span>{" "}
-                            <span className="text-xs">{h.meaning}</span>
+                            <span>{h.meaning}</span>
                           </span>
                           <button
                             onClick={(e) => { e.stopPropagation(); speak(h.word, "id"); }}
@@ -382,7 +404,7 @@ const Story = () => {
                       ))}
                     </ul>
                   </>
-                )}
+                ) : null}
               </>
             )}
             </div>
