@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Sunrise, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Sunrise, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { BIBLE_BOOKS, getBook, fetchChapter, BibleVerse } from "@/lib/bible";
+import { BIBLE_BOOKS, getBook, fetchChapter, bibleComUrl, BibleVerse } from "@/lib/bible";
 import { generateDevotion } from "@/lib/devotion";
 import { saveDevotion, listDevotions, DevotionRecord } from "@/lib/devotionStore";
 import { quickLookupWord } from "@/lib/story";
@@ -336,7 +336,7 @@ const Devotion = () => {
 
   const renderKorean = (text: string) =>
     text.split(new RegExp("\\n{2,}")).filter((p) => p.trim()).map((para, i) => (
-      <p key={i} className="mb-4 text-sm leading-relaxed text-gray-800 font-body">{para}</p>
+      <p key={i} className="mb-4 text-xs leading-relaxed text-gray-800 font-body">{para}</p>
     ));
 
   const renderVerse = (v: BibleVerse) => (
@@ -375,69 +375,67 @@ const Devotion = () => {
                 <>
                   {/* 앞면: 인니어 묵상 */}
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-xs font-medium text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
+                    <span className="text-xs font-bold text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
                       {cBook ? cBook.idName : current.bookId} {current.chapter}
                     </span>
                     <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">Saat Teduh</span>
                   </div>
                   <div className="mb-3 min-w-0">
-                    <h2 className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">{c.title}</h2>
+                    <h2 className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">
+                      {renderTokens(c.title, "title-")}
+                    </h2>
                   </div>
 
-                  {/* Nas: 묵상 중심 구절 (TB 원문) */}
-                  <div className="rounded-lg bg-rose-500/5 border border-rose-200/60 px-3 py-3 mb-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <p className="flex-1 text-xs font-semibold text-rose-600 font-gothic">
+                  {/* Nas: 묵상 중심 구절 (TB 원문) — 토글 */}
+                  <div className="rounded-lg bg-rose-500/5 border border-rose-200/60 px-3 py-2.5 mb-4">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setFullOpen((f) => !f); }}
+                      className="w-full flex items-center gap-2 text-left"
+                    >
+                      <span className="flex-1 min-w-0 text-xs font-semibold text-rose-600 font-gothic truncate">
                         Nas · {cBook ? cBook.idName : ""} {current.chapter}:{nasRef}
-                      </p>
-                      {nasVerses.length > 0 && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); speak(nasVerses.map((v) => v.text).join(" "), "id"); }}
-                          className="shrink-0 w-7 h-7 rounded-full bg-rose-500/10 text-rose-600 flex items-center justify-center"
-                          title="본문 듣기"
-                        >
-                          <Volume2 size={13} />
-                        </button>
+                      </span>
+                      {fullOpen ? (
+                        <ChevronUp size={15} className="shrink-0 text-rose-500" />
+                      ) : (
+                        <ChevronDown size={15} className="shrink-0 text-rose-500" />
                       )}
-                    </div>
-                    {cardLoading && (
-                      <div className="flex items-center gap-2 text-gray-400 text-sm py-1">
-                        <Loader2 size={14} className="animate-spin" /> 본문을 불러오는 중...
-                      </div>
-                    )}
-                    {cardError && (
-                      <div className="text-xs text-gray-500 font-gothic py-1">
-                        본문을 불러오지 못했어요. 네트워크를 확인해주세요.{" "}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); loadVerses(current); }}
-                          className="text-rose-600 font-medium underline"
-                        >
-                          다시 시도
-                        </button>
-                      </div>
-                    )}
-                    {nasVerses.map(renderVerse)}
-                  </div>
+                    </button>
 
-                  {/* 장 전체 토글 */}
-                  {cardVerses && cardVerses.length > 0 && (
-                    <div className="mb-4">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setFullOpen((f) => !f); }}
-                        className="w-full flex items-center justify-between rounded-lg bg-black/5 px-3 py-2 text-xs font-medium text-gray-700 font-gothic"
-                      >
-                        <span>
-                          Baca {cBook ? cBook.idName : ""} {current.chapter} · {cardVerses.length} ayat
-                        </span>
-                        {fullOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                      </button>
-                      {fullOpen && (
-                        <div className="mt-2 rounded-lg bg-black/[0.03] px-3 py-3">
-                          {cardVerses.map(renderVerse)}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    {fullOpen && (
+                      <div className="mt-2.5">
+                        {cardLoading && (
+                          <div className="flex items-center gap-2 text-gray-400 text-sm py-1">
+                            <Loader2 size={14} className="animate-spin" /> 본문을 불러오는 중...
+                          </div>
+                        )}
+                        {cardError && (
+                          <div className="text-xs text-gray-500 font-gothic py-1">
+                            본문을 불러오지 못했어요. 네트워크를 확인해주세요.{" "}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); loadVerses(current); }}
+                              className="text-rose-600 font-medium underline"
+                            >
+                              다시 시도
+                            </button>
+                          </div>
+                        )}
+                        {nasVerses.map(renderVerse)}
+                        {!cardLoading && !cardError && (
+                          <a
+                            href={bibleComUrl(current.bookId, current.chapter)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-600 font-gothic"
+                          >
+                            <ExternalLink size={12} />
+                            {cBook ? cBook.idName : ""} {current.chapter} 전체 읽기 · 듣기
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   {/* 묵상 본문 */}
                   {renderIndoBody(c.body)}
@@ -453,13 +451,13 @@ const Devotion = () => {
               ) : (
                 <>
                   {/* 뒷면: 한국어 번역 + 큰 그림 */}
-                  <h2 className="text-lg font-bold text-gray-900 break-words mb-1">{c.titleKo}</h2>
+                  <h2 className="text-base font-bold text-gray-900 break-words mb-1">{c.titleKo}</h2>
                   <p className="text-xs text-gray-500 font-gothic mb-3">
                     {cBook ? cBook.ko : ""} {current.chapter}:{nasRef}
                   </p>
                   {renderKorean(c.bodyKo)}
                   {c.doaKo && (
-                    <p className="mt-2 mb-4 pl-3 border-l-2 border-rose-300 text-sm leading-relaxed text-gray-800 font-body">
+                    <p className="mt-2 mb-4 pl-3 border-l-2 border-rose-300 text-xs leading-relaxed text-gray-800 font-body">
                       <span className="font-semibold text-rose-600 mr-1">기도.</span>
                       {c.doaKo}
                     </p>
@@ -626,9 +624,6 @@ const Devotion = () => {
           <h1 className="flex-1 text-lg font-semibold truncate">묵상할 성경 선택</h1>
         </header>
         <div className="px-4 py-4">
-          <p className="text-xs text-white/60 mb-3 px-1 font-gothic">
-            책마다 진도가 따로 저장됩니다. 언제든 바꿔도 이어서 묵상할 수 있어요.
-          </p>
           <p className="text-xs text-white mb-2 px-1 font-gothic">구약</p>
           <div className="grid grid-cols-2 gap-2">
             {BIBLE_BOOKS.filter((b) => b.folder === "pl").map(renderBookBtn)}
@@ -732,7 +727,7 @@ const Devotion = () => {
                   {genPhase === "bible" ? (
                     <><Loader2 size={16} className="animate-spin" /> 본문을 불러오는 중...</>
                   ) : genPhase === "write" ? (
-                    <><Loader2 size={16} className="animate-spin" /> 묵상을 쓰고 있어요... (10~30초)</>
+                    <><Loader2 size={16} className="animate-spin" /> 묵상 내용을 불러옵니다</>
                   ) : (
                     <><Sunrise size={16} /> 오늘의 묵상 · {book.ko} {nextCh}장</>
                   )}
