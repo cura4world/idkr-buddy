@@ -19,9 +19,15 @@ export const STORY_CATEGORIES = [
 
 export type StoryDifficulty = "하" | "중" | "상";
 
+// 예전 이야기 호환용 (지금은 배경 설명을 사용)
 export interface StoryHardWord {
   word: string;
   meaning: string;
+}
+
+export interface StoryBackground {
+  heading: string; // 소제목
+  body: string;    // 설명 (한국어)
 }
 
 export interface StoryData {
@@ -31,7 +37,8 @@ export interface StoryData {
   difficulty: StoryDifficulty;
   indonesian: string; // 본문 (문단은 \n\n)
   korean: string;     // 전체 번역
-  hardWords: StoryHardWord[]; // 단어 학습
+  background?: StoryBackground[]; // 글의 배경·도움말 (뒷면)
+  hardWords?: StoryHardWord[];    // 예전 이야기 호환용
 }
 
 const DIFF_INFO: Record<StoryDifficulty, { desc: string; length: string }> = {
@@ -97,13 +104,19 @@ export async function generateStory(
     '  "titleKo": "제목의 한국어 번역",\n' +
     '  "indonesian": "본문. 문단 구분은 빈 줄 두 개",\n' +
     '  "korean": "본문 전체의 자연스러운 한국어 번역. 문단 구분 동일",\n' +
-    '  "hardWords": [{"word": "본문에 나온 단어", "meaning": "간략한 한국어 뜻"}]\n' +
+    '  "background": [{"heading": "소제목", "body": "한국어 설명"}]\n' +
     "}\n\n" +
     "주의:\n" +
-    "- 역사/인물/장소/문화/상식/성경 등 사실 기반 카테고리는 정확한 사실로, 동화는 흥미로운 창작으로.\n" +
-    "- hardWords는 이 난이도의 학습자가 모를 만한 단어 5~8개.\n" +
+    "- 역사/인물/장소/문화/상식 등 사실 기반 카테고리는 정확한 사실로, 동화는 흥미로운 창작으로.\n" +
     "- 최근 다룬 주제와 겹치지 않는 새로운 주제로 쓰세요. 최근 제목: " +
-    (recentTitles.length ? recentTitles.join(", ") : "없음") + "\n";
+    (recentTitles.length ? recentTitles.join(", ") : "없음") + "\n\n" +
+    "[background — 글을 더 깊이 이해하게 돕는 배경 설명]\n" +
+    "- 항목 2~3개. 각 항목은 heading(6자 내외 소제목) + body(한국어 2~3문장).\n" +
+    "- 본문에 이미 쓴 내용을 다시 요약하지 마세요. 본문이 말하지 않은 것을 더해야 합니다.\n" +
+    "- 예: 이 소재의 역사적·지리적 배경, 인도네시아 사람들에게 갖는 의미, 한국과 비교되는 문화 차이,\n" +
+    "  본문에 나온 고유명사나 관습에 대한 보충 지식, 알아두면 좋은 인도네시아어 표현의 뉘앙스.\n" +
+    "- 동화라면 그 이야기가 담고 있는 교훈이나 비슷한 설화 전통을 소개해도 좋습니다.\n" +
+    "- 딱딱한 사전식 나열이 아니라, 읽으면 '아하' 하게 되는 친절한 도움말로 쓰세요.\n";
 
   const parsed = await callGeminiJSON(prompt, 0.9);
 
@@ -114,12 +127,12 @@ export async function generateStory(
     difficulty,
     indonesian: (parsed.indonesian || "").toString().trim(),
     korean: (parsed.korean || "").toString().trim(),
-    hardWords: (Array.isArray(parsed.hardWords) ? parsed.hardWords : [])
-      .map((h: any) => ({
-        word: (h?.word || "").toString().trim(),
-        meaning: (h?.meaning || "").toString().trim(),
+    background: (Array.isArray(parsed.background) ? parsed.background : [])
+      .map((b: any) => ({
+        heading: (b?.heading || "").toString().trim(),
+        body: (b?.body || "").toString().trim(),
       }))
-      .filter((h: StoryHardWord) => h.word),
+      .filter((b: StoryBackground) => b.body),
   };
 }
 
