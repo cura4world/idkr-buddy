@@ -1,6 +1,7 @@
 // src/lib/bible.ts
-// 인도네시아어 성경(TB, Terjemahan Baru) 본문을 GitHub 정적 JSON에서 불러옵니다.
-// 소스: tobiasagyasta/alkitab-api (raw.githubusercontent.com은 CORS 허용, 서버 불필요)
+// 인도네시아어 성경(TB, Terjemahan Baru) + 한국어 성경(새번역, RNKSV) 본문을 불러옵니다.
+// 인니어 소스: tobiasagyasta/alkitab-api (raw.githubusercontent.com, CORS 허용)
+// 한국어 소스: bolls.life (대한성서공회 허락을 받아 배포되는 새번역, CORS 허용)
 // 본문은 저장하지 않고 필요할 때마다 불러오며, 앱 실행 중에만 메모리에 캐시합니다.
 
 export interface BibleBook {
@@ -93,6 +94,13 @@ export function getBook(id: string): BibleBook | undefined {
   return BIBLE_BOOKS.find((b) => b.id === id);
 }
 
+// bolls.life는 책을 1~66 숫자로 구분합니다(창세기=1 ... 요한계시록=66).
+// BIBLE_BOOKS 배열이 정경 순서 그대로라 인덱스+1이 곧 bolls.life 책 번호입니다.
+function bollsBookNumber(bookId: string): number {
+  const idx = BIBLE_BOOKS.findIndex((b) => b.id === bookId);
+  return idx + 1;
+}
+
 // Bible.com(TB, versionId 306)에서 해당 장을 여는 링크. 앱이 깔려 있으면 앱으로 열립니다.
 export function bibleComUrl(bookId: string, chapter: number): string {
   const book = getBook(bookId);
@@ -129,4 +137,44 @@ export async function fetchChapter(bookId: string, chapter: number): Promise<Bib
   return [...verses]
     .filter((v) => v && typeof v.verse === "number" && typeof v.text === "string")
     .sort((a, b) => a.verse - b.verse);
+}
+
+// ── 한국어(새번역, RNKSV) ──────────────────────────────────────
+// bolls.life는 정적 파일이 아니라 실시간 API라 절 단위로 그때그때 불러옵니다.
+// 대한성서공회의 허락을 받아 배포되는 번역이며, 본문은 저장하지 않고 세션 메모리에만 캐시합니다.
+
+const koChapterCache = new Map<string, BibleVerse[]>();
+
+// bolls.life 응답의 text는 HTML 문자열(예: <i>...</i>)일 수 있어 태그를 제거합니다.
+function stripHtml(html: string): string {
+  return html.replace(new RegExp("<[^>]*>", "g"), "").trim();
+}
+
+export async function fetchChapterKo(bookId: string, chapter: number): Promise<BibleVerse[]> {
+  const cacheKey = bookId + "-" + chapter;
+  const cached = koChapterCache.get(cacheKey);
+  if (cached) return cached;
+
+  const bookNum = bollsBookNumber(bookId);
+  if (!bookNum) throw new Error("UNKNOWN_BOOK");
+
+  let res: Response;
+  try {
+    res = await fetch("https://bolls.life/get-text/RNKSV/" + bookNum + "/" + chapter + "/");
+  } catch {
+    throw new Error("BIBLE_FETCH_FAILED");
+  }
+  if (!res.ok) throw new Error("BIBLE_FETCH_FAILED");
+
+  const data = await res.json();
+  if (!Array.isArray(data) || data.length === 0) throw new Error("CHAPTER_NOT_FOUND");
+
+  const verses: BibleVerse[] = data
+    .filter((v: any) => v && typeof v.verse === "number" && typeof v.text === "string")
+    .map((v: any) => ({ verse: v.verse, text: stripHtml(v.text) }))
+    .sort((a: BibleVerse, b: BibleVerse) => a.verse - b.verse);
+
+  if (verses.length === 0) throw new Error("CHAPTER_NOT_FOUND");
+  koChapterCache.set(cacheKey, verses);
+  return verses;
 }
