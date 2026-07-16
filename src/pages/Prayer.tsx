@@ -68,9 +68,6 @@ const Prayer = () => {
   const [current, setCurrent] = useState<PrayerRecord | null>(null);
   const [flipped, setFlipped] = useState(false); // 앞: 인니어 / 뒤: 한국어
   const [delConfirm, setDelConfirm] = useState(false);
-  const [swipedId, setSwipedId] = useState<string | null>(null); // 목록에서 왼쪽으로 스와이프된 항목
-  const swipeStartX = useRef(0);
-  const swipeStartY = useRef(0);
 
   // 단어 미니 팝업 (이야기·묵상과 동일한 3단 캐시 공유)
   const [popupWord, setPopupWord] = useState<string | null>(null);
@@ -105,7 +102,6 @@ const Prayer = () => {
     setCurrent(null);
     setFlipped(false);
     setDelConfirm(false);
-    setSwipedId(null);
     setPopupWord(null);
     wordCache.current.clear();
   };
@@ -265,13 +261,6 @@ const Prayer = () => {
     closeSub();
   };
 
-  // 목록에서 스와이프 후 삭제
-  const deleteFromList = async (id: string) => {
-    await deletePrayer(id);
-    setRecords(await listPrayers());
-    setSwipedId(null);
-    toast("삭제되었습니다");
-  };
 
   // ---------- 단어 탭 → 미니 팝업 (카드 메모리 → 폰 저장소 → API) ----------
   const openWordPopup = async (rawToken: string, sentence: string) => {
@@ -430,45 +419,66 @@ const Prayer = () => {
               </div>
 
               {!flipped ? (
-                /* 앞면: 인도네시아어 기도문 (단어 탭 가능) */
-                renderIndoBody(current.indonesian)
-              ) : (
-                /* 뒷면: 한국어 번역 */
-                <div>{renderKorean(current.korean)}</div>
-              )}
+                <>
+                  {/* 앞면: 인도네시아어 기도문 (단어 탭 가능) */}
+                  {renderIndoBody(current.indonesian)}
 
-              {/* 하단 액션 */}
-              <div className="flex items-center gap-2 pt-3">
-                <button
-                  onClick={regenerate}
-                  disabled={generating}
-                  className="flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-medium font-gothic bg-emerald-500/10 text-emerald-700 disabled:opacity-50"
-                >
-                  {generating ? (
-                    <><Loader2 size={13} className="animate-spin" /> 만드는 중...</>
-                  ) : (
-                    <><RefreshCw size={13} /> 같은 설정으로 다시 만들기</>
-                  )}
-                </button>
-                {!delConfirm ? (
-                  <button
-                    onClick={() => setDelConfirm(true)}
-                    className="shrink-0 w-9 h-9 rounded-full bg-black/5 text-gray-500 flex items-center justify-center"
-                    title="삭제"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                ) : (
-                  <div className="shrink-0 flex items-center gap-1.5">
-                    <button onClick={doDelete} className="rounded-full py-2 px-3 text-xs font-medium bg-red-500 text-white">
-                      삭제
+                  {/* 앞면 하단 액션 */}
+                  <div className="flex items-center gap-2 pt-3">
+                    <button
+                      onClick={regenerate}
+                      disabled={generating}
+                      className="flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[11px] font-medium font-gothic bg-emerald-500/10 text-emerald-700 disabled:opacity-50"
+                    >
+                      {generating ? (
+                        <><Loader2 size={12} className="animate-spin" /> 만드는 중...</>
+                      ) : (
+                        <><RefreshCw size={12} /> 같은 설정으로 다시 만들기</>
+                      )}
                     </button>
-                    <button onClick={() => setDelConfirm(false)} className="rounded-full py-2 px-3 text-xs font-medium bg-black/5 text-gray-600">
-                      취소
-                    </button>
+                    {!delConfirm ? (
+                      <button
+                        onClick={() => setDelConfirm(true)}
+                        className="shrink-0 w-9 h-9 rounded-full bg-black/5 text-gray-500 flex items-center justify-center"
+                        title="삭제"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    ) : (
+                      <div className="shrink-0 flex items-center gap-1.5">
+                        <button onClick={doDelete} className="rounded-full py-2 px-3 text-xs font-medium bg-red-500 text-white">
+                          삭제
+                        </button>
+                        <button onClick={() => setDelConfirm(false)} className="rounded-full py-2 px-3 text-xs font-medium bg-black/5 text-gray-600">
+                          취소
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              ) : (
+                <>
+                  {/* 뒷면: 한국어 번역 */}
+                  <div>{renderKorean(current.korean)}</div>
+
+                  {/* 뒷면: 근거 성경말씀 */}
+                  {current.verseRef && current.verseKo && (
+                    <div className="rounded-lg bg-emerald-500/5 border border-emerald-200/60 px-3 py-2.5 mt-4">
+                      <p className="text-[11px] font-bold text-emerald-600 font-gothic mb-1.5">
+                        📖 {current.verseRef}
+                      </p>
+                      <p className="text-[11px] leading-relaxed text-gray-800 font-gothic">
+                        {current.verseKo}
+                      </p>
+                      {current.verseNote && (
+                        <p className="text-[11px] leading-relaxed text-gray-500 font-gothic mt-2 pt-2 border-t border-emerald-200/50">
+                          {current.verseNote}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* 오른쪽 세로 바: 누르면 뒤집기 */}
@@ -695,60 +705,22 @@ const Prayer = () => {
           <div className="space-y-2">
             {records.map((r) => {
               const cat = getPrayerCategory(r.categoryId);
-              const isSwiped = swipedId === r.id;
               return (
-                <div key={r.id} className="relative overflow-hidden rounded-xl">
-                  {/* 스와이프하면 드러나는 삭제 영역 */}
-                  <div className="absolute inset-y-0 right-0 flex items-center gap-1.5 pr-3">
-                    <button
-                      onClick={() => deleteFromList(r.id)}
-                      className="rounded-full py-1.5 px-3 text-xs font-medium font-gothic bg-red-500 text-white"
-                    >
-                      삭제
-                    </button>
-                    <button
-                      onClick={() => setSwipedId(null)}
-                      className="rounded-full py-1.5 px-3 text-xs font-medium font-gothic bg-black/20 text-white"
-                    >
-                      취소
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      if (isSwiped) { setSwipedId(null); return; }
-                      if (swipedId) { setSwipedId(null); return; }
-                      openPrayer(r);
-                    }}
-                    onTouchStart={(e) => {
-                      swipeStartX.current = e.touches[0].clientX;
-                      swipeStartY.current = e.touches[0].clientY;
-                    }}
-                    onTouchEnd={(e) => {
-                      const dx = e.changedTouches[0].clientX - swipeStartX.current;
-                      const dy = e.changedTouches[0].clientY - swipeStartY.current;
-                      // 가로로 충분히, 세로 스크롤보다 확실히 많이 움직였을 때만
-                      if (dx < -55 && Math.abs(dx) > Math.abs(dy) * 1.6) {
-                        setSwipedId(r.id);
-                      } else if (dx > 40 && isSwiped) {
-                        setSwipedId(null);
-                      }
-                    }}
-                    className={`relative w-full text-left bg-card border border-border/50 rounded-xl px-4 py-3 flex items-center gap-3 active:bg-emerald-500/5 transition-transform duration-200 ${
-                      isSwiped ? "-translate-x-[104px]" : "translate-x-0"
-                    }`}
-                  >
-                    <span className="shrink-0 text-lg">{cat ? cat.emoji : "🙏"}</span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-semibold text-gray-900 truncate">{r.title}</span>
-                      <span className="block text-[11px] text-gray-500 font-gothic truncate">
-                        {r.situationLabel}
-                        {r.name ? " · " + r.name : ""} · {fmtDate(r.createdAt)}
-                      </span>
+                <button
+                  key={r.id}
+                  onClick={() => openPrayer(r)}
+                  className="w-full text-left bg-card border border-border/50 rounded-xl px-4 py-3 flex items-center gap-3 active:bg-emerald-500/5"
+                >
+                  <span className="shrink-0 text-lg">{cat ? cat.emoji : "🙏"}</span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-semibold text-gray-900 truncate">{r.title}</span>
+                    <span className="block text-[11px] text-gray-500 font-gothic truncate">
+                      {r.situationLabel}
+                      {r.name ? " · " + r.name : ""} · {fmtDate(r.createdAt)}
                     </span>
-                    {r.pinned && <Bookmark size={14} className="shrink-0 text-amber-400" fill="currentColor" />}
-                  </button>
-                </div>
+                  </span>
+                  {r.pinned && <Bookmark size={14} className="shrink-0 text-amber-400" fill="currentColor" />}
+                </button>
               );
             })}
           </div>
