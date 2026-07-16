@@ -390,7 +390,7 @@ const Prayer = () => {
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="flex-1 min-w-0 text-base font-semibold leading-snug line-clamp-2 break-words font-gothic">
+          <h1 className="flex-1 min-w-0 text-base font-semibold leading-snug line-clamp-2 break-words">
             {current.title}
           </h1>
           <button
@@ -408,7 +408,7 @@ const Prayer = () => {
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5 min-h-[72vh] content-bump select-none">
             {/* 상황·날짜 + 전체 듣기 */}
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <span className="text-xs font-bold text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5 font-gothic">
+              <span className="text-xs font-bold text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5">
                 {current.situationLabel}
               </span>
               <span className="text-xs text-gray-400 font-gothic">{fmtDate(current.createdAt)}</span>
@@ -448,7 +448,7 @@ const Prayer = () => {
               <button
                 onClick={regenerate}
                 disabled={generating}
-                className="flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-medium font-gothic bg-emerald-500/10 text-emerald-700 disabled:opacity-50"
+                className="flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-medium bg-emerald-500/10 text-emerald-700 disabled:opacity-50"
               >
                 {generating ? (
                   <><Loader2 size={13} className="animate-spin" /> 만드는 중...</>
@@ -466,17 +466,17 @@ const Prayer = () => {
                 </button>
               ) : (
                 <div className="shrink-0 flex items-center gap-1.5">
-                  <button onClick={doDelete} className="rounded-full py-2 px-3 text-xs font-medium font-gothic bg-red-500 text-white">
+                  <button onClick={doDelete} className="rounded-full py-2 px-3 text-xs font-medium bg-red-500 text-white">
                     삭제
                   </button>
-                  <button onClick={() => setDelConfirm(false)} className="rounded-full py-2 px-3 text-xs font-medium font-gothic bg-black/5 text-gray-600">
+                  <button onClick={() => setDelConfirm(false)} className="rounded-full py-2 px-3 text-xs font-medium bg-black/5 text-gray-600">
                     취소
                   </button>
                 </div>
               )}
             </div>
           </div>
-          <p className="text-center text-white/50 text-xs mt-3 font-gothic">단어를 탭하면 뜻이 나옵니다</p>
+          <p className="text-center text-white/50 text-xs mt-3">단어를 탭하면 뜻이 나옵니다</p>
         </div>
 
         {/* 단어 미니 팝업 */}
@@ -565,7 +565,7 @@ const Prayer = () => {
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="flex-1 min-w-0 text-base font-semibold font-gothic">{cat.emoji} {cat.label}</h1>
+          <h1 className="flex-1 min-w-0 text-base font-semibold">{cat.emoji} {cat.label}</h1>
         </header>
 
         <div className="px-4 py-4 pb-32">
@@ -656,7 +656,7 @@ const Prayer = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="flex-1 min-w-0 text-base font-semibold font-gothic">인도네시아어 기도</h1>
+        <h1 className="flex-1 min-w-0 text-base font-semibold">인도네시아어 기도</h1>
       </header>
 
       <div className="px-4 py-4">
@@ -669,7 +669,7 @@ const Prayer = () => {
               className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-4 py-4 text-left card-lift active:scale-[0.98] transition-transform"
             >
               <span className="text-2xl">{c.emoji}</span>
-              <p className="mt-1.5 text-sm font-bold text-gray-900 font-gothic">{c.label}</p>
+              <p className="mt-1.5 text-sm font-bold text-gray-900">{c.label}</p>
               <p className="text-[11px] text-gray-500 font-gothic mt-0.5">
                 {c.situations.length}가지 상황
               </p>
@@ -678,7 +678,7 @@ const Prayer = () => {
         </div>
 
         {/* 저장된 기도문 */}
-        <p className="text-sm font-bold text-white/90 mb-2 px-1 font-gothic">저장된 기도문</p>
+        <p className="text-sm font-bold text-white/90 mb-2 px-1">저장된 기도문</p>
         {records.length === 0 ? (
           <div className="bg-card/60 border border-border/40 rounded-xl px-5 py-8 text-center">
             <p className="text-sm text-gray-500 font-gothic">
@@ -699,7 +699,7 @@ const Prayer = () => {
                 >
                   <span className="shrink-0 text-lg">{cat ? cat.emoji : "🙏"}</span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-semibold text-gray-900 truncate font-gothic">{r.title}</span>
+                    <span className="block text-sm font-semibold text-gray-900 truncate">{r.title}</span>
                     <span className="block text-[11px] text-gray-500 font-gothic truncate">
                       {r.situationLabel}
                       {r.name ? " · " + r.name : ""} · {fmtDate(r.createdAt)}
