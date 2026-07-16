@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, restoreSharedCategories } from "@/lib/store";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import SettingsDialog from "@/components/SettingsDialog";
-import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, Sunrise, ChevronRight } from "lucide-react";
+import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, Church, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -97,7 +97,7 @@ const Index = () => {
           <h1 className="font-word text-3xl font-semibold tracking-tight text-white leading-none">
             Kata kata<span className="text-accent">.</span>
           </h1>
-          <p className="mt-2 text-xs font-gothic uppercase tracking-[0.22em] text-white/45">
+          <p className="mt-2 text-[10px] font-gothic uppercase tracking-[0.16em] text-white/45 whitespace-nowrap">
             Selangkah demi selangkah
           </p>
         </div>
@@ -151,7 +151,7 @@ const Index = () => {
         />
         <MenuCard
           onClick={() => navigate("/devotion")}
-          icon={Sunrise}
+          icon={Church}
           grad="to-rose-300/35"
           border="border-rose-300/50"
           tile="bg-rose-500"
