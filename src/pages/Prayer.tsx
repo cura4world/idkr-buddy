@@ -599,7 +599,7 @@ const Prayer = () => {
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
               placeholder="예: Johan (비워두면 이름 없이)"
-              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-gray-900 font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs"
+              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-white font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-white/40"
             />
 
             {/* 사정 한 줄 (선택) */}
@@ -608,7 +608,7 @@ const Prayer = () => {
               value={noteInput}
               onChange={(e) => setNoteInput(e.target.value)}
               placeholder="예: 내일 수술 예정 / 비자 연장 심사 중"
-              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-gray-900 font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs"
+              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-white font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-white/40"
             />
 
             {/* 길이 */}
