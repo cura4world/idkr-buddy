@@ -150,7 +150,7 @@ const Index = () => {
           sub={folderCount > 0 ? `Kosakata · ${folderCount}권` : "Kosakata"}
         />
         <MenuCard
-          onClick={() => toast("말씀 묵상 기능을 준비하고 있어요. 곧 만나요!")}
+          onClick={() => navigate("/devotion")}
           icon={Sunrise}
           grad="to-rose-300/35"
           border="border-rose-300/50"
@@ -158,7 +158,6 @@ const Index = () => {
           mark="text-rose-500/10"
           title="인도네시아어 묵상"
           sub="Saat Teduh"
-          badge="곧 출시"
         />
 
         {/* 내 단어장 - 같은 높이, 오른쪽에 Quiz/Card */}
