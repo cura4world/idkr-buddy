@@ -3,11 +3,37 @@ import { useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, restoreSharedCategories } from "@/lib/store";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import SettingsDialog from "@/components/SettingsDialog";
-import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, Church, ChevronRight } from "lucide-react";
+import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
 const MY_WORDBOOK_ID = "my-wordbook";
+
+// 교회 아이콘: 지붕 위에 십자가가 선명하게 보이는 심플한 형태 (lucide 스타일 스트로크)
+const ChurchCross = ({ size = 24, className = "" }: { size?: number; className?: string }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden="true"
+  >
+    {/* 지붕 위 십자가 */}
+    <path d="M12 2v5" />
+    <path d="M9.5 4h5" />
+    {/* 지붕 */}
+    <path d="M4 13 12 7l8 6" />
+    {/* 건물 본체 */}
+    <path d="M6 12v9h12v-9" />
+    {/* 문 */}
+    <path d="M10 21v-4a2 2 0 0 1 4 0v4" />
+  </svg>
+);
 
 // 5개 박스 공통 골격 (높이 통일: 4.75rem — 글자크기 설정에 따라 함께 커짐)
 const CARD_BASE =
@@ -15,7 +41,7 @@ const CARD_BASE =
 
 type MenuCardProps = {
   onClick: () => void;
-  icon: LucideIcon;
+  icon: LucideIcon | ((p: { size?: number; className?: string }) => JSX.Element);
   grad: string;
   border: string;
   tile: string;
@@ -151,7 +177,7 @@ const Index = () => {
         />
         <MenuCard
           onClick={() => navigate("/devotion")}
-          icon={Church}
+          icon={ChurchCross}
           grad="to-rose-300/35"
           border="border-rose-300/50"
           tile="bg-rose-500"
