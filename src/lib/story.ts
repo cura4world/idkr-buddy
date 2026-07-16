@@ -1,5 +1,5 @@
 // src/lib/story.ts
-// 인도네시아 이야기 카드: 10개 카테고리 중 랜덤 주제로 학습용 짧은 글을 생성합니다.
+// 인도네시아 이야기 카드: 9개 카테고리 중 랜덤 주제로 학습용 짧은 글을 생성합니다.
 // 기존 Gemini API 키(localStorage "geminiApiKey")를 재사용합니다.
 
 import { getGeminiApiKey } from "@/lib/gemini";
@@ -15,8 +15,6 @@ export const STORY_CATEGORIES = [
   "인도네시아 종교",
   "인도네시아 인물",
   "인도네시아 장소",
-  "일반상식",
-  "성경 이야기",
 ];
 
 export type StoryDifficulty = "하" | "중" | "상";
