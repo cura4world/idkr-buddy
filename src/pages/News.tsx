@@ -203,7 +203,7 @@ const News = () => {
       const code = e?.message || "";
       if (code === "RATE_LIMIT") toast("요청이 많습니다. 잠시 후 다시 시도해주세요");
       else if (code === "NO_API_KEY" || code === "INVALID_API_KEY") toast("API 키를 설정에서 확인해주세요");
-      else toast("뉴스를 가져오지 못했습니다. 다시 시도해주세요");
+      else toast("뉴스 실패: " + (code ? code.slice(0, 120) : "알 수 없는 오류"));
     } finally {
       setGenerating(false);
     }
