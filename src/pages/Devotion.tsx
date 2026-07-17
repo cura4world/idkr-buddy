@@ -195,7 +195,19 @@ const Devotion = () => {
   }, []);
 
   useEffect(() => {
-    listDevotions().then(setRecords);
+    listDevotions().then((all) => {
+      setRecords(all);
+      // 사전에서 "묵상으로" 버튼으로 돌아온 경우, 보던 묵상 카드를 다시 연다
+      try {
+        const rid = sessionStorage.getItem("devotion-return-id");
+        if (rid) {
+          sessionStorage.removeItem("devotion-return-id");
+          const found = all.find((r) => r.id === rid);
+          if (found) openCard(found);
+        }
+      } catch (e) {}
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const book = getBook(bookId);
@@ -367,6 +379,7 @@ const Devotion = () => {
 
   const openInDictionary = () => {
     if (!popupWord) return;
+    try { if (current) sessionStorage.setItem("devotion-return-id", current.id); } catch (e) {}
     navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=devotion");
   };
 
