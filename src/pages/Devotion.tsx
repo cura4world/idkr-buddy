@@ -367,7 +367,7 @@ const Devotion = () => {
 
   const openInDictionary = () => {
     if (!popupWord) return;
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord));
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=devotion");
   };
 
   const savePopupWord = () => {
