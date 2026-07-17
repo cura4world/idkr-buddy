@@ -326,15 +326,17 @@ export default function CategoryDetail() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
-      <button onClick={() => navigate("/")} className="flex items-center gap-2 text-sm text-white mb-4 hover:text-white/80">
-        <ArrowLeft size={16} />
-        <span className="font-gothic">돌아가기</span>
-      </button>
       <div className="sticky top-0 z-30 bg-background -mx-4 px-4 pt-2 pb-3 mb-3">
-        <header className="mb-2">
-          <h1 className="text-lg font-semibold font-body flex items-center gap-2">
-            <span>{category.emoji}</span>
-            <span>{category.name}</span>
+        <header className="flex items-center gap-2 mb-2 pr-2">
+          <button
+            onClick={() => navigate("/")}
+            className="text-white hover:text-white/70 w-8 h-8 flex items-center justify-center -ml-2 shrink-0"
+            title="뒤로"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <h1 className="flex-1 min-w-0 text-lg font-semibold font-body tracking-tight truncate">
+            {category.name}
           </h1>
         </header>
         <div className="flex justify-end gap-4">
@@ -395,7 +397,7 @@ export default function CategoryDetail() {
               >
                 <div className="flex-1 min-w-0 content-bump">
                   <p className="font-word text-base font-medium truncate">{w.word}</p>
-                  <p className="text-sm text-muted-foreground font-gothic">{w.meaning}</p>
+                  <p className="text-xs font-bold text-muted-foreground font-gothic">{w.meaning}</p>
                   {w.example && (
                     <p className="text-xs text-muted-foreground/70 font-word mt-0.5">{w.example}</p>
                   )}
@@ -445,7 +447,7 @@ export default function CategoryDetail() {
         >
           <div className="flex-1 min-w-0 content-bump">
             <p className="font-word text-base font-medium truncate text-muted-foreground">{draggingWord.word}</p>
-            <p className="text-sm text-muted-foreground font-gothic">{draggingWord.meaning}</p>
+            <p className="text-xs font-bold text-muted-foreground font-gothic">{draggingWord.meaning}</p>
             {draggingWord.example && (
               <p className="text-xs text-muted-foreground font-word mt-0.5">{draggingWord.example}</p>
             )}
