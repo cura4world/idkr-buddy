@@ -156,16 +156,6 @@ const Index = () => {
           sub="Kamus"
         />
         <MenuCard
-          onClick={() => navigate("/story")}
-          icon={ScrollText}
-          grad="to-amber-300/35"
-          border="border-amber-300/50"
-          tile="bg-amber-500"
-          mark="text-amber-500/10"
-          title="인도네시아 이야기"
-          sub="Cerita"
-        />
-        <MenuCard
           onClick={() => navigate("/news")}
           icon={Newspaper}
           grad="to-indigo-300/35"
@@ -174,6 +164,16 @@ const Index = () => {
           mark="text-indigo-500/10"
           title="인도네시아 뉴스"
           sub="Berita"
+        />
+        <MenuCard
+          onClick={() => navigate("/story")}
+          icon={ScrollText}
+          grad="to-amber-300/35"
+          border="border-amber-300/50"
+          tile="bg-amber-500"
+          mark="text-amber-500/10"
+          title="인도네시아 이야기"
+          sub="Cerita"
         />
         <MenuCard
           onClick={() => navigate("/devotion")}
