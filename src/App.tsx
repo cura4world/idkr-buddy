@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import Dictionary from "./pages/Dictionary";
 import Story from "./pages/Story";
+import News from "./pages/News";
 import Devotion from "./pages/Devotion";
 import Prayer from "./pages/Prayer";
 import Wordbooks from "./pages/Wordbooks";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/dictionary" element={<Dictionary />} />
           <Route path="/story" element={<Story />} />
+          <Route path="/news" element={<News />} />
           <Route path="/devotion" element={<Devotion />} />
           <Route path="/prayer" element={<Prayer />} />
           <Route path="/wordbooks" element={<Wordbooks />} />
