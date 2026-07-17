@@ -71,33 +71,42 @@ async function callGeminiWithSearch(prompt: string): Promise<string> {
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           tools: [{ google_search: {} }],
-          generationConfig: { temperature: 0.6 },
+          // 기사 6개(인니어+한국어)는 출력이 매우 길어 한도를 넉넉히 잡아야
+          // JSON이 중간에 잘리지 않습니다 (잘리면 파싱 실패 = 매번 실패).
+          generationConfig: { temperature: 0.6, maxOutputTokens: 32768 },
         }),
       });
 
       if (!res.ok) {
-        if (res.status === 403) throw new Error("INVALID_API_KEY");
         if (res.status === 429) {
           lastError = new Error("RATE_LIMIT");
           continue; // 다음 모델 시도
         }
-        // 400(모델/필드 미지원 등)은 다음 모델로 폴백
-        lastError = new Error("REQUEST_FAILED_" + res.status);
+        // 실패 원인을 화면에서 볼 수 있게 API 에러 메시지를 함께 전달
+        let detail = "";
+        try {
+          const j = await res.json();
+          detail = (j?.error?.message || "").toString().slice(0, 100);
+        } catch (e) {}
+        lastError = new Error("HTTP_" + res.status + (detail ? " " + detail : ""));
         continue;
       }
 
       const data = await res.json();
-      const parts = data?.candidates?.[0]?.content?.parts;
+      const cand = data?.candidates?.[0];
+      const parts = cand?.content?.parts;
       const text: string = Array.isArray(parts)
-        ? parts.map((p: any) => p?.text || "").join("")
+        ? parts
+            .filter((p: any) => !p?.thought)
+            .map((p: any) => p?.text || "")
+            .join("")
         : "";
       if (!text) {
-        lastError = new Error("EMPTY_RESPONSE");
+        lastError = new Error("EMPTY_RESPONSE_" + (cand?.finishReason || "?"));
         continue;
       }
       return text;
     } catch (e: any) {
-      if (e?.message === "INVALID_API_KEY") throw e;
       lastError = e instanceof Error ? e : new Error("REQUEST_FAILED");
     }
   }
@@ -114,6 +123,46 @@ function extractJSON(text: string): Record<string, unknown> {
     if (start === -1 || end === -1 || end <= start) throw new Error("PARSE_FAILED");
     return JSON.parse(text.slice(start, end + 1));
   }
+}
+
+// 응답이 중간에 잘려 전체 JSON 파싱이 실패해도,
+// articles 배열 안에서 "완성된 기사 객체"만 하나씩 건져냅니다.
+function salvageArticles(text: string): any[] {
+  const keyPos = text.indexOf('"articles"');
+  if (keyPos === -1) return [];
+  const arrStart = text.indexOf("[", keyPos);
+  if (arrStart === -1) return [];
+  const out: any[] = [];
+  let i = arrStart + 1;
+  while (i < text.length) {
+    const objStart = text.indexOf("{", i);
+    if (objStart === -1) break;
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    let end = -1;
+    for (let j = objStart; j < text.length; j++) {
+      const ch = text[j];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (ch === "\\") esc = true;
+        else if (ch === '"') inStr = false;
+      } else {
+        if (ch === '"') inStr = true;
+        else if (ch === "{") depth++;
+        else if (ch === "}") {
+          depth--;
+          if (depth === 0) { end = j; break; }
+        }
+      }
+    }
+    if (end === -1) break; // 잘린 객체는 버림
+    try {
+      out.push(JSON.parse(text.slice(objStart, end + 1)));
+    } catch (e) {}
+    i = end + 1;
+  }
+  return out;
 }
 
 // 오늘의 신문 생성 (기사 6개: 핫뉴스 2 + 분야별 4)
@@ -150,9 +199,21 @@ export async function generateDailyNews(): Promise<NewsEdition> {
     "}\n";
 
   const text = await callGeminiWithSearch(prompt);
-  const parsed = extractJSON(text);
 
-  const articles: NewsArticle[] = (Array.isArray(parsed.articles) ? parsed.articles : [])
+  let rawArticles: any[] = [];
+  try {
+    const parsed = extractJSON(text);
+    rawArticles = Array.isArray(parsed.articles) ? parsed.articles : [];
+  } catch (e) {
+    rawArticles = [];
+  }
+  // 전체 파싱 실패 또는 기사 부족 → 잘린 응답에서 완성된 기사만 복구
+  if (rawArticles.length < 3) {
+    const salvaged = salvageArticles(text);
+    if (salvaged.length > rawArticles.length) rawArticles = salvaged;
+  }
+
+  const articles: NewsArticle[] = rawArticles
     .map((a: any) => ({
       category: (a?.category || "").toString().trim() || "뉴스",
       title: (a?.title || "").toString().trim(),
@@ -163,7 +224,9 @@ export async function generateDailyNews(): Promise<NewsEdition> {
     }))
     .filter((a: NewsArticle) => a.title && a.body);
 
-  if (articles.length < 3) throw new Error("PARSE_FAILED");
+  if (articles.length < 3) {
+    throw new Error("PARSE_FAILED_" + articles.length + "_LEN" + text.length);
+  }
 
   return {
     date: todayKey(),
