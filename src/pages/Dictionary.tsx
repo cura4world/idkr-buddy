@@ -597,10 +597,8 @@ const Dictionary = () => {
                     ? idSentence.chunks.map((c) => c.id).join(" / ")
                     : idSentence.original}
                 </p>
-                <p className="text-sm text-gray-600 mt-1.5 break-words leading-relaxed font-gothic">
-                  {idSentence.chunks.length > 0 && idSentence.chunks.some((c) => c.ko)
-                    ? idSentence.chunks.map((c) => c.ko).join(" / ")
-                    : idSentence.translation}
+                <p className="text-xs text-gray-600 mt-1.5 break-words leading-relaxed font-gothic">
+                  {idSentence.translation}
                 </p>
               </div>
               <button
@@ -630,7 +628,7 @@ const Dictionary = () => {
                           <Volume2 size={14} />
                         </button>
                         {w.meaning && (
-                          <span className="text-sm text-gray-800 break-words font-gothic">{w.meaning}</span>
+                          <span className="text-xs text-gray-800 break-words font-gothic">{w.meaning}</span>
                         )}
                       </div>
                       {w.points.length > 0 && (
@@ -652,29 +650,11 @@ const Dictionary = () => {
               </>
             )}
 
-            {/* 문장 구조 */}
-            {idSentence.structure.id && (
-              <>
-                <Divider />
-                <SectionTitle>문장 구조</SectionTitle>
-                <div className="rounded-lg bg-gray-50 border border-gray-200 px-3.5 py-3 min-w-0">
-                  <p className="text-sm text-gray-900 break-words font-word leading-relaxed">
-                    {idSentence.structure.id}
-                  </p>
-                  {idSentence.structure.ko && (
-                    <p className="text-sm text-gray-600 mt-1.5 break-words font-gothic leading-relaxed">
-                      {idSentence.structure.ko}
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
-
             {/* 더 자연스러운 표현 */}
             {idSentence.natural.id && (
               <>
                 <Divider />
-                <SectionTitle>좀 더 자연스럽게</SectionTitle>
+                <SectionTitle>더 자연스러운 표현</SectionTitle>
                 <div className="rounded-lg bg-gray-50 border border-gray-200 px-3.5 py-3 min-w-0">
                   <div className="flex items-start justify-between gap-2 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 break-words font-word leading-relaxed min-w-0">
@@ -689,7 +669,7 @@ const Dictionary = () => {
                     </button>
                   </div>
                   {idSentence.natural.ko && (
-                    <p className="text-sm text-gray-600 mt-1.5 break-words font-gothic leading-relaxed">
+                    <p className="text-xs text-gray-600 mt-1.5 break-words font-gothic leading-relaxed">
                       {idSentence.natural.ko}
                     </p>
                   )}
