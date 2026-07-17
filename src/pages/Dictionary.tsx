@@ -124,6 +124,19 @@ function removeHistory(term: string): string[] {
   return next;
 }
 
+// 핵심 문형 안의 한글(사람/동사 등)만 한 단계 작게 표시합니다.
+function renderPattern(text: string): React.ReactNode[] {
+  const parts = text.split(new RegExp("([\\uAC00-\\uD7A3\\u1100-\\u11FF\\u3130-\\u318F]+)"));
+  return parts.filter((x) => x !== "").map((part, i) => {
+    const isKo = new RegExp("^[\\uAC00-\\uD7A3\\u1100-\\u11FF\\u3130-\\u318F]+$").test(part);
+    return isKo ? (
+      <span key={i} className="text-xs font-gothic">{part}</span>
+    ) : (
+      <span key={i}>{part}</span>
+    );
+  });
+}
+
 // 끊어읽기 문장: "/"로 연결하고 문장 끝 마침표를 보장합니다.
 function chunkedSentence(r: IdSentenceResult): string {
   const base =
@@ -711,7 +724,7 @@ const Dictionary = () => {
                       className="rounded-lg bg-gray-50 border border-gray-200 px-3.5 py-3 min-w-0"
                     >
                       <p className="text-sm font-semibold text-gray-900 break-words font-word leading-relaxed">
-                        {p.pattern}
+                        {renderPattern(p.pattern)}
                       </p>
                       {p.meaning && (
                         <p className="text-xs text-gray-600 mt-1.5 break-words font-gothic leading-relaxed">
