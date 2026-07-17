@@ -302,12 +302,6 @@ export interface WordAnalysisItem {
   note: string;      // 불릿 아래 보충 문장 (없으면 "")
 }
 
-// 문장 구조
-export interface SentenceStructure {
-  id: string;   // Dia + berjalan keliling kota + untuk mencari pekerjaan
-  ko: string;   // 그는 + 도시 곳곳을 걸어 다녔다 + 일자리를 찾기 위해
-}
-
 // 더 자연스러운 표현 (선택)
 export interface NaturalRewrite {
   id: string;   // 인니어 문장
@@ -319,7 +313,6 @@ export interface IdSentenceResult {
   translation: string;              // 전체 한국어 번역
   chunks: SentenceChunk[];          // 끊어읽기 (호흡 단위)
   wordAnalysis: WordAnalysisItem[]; // 단어 분석
-  structure: SentenceStructure;     // 문장 구조
   natural: NaturalRewrite;          // 더 자연스러운 표현 (없으면 빈 값)
 }
 
@@ -337,7 +330,6 @@ export async function analyzeIdSentence(sentence: string): Promise<IdSentenceRes
     '  "translation": "\uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uD55C\uAD6D\uC5B4 \uC804\uCCB4 \uBC88\uC5ED",\n' +
     '  "chunks": [{"id": "\uC778\uB2C8\uC5B4 \uC870\uAC01", "ko": "\uADF8 \uC870\uAC01\uC758 \uD55C\uAD6D\uC5B4 \uB73B"}],\n' +
     '  "wordAnalysis": [{"word": "\uB2E8\uC5B4/\uB369\uC5B4\uB9AC", "meaning": "\uD55C\uAD6D\uC5B4 \uB73B", "points": ["\uBD88\uB9BF \uC124\uBA85"], "note": "\uBCF4\uCDA9 \uC124\uBA85(\uC5C6\uC73C\uBA74 \uBE48 \uBB38\uC790\uC5F4)"}],\n' +
-    '  "structure": {"id": "\uC778\uB2C8\uC5B4 \uAD6C\uC131\uC744 +\uB85C \uC5F0\uACB0", "ko": "\uD55C\uAD6D\uC5B4 \uAD6C\uC131\uC744 +\uB85C \uC5F0\uACB0"},\n' +
     '  "natural": {"id": "\uB354 \uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uC778\uB2C8\uC5B4 \uBB38\uC7A5", "ko": "\uADF8 \uD55C\uAD6D\uC5B4 \uBC88\uC5ED"}\n' +
     "}\n\n" +
     "\uC8FC\uC758:\n" +
@@ -346,8 +338,7 @@ export async function analyzeIdSentence(sentence: string): Promise<IdSentenceRes
     "- wordAnalysis\uB294 \uBB38\uC7A5\uC5D0 \uB098\uC624\uB294 \uC21C\uC11C\uB300\uB85C, \uB2E8\uC5B4 \uB610\uB294 \uC758\uBBF8 \uB369\uC5B4\uB9AC(\uC608: keliling kota) \uB2E8\uC704\uB85C \uBAA8\uB450 \uB123\uC73C\uC138\uC694.\n" +
     "- points\uC5D0\uB294 \uAE30\uBCF8\uD615(\uC5B4\uADFC), \uC811\uC0AC \uACB0\uD569 \uACFC\uC815(\uC608: ber- + jalan \u2192 berjalan \uAC77\uB2E4), \uC5F0\uC5B4/\uD30C\uC0DD\uC5B4 \uB4F1\uC744 \uC9E7\uAC8C \uC801\uC73C\uC138\uC694. \uC124\uBA85\uD560 \uAC8C \uC5C6\uC73C\uBA74 \uBE48 \uBC30\uC5F4 [].\n" +
     "- note\uB294 \uBB38\uBC95\uC801\uC73C\uB85C \uB354 \uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uB300\uC548 \uB4F1 \uBCF4\uCDA9 \uC124\uBA85\uC774 \uD544\uC694\uD560 \uB54C\uB9CC. \uC5C6\uC73C\uBA74 \uBE48 \uBB38\uC790\uC5F4.\n" +
-    "- structure\uB294 \uBB38\uC7A5\uC744 \uC8FC\uC5B4/\uC220\uC5B4/\uBAA9\uC801\uC5B4 \uB4F1 \uD070 \uB369\uC5B4\uB9AC\uB85C \uB098\uB204\uC5B4 \uD50C\uB7EC\uC2A4 \uAE30\uD638\uB85C \uC774\uC5B4\uC11C \uC801\uC73C\uC138\uC694. ko\uB294 \uAC19\uC740 \uC21C\uC11C\uB85C \uB300\uC751\uC2DC\uD0B5\uB2C8\uB2E4.\n" +
-    "- natural\uC740 \uC6D0\uBB38\uBCF4\uB2E4 \uB354 \uC790\uC5F0\uC2A4\uB7FD\uAC70\uB098 \uBB38\uBC95\uC801\uC73C\uB85C \uC644\uC804\uD55C \uD45C\uD604\uC774 \uC788\uC744 \uB54C\uB9CC \uCC44\uC6B0\uACE0, \uC6D0\uBB38\uC774 \uC774\uBBF8 \uC790\uC5F0\uC2A4\uB7FD\uB2E4\uBA74 id\uC640 ko \uBAA8\uB450 \uBE48 \uBB38\uC790\uC5F4\uB85C \uB450\uC138\uC694.\n";
+    "- natural\uC740 \uC6D0\uBB38\uBCF4\uB2E4 \uB354 \uC790\uC5F0\uC2A4\uB7FD\uAC70\uB098 \uBB38\uBC95\uC801\uC73C\uB85C \uB354 \uC644\uC804\uD55C \uD45C\uD604\uC774 \uC788\uC73C\uBA74 \uBC18\uB4DC\uC2DC \uCC44\uC6B0\uC138\uC694. \uC6D0\uBB38\uC774 \uC774\uBBF8 \uC644\uBCBD\uD558\uBA74 id\uC640 ko \uBAA8\uB450 \uBE48 \uBB38\uC790\uC5F4\uB85C \uB450\uC138\uC694.\n";
 
   const parsed = await callGeminiJSON(prompt);
   return {
@@ -363,10 +354,6 @@ export async function analyzeIdSentence(sentence: string): Promise<IdSentenceRes
       points: arr<string>(w?.points).map((p) => (p || "").toString().trim()).filter(Boolean),
       note: (w?.note || "").toString().trim(),
     })).filter((w) => w.word),
-    structure: {
-      id: ((parsed.structure as any)?.id || "").toString().trim(),
-      ko: ((parsed.structure as any)?.ko || "").toString().trim(),
-    },
     natural: {
       id: ((parsed.natural as any)?.id || "").toString().trim(),
       ko: ((parsed.natural as any)?.ko || "").toString().trim(),
