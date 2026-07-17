@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, restoreSharedCategories } from "@/lib/store";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import SettingsDialog from "@/components/SettingsDialog";
-import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, ChevronRight, HandHeart } from "lucide-react";
+import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, ChevronRight, HandHeart, Newspaper } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -85,7 +85,7 @@ const Index = () => {
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // 메인에는 기능 박스 5개: 사전 / 이야기 / 단어장(폴더) / 묵상(준비 중) / 내 단어장
+  // 메인 기능 박스: 사전 / 이야기 / 뉴스 / 묵상 / 기도 / 단어장(폴더) / 내 단어장
   const allCategories = getCategories();
   const hasMyWordbook = allCategories.some((c) => c.id === MY_WORDBOOK_ID);
   const myWordCount = getWordsByCategory(MY_WORDBOOK_ID).length;
@@ -164,6 +164,16 @@ const Index = () => {
           mark="text-amber-500/10"
           title="인도네시아 이야기"
           sub="Cerita"
+        />
+        <MenuCard
+          onClick={() => navigate("/news")}
+          icon={Newspaper}
+          grad="to-indigo-300/35"
+          border="border-indigo-300/50"
+          tile="bg-indigo-500"
+          mark="text-indigo-500/10"
+          title="인도네시아 뉴스"
+          sub="Berita"
         />
         <MenuCard
           onClick={() => navigate("/devotion")}
