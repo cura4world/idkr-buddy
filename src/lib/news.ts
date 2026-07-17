@@ -73,7 +73,13 @@ async function callGeminiWithSearch(prompt: string): Promise<string> {
           tools: [{ google_search: {} }],
           // 기사 6개(인니어+한국어)는 출력이 매우 길어 한도를 넉넉히 잡아야
           // JSON이 중간에 잘리지 않습니다 (잘리면 파싱 실패 = 매번 실패).
-          generationConfig: { temperature: 0.6, maxOutputTokens: 32768 },
+          generationConfig: {
+            temperature: 0.6,
+            maxOutputTokens: 32768,
+            // thinking을 꺼서 생성 시간과 비용을 크게 줄임.
+            // 이 옵션을 거부하는 모델이면 400이 나고 다음 모델로 자동 폴백됨.
+            thinkingConfig: { thinkingBudget: 0 },
+          },
         }),
       });
 
