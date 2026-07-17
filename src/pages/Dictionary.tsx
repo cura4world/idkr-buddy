@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home, Mic, ScrollText } from "lucide-react";
+import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home, Mic, ScrollText, Newspaper } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
@@ -156,6 +156,10 @@ const Dictionary = () => {
   // 묵상 카드의 "사전에서 보기"로 진입했는지 (묵상으로 돌아가기 버튼 표시)
   const [fromDevotion] = useState(() => {
     try { return new URLSearchParams(window.location.search).get("from") === "devotion"; } catch (e) { return false; }
+  });
+  // 뉴스 기사의 "사전에서 보기"로 진입했는지 (뉴스로 돌아가기 버튼 표시)
+  const [fromNews] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get("from") === "news"; } catch (e) { return false; }
   });
   const [query, setQuery] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory());
@@ -494,6 +498,16 @@ const Dictionary = () => {
           className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
         >
           <ScrollText size={16} /> 묵상으로
+        </button>
+      )}
+
+      {/* 뉴스로 돌아가기 플로팅 버튼 */}
+      {fromNews && (
+        <button
+          onClick={() => navigate("/news")}
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
+        >
+          <Newspaper size={16} /> 뉴스로
         </button>
       )}
 
