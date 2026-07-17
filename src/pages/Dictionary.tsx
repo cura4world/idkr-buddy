@@ -852,9 +852,9 @@ const Dictionary = () => {
               {!imgLoading && !imgUrl && !imgError && (
                 <button
                   onClick={() => loadImage(result.word, result.meaning)}
-                  className="w-full flex items-center justify-center gap-1.5 border border-dashed border-gray-300 rounded-lg py-3 text-sm text-gray-500 hover:bg-black/5"
+                  className="w-full flex items-center justify-center gap-1.5 border border-dashed border-gray-300 rounded-lg py-3 text-xs text-gray-500 hover:bg-black/5"
                 >
-                  <ImageIcon size={15} /> 이미지 보기
+                  <ImageIcon size={13} /> 이미지 보기
                 </button>
               )}
               {!imgLoading && !imgUrl && imgError && (
@@ -931,7 +931,7 @@ const Dictionary = () => {
 
             {/* 사용빈도 / 난이도 */}
             <Divider />
-            <div className="space-y-1 text-sm text-gray-900">
+            <div className="space-y-1 text-xs text-gray-900">
               <p><span className="font-semibold">실제 회화 사용빈도</span> <Stars n={result.frequency} /></p>
               <p><span className="font-semibold">난이도</span> <Stars n={result.difficulty} /></p>
             </div>
