@@ -577,9 +577,11 @@ const Dictionary = () => {
         {/* 초기 화면: 안내 문구 + 최근 검색 (바닥까지 이어지는 시트) */}
         {isHome && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <div className="text-center pt-1 pb-4 text-white/60">
-              <Search size={32} className="mx-auto mb-2 opacity-60" />
-              <p className="text-sm">인니어·한국어 단어나 문장을 검색해보세요</p>
+            <div className="pt-1 pb-4 text-white/60">
+              <p className="text-xs flex items-center justify-center gap-1">
+                <Search size={13} className="opacity-60 shrink-0" />
+                <span>인니어·한국어 단어나 문장을 검색해보세요</span>
+              </p>
             </div>
             {history.length > 0 && (
               <>
