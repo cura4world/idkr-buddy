@@ -470,7 +470,7 @@ const Prayer = () => {
 
   const renderKorean = (text: string) =>
     text.split(new RegExp("\\n{2,}")).filter((p) => p.trim()).map((para, i) => (
-      <p key={i} className="mb-3 text-xs leading-relaxed text-gray-800 font-body">{para}</p>
+      <p key={i} className="mb-3 text-sm leading-relaxed text-gray-800 font-body">{para}</p>
     ));
 
   const chip = (selected: boolean) =>
@@ -857,7 +857,7 @@ const Prayer = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="flex-1 min-w-0 text-base font-semibold">인도네시아어 기도</h1>
+        <h1 className="flex-1 min-w-0 text-lg font-semibold">인도네시아어 기도</h1>
       </header>
 
       <div className="px-4 py-4">
@@ -889,7 +889,7 @@ const Prayer = () => {
         </div>
 
         {/* 저장된 기도문 */}
-        <p className="text-sm font-bold text-white/90 mb-2 px-1">저장된 기도문</p>
+        <p className="text-sm font-bold text-white/90 mb-2 px-1 font-gothic">저장된 기도문</p>
         {records.length === 0 ? (
           <div className="bg-card/60 border border-border/40 rounded-xl px-5 py-8 text-center">
             <p className="text-sm text-gray-500 font-gothic">
