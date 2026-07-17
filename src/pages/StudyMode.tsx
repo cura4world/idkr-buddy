@@ -284,14 +284,14 @@ export default function StudyMode() {
               >
                 <Bookmark size={22} fill={isMarked ? "currentColor" : "none"} />
               </button>
-              <p className={`text-center leading-relaxed text-gray-900 ${frontLang === "id" ? "font-word text-2xl" : "font-gothic text-xl"}`}>
+              <p className={`text-center leading-relaxed text-gray-900 ${frontLang === "id" ? "font-word text-2xl" : "font-gothic text-lg font-bold"}`}>
                 {frontLang === "id" ? currentWord?.word : currentWord?.meaning}
               </p>
               {frontLang === "id" && currentWord?.example && (
                 <p className="text-base text-muted-foreground font-word mt-4 text-center leading-relaxed">{currentWord.example}</p>
               )}
               {frontLang === "ko" && currentWord?.exampleMeaning && (
-                <p className="text-base text-muted-foreground font-gothic mt-4 text-center leading-relaxed">{currentWord.exampleMeaning}</p>
+                <p className="text-sm text-muted-foreground font-gothic mt-4 text-center leading-relaxed">{currentWord.exampleMeaning}</p>
               )}
             </div>
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
@@ -301,11 +301,11 @@ export default function StudyMode() {
               >
                 <Bookmark size={22} fill={isMarked ? "currentColor" : "none"} />
               </button>
-              <p className={`font-normal text-center mb-3 text-gray-900 ${frontLang === "id" ? "font-gothic text-xl" : "font-word text-2xl"}`}>
+              <p className={`font-normal text-center mb-3 text-gray-900 ${frontLang === "id" ? "font-gothic text-lg font-bold" : "font-word text-2xl"}`}>
                 {frontLang === "id" ? currentWord?.meaning : currentWord?.word}
               </p>
               {frontLang === "id" && currentWord?.exampleMeaning && (
-                <p className="text-base text-muted-foreground font-gothic text-center leading-relaxed">{currentWord.exampleMeaning}</p>
+                <p className="text-sm text-muted-foreground font-gothic text-center leading-relaxed">{currentWord.exampleMeaning}</p>
               )}
               {frontLang === "ko" && currentWord?.example && (
                 <p className="text-base text-muted-foreground font-word text-center leading-relaxed">{currentWord.example}</p>
