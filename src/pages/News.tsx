@@ -513,14 +513,11 @@ const News = () => {
                 className="w-full mt-3 flex items-center justify-center gap-2 rounded-full py-3 text-sm font-medium bg-primary text-white disabled:opacity-60"
               >
                 {generating ? (
-                  <><Loader2 size={16} className="animate-spin" /> 오늘 신문을 만들고 있어요...</>
+                  <><Loader2 size={16} className="animate-spin" /> 오늘의 뉴스를 인쇄중입니다...</>
                 ) : (
                   <><Newspaper size={16} /> 오늘의 뉴스 가져오기</>
                 )}
               </button>
-              <p className="mt-2 text-[11px] text-gray-400 font-gothic">
-                실제 오늘 뉴스를 검색해 학습용 기사로 다시 씁니다 (20~30초)
-              </p>
             </>
           )}
           {todayEdition && !isTodayShown && (
