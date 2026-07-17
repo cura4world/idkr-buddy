@@ -124,11 +124,25 @@ function removeHistory(term: string): string[] {
   return next;
 }
 
+// 끊어읽기 문장: "/"로 연결하고 문장 끝 마침표를 보장합니다.
+function chunkedSentence(r: IdSentenceResult): string {
+  const base =
+    r.chunks.length > 0 ? r.chunks.map((c) => c.id).join(" / ") : r.original;
+  const t = base.trim();
+  if (!t) return t;
+  if (new RegExp("[.!?\\u2026]$").test(t)) return t;
+  return t + ".";
+}
+
 const Dictionary = () => {
   const navigate = useNavigate();
   // 이야기 카드의 "사전에서 보기"로 진입했는지 (돌아가기 플로팅 버튼 표시)
   const [fromStory] = useState(() => {
     try { return new URLSearchParams(window.location.search).get("from") === "story"; } catch (e) { return false; }
+  });
+  // 묵상 카드의 "사전에서 보기"로 진입했는지 (묵상으로 돌아가기 버튼 표시)
+  const [fromDevotion] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get("from") === "devotion"; } catch (e) { return false; }
   });
   const [query, setQuery] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory());
@@ -460,9 +474,19 @@ const Dictionary = () => {
         </button>
       )}
 
+      {/* 묵상으로 돌아가기 플로팅 버튼 */}
+      {fromDevotion && (
+        <button
+          onClick={() => navigate("/devotion")}
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
+        >
+          <ScrollText size={16} /> 묵상으로
+        </button>
+      )}
+
       <div className={isHome ? "px-4 pt-4 pb-0 flex-1 min-h-0 flex flex-col" : "px-4 py-4"}>
         {/* 검색창 */}
-        <div className="flex items-center gap-2 mb-4 min-w-0">
+        <div className={`flex items-center gap-2 min-w-0 ${isHome ? "mb-2" : "mb-4"}`}>
           <div className="flex-1 min-w-0 flex items-center gap-2 bg-card border border-border rounded-full px-4 py-2.5">
             <Search size={18} className="text-gray-400 shrink-0" />
             <input
@@ -540,13 +564,13 @@ const Dictionary = () => {
         {/* 초기 화면: 안내 문구 + 최근 검색 (바닥까지 이어지는 시트) */}
         {isHome && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <div className="text-center py-8 text-white/60">
-              <Search size={32} className="mx-auto mb-3 opacity-60" />
+            <div className="text-center pt-1 pb-4 text-white/60">
+              <Search size={32} className="mx-auto mb-2 opacity-60" />
               <p className="text-sm">인니어·한국어 단어나 문장을 검색해보세요</p>
             </div>
             {history.length > 0 && (
               <>
-                <p className="text-xs text-white mb-2 px-1 font-gothic">최근 검색</p>
+                <p className="text-xs text-white mb-1 px-1 font-gothic">최근 검색</p>
                 {/* 바깥: 바닥까지 이어지는 흰 시트 / 안쪽: 리스트만 스크롤 + 아래로 갈수록 흐려지는 페이드 */}
                 <div className="flex-1 min-h-0 bg-card rounded-t-xl overflow-hidden flex flex-col">
                   <ul
@@ -572,7 +596,7 @@ const Dictionary = () => {
                           onMouseUp={cancelLongPress}
                           onMouseLeave={cancelLongPress}
                           onContextMenu={(e) => e.preventDefault()}
-                          className={`w-full text-left px-4 py-2 flex items-center gap-2 hover:bg-black/5 select-none ${i > 0 ? "border-t border-gray-100" : ""}`}
+                          className={`w-full text-left px-4 py-1.5 flex items-center gap-2 hover:bg-black/5 select-none ${i > 0 ? "border-t border-gray-100" : ""}`}
                         >
                           <Search size={14} className="text-gray-400 shrink-0" />
                           <span className="text-sm text-gray-900 break-words min-w-0 font-gothic">{h}</span>
@@ -592,10 +616,8 @@ const Dictionary = () => {
             {/* 끊어읽기: 인니어 / 한국어 */}
             <div className="flex items-start justify-between gap-2 min-w-0">
               <div className="min-w-0">
-                <p className="text-base font-semibold text-gray-900 break-words font-word leading-relaxed">
-                  {idSentence.chunks.length > 0
-                    ? idSentence.chunks.map((c) => c.id).join(" / ")
-                    : idSentence.original}
+                <p className="text-sm font-semibold text-gray-900 break-words font-word leading-relaxed">
+                  {chunkedSentence(idSentence)}
                 </p>
                 <p className="text-xs text-gray-600 mt-1.5 break-words leading-relaxed font-gothic">
                   {idSentence.translation}
@@ -673,6 +695,31 @@ const Dictionary = () => {
                       {idSentence.natural.ko}
                     </p>
                   )}
+                </div>
+              </>
+            )}
+
+            {/* 핵심 문형 */}
+            {idSentence.patterns.length > 0 && (
+              <>
+                <Divider />
+                <SectionTitle>핵심 문형</SectionTitle>
+                <div className="space-y-2.5">
+                  {idSentence.patterns.map((p, i) => (
+                    <div
+                      key={i}
+                      className="rounded-lg bg-gray-50 border border-gray-200 px-3.5 py-3 min-w-0"
+                    >
+                      <p className="text-sm font-semibold text-gray-900 break-words font-word leading-relaxed">
+                        {p.pattern}
+                      </p>
+                      {p.meaning && (
+                        <p className="text-xs text-gray-600 mt-1.5 break-words font-gothic leading-relaxed">
+                          = {p.meaning}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </>
             )}
@@ -771,7 +818,7 @@ const Dictionary = () => {
                 <Volume2 size={18} />
               </button>
             </div>
-            <p className="text-base font-medium text-gray-900 break-words">{result.meaning}</p>
+            <p className="text-sm font-medium text-gray-900 break-words">{result.meaning}</p>
             {result.meaningDetail && (
               <p className="text-xs text-gray-500 mt-1 break-words font-gothic">{result.meaningDetail}</p>
             )}
@@ -879,17 +926,14 @@ const Dictionary = () => {
               <button
                 onClick={handleSaveToWordbook}
                 disabled={saved}
-                className={`w-full flex items-center justify-center gap-2 rounded-full py-3 text-sm font-medium transition-colors ${
+                className={`w-full flex items-center justify-center gap-2 rounded-full py-3 text-xs font-medium transition-colors ${
                   saved
                     ? "bg-gray-100 text-gray-400"
                     : "bg-primary text-white hover:bg-primary/90"
                 }`}
               >
-                {saved ? <><Check size={16} /> 저장됨</> : <><Plus size={16} /> 내 단어장에 보내기</>}
+                {saved ? <><Check size={14} /> 저장됨</> : <><Plus size={14} /> 내 단어장에 보내기</>}
               </button>
-              <p className="text-xs text-gray-400 text-center mt-2">
-                단어·뜻·예문이 내 단어장에 저장됩니다
-              </p>
             </div>
           </div>
         )}
