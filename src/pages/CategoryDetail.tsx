@@ -402,7 +402,7 @@ export default function CategoryDetail() {
                     <p className="text-xs text-muted-foreground/70 font-word mt-0.5">{w.example}</p>
                   )}
                   {w.exampleMeaning && (
-                    <p className="text-xs text-muted-foreground/50 font-body mt-0.5">{w.exampleMeaning}</p>
+                    <p className="text-[0.6875rem] leading-snug text-muted-foreground/50 font-body mt-0.5">{w.exampleMeaning}</p>
                   )}
                 </div>
                 <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
@@ -452,7 +452,7 @@ export default function CategoryDetail() {
               <p className="text-xs text-muted-foreground font-word mt-0.5">{draggingWord.example}</p>
             )}
             {draggingWord.exampleMeaning && (
-              <p className="text-xs text-muted-foreground font-body mt-0.5">{draggingWord.exampleMeaning}</p>
+              <p className="text-[0.6875rem] leading-snug text-muted-foreground font-body mt-0.5">{draggingWord.exampleMeaning}</p>
             )}
           </div>
           <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
