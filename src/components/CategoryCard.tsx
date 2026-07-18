@@ -50,7 +50,7 @@ export default function CategoryCard({
   return (
     <div
       ref={cardRef}
-      className={`relative rounded-xl bg-card px-5 py-4 card-lift border border-border/60 select-none ${isDragging ? "opacity-20" : ""} ${isDropTarget ? "ring-2 ring-primary ring-offset-2" : ""}`}
+      className={`relative rounded-xl bg-card px-5 py-3 card-lift border border-border/60 select-none ${isDragging ? "opacity-20" : ""} ${isDropTarget ? "ring-2 ring-primary ring-offset-2" : ""}`}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       onMouseDown={onMouseDown}
@@ -61,7 +61,7 @@ export default function CategoryCard({
           className="flex items-center gap-2 cursor-pointer pr-8"
           onClick={() => navigate(`/category/${category.id}`)}
         >
-          <span className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-lg shrink-0">{category.emoji}</span>
+          <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-base shrink-0">{category.emoji}</span>
           <h2 className="text-base font-semibold font-body text-card-foreground truncate">{category.name}</h2>
         </div>
 
@@ -128,18 +128,18 @@ export default function CategoryCard({
         />
       )}
 
-      <div className="flex items-center justify-between mt-3.5">
+      <div className="flex items-center justify-between mt-2">
         <span className="text-xs text-muted-foreground">{words.length}개의 단어</span>
         <div className="flex gap-2">
           <button
             onClick={() => navigate(`/quiz/${category.id}`)}
-            className="text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3.5 py-1.5 rounded-full transition-colors"
+            className="text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3.5 py-1 rounded-full transition-colors"
           >
             Quiz
           </button>
           <button
             onClick={() => navigate(`/study/${category.id}`)}
-            className="text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3.5 py-1.5 rounded-full transition-colors"
+            className="text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3.5 py-1 rounded-full transition-colors"
           >
             Card
           </button>
