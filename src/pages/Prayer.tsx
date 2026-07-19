@@ -514,6 +514,9 @@ const Prayer = () => {
   if (view === "prayer" && current) {
     const quote = pickPrayerQuote(current.id);
     const isLords = current.id === "lords-prayer" || current.id === "apostles-creed";
+    // 고정 기도문(사도신경/주기도문)의 인도네시아어 이름 — title "한국어 · Indonesian" 에서 추출
+    const idNameParts = current.title.split("·");
+    const idName = idNameParts.length > 1 ? idNameParts[1].trim() : current.situationLabel;
     return (
       <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
         <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
@@ -545,8 +548,8 @@ const Prayer = () => {
             <div className="flex-1 min-w-0 bg-card border border-border/60 rounded-xl px-5 py-5 min-h-[72vh] content-bump select-none">
               {/* 제목(상황) 한 줄, 다음 줄 우측: 날짜 + 글자크기(-,+) 또는 연필 */}
               <div className="mb-3">
-                <span className="inline-block max-w-full truncate text-xs font-bold text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5">
-                  {current.situationLabel}
+                <span className={`inline-block max-w-full truncate font-bold text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5 ${isLords ? "font-gothic text-sm" : "text-xs"}`}>
+                  {isLords && !flipped ? idName : current.situationLabel}
                 </span>
                 <div className="flex items-center justify-end gap-2 mt-1.5">
                   {!isLords && (
