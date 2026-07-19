@@ -145,9 +145,6 @@ const Index = () => {
       </header>
 
       <div className="relative space-y-2.5">
-        <p className="px-1 text-[10px] font-gothic font-semibold uppercase tracking-[0.22em] text-white/40 select-none">
-          Belajar <span className="text-white/25">·</span> 배우기
-        </p>
         <MenuCard
           onClick={() => navigate("/dictionary")}
           icon={BookOpen}
@@ -199,9 +196,6 @@ const Index = () => {
           title="인도네시아어 기도"
           sub="Doa"
         />
-        <p className="px-1 pt-3 text-[10px] font-gothic font-semibold uppercase tracking-[0.22em] text-white/40 select-none">
-          Kosakata <span className="text-white/25">·</span> 단어장
-        </p>
         <MenuCard
           onClick={() => navigate("/wordbooks")}
           icon={Library}
