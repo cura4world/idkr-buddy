@@ -116,15 +116,18 @@
   background-image: linear-gradient(180deg, hsl(195 68% 26%) 0%, hsl(196 72% 22%) 38%, hsl(201 76% 14%) 100%);
 }
 
-/* 콘텐츠 페이지 헤더(사전·이야기·묵상·뉴스 공통) — 색 배경바 없이 글자만 있는 것처럼
-   페이지 배경에 녹아드는 스타일 (단어장 폴더 상단과 통일).
-   스크롤 시 본문 글자와 겹치지 않도록 반투명 배경 + 블러만 유지합니다. */
-header.bg-primary {
-  background-color: hsl(var(--background) / 0.92);
+/* 콘텐츠 페이지 상단 헤더/바 — 색 배경 박스 없이 페이지 배경에 녹아들게 (모든 폴더 통일).
+   대상: 사전·이야기·묵상·뉴스(bg-primary), 기도(bg-background/95), 단어장 상세(sticky 바).
+   페이지 그라디언트 최상단 색과 정확히 맞춰, 정지 상태에선 박스가 안 보이고
+   스크롤 시엔 본문 글자를 깔끔히 덮습니다. */
+header.bg-primary,
+header.bg-background\/95,
+.sticky.top-0.z-30.bg-background {
+  background-color: hsl(195 68% 26%);
   background-image: none;
   box-shadow: none;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 /* Soft layered lift for cards sitting on the deep background
