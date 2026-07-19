@@ -111,8 +111,10 @@
   font-family: 'Gowun Dodum', sans-serif;
 }
 
-/* App background: deep-sea depth gradient (page roots only, inputs unaffected) */
-.min-h-screen.bg-background {
+/* App background: deep-sea depth gradient (page roots only, inputs unaffected)
+   사전 홈은 min-h-screen 대신 h-[100dvh]를 쓰므로 그 셀렉터도 함께 포함 (헤더 색과 일치용) */
+.min-h-screen.bg-background,
+.h-\[100dvh\].bg-background {
   background-image: linear-gradient(180deg, hsl(195 68% 26%) 0%, hsl(196 72% 22%) 38%, hsl(201 76% 14%) 100%);
 }
 
