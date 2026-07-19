@@ -59,7 +59,7 @@ const MenuCard = ({ onClick, icon: Icon, grad, border, tile, mark, title, sub, b
   >
     <Icon size={92} className={`absolute -right-4 -bottom-8 ${mark} rotate-12 pointer-events-none`} />
     <div className="relative h-full flex items-center gap-3.5">
-      <span className={`w-12 h-12 rounded-xl ${tile} flex items-center justify-center shrink-0 shadow-sm`}>
+      <span className={`w-12 h-12 rounded-xl ${tile} flex items-center justify-center shrink-0 shadow-sm ring-1 ring-inset ring-white/25`}>
         <Icon size={23} className="text-white" />
       </span>
       <div className="flex-1 min-w-0">
@@ -145,13 +145,16 @@ const Index = () => {
       </header>
 
       <div className="relative space-y-2.5">
+        <p className="px-1 text-[10px] font-gothic font-semibold uppercase tracking-[0.22em] text-white/40 select-none">
+          Belajar <span className="text-white/25">·</span> 배우기
+        </p>
         <MenuCard
           onClick={() => navigate("/dictionary")}
           icon={BookOpen}
           grad="to-primary/25"
-          border="border-primary/25"
-          tile="bg-primary"
-          mark="text-primary/5"
+          border="border-primary/40"
+          tile="bg-gradient-to-b from-[hsl(172_45%_38%)] to-[hsl(172_45%_26%)]"
+          mark="text-primary/10"
           title="인도네시아어 사전"
           sub="Kamus"
         />
@@ -159,8 +162,8 @@ const Index = () => {
           onClick={() => navigate("/news")}
           icon={Newspaper}
           grad="to-indigo-300/35"
-          border="border-indigo-300/50"
-          tile="bg-indigo-500"
+          border="border-indigo-300/70"
+          tile="bg-gradient-to-b from-indigo-400 to-indigo-600"
           mark="text-indigo-500/10"
           title="인도네시아 뉴스"
           sub="Berita"
@@ -169,8 +172,8 @@ const Index = () => {
           onClick={() => navigate("/story")}
           icon={ScrollText}
           grad="to-amber-300/35"
-          border="border-amber-300/50"
-          tile="bg-amber-500"
+          border="border-amber-300/70"
+          tile="bg-gradient-to-b from-amber-400 to-amber-600"
           mark="text-amber-500/10"
           title="인도네시아 이야기"
           sub="Cerita"
@@ -179,8 +182,8 @@ const Index = () => {
           onClick={() => navigate("/devotion")}
           icon={ChurchCross}
           grad="to-rose-300/35"
-          border="border-rose-300/50"
-          tile="bg-rose-500"
+          border="border-rose-300/70"
+          tile="bg-gradient-to-b from-rose-400 to-rose-600"
           mark="text-rose-500/10"
           title="인도네시아어 묵상"
           sub="Saat Teduh"
@@ -190,18 +193,21 @@ const Index = () => {
           onClick={() => navigate("/prayer")}
           icon={HandHeart}
           grad="to-emerald-300/35"
-          border="border-emerald-300/50"
-          tile="bg-emerald-500"
+          border="border-emerald-300/70"
+          tile="bg-gradient-to-b from-emerald-400 to-emerald-600"
           mark="text-emerald-500/10"
           title="인도네시아어 기도"
           sub="Doa"
         />
+        <p className="px-1 pt-3 text-[10px] font-gothic font-semibold uppercase tracking-[0.22em] text-white/40 select-none">
+          Kosakata <span className="text-white/25">·</span> 단어장
+        </p>
         <MenuCard
           onClick={() => navigate("/wordbooks")}
           icon={Library}
           grad="to-sky-300/35"
-          border="border-sky-300/50"
-          tile="bg-sky-500"
+          border="border-sky-300/70"
+          tile="bg-gradient-to-b from-sky-400 to-sky-600"
           mark="text-sky-500/10"
           title="인도네시아어 단어장"
           sub={folderCount > 0 ? `Kosakata · ${folderCount}권` : "Kosakata"}
@@ -209,7 +215,7 @@ const Index = () => {
 
         {/* 내 단어장 - 같은 높이, 오른쪽에 Quiz/Card */}
         {hasMyWordbook && (
-          <div className={`${CARD_BASE} bg-gradient-to-br from-transparent to-violet-300/35 border-violet-300/50`}>
+          <div className={`${CARD_BASE} bg-gradient-to-br from-transparent to-violet-300/35 border-violet-300/70`}>
             <Star size={92} className="absolute -right-4 -bottom-8 text-violet-500/10 rotate-12 pointer-events-none" />
             <div className="relative h-full flex items-center gap-3.5">
               <button
@@ -217,7 +223,7 @@ const Index = () => {
                 onClick={() => navigate(`/category/${MY_WORDBOOK_ID}`)}
                 className="flex-1 min-w-0 h-full flex items-center gap-3.5 text-left"
               >
-                <span className="w-12 h-12 rounded-xl bg-violet-500 flex items-center justify-center shrink-0 shadow-sm">
+                <span className="w-12 h-12 rounded-xl bg-gradient-to-b from-violet-400 to-violet-600 flex items-center justify-center shrink-0 shadow-sm ring-1 ring-inset ring-white/25">
                   <Star size={23} className="text-white" />
                 </span>
                 <div className="flex-1 min-w-0">
