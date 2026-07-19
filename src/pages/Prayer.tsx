@@ -69,6 +69,35 @@ const LORDS_PRAYER: PrayerRecord = {
     "나라와 권능과 영광이 영원히 아버지의 것입니다. 아멘.",
 };
 
+// 사도신경 (고정 카드 — 주기도문과 동일 포메이션, 저장/삭제/재생성 없음)
+// 인니어: 인도네시아 개신교회 표준 사도신경 (음부에 내려가심 "turun ke dalam kerajaan maut" 포함)
+// 한국어: 한국교회 새번역 사도신경 (음부 구절 없음 — 인니어보다 한 조각 짧음)
+const APOSTLES_CREED: PrayerRecord = {
+  id: "apostles-creed",
+  createdAt: 0,
+  categoryId: "apostles",
+  situationId: "apostles",
+  situationLabel: "사도신경",
+  length: "short",
+  title: "사도신경 · Pengakuan Iman Rasuli",
+  indonesian:
+    "Aku percaya kepada Allah, Bapa yang Mahakuasa, Khalik langit dan bumi.\n\n" +
+    "Dan kepada Yesus Kristus, Anak-Nya yang tunggal, Tuhan kita.\n\n" +
+    "Yang dikandung daripada Roh Kudus, lahir dari anak dara Maria.\n\n" +
+    "Yang menderita sengsara di bawah pemerintahan Pontius Pilatus, disalibkan, mati dan dikuburkan, turun ke dalam kerajaan maut; pada hari yang ketiga bangkit pula dari antara orang mati.\n\n" +
+    "Naik ke sorga, duduk di sebelah kanan Allah, Bapa yang Mahakuasa.\n\n" +
+    "Dan dari sana Ia akan datang untuk menghakimi orang yang hidup dan yang mati.\n\n" +
+    "Aku percaya kepada Roh Kudus; gereja yang kudus dan am, persekutuan orang kudus; pengampunan dosa; kebangkitan tubuh; dan hidup yang kekal. Amin.",
+  korean:
+    "나는 전능하신 아버지 하나님, 천지의 창조주를 믿습니다.\n\n" +
+    "나는 그의 유일하신 아들, 우리 주 예수 그리스도를 믿습니다.\n\n" +
+    "그는 성령으로 잉태되어 동정녀 마리아에게서 나시고,\n\n" +
+    "본디오 빌라도에게 고난을 받아 십자가에 못 박혀 죽으시고, 장사된 지 사흘 만에 죽은 자 가운데서 다시 살아나셨으며,\n\n" +
+    "하늘에 오르시어 전능하신 아버지 하나님 우편에 앉아 계시다가,\n\n" +
+    "거기로부터 살아 있는 자와 죽은 자를 심판하러 오십니다.\n\n" +
+    "나는 성령을 믿으며, 거룩한 공교회와 성도의 교제와 죄를 용서받는 것과 몸의 부활과 영생을 믿습니다. 아멘.",
+};
+
 const LENGTH_LABELS: { id: PrayerLength; label: string }[] = [
   { id: "short", label: "짧게" },
   { id: "medium", label: "보통" },
@@ -484,7 +513,7 @@ const Prayer = () => {
   // ================================================================
   if (view === "prayer" && current) {
     const quote = pickPrayerQuote(current.id);
-    const isLords = current.id === "lords-prayer";
+    const isLords = current.id === "lords-prayer" || current.id === "apostles-creed";
     return (
       <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
         <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
@@ -861,30 +890,49 @@ const Prayer = () => {
       </header>
 
       <div className="px-4 py-4">
-        {/* 카테고리 2x2 */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {PRAYER_CATEGORIES.map((c) => (
+        {/* 위 4개 기도: 2열 x 2줄 (설명 없이 높이만 콤팩트하게) */}
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          {PRAYER_CATEGORIES.filter((c) => c.id !== "etc").map((c) => (
             <button
               key={c.id}
               onClick={() => openWizard(c.id)}
-              className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-4 py-4 text-left card-lift active:scale-[0.98] transition-transform"
+              className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-4 py-3 text-left card-lift active:scale-[0.98] transition-transform"
             >
               <span className="text-2xl">{c.emoji}</span>
-              <p className="mt-1.5 text-sm font-bold text-gray-900">{c.label}</p>
-              <p className="text-[11px] text-gray-500 font-gothic mt-0.5">
-                {c.id === "etc" ? "상황 직접 입력" : c.situations.length + "가지 상황"}
-              </p>
+              <p className="mt-1 text-sm font-bold text-gray-900">{c.label}</p>
             </button>
           ))}
+        </div>
+
+        {/* 셋째 줄: 그외 기도 / 사도신경 / 주기도문 (3열) */}
+        <div className="grid grid-cols-3 gap-2.5 mb-6">
+          {/* 그외 기도 */}
+          <button
+            onClick={() => openWizard("etc")}
+            className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-3 py-3 text-left card-lift active:scale-[0.98] transition-transform"
+          >
+            <span className="text-2xl">🙏</span>
+            <p className="mt-1 text-sm font-bold text-gray-900 leading-tight">그외 기도</p>
+          </button>
+
+          {/* 사도신경 — 고정 카드 */}
+          <button
+            onClick={() => openPrayer(APOSTLES_CREED)}
+            className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-3 py-3 text-left card-lift active:scale-[0.98] transition-transform"
+          >
+            <span className="text-2xl">📜</span>
+            <p className="mt-1 text-sm font-bold text-gray-900 leading-tight">사도신경</p>
+            <p className="text-[10px] text-gray-500 font-gothic mt-0.5 leading-tight">Pengakuan Iman Rasuli</p>
+          </button>
 
           {/* 주기도문 — 고정 카드 */}
           <button
             onClick={() => openPrayer(LORDS_PRAYER)}
-            className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-4 py-4 text-left card-lift active:scale-[0.98] transition-transform"
+            className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-3 py-3 text-left card-lift active:scale-[0.98] transition-transform"
           >
             <span className="text-2xl">✝️</span>
-            <p className="mt-1.5 text-sm font-bold text-gray-900">주기도문</p>
-            <p className="text-[11px] text-gray-500 font-gothic mt-0.5">Doa Bapa Kami</p>
+            <p className="mt-1 text-sm font-bold text-gray-900 leading-tight">주기도문</p>
+            <p className="text-[10px] text-gray-500 font-gothic mt-0.5 leading-tight">Doa Bapa Kami</p>
           </button>
         </div>
 
