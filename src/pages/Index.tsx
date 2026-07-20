@@ -44,6 +44,7 @@ type MenuCardProps = {
   icon: LucideIcon | ((p: { size?: number; className?: string }) => JSX.Element);
   grad: string;
   border: string;
+  inner: string;
   tile: string;
   mark: string;
   title: string;
@@ -51,12 +52,13 @@ type MenuCardProps = {
   badge?: string;
 };
 
-const MenuCard = ({ onClick, icon: Icon, grad, border, tile, mark, title, sub, badge }: MenuCardProps) => (
+const MenuCard = ({ onClick, icon: Icon, grad, border, inner, tile, mark, title, sub, badge }: MenuCardProps) => (
   <button
     type="button"
     onClick={onClick}
     className={`${CARD_BASE} text-left bg-gradient-to-br from-transparent ${grad} ${border}`}
   >
+    <span aria-hidden className={`pointer-events-none absolute inset-[3px] rounded-[13px] border ${inner}`} />
     <Icon size={92} className={`absolute -right-4 -bottom-8 ${mark} rotate-12 pointer-events-none`} />
     <div className="relative h-full flex items-center gap-3.5">
       <span className={`w-12 h-12 rounded-xl ${tile} flex items-center justify-center shrink-0 shadow-sm ring-1 ring-inset ring-white/25`}>
@@ -150,6 +152,7 @@ const Index = () => {
           icon={BookOpen}
           grad="to-primary/25"
           border="border-primary/40"
+          inner="border-primary/50"
           tile="bg-gradient-to-b from-[hsl(172_45%_38%)] to-[hsl(172_45%_26%)]"
           mark="text-primary/10"
           title="인도네시아어 사전"
@@ -160,6 +163,7 @@ const Index = () => {
           icon={Newspaper}
           grad="to-indigo-300/35"
           border="border-indigo-300/70"
+          inner="border-indigo-500/40"
           tile="bg-gradient-to-b from-indigo-400 to-indigo-600"
           mark="text-indigo-500/10"
           title="인도네시아 뉴스"
@@ -170,6 +174,7 @@ const Index = () => {
           icon={ScrollText}
           grad="to-amber-300/35"
           border="border-amber-300/70"
+          inner="border-amber-500/40"
           tile="bg-gradient-to-b from-amber-400 to-amber-600"
           mark="text-amber-500/10"
           title="인도네시아 이야기"
@@ -180,6 +185,7 @@ const Index = () => {
           icon={ChurchCross}
           grad="to-rose-300/35"
           border="border-rose-300/70"
+          inner="border-rose-500/40"
           tile="bg-gradient-to-b from-rose-400 to-rose-600"
           mark="text-rose-500/10"
           title="인도네시아어 묵상"
@@ -191,6 +197,7 @@ const Index = () => {
           icon={HandHeart}
           grad="to-emerald-300/35"
           border="border-emerald-300/70"
+          inner="border-emerald-500/40"
           tile="bg-gradient-to-b from-emerald-400 to-emerald-600"
           mark="text-emerald-500/10"
           title="인도네시아어 기도"
@@ -201,6 +208,7 @@ const Index = () => {
           icon={Library}
           grad="to-sky-300/35"
           border="border-sky-300/70"
+          inner="border-sky-500/40"
           tile="bg-gradient-to-b from-sky-400 to-sky-600"
           mark="text-sky-500/10"
           title="인도네시아어 단어장"
@@ -210,6 +218,7 @@ const Index = () => {
         {/* 내 단어장 - 같은 높이, 오른쪽에 Quiz/Card */}
         {hasMyWordbook && (
           <div className={`${CARD_BASE} bg-gradient-to-br from-transparent to-violet-300/35 border-violet-300/70`}>
+            <span aria-hidden className="pointer-events-none absolute inset-[3px] rounded-[13px] border border-violet-500/40" />
             <Star size={92} className="absolute -right-4 -bottom-8 text-violet-500/10 rotate-12 pointer-events-none" />
             <div className="relative h-full flex items-center gap-3.5">
               <button
