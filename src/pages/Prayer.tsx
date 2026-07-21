@@ -17,6 +17,8 @@ import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { hasClaudeApiKey } from "@/lib/claude";
 import SettingsDialog from "@/components/SettingsDialog";
+import PlayButton from "@/components/PlayButton";
+import { ttsPlayer } from "@/lib/tts";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 const LENGTH_KEY_PREFIX = "prayer-length-"; // 카테고리별 마지막 길이 기억
@@ -168,6 +170,7 @@ const Prayer = () => {
   };
 
   const resetSub = () => {
+    ttsPlayer.stop();
     genToken.current++;
     setView("home");
     setCatId(null);
@@ -232,6 +235,7 @@ const Prayer = () => {
   };
 
   const openPrayer = (rec: PrayerRecord) => {
+    ttsPlayer.stop();
     wordCache.current.clear();
     setPopupWord(null);
     setFlipped(false);
@@ -591,6 +595,9 @@ const Prayer = () => {
               {!flipped ? (
                 <>
                   {/* 앞면: 인도네시아어 기도문 (단어 탭 가능) */}
+                  <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                    <PlayButton cacheKey={"prayer-" + current.id} text={current.indonesian} label="기도 듣기" />
+                  </div>
                   {renderIndoBody(current.indonesian)}
 
                   {/* 앞면 하단 액션 (주기도문 제외) */}
