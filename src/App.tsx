@@ -8,6 +8,7 @@ import Story from "./pages/Story";
 import News from "./pages/News";
 import Devotion from "./pages/Devotion";
 import Prayer from "./pages/Prayer";
+import IndoMap from "./pages/IndoMap";
 import Wordbooks from "./pages/Wordbooks";
 import CategoryDetail from "./pages/CategoryDetail";
 import StudyMode from "./pages/StudyMode";
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/news" element={<News />} />
           <Route path="/devotion" element={<Devotion />} />
           <Route path="/prayer" element={<Prayer />} />
+          <Route path="/map" element={<IndoMap />} />
           <Route path="/wordbooks" element={<Wordbooks />} />
           <Route path="/category/:id" element={<CategoryDetail />} />
           <Route path="/study/:id" element={<StudyMode />} />
