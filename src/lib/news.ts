@@ -7,7 +7,9 @@ import { getGeminiApiKey } from "@/lib/gemini";
 
 // 검색 그라운딩(google_search 도구)은 상위 flash 모델이 필요합니다.
 // lite 모델은 그라운딩을 지원하지 않아 사용하지 않습니다.
-const NEWS_MODELS = ["gemini-flash-latest", "gemini-2.5-flash"];
+// gemini-2.5-flash는 2026-10 종료 예정으로 신규 결제 계정에서는 이미 404 →
+// 현행 모델(gemini-3.5-flash)을 1순위로, 별칭과 구모델을 폴백으로 둡니다.
+const NEWS_MODELS = ["gemini-3.5-flash", "gemini-flash-latest", "gemini-2.5-flash"];
 
 export interface NewsArticle {
   category: string; // 한국어 카테고리 (핫뉴스/정치/경제/사회/문화/스포츠 등)
@@ -73,12 +75,11 @@ async function callGeminiWithSearch(prompt: string): Promise<string> {
           tools: [{ google_search: {} }],
           // 기사 6개(인니어+한국어)는 출력이 매우 길어 한도를 넉넉히 잡아야
           // JSON이 중간에 잘리지 않습니다 (잘리면 파싱 실패 = 매번 실패).
+          // thinkingConfig(thinkingBudget)는 Gemini 3.x에서 거부될 수 있어 보내지 않습니다.
+          // (뉴스는 하루 1회 호출이라 thinking 비용 영향이 미미함)
           generationConfig: {
             temperature: 0.6,
             maxOutputTokens: 32768,
-            // thinking을 꺼서 생성 시간과 비용을 크게 줄임.
-            // 이 옵션을 거부하는 모델이면 400이 나고 다음 모델로 자동 폴백됨.
-            thinkingConfig: { thinkingBudget: 0 },
           },
         }),
       });
