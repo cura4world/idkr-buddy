@@ -32,6 +32,15 @@ const speak = (text: string, lang: "id" | "ko" = "id") => {
 
 const fmtQtDate = (dateStr: string) => dateStr.replace(new RegExp("-", "g"), ".");
 
+// 카드 헤더용 날짜 라벨: 앞면(인니어) "QT 21 Juli" / 뒷면(한국어) "7월 21일 QT"
+const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+const qtDateLabel = (dateStr: string, ko: boolean) => {
+  const parts = dateStr.split("-");
+  const m = Number(parts[1]) || 1;
+  const d = Number(parts[2]) || 1;
+  return ko ? m + "월 " + d + "일 QT" : "QT " + d + " " + (BULAN[m - 1] || "");
+};
+
 const tbRangeLabel = (rec: DevotionRecord) =>
   rec.crossChapter
     ? rec.bookIdName + " " + rec.chapter + ":" + rec.verseStart + "-" + rec.endChapter + ":" + rec.verseEnd
@@ -396,7 +405,7 @@ const Devotion = () => {
             <ArrowLeft size={20} />
           </button>
           <h1 className="flex-1 min-w-0 text-base font-semibold leading-snug line-clamp-2 break-words">
-            {c.titleKo}
+            {qtDateLabel(current.date, flipped)}
           </h1>
         </header>
 
@@ -407,9 +416,6 @@ const Devotion = () => {
                 <>
                   {/* 앞면: 인니어 */}
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-xs font-bold text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
-                      {current.bookIdName} {current.chapter}
-                    </span>
                     <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">Saat Teduh</span>
                   </div>
                   <div className="mb-3 min-w-0">
@@ -421,7 +427,12 @@ const Devotion = () => {
                   {/* TB 본문 — 토글 */}
                   <div className="rounded-lg bg-rose-500/5 border border-rose-200/60 px-3 py-2.5 mb-4">
                     <button
-                      onClick={(e) => { e.stopPropagation(); setFullOpen((f) => !f); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const next = !fullOpen;
+                        setFullOpen(next);
+                        if (next && !cardVerses && !cardLoading) loadTbVerses(current);
+                      }}
                       className="w-full flex items-center gap-2 text-left"
                     >
                       <span className="flex-1 min-w-0 text-xs font-semibold text-rose-600 font-gothic truncate">
@@ -452,14 +463,6 @@ const Devotion = () => {
                             </button>
                           </div>
                         )}
-                        {!cardVerses && !cardLoading && !cardError && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); loadTbVerses(current); }}
-                            className="text-xs text-rose-600 font-medium underline py-1"
-                          >
-                            본문 불러오기
-                          </button>
-                        )}
                         {cardVerses && cardVerses.map(renderTbVerse)}
                       </div>
                     )}
@@ -479,6 +482,9 @@ const Devotion = () => {
               ) : (
                 <>
                   {/* 뒷면: 한국어 */}
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">QT</span>
+                  </div>
                   <h2 className="text-base font-bold text-gray-900 break-words mb-3">{c.titleKo}</h2>
 
                   {/* 우리말성경 본문 — 토글 (레코드에 저장돼 있어 즉시 표시) */}
@@ -644,9 +650,14 @@ const Devotion = () => {
         ) : todayRec ? (
           <button
             onClick={() => openCard(todayRec)}
-            className="w-full text-left rounded-xl border border-rose-300/60 bg-gradient-to-br from-transparent to-rose-300/25 px-4 py-3.5"
+            className="w-full text-left rounded-xl border border-rose-300/60 bg-card bg-gradient-to-br from-transparent to-rose-300/35 px-4 py-3.5"
           >
-            <p className="text-xs font-medium text-rose-600 font-gothic">오늘의 묵상</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-xs font-medium text-rose-600 font-gothic">오늘의 묵상</p>
+              <span className="text-[11px] font-medium text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
+                {tbRangeLabel(todayRec)}
+              </span>
+            </div>
             <p className="mt-1 text-base font-bold text-gray-900 font-word break-words">{todayRec.content.title}</p>
             <p className="text-xs text-gray-500 font-gothic mt-0.5 break-words">{todayRec.content.titleKo}</p>
           </button>
