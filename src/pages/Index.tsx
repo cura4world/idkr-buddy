@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, restoreSharedCategories } from "@/lib/store";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import SettingsDialog from "@/components/SettingsDialog";
-import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, ChevronRight, HandHeart, Newspaper } from "lucide-react";
+import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, ChevronRight, HandHeart, Newspaper, Map as MapIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -59,7 +59,7 @@ const MenuCard = ({ onClick, icon: Icon, grad, border, inner, tile, mark, title,
     className={`${CARD_BASE} text-left bg-gradient-to-br from-transparent ${grad} ${border}`}
   >
     <span aria-hidden className={`pointer-events-none absolute inset-[3px] rounded-[13px] border ${inner}`} />
-    <Icon size={92} className={`absolute -right-4 -bottom-8 ${mark} rotate-12 pointer-events-none`} />
+    <Icon size={110} className={`absolute -right-3.5 top-1/2 -translate-y-1/2 ${mark} -rotate-12 pointer-events-none`} />
     <div className="relative h-full flex items-center gap-3.5">
       <span className={`w-12 h-12 rounded-xl ${tile} flex items-center justify-center shrink-0 shadow-sm ring-1 ring-inset ring-white/25`}>
         <Icon size={23} className="text-white" />
@@ -112,24 +112,24 @@ const Index = () => {
       <style>{`
         .kk-glow { position: fixed; border-radius: 50%; pointer-events: none; will-change: opacity, transform; }
         .kk-glow-a { width:130vmax; height:130vmax; right:-55vmax; bottom:-55vmax;
-          background:radial-gradient(circle, #237483 0%, rgba(35,116,131,0.4) 38%, transparent 68%);
+          background:radial-gradient(circle, #2f95aa 0%, rgba(47,149,170,0.5) 38%, transparent 66%);
           animation: kkBreatheA 13s ease-in-out infinite, kkWanderA 34s ease-in-out infinite; }
         .kk-glow-b { width:112vmax; height:112vmax; left:50%; top:50%; margin-left:-56vmax; margin-top:-56vmax;
-          background:radial-gradient(circle, #1c6a5f 0%, rgba(28,106,95,0.36) 40%, transparent 70%);
+          background:radial-gradient(circle, #26877a 0%, rgba(38,135,122,0.45) 40%, transparent 68%);
           animation: kkBreatheB 16s ease-in-out infinite, kkWanderB 41s ease-in-out infinite; }
         .kk-glow-c { width:120vmax; height:120vmax; left:-50vmax; top:-50vmax;
-          background:radial-gradient(circle, #205f74 0%, rgba(32,95,116,0.38) 38%, transparent 68%);
+          background:radial-gradient(circle, #2b7e96 0%, rgba(43,126,150,0.48) 38%, transparent 66%);
           animation: kkBreatheC 14.5s ease-in-out infinite, kkWanderC 47s ease-in-out infinite; }
         .kk-undertow { position: fixed; left:-25%; top:-25%; right:-25%; bottom:-25%; pointer-events:none;
-          background:radial-gradient(circle at 50% 50%, transparent 30%, rgba(4,20,24,0.6) 85%);
+          background:radial-gradient(circle at 50% 50%, transparent 28%, rgba(3,16,20,0.7) 82%);
           animation: kkUndertow 19s ease-in-out infinite; }
-        @keyframes kkBreatheA { 0%,100% { opacity:0.05; } 45% { opacity:0.82; } }
-        @keyframes kkBreatheB { 0%,100% { opacity:0.72; } 40% { opacity:0.08; } }
-        @keyframes kkBreatheC { 0%,100% { opacity:0.14; } 60% { opacity:0.78; } }
+        @keyframes kkBreatheA { 0%,100% { opacity:0.04; } 45% { opacity:0.95; } }
+        @keyframes kkBreatheB { 0%,100% { opacity:0.85; } 40% { opacity:0.06; } }
+        @keyframes kkBreatheC { 0%,100% { opacity:0.1; } 60% { opacity:0.9; } }
         @keyframes kkWanderA { 0%{transform:translate(0,0) scale(1);} 25%{transform:translate(-9vmax,4vmax) scale(1.08);} 50%{transform:translate(3vmax,-7vmax) scale(0.96);} 75%{transform:translate(-6vmax,-3vmax) scale(1.05);} 100%{transform:translate(0,0) scale(1);} }
         @keyframes kkWanderB { 0%{transform:translate(0,0) scale(1);} 30%{transform:translate(7vmax,6vmax) scale(1.07);} 55%{transform:translate(-5vmax,8vmax) scale(0.94);} 80%{transform:translate(6vmax,-4vmax) scale(1.04);} 100%{transform:translate(0,0) scale(1);} }
         @keyframes kkWanderC { 0%{transform:translate(0,0) scale(1);} 20%{transform:translate(8vmax,-5vmax) scale(1.06);} 45%{transform:translate(-4vmax,6vmax) scale(1.09);} 70%{transform:translate(9vmax,3vmax) scale(0.97);} 100%{transform:translate(0,0) scale(1);} }
-        @keyframes kkUndertow { 0%,100% { opacity:0.7; transform:translate(0,0); } 50% { opacity:0.25; transform:translate(4vmax,-3vmax); } }
+        @keyframes kkUndertow { 0%,100% { opacity:0.8; transform:translate(0,0); } 50% { opacity:0.15; transform:translate(4vmax,-3vmax); } }
         @media (prefers-reduced-motion: reduce) { .kk-glow, .kk-undertow { animation: none !important; opacity: 0.3; } }
       `}</style>
       <div aria-hidden className="kk-glow kk-glow-a" />
@@ -221,6 +221,17 @@ const Index = () => {
           sub="Doa"
         />
         <MenuCard
+          onClick={() => navigate("/map")}
+          icon={MapIcon}
+          grad="to-orange-300/35"
+          border="border-orange-300/70"
+          inner="border-orange-500/40"
+          tile="bg-gradient-to-b from-orange-400 to-orange-600"
+          mark="text-orange-500/10"
+          title="인도네시아 지도"
+          sub="Peta"
+        />
+        <MenuCard
           onClick={() => navigate("/wordbooks")}
           icon={Library}
           grad="to-sky-300/35"
@@ -236,7 +247,7 @@ const Index = () => {
         {hasMyWordbook && (
           <div className={`${CARD_BASE} bg-gradient-to-br from-transparent to-violet-300/35 border-violet-300/70`}>
             <span aria-hidden className="pointer-events-none absolute inset-[3px] rounded-[13px] border border-violet-500/40" />
-            <Star size={92} className="absolute -right-4 -bottom-8 text-violet-500/10 rotate-12 pointer-events-none" />
+            <Star size={110} className="absolute -right-3.5 top-1/2 -translate-y-1/2 text-violet-500/10 -rotate-12 pointer-events-none" />
             <div className="relative h-full flex items-center gap-3.5">
               <button
                 type="button"
