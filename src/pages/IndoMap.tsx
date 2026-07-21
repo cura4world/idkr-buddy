@@ -107,8 +107,8 @@ const IndoMap = () => {
       "translate(" + s.tx + " " + s.ty + ") scale(" + s.k + ")"
     );
 
-    // 섬 이름: 항상 표시, 확대할수록 화면상 크기가 조금씩 커짐 (1/k^0.7)
-    const islScale = 1 / Math.pow(s.k, 0.7);
+    // 섬 이름: 항상 표시, 확대할수록 화면상 크기가 커짐 (1/k^0.6)
+    const islScale = 1 / Math.pow(s.k, 0.6);
     MAP_ISLANDS.forEach((p, i) => {
       islandRefs.current[i]?.setAttribute(
         "transform",
@@ -116,19 +116,15 @@ const IndoMap = () => {
       );
     });
 
-    // 핀: 역스케일 + 줌 레벨별 표시 (도시 k≥1.5, 관광지 k≥2.8)
+    // 핀: 부분 역스케일(1/k^0.65 — 확대할수록 화면상 글자가 커짐)
+    // tier별 표시 시점: 1=대도시 k≥1.35, 2=중소도시 k≥2.4, 3=관광지 k≥3.0
+    const pinScale = 1 / Math.pow(s.k, 0.65);
     PINS.forEach((p, i) => {
       const el = pinRefs.current[i];
       if (!el) return;
-      const op =
-        p.type === "city"
-          ? s.k < 1.5
-            ? 0
-            : Math.min(1, (s.k - 1.5) / 0.5)
-          : s.k < 2.8
-            ? 0
-            : Math.min(1, (s.k - 2.8) / 0.7);
-      el.setAttribute("transform", "translate(" + p.x + " " + p.y + ") scale(" + 1 / s.k + ")");
+      const start = p.tier === 1 ? 1.35 : p.tier === 2 ? 2.4 : 3.0;
+      const op = s.k < start ? 0 : Math.min(1, (s.k - start) / 0.5);
+      el.setAttribute("transform", "translate(" + p.x + " " + p.y + ") scale(" + pinScale + ")");
       el.setAttribute("opacity", op.toFixed(2));
       pinVisible.current[i] = op > 0.35;
     });
@@ -153,6 +149,9 @@ const IndoMap = () => {
     (cx: number, cy: number) => {
       const s = vs.current;
       const p = toVb(cx, cy);
+      // 탭 허용 반경을 화면 픽셀(32px) 기준으로 계산 — viewBox 단위로 하면 폰에서 ~8px밖에 안 됨
+      const m = pxToVb();
+      const tol = 32 / m.scale;
       let best: Pin | null = null;
       let bestD = 1e9;
       PINS.forEach((pin, i) => {
@@ -160,14 +159,14 @@ const IndoMap = () => {
         const sx = pin.x * s.k + s.tx;
         const sy = pin.y * s.k + s.ty;
         const d = Math.hypot(p.x - sx, p.y - sy);
-        if (d < 20 && d < bestD) {
+        if (d < tol && d < bestD) {
           bestD = d;
           best = pin;
         }
       });
       if (best) openSheet(best);
     },
-    [toVb] // eslint-disable-line react-hooks/exhaustive-deps
+    [toVb, pxToVb] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // ---------- 제스처 (핀치줌 / 팬 / 탭 / 더블탭) ----------
@@ -326,8 +325,8 @@ const IndoMap = () => {
         .kkm-isl-ko { font-family: inherit; font-style: normal; fill: #9cc3c8; }
         .kkm-pin-dot { fill: #f97316; stroke: #fff; stroke-width: 1.6; }
         .kkm-pin-dot.spot { fill: #fbbf24; }
-        .kkm-pin-name { font-size: 11px; fill: #ffffff; text-anchor: middle;
-          paint-order: stroke; stroke: rgba(9,34,40,0.85); stroke-width: 3px; }
+        .kkm-pin-name { font-size: 20px; fill: #ffffff; text-anchor: middle; font-weight: 600;
+          paint-order: stroke; stroke: rgba(9,34,40,0.85); stroke-width: 4px; }
       `}</style>
 
       {/* 헤더 */}
@@ -357,18 +356,18 @@ const IndoMap = () => {
             <path className="kkm-country" d={INDONESIA_PATH} />
             {MAP_ISLANDS.map((p, i) => (
               <g key={p.id} ref={(el) => (islandRefs.current[i] = el)}>
-                <text className="kkm-isl" fontSize={22}>
+                <text className="kkm-isl" fontSize={34}>
                   {p.id}
                 </text>
-                <text className="kkm-isl kkm-isl-ko" fontSize={12.5} y={16}>
+                <text className="kkm-isl kkm-isl-ko" fontSize={19} y={24}>
                   {p.ko}
                 </text>
               </g>
             ))}
             {PINS.map((p, i) => (
               <g key={p.type + "-" + p.id} ref={(el) => (pinRefs.current[i] = el)} opacity={0}>
-                <circle r={p.type === "spot" ? 5 : 5.5} className={"kkm-pin-dot" + (p.type === "spot" ? " spot" : "")} />
-                <text className="kkm-pin-name" y={-10}>
+                <circle r={p.tier === 1 ? 9 : p.tier === 2 ? 8 : 7.5} className={"kkm-pin-dot" + (p.type === "spot" ? " spot" : "")} />
+                <text className="kkm-pin-name" y={-15}>
                   {p.ko}
                 </text>
               </g>
