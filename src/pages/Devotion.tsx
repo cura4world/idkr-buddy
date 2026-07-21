@@ -197,6 +197,15 @@ const Devotion = () => {
 
   const todayRec = todayQt ? records.find((r) => r.id === qtIdFor(todayQt.date)) : undefined;
 
+  // 생성 사고 복구: 인니어 필드에 한글이 섞인 기록은 "생성 전"으로 취급해 다시 만들 수 있게 함
+  // (handleGenerate가 같은 id로 덮어쓰므로 재생성 시 오염된 기록이 교체됨)
+  const recHasKorean = (r: DevotionRecord | undefined) => {
+    if (!r) return false;
+    const h = (t: string) => new RegExp("[\\uAC00-\\uD7AF]").test(t || "");
+    return h(r.content.title) || h(r.content.helper) || h(r.content.doa) || h(r.content.note);
+  };
+  const todayBroken = recHasKorean(todayRec);
+
   // ---------- TB(인니어) 본문 로드 ----------
   const loadTbVerses = (rec: DevotionRecord) => {
     if (!rec.bookId) {
@@ -659,7 +668,7 @@ const Devotion = () => {
               <RotateCcw size={14} /> 다시 시도
             </button>
           </div>
-        ) : todayRec ? (
+        ) : todayRec && !todayBroken ? (
           <button
             onClick={() => openCard(todayRec)}
             className="w-full text-left rounded-xl border border-rose-300/60 bg-card bg-gradient-to-br from-transparent to-rose-300/35 px-4 py-3.5"
@@ -674,6 +683,12 @@ const Devotion = () => {
             <p className="text-xs text-gray-500 font-gothic mt-0.5 break-words">{todayRec.content.titleKo}</p>
           </button>
         ) : (
+          <>
+          {todayBroken && (
+            <p className="text-xs text-gray-500 font-gothic text-center mb-2.5">
+              이전 생성에 언어 오류가 있어 오늘 묵상을 다시 만들 수 있어요
+            </p>
+          )}
           <button
             onClick={handleGenerate}
             disabled={generating}
@@ -685,6 +700,7 @@ const Devotion = () => {
               <><Sunrise size={16} /> 오늘의 묵상 · {todayQt.rangeText}</>
             )}
           </button>
+          </>
         )}
 
         {/* 지난 묵상 */}
