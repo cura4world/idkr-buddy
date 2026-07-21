@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import CSVImportDialog from "@/components/CSVImportDialog";
-import { Copy, Download, Upload, Trash2, Minus, Plus, Type } from "lucide-react";
+import { Copy, Download, Upload, Trash2, Minus, Plus, Type, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { clearStoredImages, countStoredImages } from "@/lib/imageStore";
 import { clearLookupWords, countLookupWords } from "@/lib/wordStore";
 import { getFontStep, getStepCount, stepFont } from "@/lib/fontScale";
+import { getTtsVoice, setTtsVoice, TTS_VOICES, TtsVoiceId, clearTtsCache } from "@/lib/tts";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -24,6 +25,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const [importOpen, setImportOpen] = useState(false);
   const [privateFolder, setPrivateFolder] = useState("");
   const [fontStep, setFontStepState] = useState(3);
+  const [voice, setVoice] = useState<TtsVoiceId>("male");
 
   useEffect(() => {
     if (open) {
@@ -31,6 +33,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
       setClaudeKey(getClaudeApiKey());
       setPrivateFolder(getPrivateFolderName());
       setFontStepState(getFontStep());
+      setVoice(getTtsVoice());
     }
   }, [open]);
 
@@ -58,6 +61,11 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     if (imgN > 0) parts.push("이미지 " + imgN + "장");
     if (wordN > 0) parts.push("단어 " + wordN + "개");
     toast(parts.join(", ") + "를 비웠습니다");
+  };
+
+  const handleClearTts = async () => {
+    await clearTtsCache();
+    toast("저장된 읽기 음성을 비웠습니다");
   };
 
   // 개인 단어장 폴더 적용: 저장 후 새로고침해 즉시 동기화
@@ -155,6 +163,30 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             </p>
           </div>
           <div>
+            <Label className="font-body text-sm text-gray-900 flex items-center gap-1.5">
+              <Volume2 className="w-4 h-4" /> 문장 읽기 음성
+            </Label>
+            <div className="mt-2 flex gap-2">
+              {TTS_VOICES.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => { setVoice(v.id); setTtsVoice(v.id); }}
+                  className={`flex-1 rounded-lg py-2 text-sm font-body border ${
+                    voice === v.id
+                      ? "bg-primary text-white border-primary"
+                      : "bg-transparent text-gray-700 border-border"
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground font-body">
+              묵상·이야기·뉴스·기도의 "전체 듣기"에 쓰이는 목소리입니다. 이 기기에만 적용됩니다.
+            </p>
+          </div>
+          <div>
             <Label className="font-body text-sm text-gray-900">Gemini API 키</Label>
             <Input
               type="password"
@@ -225,6 +257,10 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             <Button type="button" variant="outline" className="w-full mt-2" onClick={handleClearImages}>
               <Trash2 className="w-4 h-4 mr-1.5" />
               저장된 사전 이미지·단어 비우기
+            </Button>
+            <Button type="button" variant="outline" className="w-full mt-2" onClick={handleClearTts}>
+              <Trash2 className="w-4 h-4 mr-1.5" />
+              저장된 읽기 음성 비우기
             </Button>
           </div>
           <div className="border-t border-gray-200 pt-3">
