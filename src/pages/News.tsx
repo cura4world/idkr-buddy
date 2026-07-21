@@ -8,6 +8,8 @@ import { saveEdition, listEditions } from "@/lib/newsStore";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { hasGeminiApiKey } from "@/lib/gemini";
+import PlayButton from "@/components/PlayButton";
+import { ttsPlayer } from "@/lib/tts";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 
@@ -115,6 +117,7 @@ const News = () => {
   const articleStateRef = useRef(false);
 
   const openArticle = (edition: NewsEdition, idx: number) => {
+    ttsPlayer.stop();
     wordCache.current.clear();
     setSelected(edition);
     setArticleIdx(idx);
@@ -129,6 +132,7 @@ const News = () => {
   };
 
   const resetToFront = () => {
+    ttsPlayer.stop();
     setArticleIdx(null);
     setFlipped(false);
     paraRefs.current = {};
@@ -379,6 +383,13 @@ const News = () => {
                       {renderTokens(article.lead, "lead-")}
                     </p>
                   )}
+                  <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                    <PlayButton
+                      cacheKey={"news-" + selected.date + "-" + articleIdx}
+                      text={[article.title, article.lead, article.body].filter(Boolean).join("\n\n")}
+                      label="전체 듣기"
+                    />
+                  </div>
                   {renderIndonesian(article.body)}
                 </>
               ) : (
