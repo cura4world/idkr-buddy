@@ -178,3 +178,27 @@ export async function fetchChapterKo(bookId: string, chapter: number): Promise<B
   koChapterCache.set(cacheKey, verses);
   return verses;
 }
+
+// ── QT(오늘의 묵상) 지원 헬퍼 ────────────────────────────────────
+// 두란노 today.json의 "book"은 한국어 책 이름 문자열이라, BIBLE_BOOKS와 매칭합니다.
+export function getBookByKo(ko: string): BibleBook | undefined {
+  return BIBLE_BOOKS.find((b) => b.ko === ko);
+}
+
+// QT 범위(장이 하나거나, 드물게 장을 걸치는 경우)에 해당하는 TB(인니어) 절만 뽑아옵니다.
+export async function fetchQtTbVerses(
+  bookId: string,
+  range: { chapter: number; verseStart: number; verseEnd: number; endChapter: number; crossChapter: boolean }
+): Promise<BibleVerse[]> {
+  if (!range.crossChapter) {
+    const all = await fetchChapter(bookId, range.chapter);
+    return all.filter((v) => v.verse >= range.verseStart && v.verse <= range.verseEnd);
+  }
+  const [first, second] = await Promise.all([
+    fetchChapter(bookId, range.chapter),
+    fetchChapter(bookId, range.endChapter),
+  ]);
+  const part1 = first.filter((v) => v.verse >= range.verseStart);
+  const part2 = second.filter((v) => v.verse <= range.verseEnd);
+  return [...part1, ...part2];
+}
