@@ -108,17 +108,34 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto relative">
-      {/* 배경 분위기: 은은한 빛 두 점 (블러 없이 radial-gradient만 사용 — WebView 성능 안전) */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-80"
-        style={{ background: "radial-gradient(26rem 16rem at 88% -4rem, hsl(172 60% 45% / 0.20), transparent 70%)" }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-36 h-80"
-        style={{ background: "radial-gradient(22rem 15rem at -3rem 2rem, hsl(18 80% 62% / 0.10), transparent 70%)" }}
-      />
+      {/* 확정 배경: 그라데이션 물결 — 빛무리 3개가 임의 궤적으로 표류하며 명암 호흡 (blur 없음, WebView 안전) */}
+      <style>{`
+        .kk-glow { position: fixed; border-radius: 50%; pointer-events: none; will-change: opacity, transform; }
+        .kk-glow-a { width:130vmax; height:130vmax; right:-55vmax; bottom:-55vmax;
+          background:radial-gradient(circle, #237483 0%, rgba(35,116,131,0.4) 38%, transparent 68%);
+          animation: kkBreatheA 13s ease-in-out infinite, kkWanderA 34s ease-in-out infinite; }
+        .kk-glow-b { width:112vmax; height:112vmax; left:50%; top:50%; margin-left:-56vmax; margin-top:-56vmax;
+          background:radial-gradient(circle, #1c6a5f 0%, rgba(28,106,95,0.36) 40%, transparent 70%);
+          animation: kkBreatheB 16s ease-in-out infinite, kkWanderB 41s ease-in-out infinite; }
+        .kk-glow-c { width:120vmax; height:120vmax; left:-50vmax; top:-50vmax;
+          background:radial-gradient(circle, #205f74 0%, rgba(32,95,116,0.38) 38%, transparent 68%);
+          animation: kkBreatheC 14.5s ease-in-out infinite, kkWanderC 47s ease-in-out infinite; }
+        .kk-undertow { position: fixed; left:-25%; top:-25%; right:-25%; bottom:-25%; pointer-events:none;
+          background:radial-gradient(circle at 50% 50%, transparent 30%, rgba(4,20,24,0.6) 85%);
+          animation: kkUndertow 19s ease-in-out infinite; }
+        @keyframes kkBreatheA { 0%,100% { opacity:0.05; } 45% { opacity:0.82; } }
+        @keyframes kkBreatheB { 0%,100% { opacity:0.72; } 40% { opacity:0.08; } }
+        @keyframes kkBreatheC { 0%,100% { opacity:0.14; } 60% { opacity:0.78; } }
+        @keyframes kkWanderA { 0%{transform:translate(0,0) scale(1);} 25%{transform:translate(-9vmax,4vmax) scale(1.08);} 50%{transform:translate(3vmax,-7vmax) scale(0.96);} 75%{transform:translate(-6vmax,-3vmax) scale(1.05);} 100%{transform:translate(0,0) scale(1);} }
+        @keyframes kkWanderB { 0%{transform:translate(0,0) scale(1);} 30%{transform:translate(7vmax,6vmax) scale(1.07);} 55%{transform:translate(-5vmax,8vmax) scale(0.94);} 80%{transform:translate(6vmax,-4vmax) scale(1.04);} 100%{transform:translate(0,0) scale(1);} }
+        @keyframes kkWanderC { 0%{transform:translate(0,0) scale(1);} 20%{transform:translate(8vmax,-5vmax) scale(1.06);} 45%{transform:translate(-4vmax,6vmax) scale(1.09);} 70%{transform:translate(9vmax,3vmax) scale(0.97);} 100%{transform:translate(0,0) scale(1);} }
+        @keyframes kkUndertow { 0%,100% { opacity:0.7; transform:translate(0,0); } 50% { opacity:0.25; transform:translate(4vmax,-3vmax); } }
+        @media (prefers-reduced-motion: reduce) { .kk-glow, .kk-undertow { animation: none !important; opacity: 0.3; } }
+      `}</style>
+      <div aria-hidden className="kk-glow kk-glow-a" />
+      <div aria-hidden className="kk-glow kk-glow-b" />
+      <div aria-hidden className="kk-glow kk-glow-c" />
+      <div aria-hidden className="kk-undertow" />
 
       <header className="relative flex items-start justify-between mb-7 pr-1">
         <div>
