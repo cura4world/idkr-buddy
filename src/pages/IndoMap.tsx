@@ -75,6 +75,7 @@ const IndoMap = () => {
   const [infoState, setInfoState] = useState<"idle" | "loading" | "error">("idle");
   const [savedTick, setSavedTick] = useState(0);
   const sheetOpenRef = useRef(false);
+  const sheetOpenedAt = useRef(0);
   const reqIdRef = useRef(0);
 
   // ---------- 좌표 변환 ----------
@@ -127,6 +128,36 @@ const IndoMap = () => {
       el.setAttribute("transform", "translate(" + p.x + " " + p.y + ") scale(" + pinScale + ")");
       el.setAttribute("opacity", op.toFixed(2));
       pinVisible.current[i] = op > 0.35;
+    });
+
+    // 라벨 겹침 방지: 대도시→중소도시→관광지 우선순위로 배치하고,
+    // 겹치는 라벨은 글자만 숨김(점은 유지). 확대할수록 라벨이 작아져 다시 나타남.
+    const placedRects: { x1: number; y1: number; x2: number; y2: number }[] = [];
+    const order = PINS.map((_, i) => i).sort((a, b) => PINS[a].tier - PINS[b].tier);
+    order.forEach((i) => {
+      const p = PINS[i];
+      const el = pinRefs.current[i];
+      if (!el) return;
+      const txt = el.querySelector("text");
+      if (!txt) return;
+      if (!pinVisible.current[i]) {
+        txt.setAttribute("opacity", "0");
+        return;
+      }
+      const w = (p.id.length * 10.5 + 14) * pinScale;
+      const h = 30 * pinScale;
+      const cx = p.x;
+      const cy = p.y - 15 * pinScale;
+      const rect = { x1: cx - w / 2, y1: cy - h, x2: cx + w / 2, y2: cy + 6 * pinScale };
+      const hit = placedRects.some(
+        (q) => rect.x1 < q.x2 && rect.x2 > q.x1 && rect.y1 < q.y2 && rect.y2 > q.y1
+      );
+      if (hit) {
+        txt.setAttribute("opacity", "0");
+      } else {
+        txt.setAttribute("opacity", "1");
+        placedRects.push(rect);
+      }
     });
   }, []);
 
@@ -253,6 +284,7 @@ const IndoMap = () => {
 
   // ---------- 시트 열기/닫기 (+ 뒤로가기 한 단계) ----------
   const openSheet = (pin: Pin) => {
+    sheetOpenedAt.current = Date.now();
     setSelected(pin);
     setInfo(null);
     if (!sheetOpenRef.current) {
@@ -368,7 +400,7 @@ const IndoMap = () => {
               <g key={p.type + "-" + p.id} ref={(el) => (pinRefs.current[i] = el)} opacity={0}>
                 <circle r={p.tier === 1 ? 9 : p.tier === 2 ? 8 : 7.5} className={"kkm-pin-dot" + (p.type === "spot" ? " spot" : "")} />
                 <text className="kkm-pin-name" y={-15}>
-                  {p.ko}
+                  {p.id}
                 </text>
               </g>
             ))}
@@ -404,7 +436,14 @@ const IndoMap = () => {
 
       {/* 하단 시트 */}
       {selected && (
-        <div className="fixed inset-0 z-40" onClick={() => closeSheet()}>
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => {
+            // 핀 탭에서 이어지는 합성 click이 시트를 즉시 닫는 것 방지
+            if (Date.now() - sheetOpenedAt.current < 500) return;
+            closeSheet();
+          }}
+        >
           <div
             className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl shadow-2xl max-h-[75dvh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
