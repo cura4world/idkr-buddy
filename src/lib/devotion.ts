@@ -34,6 +34,9 @@ const SYSTEM_PROMPT =
   "- 인도네시아어: Santapan Rohani 수준의 쉬운 일상어. 신학 전문용어 최소화. 소제목 없이 하나의 흐르는 글.\n" +
   "- 예화: 인도네시아와 한국을 포함한 어느 나라의 일상, 역사, 문화, 인물, 자연 등에서 자유롭게 가져옵니다. 자극적·정치적 소재는 금지.\n" +
   "- 한국어: 자연스럽고 따뜻한 경어체.\n\n" +
+  "[언어 규칙 — 가장 중요]\n" +
+  "- title, helper, doa, note 필드는 반드시 100% 인도네시아어로만 작성합니다. 한국어(한글)가 한 글자라도 섞이면 안 됩니다.\n" +
+  "- 한국어는 titleKo를 제외한 helperKo, doaKo, noteKo 필드에만 사용합니다.\n\n" +
   "출력은 반드시 유효한 JSON 객체 하나만 냅니다. 마크다운 코드펜스나 다른 텍스트를 붙이지 않습니다.";
 
 function versesText(qt: QtToday): string {
@@ -62,7 +65,25 @@ export async function generateQtDevotion(qt: QtToday, book: BibleBook | undefine
     "[출력 형식 — 유효한 JSON 하나만]\n" +
     '{"title":"...","helper":"...","helperKo":"...","doa":"...","doaKo":"...","note":"...","noteKo":"..."}';
 
-  const parsed = await callClaudeJSON(SYSTEM_PROMPT, user);
+  // 인니어 필드에 한글이 섞이는 생성 사고 방지: 검출 시 교정 지시와 함께 1회 재시도
+  const hasHangul = (s: string) => new RegExp("[\\uAC00-\\uD7AF]").test(s || "");
+
+  const attempt = async (extra: string) => callClaudeJSON(SYSTEM_PROMPT, user + extra);
+
+  let parsed = await attempt("");
+  const indoFieldsKorean = (p: Record<string, unknown>) =>
+    hasHangul((p.title || "").toString()) ||
+    hasHangul((p.helper || "").toString()) ||
+    hasHangul((p.doa || "").toString()) ||
+    hasHangul((p.note || "").toString());
+
+  if (indoFieldsKorean(parsed)) {
+    parsed = await attempt(
+      "\n\n[재시도 — 매우 중요] 직전 시도에서 인도네시아어 필드에 한국어가 섞였습니다. " +
+        "title, helper, doa, note는 반드시 100% 인도네시아어로만 다시 작성하세요. 한글이 한 글자라도 있으면 안 됩니다."
+    );
+    if (indoFieldsKorean(parsed)) throw new Error("PARSE_FAILED");
+  }
 
   const content: DevotionContent = {
     title: (parsed.title || "").toString().trim(),
