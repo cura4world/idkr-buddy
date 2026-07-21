@@ -11,6 +11,8 @@ import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { hasClaudeApiKey } from "@/lib/claude";
 import SettingsDialog from "@/components/SettingsDialog";
+import PlayButton from "@/components/PlayButton";
+import { ttsPlayer } from "@/lib/tts";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 
@@ -134,6 +136,7 @@ const Devotion = () => {
   };
 
   const resetSub = () => {
+    ttsPlayer.stop();
     setCurrent(null);
     setFlipped(false);
     paraRefs.current = {};
@@ -209,6 +212,7 @@ const Devotion = () => {
   };
 
   const openCard = (rec: DevotionRecord) => {
+    ttsPlayer.stop();
     wordCache.current.clear();
     setFlipped(false);
     paraRefs.current = {};
@@ -469,14 +473,22 @@ const Devotion = () => {
                   </div>
 
                   {/* 묵상 도우미 */}
+                  <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                    <PlayButton cacheKey={current.id + "-helper"} text={c.helper} label="묵상 듣기" />
+                  </div>
                   {renderIndoParagraphs(c.helper)}
 
                   {/* 기도 */}
                   {c.doa && (
-                    <p className="mt-2 mb-2 pl-3 border-l-2 border-rose-300 text-base leading-relaxed font-word text-gray-800 italic">
-                      <span className="not-italic font-semibold text-rose-600 text-sm mr-1">Doa</span>
-                      {renderTokens(c.doa, "doa-")}
-                    </p>
+                    <>
+                      <p className="mt-2 mb-2 pl-3 border-l-2 border-rose-300 text-base leading-relaxed font-word text-gray-800 italic">
+                        <span className="not-italic font-semibold text-rose-600 text-sm mr-1">Doa</span>
+                        {renderTokens(c.doa, "doa-")}
+                      </p>
+                      <div className="mb-2 pl-3" onClick={(e) => e.stopPropagation()}>
+                        <PlayButton cacheKey={current.id + "-doa"} text={c.doa} label="기도 듣기" />
+                      </div>
+                    </>
                   )}
                 </>
               ) : (
