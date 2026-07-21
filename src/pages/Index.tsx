@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, restoreSharedCategories } from "@/lib/store";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import SettingsDialog from "@/components/SettingsDialog";
-import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, ChevronRight, HandHeart, Newspaper, Map as MapIcon } from "lucide-react";
+import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, ChevronRight, Heart, Newspaper, Map as MapIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -61,7 +61,7 @@ const MenuCard = ({ onClick, icon: Icon, grad, border, inner, tile, mark, title,
     <span aria-hidden className={`pointer-events-none absolute inset-[3px] rounded-[13px] border ${inner}`} />
     <Icon size={110} className={`absolute -right-3.5 top-1/2 -translate-y-1/2 ${mark} -rotate-12 pointer-events-none`} />
     <div className="relative h-full flex items-center gap-3.5">
-      <span className={`w-12 h-12 rounded-xl ${tile} flex items-center justify-center shrink-0 shadow-sm ring-1 ring-inset ring-white/25`}>
+      <span className={`w-12 h-12 rounded-2xl ${tile} flex items-center justify-center shrink-0 shadow-lg shadow-black/30`}>
         <Icon size={23} className="text-white" />
       </span>
       <div className="flex-1 min-w-0">
@@ -170,7 +170,7 @@ const Index = () => {
           grad="to-primary/25"
           border="border-primary/40"
           inner="border-primary/50"
-          tile="bg-gradient-to-b from-[hsl(172_45%_38%)] to-[hsl(172_45%_26%)]"
+          tile="bg-[hsl(172_45%_32%)]"
           mark="text-primary/10"
           title="인도네시아어 사전"
           sub="Kamus"
@@ -181,7 +181,7 @@ const Index = () => {
           grad="to-indigo-300/35"
           border="border-indigo-300/70"
           inner="border-indigo-500/40"
-          tile="bg-gradient-to-b from-indigo-400 to-indigo-600"
+          tile="bg-indigo-500"
           mark="text-indigo-500/10"
           title="인도네시아 뉴스"
           sub="Berita"
@@ -192,7 +192,7 @@ const Index = () => {
           grad="to-amber-300/35"
           border="border-amber-300/70"
           inner="border-amber-500/40"
-          tile="bg-gradient-to-b from-amber-400 to-amber-600"
+          tile="bg-amber-500"
           mark="text-amber-500/10"
           title="인도네시아 이야기"
           sub="Cerita"
@@ -203,7 +203,7 @@ const Index = () => {
           grad="to-rose-300/35"
           border="border-rose-300/70"
           inner="border-rose-500/40"
-          tile="bg-gradient-to-b from-rose-400 to-rose-600"
+          tile="bg-rose-500"
           mark="text-rose-500/10"
           title="인도네시아어 묵상"
           sub="Saat Teduh"
@@ -211,25 +211,14 @@ const Index = () => {
 
         <MenuCard
           onClick={() => navigate("/prayer")}
-          icon={HandHeart}
+          icon={Heart}
           grad="to-emerald-300/35"
           border="border-emerald-300/70"
           inner="border-emerald-500/40"
-          tile="bg-gradient-to-b from-emerald-400 to-emerald-600"
+          tile="bg-emerald-400"
           mark="text-emerald-500/10"
           title="인도네시아어 기도"
           sub="Doa"
-        />
-        <MenuCard
-          onClick={() => navigate("/map")}
-          icon={MapIcon}
-          grad="to-orange-300/35"
-          border="border-orange-300/70"
-          inner="border-orange-500/40"
-          tile="bg-gradient-to-b from-orange-400 to-orange-600"
-          mark="text-orange-500/10"
-          title="인도네시아 지도"
-          sub="Peta"
         />
         <MenuCard
           onClick={() => navigate("/wordbooks")}
@@ -237,7 +226,7 @@ const Index = () => {
           grad="to-sky-300/35"
           border="border-sky-300/70"
           inner="border-sky-500/40"
-          tile="bg-gradient-to-b from-sky-400 to-sky-600"
+          tile="bg-sky-400"
           mark="text-sky-500/10"
           title="인도네시아어 단어장"
           sub={folderCount > 0 ? `Kosakata · ${folderCount}권` : "Kosakata"}
@@ -254,7 +243,7 @@ const Index = () => {
                 onClick={() => navigate(`/category/${MY_WORDBOOK_ID}`)}
                 className="flex-1 min-w-0 h-full flex items-center gap-3.5 text-left"
               >
-                <span className="w-12 h-12 rounded-xl bg-gradient-to-b from-violet-400 to-violet-600 flex items-center justify-center shrink-0 shadow-sm ring-1 ring-inset ring-white/25">
+                <span className="w-12 h-12 rounded-2xl bg-violet-500 flex items-center justify-center shrink-0 shadow-lg shadow-black/30">
                   <Star size={23} className="text-white" />
                 </span>
                 <div className="flex-1 min-w-0">
@@ -283,6 +272,18 @@ const Index = () => {
             </div>
           </div>
         )}
+
+        <MenuCard
+          onClick={() => navigate("/map")}
+          icon={MapIcon}
+          grad="to-orange-300/35"
+          border="border-orange-300/70"
+          inner="border-orange-500/40"
+          tile="bg-orange-500"
+          mark="text-orange-500/10"
+          title="인도네시아 지도"
+          sub="Peta"
+        />
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
