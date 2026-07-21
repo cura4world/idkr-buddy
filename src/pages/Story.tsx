@@ -7,6 +7,8 @@ import { saveStory, listStories, StoryRecord } from "@/lib/storyStore";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { hasGeminiApiKey } from "@/lib/gemini";
+import PlayButton from "@/components/PlayButton";
+import { ttsPlayer } from "@/lib/tts";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 const DIFF_KEY = "story-difficulty";
@@ -111,6 +113,7 @@ const Story = () => {
 
   // 카드 열기: 히스토리를 쌓아 뒤로가기가 목록으로 오게 함
   const openCard = (rec: StoryRecord) => {
+    ttsPlayer.stop();
     wordCache.current.clear();
     setCurrent(rec);
     setFlipped(false);
@@ -124,6 +127,7 @@ const Story = () => {
 
   // 카드 상태만 정리 (히스토리는 건드리지 않음)
   const resetToList = () => {
+    ttsPlayer.stop();
     setCurrent(null);
     setFlipped(false);
     paraRefs.current = {};
@@ -356,6 +360,9 @@ const Story = () => {
                   <h2 className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">
                     {renderTokens(current.title, "title-")}
                   </h2>
+                </div>
+                <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                  <PlayButton cacheKey={"story-" + current.id} text={current.indonesian} label="전체 듣기" />
                 </div>
                 {renderIndonesian(current.indonesian)}
               </>
