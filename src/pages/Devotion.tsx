@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Sunrise, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Sunrise, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import { BIBLE_BOOKS, getBook, fetchChapter, fetchChapterKo, BibleVerse } from "@/lib/bible";
-import { generateDevotion } from "@/lib/devotion";
-import { saveDevotion, listDevotions, DevotionRecord } from "@/lib/devotionStore";
+import { getBookByKo, fetchQtTbVerses, BibleVerse } from "@/lib/bible";
+import { fetchTodayQt, QtToday, QtVerse } from "@/lib/qtToday";
+import { generateQtDevotion } from "@/lib/devotion";
+import { saveDevotion, listDevotions, qtIdFor, DevotionRecord } from "@/lib/devotionStore";
 import { quickLookupWord } from "@/lib/story";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
@@ -12,10 +13,6 @@ import { hasClaudeApiKey } from "@/lib/claude";
 import SettingsDialog from "@/components/SettingsDialog";
 
 const MY_WORDBOOK_ID = "my-wordbook";
-const BOOK_KEY = "devotion-book";
-const PROG_KEY = "devotion-progress";
-const DATE_KEY = "devotion-last-date";
-const TODAY_ID_KEY = "devotion-today-id";
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
 const speak = (text: string, lang: "id" | "ko" = "id") => {
@@ -33,48 +30,24 @@ const speak = (text: string, lang: "id" | "ko" = "id") => {
   } catch (e) {}
 };
 
-const fmtDate = (t: number) => {
-  const d = new Date(t);
-  return d.getFullYear() + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + String(d.getDate()).padStart(2, "0");
-};
+const fmtQtDate = (dateStr: string) => dateStr.replace(new RegExp("-", "g"), ".");
 
-const todayStr = () => {
-  const d = new Date();
-  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-};
-
-const readProgress = (): Record<string, number> => {
-  try {
-    const v = JSON.parse(localStorage.getItem(PROG_KEY) || "{}");
-    return v && typeof v === "object" ? v : {};
-  } catch {
-    return {};
-  }
-};
+const tbRangeLabel = (rec: DevotionRecord) =>
+  rec.crossChapter
+    ? rec.bookIdName + " " + rec.chapter + ":" + rec.verseStart + "-" + rec.endChapter + ":" + rec.verseEnd
+    : rec.bookIdName + " " + rec.chapter + ":" + rec.verseStart + "-" + rec.verseEnd;
 
 const Devotion = () => {
   const navigate = useNavigate();
 
-  const [bookId, setBookId] = useState<string>(() => {
-    try { return localStorage.getItem(BOOK_KEY) || ""; } catch { return ""; }
-  });
-  const [progress, setProgress] = useState<Record<string, number>>(readProgress);
-  const [todayInfo, setTodayInfo] = useState<{ date: string; id: string }>(() => {
-    try {
-      return {
-        date: localStorage.getItem(DATE_KEY) || "",
-        id: localStorage.getItem(TODAY_ID_KEY) || "",
-      };
-    } catch {
-      return { date: "", id: "" };
-    }
-  });
+  const [todayQt, setTodayQt] = useState<QtToday | null>(null);
+  const [qtLoading, setQtLoading] = useState(true);
+  const [qtError, setQtError] = useState(false);
+
   const [records, setRecords] = useState<DevotionRecord[]>([]);
-  const [genPhase, setGenPhase] = useState<null | "bible" | "write">(null);
+  const [generating, setGenerating] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // 하위 화면: 성경 선택 / 묵상 카드
-  const [selectOpen, setSelectOpen] = useState(false);
   const [current, setCurrent] = useState<DevotionRecord | null>(null);
   const [flipped, setFlipped] = useState(false);
 
@@ -82,9 +55,8 @@ const Devotion = () => {
   const paraRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
   const pendingPara = useRef<number | null>(null);
 
-  // 화면 상단 기준으로 지금 보고 있는 문단 번호를 찾음
   const currentParaIndex = (side: "id" | "ko") => {
-    const marker = 140; // 헤더 아래 기준선
+    const marker = 140;
     let best = 0;
     let bestDist = Infinity;
     Object.keys(paraRefs.current).forEach((k) => {
@@ -101,14 +73,12 @@ const Devotion = () => {
     return best;
   };
 
-  // 뒤집기: 지금 문단 번호를 기억해두고 반대편에서 같은 번호로 스크롤
   const handleFlip = () => {
     const side = flipped ? "ko" : "id";
     pendingPara.current = currentParaIndex(side);
     setFlipped((f) => !f);
   };
 
-  // 뒤집힌 뒤 기억해둔 문단 위치로 이동
   useEffect(() => {
     const idx = pendingPara.current;
     if (idx === null) return;
@@ -126,16 +96,13 @@ const Devotion = () => {
     const top = window.scrollY + el.getBoundingClientRect().top - 140;
     window.scrollTo({ top: Math.max(0, top) });
   }, [flipped]);
-  const [fullOpen, setFullOpen] = useState(false); // 본문 전체 토글 (인니어, 앞면)
+
+  const [fullOpen, setFullOpen] = useState(false); // TB 본문 토글 (앞면)
   const [cardVerses, setCardVerses] = useState<BibleVerse[] | null>(null);
   const [cardLoading, setCardLoading] = useState(false);
   const [cardError, setCardError] = useState(false);
 
-  // 한국어 본문(새번역) 토글 (뒷면)
-  const [koOpen, setKoOpen] = useState(false);
-  const [koVerses, setKoVerses] = useState<BibleVerse[] | null>(null);
-  const [koLoading, setKoLoading] = useState(false);
-  const [koError, setKoError] = useState(false);
+  const [koOpen, setKoOpen] = useState(false); // 우리말성경 토글 (뒷면) — 레코드에 이미 저장돼 있어 즉시 표시
 
   // 단어 미니 팝업 (이야기와 동일한 3단 캐시 공유)
   const [popupWord, setPopupWord] = useState<string | null>(null);
@@ -148,7 +115,6 @@ const Devotion = () => {
   const popupReqId = useRef(0);
   const wordCache = useRef(new Map<string, { meaning: string; info: string; sentenceKo: string }>());
 
-  // 하위 화면이 열려 있는지 (히스토리 한 칸)
   const subOpenRef = useRef(false);
 
   const pushSub = () => {
@@ -160,23 +126,20 @@ const Devotion = () => {
 
   const resetSub = () => {
     setCurrent(null);
-    setSelectOpen(false);
     setFlipped(false);
     paraRefs.current = {};
     pendingPara.current = null;
     setFullOpen(false);
+    setKoOpen(false);
     setPopupWord(null);
     setCardVerses(null);
     setCardError(false);
-    setKoOpen(false);
-    setKoVerses(null);
-    setKoError(false);
     wordCache.current.clear();
   };
 
   const closeSub = () => {
     if (subOpenRef.current) {
-      window.history.back(); // popstate 핸들러가 resetSub 처리
+      window.history.back();
     } else {
       resetSub();
     }
@@ -194,10 +157,20 @@ const Devotion = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 오늘의 QT 불러오기
+  const loadTodayQt = () => {
+    setQtLoading(true);
+    setQtError(false);
+    fetchTodayQt()
+      .then((qt) => setTodayQt(qt))
+      .catch(() => setQtError(true))
+      .finally(() => setQtLoading(false));
+  };
+
   useEffect(() => {
+    loadTodayQt();
     listDevotions().then((all) => {
       setRecords(all);
-      // 사전에서 "묵상으로" 버튼으로 돌아온 경우, 보던 묵상 카드를 다시 연다
       try {
         const rid = sessionStorage.getItem("devotion-return-id");
         if (rid) {
@@ -210,93 +183,51 @@ const Devotion = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const book = getBook(bookId);
-  const doneCh = book ? progress[book.id] || 0 : 0;
-  const nextCh = doneCh + 1;
-  const completed = !!book && doneCh >= book.chapters;
-  const isToday = todayInfo.date === todayStr();
-  const todayRec = isToday ? records.find((r) => r.id === todayInfo.id) : undefined;
+  const todayRec = todayQt ? records.find((r) => r.id === qtIdFor(todayQt.date)) : undefined;
 
-  // ---------- 하위 화면 열기 ----------
-  const loadVerses = (rec: DevotionRecord) => {
+  // ---------- TB(인니어) 본문 로드 ----------
+  const loadTbVerses = (rec: DevotionRecord) => {
+    if (!rec.bookId) {
+      setCardError(true);
+      return;
+    }
     setCardLoading(true);
     setCardError(false);
-    fetchChapter(rec.bookId, rec.chapter)
+    fetchQtTbVerses(rec.bookId, rec)
       .then((v) => setCardVerses(v))
       .catch(() => setCardError(true))
       .finally(() => setCardLoading(false));
   };
 
-  // 한국어(새번역) 본문 로드 — 토글을 처음 열 때만 불러옴
-  const loadKoVerses = (rec: DevotionRecord) => {
-    if (koVerses || koLoading) return;
-    setKoLoading(true);
-    setKoError(false);
-    fetchChapterKo(rec.bookId, rec.chapter)
-      .then((v) => setKoVerses(v))
-      .catch(() => setKoError(true))
-      .finally(() => setKoLoading(false));
-  };
-
-  const openCard = (rec: DevotionRecord, verses?: BibleVerse[]) => {
+  const openCard = (rec: DevotionRecord) => {
     wordCache.current.clear();
-    setSelectOpen(false);
     setFlipped(false);
     paraRefs.current = {};
     pendingPara.current = null;
     setFullOpen(false);
     setKoOpen(false);
-    setKoVerses(null);
-    setKoError(false);
     setPopupWord(null);
+    setCardVerses(null);
+    setCardError(false);
     setCurrent(rec);
-    if (verses) {
-      setCardVerses(verses);
-      setCardError(false);
-      setCardLoading(false);
-    } else {
-      setCardVerses(null);
-      loadVerses(rec);
-    }
     pushSub();
-  };
-
-  const openSelect = () => {
-    setSelectOpen(true);
-    pushSub();
-  };
-
-  const pickBook = (id: string) => {
-    setBookId(id);
-    try { localStorage.setItem(BOOK_KEY, id); } catch (e) {}
-    closeSub();
   };
 
   // ---------- 오늘의 묵상 생성 ----------
   const handleGenerate = async () => {
-    if (genPhase || !book || completed) return;
+    if (generating || !todayQt) return;
     if (!hasClaudeApiKey()) {
       toast("Claude API 키가 필요합니다. 설정에서 입력해주세요");
       setSettingsOpen(true);
       return;
     }
-    const ch = nextCh;
-    setGenPhase("bible");
+    setGenerating(true);
     try {
-      const verses = await fetchChapter(book.id, ch);
-      setGenPhase("write");
-      const content = await generateDevotion(book, ch, verses);
-      const rec = await saveDevotion(book.id, ch, content);
-      const np = { ...progress, [book.id]: ch };
-      setProgress(np);
-      try {
-        localStorage.setItem(PROG_KEY, JSON.stringify(np));
-        localStorage.setItem(DATE_KEY, todayStr());
-        localStorage.setItem(TODAY_ID_KEY, rec.id);
-      } catch (e) {}
-      setTodayInfo({ date: todayStr(), id: rec.id });
+      const book = getBookByKo(todayQt.book);
+      const content = await generateQtDevotion(todayQt, book);
+      const rec = await saveDevotion(todayQt, book ? book.id : "", book ? book.idName : todayQt.book, content);
       setRecords((prev) => [rec, ...prev.filter((r) => r.id !== rec.id)]);
-      openCard(rec, verses);
+      openCard(rec);
     } catch (e: any) {
       const code = (e && e.message) || "";
       if (code === "NO_API_KEY" || code === "INVALID_API_KEY") {
@@ -306,17 +237,15 @@ const Devotion = () => {
         toast("Claude 크레딧이 부족합니다. console.anthropic.com에서 충전해주세요");
       } else if (code === "RATE_LIMIT" || code === "OVERLOADED") {
         toast("지금 요청이 많아요. 잠시 후 다시 시도해주세요");
-      } else if (code === "BIBLE_FETCH_FAILED" || code === "CHAPTER_NOT_FOUND" || code === "NETWORK_FAILED") {
-        toast("성경 본문을 불러오지 못했어요. 네트워크를 확인해주세요");
       } else {
         toast("묵상 생성에 실패했어요. 다시 시도해주세요");
       }
     } finally {
-      setGenPhase(null);
+      setGenerating(false);
     }
   };
 
-  // ---------- 단어 탭 → 미니 팝업 (카드 메모리 → 폰 저장소 → API) ----------
+  // ---------- 단어 탭 → 미니 팝업 ----------
   const openWordPopup = async (rawToken: string, sentence: string) => {
     const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
     if (!word) return;
@@ -409,7 +338,7 @@ const Devotion = () => {
       </span>
     ));
 
-  const renderIndoBody = (text: string) => {
+  const renderIndoParagraphs = (text: string) => {
     const paragraphs = text.split(new RegExp("\\n{2,}")).filter((p) => p.trim());
     return paragraphs.map((para, pi) => {
       const sentences = para.split(new RegExp("(?<=[.!?])\\s+")).filter(Boolean);
@@ -427,7 +356,7 @@ const Devotion = () => {
     });
   };
 
-  const renderKorean = (text: string) =>
+  const renderKoParagraphs = (text: string) =>
     text.split(new RegExp("\\n{2,}")).filter((p) => p.trim()).map((para, i) => (
       <p
         key={i}
@@ -438,27 +367,23 @@ const Devotion = () => {
       </p>
     ));
 
-  const renderVerse = (v: BibleVerse) => (
+  const renderTbVerse = (v: BibleVerse) => (
     <p key={v.verse} className="mb-2 text-base leading-relaxed font-word text-gray-900">
       <span className="text-rose-500/70 text-xs align-super mr-1 select-none">{v.verse}</span>
-      {renderTokens(v.text, "v" + v.verse + "-")}
+      {renderTokens(v.text, "tb" + v.verse + "-")}
     </p>
   );
 
-  // 한국어 절 렌더링 (단어 탭 없음 — 공인 번역본 원문 그대로 표시)
-  const renderKoVerse = (v: BibleVerse) => (
-    <p key={"ko-v" + v.verse} className="mb-2 text-xs leading-relaxed text-gray-800 font-gothic">
-      <span className="text-rose-500/70 text-xs align-super mr-1 select-none">{v.verse}</span>
-      {v.text}
+  const renderWoorimalVerse = (v: QtVerse) => (
+    <p key={"w" + v.n} className="mb-2 text-xs leading-relaxed text-gray-800 font-gothic">
+      <span className="text-rose-500/70 text-xs align-super mr-1 select-none">{v.n}</span>
+      {v.t}
     </p>
   );
 
-  // ---------- 카드 뷰 ----------
+  // ---------- 카드 상세 뷰 ----------
   if (current) {
     const c = current.content;
-    const cBook = getBook(current.bookId);
-    const nasVerses = (cardVerses || []).filter((v) => v.verse >= c.nasStart && v.verse <= c.nasEnd);
-    const nasRef = c.nasStart === c.nasEnd ? String(c.nasStart) : c.nasStart + "-" + c.nasEnd;
 
     return (
       <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
@@ -471,7 +396,7 @@ const Devotion = () => {
             <ArrowLeft size={20} />
           </button>
           <h1 className="flex-1 min-w-0 text-base font-semibold leading-snug line-clamp-2 break-words">
-            {c.titleKo || c.title}
+            {c.titleKo}
           </h1>
         </header>
 
@@ -480,10 +405,10 @@ const Devotion = () => {
             <div className="flex-1 min-w-0">
               {!flipped ? (
                 <>
-                  {/* 앞면: 인니어 묵상 */}
+                  {/* 앞면: 인니어 */}
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="text-xs font-bold text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
-                      {cBook ? cBook.idName : current.bookId} {current.chapter}
+                      {current.bookIdName} {current.chapter}
                     </span>
                     <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">Saat Teduh</span>
                   </div>
@@ -493,14 +418,14 @@ const Devotion = () => {
                     </h2>
                   </div>
 
-                  {/* Nas: 묵상 중심 구절 (TB 원문) — 토글 */}
+                  {/* TB 본문 — 토글 */}
                   <div className="rounded-lg bg-rose-500/5 border border-rose-200/60 px-3 py-2.5 mb-4">
                     <button
                       onClick={(e) => { e.stopPropagation(); setFullOpen((f) => !f); }}
                       className="w-full flex items-center gap-2 text-left"
                     >
                       <span className="flex-1 min-w-0 text-xs font-semibold text-rose-600 font-gothic truncate">
-                        {cBook ? cBook.idName : ""} {current.chapter}:{nasRef}
+                        {tbRangeLabel(current)}
                       </span>
                       {fullOpen ? (
                         <ChevronUp size={15} className="shrink-0 text-rose-500" />
@@ -516,24 +441,32 @@ const Devotion = () => {
                             <Loader2 size={14} className="animate-spin" /> 본문을 불러오는 중...
                           </div>
                         )}
-                        {cardError && (
+                        {cardError && !cardLoading && (
                           <div className="text-xs text-gray-500 font-gothic py-1">
-                            본문을 불러오지 못했어요. 네트워크를 확인해주세요.{" "}
+                            본문을 불러오지 못했어요.{" "}
                             <button
-                              onClick={(e) => { e.stopPropagation(); loadVerses(current); }}
+                              onClick={(e) => { e.stopPropagation(); loadTbVerses(current); }}
                               className="text-rose-600 font-medium underline"
                             >
                               다시 시도
                             </button>
                           </div>
                         )}
-                        {nasVerses.map(renderVerse)}
+                        {!cardVerses && !cardLoading && !cardError && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); loadTbVerses(current); }}
+                            className="text-xs text-rose-600 font-medium underline py-1"
+                          >
+                            본문 불러오기
+                          </button>
+                        )}
+                        {cardVerses && cardVerses.map(renderTbVerse)}
                       </div>
                     )}
                   </div>
 
-                  {/* 묵상 본문 */}
-                  {renderIndoBody(c.body)}
+                  {/* 묵상 도우미 */}
+                  {renderIndoParagraphs(c.helper)}
 
                   {/* 기도 */}
                   {c.doa && (
@@ -545,22 +478,17 @@ const Devotion = () => {
                 </>
               ) : (
                 <>
-                  {/* 뒷면: 한국어 번역 + 큰 그림 */}
+                  {/* 뒷면: 한국어 */}
                   <h2 className="text-base font-bold text-gray-900 break-words mb-3">{c.titleKo}</h2>
 
-                  {/* 한국어 성경 본문(새번역) — 앞면과 동일한 위치·형식, 토글(기본 접힘) */}
+                  {/* 우리말성경 본문 — 토글 (레코드에 저장돼 있어 즉시 표시) */}
                   <div className="rounded-lg bg-rose-500/5 border border-rose-200/60 px-3 py-2.5 mb-4">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const next = !koOpen;
-                        setKoOpen(next);
-                        if (next) loadKoVerses(current);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); setKoOpen((f) => !f); }}
                       className="w-full flex items-center gap-2 text-left"
                     >
                       <span className="flex-1 min-w-0 text-xs font-semibold text-rose-600 font-gothic truncate">
-                        {cBook ? cBook.ko : ""} {current.chapter}:{nasRef} (새번역)
+                        {current.rangeText} (우리말성경)
                       </span>
                       {koOpen ? (
                         <ChevronUp size={15} className="shrink-0 text-rose-500" />
@@ -571,31 +499,18 @@ const Devotion = () => {
 
                     {koOpen && (
                       <div className="mt-2.5">
-                        {koLoading && (
-                          <div className="flex items-center gap-2 text-gray-400 text-sm py-1">
-                            <Loader2 size={14} className="animate-spin" /> 본문을 불러오는 중...
-                          </div>
+                        {current.versesWoorimal.length > 0 ? (
+                          current.versesWoorimal.map(renderWoorimalVerse)
+                        ) : (
+                          <p className="text-xs text-gray-500 font-gothic py-1">
+                            이 날은 우리말성경 본문을 가져오지 못했어요.
+                          </p>
                         )}
-                        {koError && (
-                          <div className="text-xs text-gray-500 font-gothic py-1">
-                            본문을 불러오지 못했어요. 네트워크를 확인해주세요.{" "}
-                            <button
-                              onClick={(e) => { e.stopPropagation(); loadKoVerses(current); }}
-                              className="text-rose-600 font-medium underline"
-                            >
-                              다시 시도
-                            </button>
-                          </div>
-                        )}
-                        {koVerses &&
-                          koVerses
-                            .filter((v) => v.verse >= c.nasStart && v.verse <= c.nasEnd)
-                            .map(renderKoVerse)}
                       </div>
                     )}
                   </div>
 
-                  {renderKorean(c.bodyKo)}
+                  {renderKoParagraphs(c.helperKo)}
                   {c.doaKo && (
                     <p className="mt-2 mb-4 pl-3 border-l-2 border-rose-300 text-xs leading-relaxed text-gray-800 font-body">
                       <span className="font-semibold text-rose-600 mr-1">기도</span>
@@ -605,41 +520,12 @@ const Devotion = () => {
 
                   <div className="border-t border-gray-200 my-4" />
 
-                  {/* 책 들어가기 (1장일 때만) */}
-                  {c.bookIntro && (
-                    <div className="rounded-lg bg-black/[0.04] px-3 py-3 mb-3">
-                      <p className="text-xs font-bold text-gray-900 font-gothic mb-2">
-                        📕 {cBook ? cBook.ko : ""} 들어가기
-                      </p>
-                      <p className="text-xs text-gray-700 font-gothic mb-1.5 leading-relaxed">
-                        <span className="font-semibold text-gray-900">저자·시대 · </span>{c.bookIntro.author}
-                      </p>
-                      <p className="text-xs text-gray-700 font-gothic mb-1.5 leading-relaxed">
-                        <span className="font-semibold text-gray-900">기록 목적 · </span>{c.bookIntro.purpose}
-                      </p>
-                      <p className="text-xs text-gray-700 font-gothic mb-1.5 leading-relaxed">
-                        <span className="font-semibold text-gray-900">전체 구조 · </span>{c.bookIntro.structure}
-                      </p>
-                      <p className="text-xs text-gray-700 font-gothic leading-relaxed">
-                        <span className="font-semibold text-gray-900">붙잡을 것 · </span>{c.bookIntro.key}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* 이 장의 자리 (큰 그림 도구) */}
+                  {/* 본문 들여다보기 */}
                   <div className="rounded-lg bg-black/[0.04] px-3 py-3">
                     <p className="text-xs font-bold text-gray-900 font-gothic mb-2">
-                      🧭 {cBook ? cBook.ko : ""} {current.chapter}장
+                      📖 {c.noteTitleKo}
                     </p>
-                    <p className="text-xs text-gray-700 font-gothic mb-1.5 leading-relaxed">
-                      <span className="font-semibold text-gray-900">요지 · </span>{c.overview.summary}
-                    </p>
-                    <p className="text-xs text-gray-700 font-gothic mb-1.5 leading-relaxed">
-                      <span className="font-semibold text-gray-900">흐름 속 위치 · </span>{c.overview.flow}
-                    </p>
-                    <p className="text-xs text-gray-700 font-gothic leading-relaxed">
-                      <span className="font-semibold text-gray-900">강조점 · </span>{c.overview.emphasis}
-                    </p>
+                    <p className="text-xs text-gray-700 font-gothic leading-relaxed">{c.noteKo}</p>
                   </div>
                 </>
               )}
@@ -725,58 +611,6 @@ const Devotion = () => {
     );
   }
 
-  // ---------- 성경 선택 뷰 ----------
-  if (selectOpen) {
-    const renderBookBtn = (b: (typeof BIBLE_BOOKS)[number]) => {
-      const done = progress[b.id] || 0;
-      const isDone = done >= b.chapters;
-      const isSel = b.id === bookId;
-      return (
-        <button
-          key={b.id}
-          onClick={() => pickBook(b.id)}
-          className={`flex items-center justify-between gap-2 rounded-lg bg-card border px-3 py-2.5 min-w-0 text-left ${
-            isSel ? "border-rose-400" : "border-border/60"
-          }`}
-        >
-          <span className="text-sm font-medium text-gray-900 truncate">{b.ko}</span>
-          {isDone ? (
-            <Check size={14} className="shrink-0 text-rose-500" />
-          ) : done > 0 ? (
-            <span className="shrink-0 text-xs text-rose-600 font-gothic">{done}/{b.chapters}</span>
-          ) : (
-            <span className="shrink-0 text-xs text-gray-400 font-gothic">{b.chapters}장</span>
-          )}
-        </button>
-      );
-    };
-
-    return (
-      <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
-        <header className="sticky top-0 z-30 bg-primary text-white px-4 py-3 flex items-center gap-3">
-          <button
-            onClick={closeSub}
-            className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
-            title="뒤로"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="flex-1 text-lg font-semibold truncate">묵상할 성경 선택</h1>
-        </header>
-        <div className="px-4 py-4">
-          <p className="text-xs text-white mb-2 px-1 font-gothic">구약</p>
-          <div className="grid grid-cols-2 gap-2">
-            {BIBLE_BOOKS.filter((b) => b.folder === "pl").map(renderBookBtn)}
-          </div>
-          <p className="text-xs text-white mb-2 mt-5 px-1 font-gothic">신약</p>
-          <div className="grid grid-cols-2 gap-2 pb-6">
-            {BIBLE_BOOKS.filter((b) => b.folder === "pb").map(renderBookBtn)}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // ---------- 홈 뷰 ----------
   return (
     <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
@@ -792,89 +626,42 @@ const Devotion = () => {
       </header>
 
       <div className="px-4 py-4">
-        {!book ? (
-          /* 첫 사용: 성경 선택 안내 */
+        {qtLoading ? (
           <div className="bg-card border border-border/60 rounded-xl px-4 py-8 text-center">
-            <Sunrise size={30} className="mx-auto mb-3 text-rose-500" />
-            <p className="text-sm text-gray-700 font-gothic mb-4">묵상할 성경을 선택해주세요</p>
+            <Loader2 size={22} className="mx-auto mb-2 text-rose-500 animate-spin" />
+            <p className="text-sm text-gray-500 font-gothic">오늘의 QT를 불러오는 중...</p>
+          </div>
+        ) : qtError || !todayQt ? (
+          <div className="bg-card border border-border/60 rounded-xl px-4 py-8 text-center">
+            <p className="text-sm text-gray-700 font-gothic mb-4">오늘의 QT를 불러오지 못했어요</p>
             <button
-              onClick={openSelect}
-              className="rounded-full px-6 py-2.5 text-sm font-medium bg-rose-500 text-white"
+              onClick={loadTodayQt}
+              className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-medium bg-rose-500 text-white"
             >
-              성경 선택하기
+              <RotateCcw size={14} /> 다시 시도
             </button>
           </div>
+        ) : todayRec ? (
+          <button
+            onClick={() => openCard(todayRec)}
+            className="w-full text-left rounded-xl border border-rose-300/60 bg-gradient-to-br from-transparent to-rose-300/25 px-4 py-3.5"
+          >
+            <p className="text-xs font-medium text-rose-600 font-gothic">오늘의 묵상</p>
+            <p className="mt-1 text-base font-bold text-gray-900 font-word break-words">{todayRec.content.title}</p>
+            <p className="text-xs text-gray-500 font-gothic mt-0.5 break-words">{todayRec.content.titleKo}</p>
+          </button>
         ) : (
-          <>
-            {/* 현재 책 + 진도 */}
-            <div className="bg-card border border-border/60 rounded-xl px-4 py-4">
-              <div className="flex items-center gap-2">
-                <p className="flex-1 min-w-0 truncate">
-                  <span className="text-base font-semibold text-gray-900">{book.ko}</span>{" "}
-                  <span className="text-xs text-gray-500 font-word">{book.idName}</span>
-                </p>
-                <button
-                  onClick={openSelect}
-                  className="shrink-0 text-xs font-medium text-rose-600 bg-rose-500/10 rounded-full px-2.5 py-1"
-                >
-                  성경 바꾸기
-                </button>
-              </div>
-              <div className="mt-3 h-1.5 rounded-full bg-black/10 overflow-hidden">
-                <div
-                  className="h-full bg-rose-500"
-                  style={{ width: Math.min(100, Math.round((doneCh / book.chapters) * 100)) + "%" }}
-                />
-              </div>
-              <p className="mt-1.5 text-xs text-gray-500 font-gothic">{doneCh} / {book.chapters}장</p>
-
-              {/* 오늘의 묵상 */}
-              {todayRec ? (
-                <>
-                  <button
-                    onClick={() => openCard(todayRec)}
-                    className="w-full mt-3 text-left rounded-xl border border-rose-300/60 bg-gradient-to-br from-transparent to-rose-300/25 px-4 py-3.5"
-                  >
-                    <p className="text-xs font-medium text-rose-600 font-gothic">오늘의 묵상</p>
-                    <p className="mt-1 text-base font-bold text-gray-900 font-word break-words">{todayRec.content.title}</p>
-                    <p className="text-xs text-gray-500 font-gothic mt-0.5 break-words">
-                      {todayRec.content.titleKo} · {(getBook(todayRec.bookId) || { ko: todayRec.bookId }).ko} {todayRec.chapter}장
-                    </p>
-                  </button>
-                  <p className="mt-2 text-xs text-gray-400 font-gothic text-center">
-                    {completed
-                      ? "🎉 " + book.ko + " 묵상을 모두 마쳤어요. 내일 다른 성경을 선택해보세요"
-                      : "내일 " + book.ko + " " + nextCh + "장으로 이어집니다"}
-                  </p>
-                </>
-              ) : completed ? (
-                <div className="mt-3 rounded-xl bg-rose-500/5 border border-rose-200/60 px-4 py-4 text-center">
-                  <p className="text-sm font-semibold text-gray-900">🎉 {book.ko} 묵상 완료!</p>
-                  <p className="text-xs text-gray-500 font-gothic mt-1">{book.chapters}장을 모두 묵상했어요</p>
-                  <button
-                    onClick={openSelect}
-                    className="mt-3 rounded-full px-5 py-2 text-xs font-medium bg-rose-500 text-white"
-                  >
-                    다른 성경 선택하기
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={handleGenerate}
-                  disabled={!!genPhase}
-                  className="w-full mt-3 flex items-center justify-center gap-2 rounded-full py-3 text-sm font-medium bg-rose-500 text-white disabled:opacity-60"
-                >
-                  {genPhase === "bible" ? (
-                    <><Loader2 size={16} className="animate-spin" /> 본문을 불러오는 중...</>
-                  ) : genPhase === "write" ? (
-                    <><Loader2 size={16} className="animate-spin" /> 묵상 내용을 불러옵니다</>
-                  ) : (
-                    <><Sunrise size={16} /> 오늘의 묵상 · {book.ko} {nextCh}장</>
-                  )}
-                </button>
-              )}
-            </div>
-          </>
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            className="w-full flex items-center justify-center gap-2 rounded-full py-3.5 text-sm font-medium bg-rose-500 text-white disabled:opacity-60"
+          >
+            {generating ? (
+              <><Loader2 size={16} className="animate-spin" /> 묵상 내용을 만드는 중...</>
+            ) : (
+              <><Sunrise size={16} /> 오늘의 묵상 · {todayQt.rangeText}</>
+            )}
+          </button>
         )}
 
         {/* 지난 묵상 */}
@@ -884,26 +671,23 @@ const Devotion = () => {
             <ul className="space-y-2">
               {records
                 .filter((r) => !todayRec || r.id !== todayRec.id)
-                .map((r) => {
-                  const rb = getBook(r.bookId);
-                  return (
-                    <li key={r.id}>
-                      <button
-                        onClick={() => openCard(r)}
-                        className="w-full text-left bg-card border border-border/60 rounded-xl px-4 py-3 min-w-0"
-                      >
-                        <p className="text-sm font-semibold text-gray-900 break-words font-word">{r.content.title}</p>
-                        <p className="text-xs text-gray-500 break-words mt-0.5 font-gothic">{r.content.titleKo}</p>
-                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                          <span className="text-[11px] font-medium text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
-                            {(rb || { ko: r.bookId }).ko} {r.chapter}장
-                          </span>
-                          <span className="text-[11px] text-gray-400 ml-auto">{fmtDate(r.createdAt)}</span>
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
+                .map((r) => (
+                  <li key={r.id}>
+                    <button
+                      onClick={() => openCard(r)}
+                      className="w-full text-left bg-card border border-border/60 rounded-xl px-4 py-3 min-w-0"
+                    >
+                      <p className="text-sm font-semibold text-gray-900 break-words font-word">{r.content.title}</p>
+                      <p className="text-xs text-gray-500 break-words mt-0.5 font-gothic">{r.content.titleKo}</p>
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        <span className="text-[11px] font-medium text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
+                          {r.rangeText}
+                        </span>
+                        <span className="text-[11px] text-gray-400 ml-auto">{fmtQtDate(r.date)}</span>
+                      </div>
+                    </button>
+                  </li>
+                ))}
             </ul>
           </div>
         )}
