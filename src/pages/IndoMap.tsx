@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Minus, Volume2, ImageIcon, Loader2, X } from "lucide-react";
+import { ArrowLeft, Plus, Minus, Volume2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   MAP_VIEW,
@@ -14,12 +14,11 @@ import {
   INDONESIA_PATH,
   MapPlace,
 } from "@/lib/mapData";
-import { fetchPlaceInfo, generatePlaceImage, MapPlaceInfo } from "@/lib/map";
-import { getStoredImage, saveStoredImage } from "@/lib/imageStore";
+import { fetchPlaceInfo, fetchPlacePhotos, MapPlaceInfo } from "@/lib/map";
 import { hasGeminiApiKey } from "@/lib/gemini";
 
 const KMIN = 1;
-const KMAX = 9;
+const KMAX = 22;
 
 type PinType = "city" | "spot";
 interface Pin extends MapPlace {
@@ -72,8 +71,9 @@ const IndoMap = () => {
   const [selected, setSelected] = useState<Pin | null>(null);
   const [info, setInfo] = useState<MapPlaceInfo | null>(null);
   const [infoState, setInfoState] = useState<"idle" | "loading" | "error">("idle");
-  const [img, setImg] = useState<string | null>(null);
-  const [imgState, setImgState] = useState<"idle" | "loading" | "error">("idle");
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [photoState, setPhotoState] = useState<"idle" | "loading" | "error">("idle");
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const sheetOpenRef = useRef(false);
   const sheetOpenedAt = useRef(0);
   const reqIdRef = useRef(0);
@@ -180,13 +180,15 @@ const IndoMap = () => {
     (cx: number, cy: number) => {
       const s = vs.current;
       const p = toVb(cx, cy);
-      // 탭 허용 반경을 화면 픽셀(32px) 기준으로 계산 — viewBox 단위로 하면 폰에서 ~8px밖에 안 됨
+      // 탭 허용 반경을 화면 픽셀 기준으로 계산. 넉넉히 44px.
       const m = pxToVb();
-      const tol = 32 / m.scale;
+      const tol = 44 / m.scale;
       let best: Pin | null = null;
       let bestD = 1e9;
+      // 표시된(op>0) 핀이면 라벨이 겹쳐 숨겨졌어도 점은 눌리게 함
       PINS.forEach((pin, i) => {
-        if (!pinVisible.current[i]) return;
+        const start = pin.tier === 1 ? 1.35 : pin.tier === 2 ? 2.4 : 3.0;
+        if (s.k < start) return;
         const sx = pin.x * s.k + s.tx;
         const sy = pin.y * s.k + s.ty;
         const d = Math.hypot(p.x - sx, p.y - sy);
@@ -287,8 +289,8 @@ const IndoMap = () => {
     sheetOpenedAt.current = Date.now();
     setSelected(pin);
     setInfo(null);
-    setImg(null);
-    setImgState("idle");
+    setPhotos([]);
+    setLightbox(null);
     if (!sheetOpenRef.current) {
       sheetOpenRef.current = true;
       try {
@@ -296,10 +298,18 @@ const IndoMap = () => {
       } catch (e) {}
     }
     const reqId = ++reqIdRef.current;
-    // 한 번 본 지점의 이미지는 자동 표시 (재과금 0)
-    getStoredImage(pin.id).then((url) => {
-      if (url && reqIdRef.current === reqId) setImg(url);
-    });
+
+    // 실제 사진 (위키피디아, 무과금)
+    setPhotoState("loading");
+    fetchPlacePhotos(pin.id)
+      .then((urls) => {
+        if (reqIdRef.current !== reqId) return;
+        setPhotos(urls);
+        setPhotoState(urls.length ? "idle" : "error");
+      })
+      .catch(() => {
+        if (reqIdRef.current === reqId) setPhotoState("error");
+      });
     if (!hasGeminiApiKey()) {
       setInfoState("error");
       return;
@@ -337,35 +347,6 @@ const IndoMap = () => {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, [closeSheet]);
-
-  // ---------- 지점 이미지 (저장소 우선, 없으면 생성 후 영구 저장) ----------
-  const loadImage = async () => {
-    if (!selected) return;
-    if (!hasGeminiApiKey()) {
-      toast("설정에서 Gemini API 키를 입력해주세요");
-      return;
-    }
-    const reqId = reqIdRef.current;
-    setImgState("loading");
-    try {
-      const stored = await getStoredImage(selected.id);
-      if (stored) {
-        if (reqIdRef.current === reqId) {
-          setImg(stored);
-          setImgState("idle");
-        }
-        return;
-      }
-      const url = await generatePlaceImage(selected.id, selected.hint);
-      await saveStoredImage(selected.id, url);
-      if (reqIdRef.current === reqId) {
-        setImg(url);
-        setImgState("idle");
-      }
-    } catch {
-      if (reqIdRef.current === reqId) setImgState("error");
-    }
-  };
 
   const zoomBtn =
     "w-10 h-10 rounded-xl bg-[rgba(9,34,40,0.6)] border border-white/15 text-white/90 flex items-center justify-center active:bg-[rgba(9,34,40,0.8)]";
@@ -429,8 +410,16 @@ const IndoMap = () => {
           </g>
         </svg>
 
-        <div className="absolute left-1/2 bottom-4 -translate-x-1/2 text-[11px] font-gothic text-white/50 bg-[rgba(9,34,40,0.55)] px-3.5 py-1.5 rounded-full pointer-events-none whitespace-nowrap">
-          핀치로 확대 · 도시(주황)와 관광지(노랑)를 탭해보세요
+        {/* 범례 (좌측 하단, +/- 버튼과 같은 높이) */}
+        <div className="absolute left-3.5 bottom-4 flex flex-col gap-2.5 pointer-events-none">
+          <div className="flex items-center gap-2 bg-[rgba(9,34,40,0.6)] rounded-full pl-2 pr-3 py-1.5">
+            <span className="w-3 h-3 rounded-full bg-[#f97316] border border-white/80 shrink-0" />
+            <span className="text-[11px] font-gothic text-white/85">도시</span>
+          </div>
+          <div className="flex items-center gap-2 bg-[rgba(9,34,40,0.6)] rounded-full pl-2 pr-3 py-1.5">
+            <span className="w-3 h-3 rounded-full bg-[#fbbf24] border border-white/80 shrink-0" />
+            <span className="text-[11px] font-gothic text-white/85">관광지</span>
+          </div>
         </div>
         <div className="absolute right-3.5 bottom-4 flex flex-col gap-2">
           <button
@@ -455,6 +444,22 @@ const IndoMap = () => {
           </button>
         </div>
       </div>
+
+      {/* 사진 라이트박스 */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <img src={lightbox} alt="확대 사진" className="max-w-full max-h-full rounded-lg object-contain" />
+          <button
+            onClick={(e) => { e.stopPropagation(); setLightbox(null); }}
+            className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/15 text-white flex items-center justify-center"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      )}
 
       {/* 하단 시트 */}
       {selected && (
@@ -496,28 +501,24 @@ const IndoMap = () => {
               </div>
               <p className="mt-1 text-xs font-gothic text-gray-400">{selected.hint}</p>
 
-              {/* 이미지: 본 지점은 자동 표시, 아니면 "이미지 보기" 버튼 (사전과 동일 패턴) */}
-              <div className="mt-3">
-                {img ? (
-                  <img src={img} alt={selected.ko} className="w-full rounded-xl" />
-                ) : imgState === "loading" ? (
-                  <div className="flex items-center justify-center gap-2 py-10 bg-gray-50 rounded-xl text-sm font-gothic text-gray-400">
-                    <Loader2 size={16} className="animate-spin" /> 이미지를 만드는 중...
-                  </div>
-                ) : (
-                  <>
+              {/* 실제 사진 (위키피디아) — 썸네일 3장, 탭하면 확대 */}
+              {photoState === "loading" ? (
+                <div className="mt-3 flex items-center justify-center gap-2 py-8 bg-gray-50 rounded-xl text-sm font-gothic text-gray-400">
+                  <Loader2 size={16} className="animate-spin" /> 사진을 불러오는 중...
+                </div>
+              ) : photos.length > 0 ? (
+                <div className="mt-3 grid grid-cols-3 gap-1.5">
+                  {photos.map((u, i) => (
                     <button
-                      onClick={loadImage}
-                      className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-gothic font-semibold bg-teal-600/10 text-teal-700 active:bg-teal-600/20"
+                      key={i}
+                      onClick={() => setLightbox(u)}
+                      className="aspect-square rounded-xl overflow-hidden bg-gray-100 active:opacity-80"
                     >
-                      <ImageIcon size={13} /> 이미지 보기
+                      <img src={u} alt={selected.ko + " 사진 " + (i + 1)} loading="lazy" className="w-full h-full object-cover" />
                     </button>
-                    {imgState === "error" && (
-                      <p className="mt-1.5 text-xs font-gothic text-gray-400">이미지를 불러오지 못했어요. 다시 눌러보세요.</p>
-                    )}
-                  </>
-                )}
-              </div>
+                  ))}
+                </div>
+              ) : null}
               <button
                 onClick={() => closeSheet()}
                 className="absolute right-4 top-4 w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center active:bg-gray-200"
