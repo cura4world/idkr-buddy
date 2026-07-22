@@ -18,7 +18,7 @@ import { fetchPlaceInfo, fetchPlacePhotos, MapPlaceInfo } from "@/lib/map";
 import { hasGeminiApiKey } from "@/lib/gemini";
 
 const KMIN = 1;
-const KMAX = 22;
+const KMAX = 32;
 
 type PinType = "city" | "spot";
 interface Pin extends MapPlace {
@@ -63,7 +63,7 @@ const IndoMap = () => {
   // 제스처 상태는 ref로 관리 (매 프레임 리렌더 방지)
   const vs = useRef({ k: 1, tx: 0, ty: 0 });
   const pointers = useRef<Record<number, { x: number; y: number }>>({});
-  const gesture = useRef<{ mode: "pan" | "pinch"; d?: number; t?: number; moved?: number } | null>(null);
+  const gesture = useRef<{ mode: "pan" | "pinch"; d?: number; t?: number; moved?: number; sx?: number; sy?: number } | null>(null);
   const lastTap = useRef(0);
   const pinVisible = useRef<boolean[]>(PINS.map(() => false));
 
@@ -144,6 +144,11 @@ const IndoMap = () => {
         txt.setAttribute("opacity", "0");
         return;
       }
+      // 충분히 확대(k≥6)하면 겹침 무시하고 모든 이름 표시
+      if (s.k >= 6) {
+        txt.setAttribute("opacity", "1");
+        return;
+      }
       const w = (p.id.length * 10.5 + 14) * pinScale;
       const h = 30 * pinScale;
       const cx = p.x;
@@ -176,17 +181,18 @@ const IndoMap = () => {
   );
 
   // ---------- 핀 탭 ----------
-  const handleTap = useCallback(
-    (cx: number, cy: number) => {
+  // 화면 좌표에서 가장 가까운 (그 줌에서 표시되는) 핀을 반환. 없으면 null.
+  const findPin = useCallback(
+    (cx: number, cy: number): Pin | null => {
       const s = vs.current;
-      const p = toVb(cx, cy);
-      // 탭 허용 반경을 화면 픽셀 기준으로 계산. 넉넉히 44px.
       const m = pxToVb();
-      const tol = 44 / m.scale;
+      // 탭 허용 반경 56px → viewBox 단위로 변환 (손가락 터치 크기 고려)
+      const tol = 56 / m.scale;
+      // 탭 지점을 view group 적용 전 좌표계로 (pin.x*k+tx 와 같은 좌표계)
+      const p = toVb(cx, cy);
       let best: Pin | null = null;
       let bestD = 1e9;
-      // 표시된(op>0) 핀이면 라벨이 겹쳐 숨겨졌어도 점은 눌리게 함
-      PINS.forEach((pin, i) => {
+      PINS.forEach((pin) => {
         const start = pin.tier === 1 ? 1.35 : pin.tier === 2 ? 2.4 : 3.0;
         if (s.k < start) return;
         const sx = pin.x * s.k + s.tx;
@@ -197,9 +203,9 @@ const IndoMap = () => {
           best = pin;
         }
       });
-      if (best) openSheet(best);
+      return best;
     },
-    [toVb, pxToVb] // eslint-disable-line react-hooks/exhaustive-deps
+    [pxToVb, toVb]
   );
 
   // ---------- 제스처 (핀치줌 / 팬 / 탭 / 더블탭) ----------
@@ -213,7 +219,7 @@ const IndoMap = () => {
       pointers.current[e.pointerId] = { x: e.clientX, y: e.clientY };
       const ids = Object.keys(pointers.current);
       if (ids.length === 1) {
-        gesture.current = { mode: "pan", t: performance.now(), moved: 0 };
+        gesture.current = { mode: "pan", t: performance.now(), moved: 0, sx: e.clientX, sy: e.clientY };
       } else if (ids.length === 2) {
         const a = pointers.current[+ids[0]];
         const b = pointers.current[+ids[1]];
@@ -253,15 +259,24 @@ const IndoMap = () => {
 
       if (wasPan && remain === 0) {
         const dt = performance.now() - t0;
-        if (moved < 8 && dt < 350) {
-          const now = performance.now();
-          if (now - lastTap.current < 300) {
-            // 더블탭: 확대 / 최대 줌이면 전체로
-            zoomAt(e.clientX, e.clientY, vs.current.k >= KMAX * 0.9 ? 1 / vs.current.k : 2);
+        // 탭 판정: 이동 총량이 아니라 시작점→끝점 직선거리로 (미세 흔들림 허용). 반경 16px.
+        const sx = g && g.sx != null ? g.sx : e.clientX;
+        const sy = g && g.sy != null ? g.sy : e.clientY;
+        const dist = Math.hypot(e.clientX - sx, e.clientY - sy);
+        if (dist < 16 && dt < 400) {
+          // 핀 히트가 있으면 즉시 열기(더블탭 대기 없음). 핀이 없을 때만 더블탭 줌 후보.
+          const hit = findPin(e.clientX, e.clientY);
+          if (hit) {
+            openSheetRef.current(hit);
             lastTap.current = 0;
           } else {
-            lastTap.current = now;
-            handleTap(e.clientX, e.clientY);
+            const now = performance.now();
+            if (now - lastTap.current < 300) {
+              zoomAt(e.clientX, e.clientY, vs.current.k >= KMAX * 0.9 ? 1 / vs.current.k : 2);
+              lastTap.current = 0;
+            } else {
+              lastTap.current = now;
+            }
           }
         }
         gesture.current = null;
@@ -282,7 +297,7 @@ const IndoMap = () => {
       wrap.removeEventListener("pointerup", onUp);
       wrap.removeEventListener("pointercancel", onUp);
     };
-  }, [render, zoomAt, handleTap, pxToVb]);
+  }, [render, zoomAt, findPin]);
 
   // ---------- 시트 열기/닫기 (+ 뒤로가기 한 단계) ----------
   const openSheet = (pin: Pin) => {
@@ -326,6 +341,7 @@ const IndoMap = () => {
         if (reqIdRef.current === reqId) setInfoState("error");
       });
   };
+  openSheetRef.current = openSheet;
 
   const closeSheet = useCallback((viaPop = false) => {
     reqIdRef.current++;
@@ -362,6 +378,10 @@ const IndoMap = () => {
         .kkm-pin-dot.spot { fill: #fbbf24; }
         .kkm-pin-name { font-size: 20px; fill: #ffffff; text-anchor: middle; font-weight: 600;
           paint-order: stroke; stroke: rgba(9,34,40,0.85); stroke-width: 4px; }
+        .kkm-lb-backdrop { animation: kkmLbFade 0.18s ease-out; }
+        .kkm-lb-img { animation: kkmLbPop 0.28s cubic-bezier(0.22,1,0.36,1); transform-origin: center bottom; }
+        @keyframes kkmLbFade { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes kkmLbPop { from { opacity: 0; transform: translateY(40px) scale(0.85); } to { opacity: 1; transform: translateY(0) scale(1); } }
       `}</style>
 
       {/* 헤더 */}
@@ -445,16 +465,21 @@ const IndoMap = () => {
         </div>
       </div>
 
-      {/* 사진 라이트박스 */}
+      {/* 사진 라이트박스 — 기존 화면 위에 팝업 애니메이션 */}
       {lightbox && (
         <div
-          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4 kkm-lb-backdrop"
           onClick={() => setLightbox(null)}
         >
-          <img src={lightbox} alt="확대 사진" className="max-w-full max-h-full rounded-lg object-contain" />
+          <img
+            src={lightbox}
+            alt="확대 사진"
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-full max-h-[82vh] rounded-2xl object-contain shadow-2xl kkm-lb-img"
+          />
           <button
             onClick={(e) => { e.stopPropagation(); setLightbox(null); }}
-            className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/15 text-white flex items-center justify-center"
+            className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center"
           >
             <X size={20} />
           </button>
