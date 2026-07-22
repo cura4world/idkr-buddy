@@ -19,24 +19,18 @@ import { toast } from "sonner";
 interface SubCardProps {
   onClick: () => void;
   icon: LucideIcon;
-  grad: string;
   border: string;
   tile: string;
-  mark: string;
   title: string;
   sub: string;
 }
 
-const SubCard = ({ onClick, icon: Icon, grad, border, tile, mark, title, sub }: SubCardProps) => (
+const SubCard = ({ onClick, icon: Icon, border, tile, title, sub }: SubCardProps) => (
   <button
     type="button"
     onClick={onClick}
-    className={`w-full relative overflow-hidden rounded-2xl bg-card h-[5rem] px-4 text-left bg-gradient-to-br from-transparent ${grad} border ${border} transition-transform duration-150 active:scale-[0.98]`}
+    className={`w-full relative overflow-hidden rounded-2xl bg-white h-[5rem] px-4 text-left border ${border} transition-transform duration-150 active:scale-[0.98]`}
   >
-    <Icon
-      size={110}
-      className={`absolute -right-3.5 top-1/2 -translate-y-1/2 ${mark} -rotate-12 pointer-events-none`}
-    />
     <div className="relative h-full flex items-center gap-3.5">
       <span className={`w-12 h-12 rounded-2xl ${tile} flex items-center justify-center shrink-0 shadow-lg shadow-black/30`}>
         <Icon size={23} className="text-white" />
@@ -74,60 +68,48 @@ const Insight = () => {
         <SubCard
           onClick={() => navigate("/insight/overview")}
           icon={Globe}
-          grad="to-sky-300/35"
           border="border-sky-300/70"
           tile="bg-sky-400"
-          mark="text-sky-500/10"
           title="인도네시아 개관"
           sub="인구 · 경제 · 사회 한눈에"
         />
         <SubCard
           onClick={() => navigate("/insight/religion")}
           icon={Landmark}
-          grad="to-violet-300/35"
           border="border-violet-300/70"
           tile="bg-violet-500"
-          mark="text-violet-500/10"
           title="인도네시아 종교"
           sub="6개 공인 종교와 분포"
         />
         <SubCard
           onClick={() => navigate("/insight/christian")}
           icon={Cross}
-          grad="to-rose-300/35"
           border="border-rose-300/70"
           tile="bg-rose-500"
-          mark="text-rose-500/10"
           title="인도네시아 기독교"
           sub="지역 · 종족 · 교단 현황"
         />
         <SubCard
           onClick={soon}
           icon={Hourglass}
-          grad="to-amber-300/35"
           border="border-amber-300/70"
           tile="bg-amber-500"
-          mark="text-amber-500/10"
           title="인도네시아 역사"
           sub="타임라인으로 보는 역사"
         />
         <SubCard
           onClick={() => navigate("/map")}
           icon={MapIcon}
-          grad="to-orange-300/35"
           border="border-orange-300/70"
           tile="bg-orange-500"
-          mark="text-orange-500/10"
           title="인도네시아 지도"
           sub="도시와 관광지 탐험"
         />
         <SubCard
           onClick={soon}
           icon={Lightbulb}
-          grad="to-emerald-300/35"
           border="border-emerald-300/70"
           tile="bg-emerald-400"
-          mark="text-emerald-500/10"
           title="인도네시아 정보"
           sub="소소한 정보와 팁"
         />
