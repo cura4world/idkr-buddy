@@ -144,7 +144,7 @@ const InsightTips = () => {
               className="w-full px-4 py-3.5 flex items-center gap-2.5 text-left"
             >
               <span className="text-2xl leading-none shrink-0">{t.emoji}</span>
-              <h2 className="flex-1 text-[15px] font-semibold text-gray-900 leading-snug">{t.title}</h2>
+              <h2 className="flex-1 text-sm font-semibold text-gray-900 leading-snug">{t.title}</h2>
               <ChevronDown
                 size={17}
                 className={"text-emerald-500 shrink-0 transition-transform " + (isOpen ? "rotate-180" : "")}
