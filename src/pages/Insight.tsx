@@ -58,8 +58,7 @@ const Insight = () => {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-xl font-semibold text-white leading-none">인도네시아 이해</h1>
-          <p className="mt-1 text-xs font-word italic text-white/45">Wawasan Indonesia</p>
+          <h1 className="text-lg font-semibold text-white leading-none">인도네시아 이해</h1>
         </div>
       </header>
 
@@ -73,20 +72,20 @@ const Insight = () => {
           sub="인구 · 경제 · 사회 한눈에"
         />
         <SubCard
-          onClick={() => navigate("/insight/religion")}
-          icon={Landmark}
-          border="border-violet-300/70"
-          tile="bg-violet-500"
-          title="인도네시아 종교"
-          sub="6개 공인 종교와 분포"
-        />
-        <SubCard
           onClick={() => navigate("/insight/ethnic")}
           icon={Users}
           border="border-teal-300/70"
           tile="bg-teal-500"
           title="인도네시아 종족"
           sub="300여 종족과 분포"
+        />
+        <SubCard
+          onClick={() => navigate("/insight/religion")}
+          icon={Landmark}
+          border="border-violet-300/70"
+          tile="bg-violet-500"
+          title="인도네시아 종교"
+          sub="6개 공인 종교와 분포"
         />
         <SubCard
           onClick={() => navigate("/insight/christian")}
