@@ -128,33 +128,20 @@ export async function fetchPlaceInfo(
 
   const typeLabel = type === "spot" ? "관광지" : "도시";
   const prompt =
-    "인도네시아어를 배우는 한국인을 위한 학습 지도 앱입니다. 아래 지점의 정보를 JSON으로 작성해주세요.\n\n" +
+    "인도네시아어를 배우는 한국인을 위한 학습 지도 앱입니다. 아래 지점의 설명을 JSON으로 작성해주세요.\n\n" +
     "[지점] " + ko + " (" + id + ") — " + typeLabel + "\n\n" +
     "[작성 지침]\n" +
-    "1. desc: 한국어 설명 3~5문장. 지리적 위치, 특징, 왜 중요한지, 그리고 인도네시아어 학습자가 알아두면 좋은 문화·언어 포인트를 담습니다. 사실에 근거하고 과장하지 않습니다.\n" +
-    "2. descId: 이 지점을 소개하는 아주 쉬운 인도네시아어 한 문장 (초급 학습자용).\n" +
-    "3. words: 이 지점과 관련된 인도네시아어 단어 4개. 각 단어는 word(인니어), meaning(한국어 뜻), example(이 지역 맥락의 쉬운 인니어 예문), exampleKo(예문 번역).\n\n" +
+    "desc: 한국어 설명 3~5문장. 지리적 위치, 특징, 왜 중요한지, 그리고 인도네시아어 학습자가 알아두면 좋은 문화·언어 포인트를 담습니다. 사실에 근거하고 과장하지 않습니다.\n\n" +
     "[출력 — 유효한 JSON 하나만]\n" +
-    '{"desc":"...","descId":"...","words":[{"word":"...","meaning":"...","example":"...","exampleKo":"..."}]}';
+    '{"desc":"..."}';
 
   const parsed = await callGeminiJSON(prompt);
-
-  const rawWords = Array.isArray(parsed.words) ? (parsed.words as Record<string, unknown>[]) : [];
-  const words: MapPlaceWord[] = rawWords
-    .map((w) => ({
-      word: (w.word || "").toString().trim(),
-      meaning: (w.meaning || "").toString().trim(),
-      example: (w.example || "").toString().trim(),
-      exampleKo: (w.exampleKo || "").toString().trim(),
-    }))
-    .filter((w) => w.word && w.meaning)
-    .slice(0, 6);
 
   const info: MapPlaceInfo = {
     id,
     desc: (parsed.desc || "").toString().trim(),
-    descId: (parsed.descId || "").toString().trim(),
-    words,
+    descId: "",
+    words: [],
     createdAt: Date.now(),
   };
 
@@ -162,4 +149,59 @@ export async function fetchPlaceInfo(
 
   await savePlace(info);
   return info;
+}
+
+// ---------- 지점 이미지 생성 (사전 이미지와 같은 모델 폴백) ----------
+const IMAGE_MODEL_CANDIDATES = ["gemini-3.1-flash-image", "gemini-2.5-flash-image"];
+
+export async function generatePlaceImage(id: string, hint: string): Promise<string> {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) throw new Error("NO_API_KEY");
+
+  const imgPrompt =
+    "A beautiful travel illustration of " + id + ", Indonesia (" + hint + "). " +
+    "Show its most iconic landmark, scenery, or atmosphere. " +
+    "Warm colors, clean flat travel-poster style, no text or letters in the image.";
+
+  let lastStatus = 0;
+
+  for (const model of IMAGE_MODEL_CANDIDATES) {
+    const endpoint =
+      "https://generativelanguage.googleapis.com/v1beta/models/" +
+      model +
+      ":generateContent?key=" +
+      encodeURIComponent(apiKey);
+
+    let res: Response;
+    try {
+      res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: imgPrompt }] }] }),
+      });
+    } catch (e) {
+      lastStatus = -1;
+      continue;
+    }
+
+    if (!res.ok) {
+      lastStatus = res.status;
+      continue;
+    }
+
+    const data = await res.json();
+    const parts = data?.candidates?.[0]?.content?.parts ?? [];
+    for (const p of parts) {
+      const inline = p?.inlineData || p?.inline_data;
+      if (inline?.data) {
+        const mime = inline.mimeType || inline.mime_type || "image/png";
+        return "data:" + mime + ";base64," + inline.data;
+      }
+    }
+    lastStatus = 200;
+  }
+
+  if (lastStatus === 429) throw new Error("RATE_LIMIT");
+  if (lastStatus === 200) throw new Error("NO_IMAGE");
+  throw new Error("IMAGE_FAILED_" + lastStatus);
 }
