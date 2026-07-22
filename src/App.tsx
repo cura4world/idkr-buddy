@@ -10,6 +10,9 @@ import Devotion from "./pages/Devotion";
 import Prayer from "./pages/Prayer";
 import IndoMap from "./pages/IndoMap";
 import Insight from "./pages/Insight";
+import InsightOverview from "./pages/InsightOverview";
+import InsightReligion from "./pages/InsightReligion";
+import InsightChristian from "./pages/InsightChristian";
 import Wordbooks from "./pages/Wordbooks";
 import CategoryDetail from "./pages/CategoryDetail";
 import StudyMode from "./pages/StudyMode";
@@ -35,6 +38,9 @@ const App = () => (
           <Route path="/prayer" element={<Prayer />} />
           <Route path="/map" element={<IndoMap />} />
           <Route path="/insight" element={<Insight />} />
+          <Route path="/insight/overview" element={<InsightOverview />} />
+          <Route path="/insight/religion" element={<InsightReligion />} />
+          <Route path="/insight/christian" element={<InsightChristian />} />
           <Route path="/wordbooks" element={<Wordbooks />} />
           <Route path="/category/:id" element={<CategoryDetail />} />
           <Route path="/study/:id" element={<StudyMode />} />
