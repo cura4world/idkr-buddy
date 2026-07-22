@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Lightbulb, Sparkles, Loader2, Volume2, Trash2 } from "lucide-react";
+import { ArrowLeft, Lightbulb, Sparkles, Loader2, Volume2, Trash2, BookOpen, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { generateTip, saveTip, listTips, deleteTip, TipRecord } from "@/lib/tips";
 import { hasGeminiApiKey } from "@/lib/gemini";
@@ -14,11 +14,13 @@ const InsightTips = () => {
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     listTips().then((all) => {
       setTips(all);
       setLoaded(true);
+      if (all.length) setOpenId(all[0].id);
     });
   }, []);
 
@@ -54,6 +56,7 @@ const InsightTips = () => {
       const data = await generateTip(recent);
       const rec = await saveTip(data);
       setTips((prev) => [rec, ...prev]);
+      setOpenId(rec.id);
     } catch (e) {
       const msg = (e as Error).message;
       if (msg === "RATE_LIMIT") toast("잠시 후 다시 시도해주세요 (사용량 초과)");
@@ -95,10 +98,6 @@ const InsightTips = () => {
         </div>
       </header>
 
-      <p className="mb-4 text-[13px] font-gothic text-white/55 leading-relaxed px-1">
-        버튼을 누를 때마다 인도네시아에 관한 소소한 정보 하나가 열리고, 아래에 차곡차곡 쌓입니다.
-      </p>
-
       {/* 생성 버튼 */}
       <button
         onClick={handleGenerate}
@@ -111,7 +110,7 @@ const InsightTips = () => {
           </>
         ) : (
           <>
-            <Sparkles size={17} /> 새로운 정보 보기
+            <Sparkles size={17} /> 정보 하나 가져오기
           </>
         )}
       </button>
@@ -129,7 +128,9 @@ const InsightTips = () => {
       )}
 
       <div className="space-y-3">
-        {tips.map((t) => (
+        {tips.map((t) => {
+          const isOpen = openId === t.id;
+          return (
           <div
             key={t.id}
             onPointerDown={() => startPress(t.id)}
@@ -137,34 +138,55 @@ const InsightTips = () => {
             onPointerLeave={cancelPress}
             className="bg-card rounded-2xl border border-emerald-300/50 overflow-hidden select-none"
           >
-            <div className="px-4 py-3.5">
-              <div className="flex items-start gap-2.5">
-                <span className="text-2xl leading-none mt-0.5 shrink-0">{t.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-[15px] font-semibold text-gray-900 leading-snug">{t.title}</h2>
-                  <p className="mt-1.5 text-sm font-gothic text-gray-700 leading-relaxed">{t.body}</p>
+            {/* 제목 행 (항상 보임, 탭하면 토글) */}
+            <button
+              onClick={() => setOpenId(isOpen ? null : t.id)}
+              className="w-full px-4 py-3.5 flex items-center gap-2.5 text-left"
+            >
+              <span className="text-2xl leading-none shrink-0">{t.emoji}</span>
+              <h2 className="flex-1 text-[15px] font-semibold text-gray-900 leading-snug">{t.title}</h2>
+              <ChevronDown
+                size={17}
+                className={"text-emerald-500 shrink-0 transition-transform " + (isOpen ? "rotate-180" : "")}
+              />
+            </button>
 
-                  {t.indo && (
-                    <div className="mt-2.5 flex items-center gap-2 bg-emerald-500/[0.07] rounded-xl px-3 py-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-word text-[15px] text-emerald-900 leading-snug">{t.indo}</p>
-                        {t.indoKo && (
-                          <p className="text-xs font-gothic text-gray-500 mt-0.5">{t.indoKo}</p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => speak(t.indo as string, "id")}
-                        className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center shrink-0 active:bg-emerald-500/20"
-                      >
-                        <Volume2 size={13} />
-                      </button>
+            {/* 내용 (열렸을 때만) */}
+            {isOpen && (
+              <div className="px-4 pb-4 -mt-0.5">
+                <p className="text-sm font-gothic text-gray-700 leading-relaxed">{t.body}</p>
+
+                {t.indo && (
+                  <div className="mt-2.5 flex items-center gap-2 bg-emerald-500/[0.07] rounded-xl px-3 py-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-word text-[15px] text-emerald-900 leading-snug">{t.indo}</p>
+                      {t.indoKo && (
+                        <p className="text-xs font-gothic text-gray-500 mt-0.5">{t.indoKo}</p>
+                      )}
                     </div>
-                  )}
-                </div>
+                    <button
+                      onClick={() =>
+                        navigate("/dictionary?q=" + encodeURIComponent(t.indo as string) + "&from=tips")
+                      }
+                      className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center shrink-0 active:bg-emerald-500/20"
+                      title="사전에서 보기"
+                    >
+                      <BookOpen size={13} />
+                    </button>
+                    <button
+                      onClick={() => speak(t.indo as string, "id")}
+                      className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center shrink-0 active:bg-emerald-500/20"
+                      title="발음 듣기"
+                    >
+                      <Volume2 size={13} />
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {tips.length > 0 && (
