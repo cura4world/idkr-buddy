@@ -8,6 +8,8 @@ import { ArrowLeft, Plus, Minus, Volume2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   MAP_VIEW,
+  NEIGHBOR_SHAPES,
+  NEIGHBOR_LABELS,
   MAP_CITIES,
   MAP_SPOTS,
   MAP_ISLANDS,
@@ -77,6 +79,7 @@ const IndoMap = () => {
   const sheetOpenRef = useRef(false);
   const sheetOpenedAt = useRef(0);
   const reqIdRef = useRef(0);
+  const openSheetRef = useRef<(pin: Pin) => void>(() => {});
 
   // ---------- 좌표 변환 ----------
   const pxToVb = useCallback(() => {
@@ -100,8 +103,11 @@ const IndoMap = () => {
   const render = useCallback(() => {
     const s = vs.current;
     s.k = Math.max(KMIN, Math.min(KMAX, s.k));
-    s.tx = Math.max(MAP_VIEW.w - MAP_VIEW.w * s.k, Math.min(0, s.tx));
-    s.ty = Math.max(MAP_VIEW.h - MAP_VIEW.h * s.k, Math.min(0, s.ty));
+    // 주변국을 볼 수 있도록 사방으로 여유(PAD)를 두고 팬 허용
+    const PADX = MAP_VIEW.w * 0.55;
+    const PADY = MAP_VIEW.h * 1.1;
+    s.tx = Math.max(MAP_VIEW.w - MAP_VIEW.w * s.k - PADX, Math.min(PADX, s.tx));
+    s.ty = Math.max(MAP_VIEW.h - MAP_VIEW.h * s.k - PADY, Math.min(PADY, s.ty));
 
     viewRef.current?.setAttribute(
       "transform",
@@ -371,6 +377,9 @@ const IndoMap = () => {
     <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
       <style>{`
         .kkm-country { fill: #17555c; stroke: #3e8d95; stroke-width: 0.7; }
+        .kkm-neighbor { fill: #2a3d45; stroke: #4a6068; stroke-width: 0.6; pointer-events: none; }
+        .kkm-neighbor-label { font-family: inherit; font-size: 15px; fill: #6b8288; text-anchor: middle;
+          pointer-events: none; letter-spacing: 0.5px; }
         .kkm-isl { font-family: Lora, serif; font-style: italic; fill: #c4e0e3; text-anchor: middle;
           letter-spacing: 0.5px; paint-order: stroke; stroke: rgba(9,34,40,0.7); stroke-width: 2.5px; }
         .kkm-isl-ko { font-family: inherit; font-style: normal; fill: #9cc3c8; }
@@ -408,6 +417,15 @@ const IndoMap = () => {
           preserveAspectRatio="xMidYMid meet"
         >
           <g ref={viewRef}>
+            {/* 주변국: 회색, 버튼 없음, 국경선 + 국가명만 */}
+            {NEIGHBOR_SHAPES.map((c) => (
+              <path key={c.id} className="kkm-neighbor" d={c.d} />
+            ))}
+            {NEIGHBOR_LABELS.map((c) => (
+              <text key={c.id} className="kkm-neighbor-label" x={c.x} y={c.y}>
+                {c.ko}
+              </text>
+            ))}
             <path className="kkm-country" d={INDONESIA_PATH} />
             {MAP_ISLANDS.map((p, i) => (
               <g key={p.id} ref={(el) => (islandRefs.current[i] = el)}>
