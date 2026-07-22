@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home, Mic, ScrollText, Newspaper } from "lucide-react";
+import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home, Mic, ScrollText, Newspaper, Map as MapIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
@@ -160,6 +160,10 @@ const Dictionary = () => {
   // 뉴스 기사의 "사전에서 보기"로 진입했는지 (뉴스로 돌아가기 버튼 표시)
   const [fromNews] = useState(() => {
     try { return new URLSearchParams(window.location.search).get("from") === "news"; } catch (e) { return false; }
+  });
+  // 지도 핀의 "사전에서 보기"로 진입했는지 (지도로 돌아가기 버튼 표시)
+  const [fromMap] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get("from") === "map"; } catch (e) { return false; }
   });
   const [query, setQuery] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory());
@@ -508,6 +512,16 @@ const Dictionary = () => {
           className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
         >
           <Newspaper size={16} /> 뉴스로
+        </button>
+      )}
+
+      {/* 지도로 돌아가기 플로팅 버튼 */}
+      {fromMap && (
+        <button
+          onClick={() => navigate("/map")}
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
+        >
+          <MapIcon size={16} /> 지도로
         </button>
       )}
 
