@@ -72,7 +72,7 @@ const Insight = () => {
 
       <div className="relative space-y-2">
         <SubCard
-          onClick={soon}
+          onClick={() => navigate("/insight/overview")}
           icon={Globe}
           grad="to-sky-300/35"
           border="border-sky-300/70"
@@ -82,7 +82,7 @@ const Insight = () => {
           sub="인구 · 경제 · 사회 한눈에"
         />
         <SubCard
-          onClick={soon}
+          onClick={() => navigate("/insight/religion")}
           icon={Landmark}
           grad="to-violet-300/35"
           border="border-violet-300/70"
@@ -92,7 +92,7 @@ const Insight = () => {
           sub="6개 공인 종교와 분포"
         />
         <SubCard
-          onClick={soon}
+          onClick={() => navigate("/insight/christian")}
           icon={Cross}
           grad="to-rose-300/35"
           border="border-rose-300/70"
