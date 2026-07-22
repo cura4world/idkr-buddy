@@ -70,6 +70,19 @@ const IndoMap = () => {
   const lastTap = useRef(0);
   const pinVisible = useRef<boolean[]>(PINS.map(() => false));
 
+  const toggleCities = () => {
+    const v = !showCitiesRef.current;
+    showCitiesRef.current = v;
+    setShowCities(v);
+    renderRef.current();
+  };
+  const toggleSpots = () => {
+    const v = !showSpotsRef.current;
+    showSpotsRef.current = v;
+    setShowSpots(v);
+    renderRef.current();
+  };
+
   // 하단 시트
   const [selected, setSelected] = useState<Pin | null>(null);
   const [info, setInfo] = useState<MapPlaceInfo | null>(null);
@@ -77,6 +90,10 @@ const IndoMap = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [photoState, setPhotoState] = useState<"idle" | "loading" | "error">("idle");
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [showCities, setShowCities] = useState(true);
+  const [showSpots, setShowSpots] = useState(true);
+  const showCitiesRef = useRef(true);
+  const showSpotsRef = useRef(true);
   const sheetOpenRef = useRef(false);
   const sheetOpenedAt = useRef(0);
   const reqIdRef = useRef(0);
@@ -101,6 +118,7 @@ const IndoMap = () => {
   );
 
   // ---------- 렌더 ----------
+  const renderRef = useRef<() => void>(() => {});
   const render = useCallback(() => {
     const s = vs.current;
     s.k = Math.max(KMIN, Math.min(KMAX, s.k));
@@ -131,9 +149,11 @@ const IndoMap = () => {
       const el = pinRefs.current[i];
       if (!el) return;
       const start = p.tier === 1 ? 1.35 : p.tier === 2 ? 2.4 : 3.0;
-      const op = s.k < start ? 0 : Math.min(1, (s.k - start) / 0.5);
+      const kindOn = p.type === "spot" ? showSpotsRef.current : showCitiesRef.current;
+      const op = !kindOn || s.k < start ? 0 : Math.min(1, (s.k - start) / 0.5);
       el.setAttribute("transform", "translate(" + p.x + " " + p.y + ") scale(" + pinScale + ")");
       el.setAttribute("opacity", op.toFixed(2));
+      el.style.pointerEvents = kindOn ? "" : "none";
       pinVisible.current[i] = op > 0.35;
     });
 
@@ -172,6 +192,7 @@ const IndoMap = () => {
       }
     });
   }, []);
+  renderRef.current = render;
 
   const zoomAt = useCallback(
     (px: number, py: number, factor: number) => {
@@ -201,7 +222,8 @@ const IndoMap = () => {
       let bestD = 1e9;
       PINS.forEach((pin) => {
         const start = pin.tier === 1 ? 1.35 : pin.tier === 2 ? 2.4 : 3.0;
-        if (s.k < start) return;
+        const kindOn = pin.type === "spot" ? showSpotsRef.current : showCitiesRef.current;
+        if (!kindOn || s.k < start) return;
         const sx = pin.x * s.k + s.tx;
         const sy = pin.y * s.k + s.ty;
         const d = Math.hypot(p.x - sx, p.y - sy);
@@ -457,16 +479,28 @@ const IndoMap = () => {
           </g>
         </svg>
 
-        {/* 범례 (좌측 하단, +/- 버튼과 같은 높이) */}
-        <div className="absolute left-3.5 bottom-4 flex flex-col gap-2.5 pointer-events-none">
-          <div className="flex items-center gap-2 bg-[rgba(9,34,40,0.6)] rounded-full pl-2 pr-3 py-1.5">
+        {/* 범례 겸 토글 버튼 (좌측 하단, +/- 버튼과 같은 높이) */}
+        <div className="absolute left-3.5 bottom-4 flex flex-col gap-2.5">
+          <button
+            onClick={toggleCities}
+            className={
+              "flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5 transition-opacity " +
+              (showCities ? "bg-[rgba(9,34,40,0.7)]" : "bg-[rgba(9,34,40,0.4)] opacity-50")
+            }
+          >
             <span className="w-3 h-3 rounded-full bg-[#f97316] border border-white/80 shrink-0" />
             <span className="text-[11px] font-gothic text-white/85">도시</span>
-          </div>
-          <div className="flex items-center gap-2 bg-[rgba(9,34,40,0.6)] rounded-full pl-2 pr-3 py-1.5">
+          </button>
+          <button
+            onClick={toggleSpots}
+            className={
+              "flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5 transition-opacity " +
+              (showSpots ? "bg-[rgba(9,34,40,0.7)]" : "bg-[rgba(9,34,40,0.4)] opacity-50")
+            }
+          >
             <span className="w-3 h-3 rounded-full bg-[#fbbf24] border border-white/80 shrink-0" />
             <span className="text-[11px] font-gothic text-white/85">관광지</span>
-          </div>
+          </button>
         </div>
         <div className="absolute right-3.5 bottom-4 flex flex-col gap-2">
           <button
