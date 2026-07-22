@@ -1,10 +1,10 @@
 // src/pages/IndoMap.tsx
 // 인도네시아 학습 지도: 실제 해안선 SVG + 핀치줌/팬 + 3단 줌(섬→도시→관광지)
-// 핀 탭 → 하단 시트: Gemini 설명(IndexedDB 캐싱) + 관련 단어(담기/사전/발음)
+// 핀 탭 → 하단 시트: 이미지 보기(영구 저장) + Gemini 설명(IndexedDB 캐싱) + 사전 연결
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Minus, Volume2, Star, BookOpen, X } from "lucide-react";
+import { ArrowLeft, Plus, Minus, Volume2, ImageIcon, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   MAP_VIEW,
@@ -14,11 +14,10 @@ import {
   INDONESIA_PATH,
   MapPlace,
 } from "@/lib/mapData";
-import { fetchPlaceInfo, MapPlaceInfo } from "@/lib/map";
+import { fetchPlaceInfo, generatePlaceImage, MapPlaceInfo } from "@/lib/map";
+import { getStoredImage, saveStoredImage } from "@/lib/imageStore";
 import { hasGeminiApiKey } from "@/lib/gemini";
-import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 
-const MY_WORDBOOK_ID = "my-wordbook";
 const KMIN = 1;
 const KMAX = 9;
 
@@ -73,7 +72,8 @@ const IndoMap = () => {
   const [selected, setSelected] = useState<Pin | null>(null);
   const [info, setInfo] = useState<MapPlaceInfo | null>(null);
   const [infoState, setInfoState] = useState<"idle" | "loading" | "error">("idle");
-  const [savedTick, setSavedTick] = useState(0);
+  const [img, setImg] = useState<string | null>(null);
+  const [imgState, setImgState] = useState<"idle" | "loading" | "error">("idle");
   const sheetOpenRef = useRef(false);
   const sheetOpenedAt = useRef(0);
   const reqIdRef = useRef(0);
@@ -287,6 +287,8 @@ const IndoMap = () => {
     sheetOpenedAt.current = Date.now();
     setSelected(pin);
     setInfo(null);
+    setImg(null);
+    setImgState("idle");
     if (!sheetOpenRef.current) {
       sheetOpenRef.current = true;
       try {
@@ -294,6 +296,10 @@ const IndoMap = () => {
       } catch (e) {}
     }
     const reqId = ++reqIdRef.current;
+    // 한 번 본 지점의 이미지는 자동 표시 (재과금 0)
+    getStoredImage(pin.id).then((url) => {
+      if (url && reqIdRef.current === reqId) setImg(url);
+    });
     if (!hasGeminiApiKey()) {
       setInfoState("error");
       return;
@@ -332,17 +338,33 @@ const IndoMap = () => {
     return () => window.removeEventListener("popstate", onPop);
   }, [closeSheet]);
 
-  // ---------- 단어장 담기 ----------
-  const addToWordbook = (w: { word: string; meaning: string; example: string; exampleKo: string }) => {
-    const r = addWordIfAbsent({
-      word: w.word,
-      meaning: w.meaning,
-      example: w.example,
-      exampleMeaning: w.exampleKo,
-      categoryId: MY_WORDBOOK_ID,
-    });
-    toast(r.added ? '"' + w.word + '" 내 단어장에 담았어요' : "이미 내 단어장에 있어요");
-    setSavedTick((t) => t + 1);
+  // ---------- 지점 이미지 (저장소 우선, 없으면 생성 후 영구 저장) ----------
+  const loadImage = async () => {
+    if (!selected) return;
+    if (!hasGeminiApiKey()) {
+      toast("설정에서 Gemini API 키를 입력해주세요");
+      return;
+    }
+    const reqId = reqIdRef.current;
+    setImgState("loading");
+    try {
+      const stored = await getStoredImage(selected.id);
+      if (stored) {
+        if (reqIdRef.current === reqId) {
+          setImg(stored);
+          setImgState("idle");
+        }
+        return;
+      }
+      const url = await generatePlaceImage(selected.id, selected.hint);
+      await saveStoredImage(selected.id, url);
+      if (reqIdRef.current === reqId) {
+        setImg(url);
+        setImgState("idle");
+      }
+    } catch {
+      if (reqIdRef.current === reqId) setImgState("error");
+    }
   };
 
   const zoomBtn =
@@ -473,6 +495,29 @@ const IndoMap = () => {
                 </span>
               </div>
               <p className="mt-1 text-xs font-gothic text-gray-400">{selected.hint}</p>
+
+              {/* 이미지: 본 지점은 자동 표시, 아니면 "이미지 보기" 버튼 (사전과 동일 패턴) */}
+              <div className="mt-3">
+                {img ? (
+                  <img src={img} alt={selected.ko} className="w-full rounded-xl" />
+                ) : imgState === "loading" ? (
+                  <div className="flex items-center justify-center gap-2 py-10 bg-gray-50 rounded-xl text-sm font-gothic text-gray-400">
+                    <Loader2 size={16} className="animate-spin" /> 이미지를 만드는 중...
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={loadImage}
+                      className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-gothic font-semibold bg-teal-600/10 text-teal-700 active:bg-teal-600/20"
+                    >
+                      <ImageIcon size={13} /> 이미지 보기
+                    </button>
+                    {imgState === "error" && (
+                      <p className="mt-1.5 text-xs font-gothic text-gray-400">이미지를 불러오지 못했어요. 다시 눌러보세요.</p>
+                    )}
+                  </>
+                )}
+              </div>
               <button
                 onClick={() => closeSheet()}
                 className="absolute right-4 top-4 w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center active:bg-gray-200"
@@ -506,88 +551,15 @@ const IndoMap = () => {
                 )}
                 {info && (
                   <>
-                    {info.descId && (
-                      <div className="flex items-start gap-2 bg-teal-600/5 border border-teal-600/15 rounded-xl px-3.5 py-3">
-                        <p className="font-word text-[15px] text-teal-900 leading-relaxed flex-1 content-bump">
-                          {info.descId}
-                        </p>
-                        <button
-                          onClick={() => speak(info.descId, "id")}
-                          className="w-7 h-7 rounded-full bg-teal-600/10 text-teal-700 flex items-center justify-center shrink-0 active:bg-teal-600/20 mt-0.5"
-                        >
-                          <Volume2 size={13} />
-                        </button>
-                      </div>
-                    )}
-                    <p className="mt-3 text-sm font-gothic text-gray-700 leading-relaxed whitespace-pre-line content-bump">
+                    <p className="mt-1 text-sm font-gothic text-gray-700 leading-relaxed whitespace-pre-line content-bump">
                       {info.desc}
                     </p>
-
-                    {/* 관련 단어 */}
-                    {info.words.length > 0 && (
-                      <div className="mt-5">
-                        <p className="text-xs font-gothic font-semibold text-gray-400 tracking-wide mb-2">
-                          관련 단어
-                        </p>
-                        <div className="space-y-2">
-                          {info.words.map((w) => {
-                            const saved = hasWordInCategory(MY_WORDBOOK_ID, w.word);
-                            void savedTick;
-                            return (
-                              <div key={w.word} className="bg-gray-50 rounded-xl px-3.5 py-3">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-word font-semibold text-[15px] text-gray-900 content-bump">
-                                    {w.word}
-                                  </span>
-                                  <button
-                                    onClick={() => speak(w.word, "id")}
-                                    className="w-7 h-7 rounded-full bg-teal-600/10 text-teal-700 flex items-center justify-center active:bg-teal-600/20"
-                                  >
-                                    <Volume2 size={13} />
-                                  </button>
-                                  <span className="text-sm font-gothic text-gray-600 flex-1 truncate">
-                                    {w.meaning}
-                                  </span>
-                                  <button
-                                    onClick={() => addToWordbook(w)}
-                                    className={
-                                      "w-8 h-8 rounded-full flex items-center justify-center active:scale-95 " +
-                                      (saved ? "bg-violet-500/15 text-violet-600" : "bg-gray-200/70 text-gray-400")
-                                    }
-                                    title={saved ? "저장됨" : "내 단어장에 담기"}
-                                  >
-                                    <Star size={15} fill={saved ? "currentColor" : "none"} />
-                                  </button>
-                                  <button
-                                    onClick={() => navigate("/dictionary?q=" + encodeURIComponent(w.word) + "&from=map")}
-                                    className="w-8 h-8 rounded-full bg-teal-600/10 text-teal-700 flex items-center justify-center active:bg-teal-600/20"
-                                    title="사전에서 보기"
-                                  >
-                                    <BookOpen size={15} />
-                                  </button>
-                                </div>
-                                {w.example && (
-                                  <p className="mt-1.5 text-[13px] font-word text-gray-600 leading-snug">
-                                    {w.example}
-                                    {w.exampleKo && (
-                                      <span className="block font-gothic text-gray-400 text-xs mt-0.5">
-                                        {w.exampleKo}
-                                      </span>
-                                    )}
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
 
                     <button
                       onClick={() => navigate("/dictionary?q=" + encodeURIComponent(selected.id) + "&from=map")}
                       className="mt-5 w-full py-3 rounded-xl bg-teal-700 text-white text-sm font-semibold active:bg-teal-800"
                     >
-                      사전에서 &quot;{selected.id}&quot; 보기
+                      사전에서 {selected.id} 보기
                     </button>
                   </>
                 )}
