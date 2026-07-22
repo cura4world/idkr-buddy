@@ -90,7 +90,7 @@ const Insight = () => {
           sub="지역 · 종족 · 교단 현황"
         />
         <SubCard
-          onClick={soon}
+          onClick={() => navigate("/insight/history")}
           icon={Hourglass}
           border="border-amber-300/70"
           tile="bg-amber-500"
