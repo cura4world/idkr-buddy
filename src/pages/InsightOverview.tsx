@@ -52,6 +52,46 @@ const KOREA: Row[] = [
   { label: "문화", value: "한류(K-pop·드라마·음식) 인기가 매우 높은 나라 중 하나" },
 ];
 
+interface Sila {
+  no: number;
+  id: string;   // 인니어 원문
+  ko: string;   // 한국어 번역
+  desc: string; // 뜻풀이
+}
+
+const PANCASILA: Sila[] = [
+  {
+    no: 1,
+    id: "Ketuhanan Yang Maha Esa",
+    ko: "유일하신 신에 대한 믿음",
+    desc: "모든 국민은 신을 믿는다는 전제. 특정 종교를 국교로 삼지 않되, 무신론은 인정하지 않습니다. 이 원칙 때문에 인도네시아는 이슬람 국가도, 세속 국가도 아닌 '유신론 국가'가 됩니다.",
+  },
+  {
+    no: 2,
+    id: "Kemanusiaan yang Adil dan Beradab",
+    ko: "공정하고 문명된 인류애",
+    desc: "인간의 존엄과 인권을 존중하고, 서로를 공정하고 예의 있게 대한다는 원칙입니다.",
+  },
+  {
+    no: 3,
+    id: "Persatuan Indonesia",
+    ko: "인도네시아의 통일",
+    desc: "수천 개의 섬과 300여 종족을 하나의 국가로 묶는 통합의 원칙. 표어 '다양성 속의 통일'과 짝을 이룹니다.",
+  },
+  {
+    no: 4,
+    id: "Kerakyatan yang Dipimpin oleh Hikmat Kebijaksanaan dalam Permusyawaratan/Perwakilan",
+    ko: "합의와 대의를 통한 지혜로운 민주주의",
+    desc: "폭력이 아니라 '무샤와라(협의)'와 합의로 문제를 풀어가는 민주주의 원칙입니다.",
+  },
+  {
+    no: 5,
+    id: "Keadilan Sosial bagi Seluruh Rakyat Indonesia",
+    ko: "전 국민을 위한 사회 정의",
+    desc: "종족·종교·계층을 가리지 않고 모든 국민이 공정한 대우와 복지를 누리게 한다는 원칙입니다.",
+  },
+];
+
 const Section = ({ title, rows, defaultOpen }: { title: string; rows: Row[]; defaultOpen?: boolean }) => {
   const [open, setOpen] = useState(!!defaultOpen);
   return (
@@ -76,6 +116,48 @@ const Section = ({ title, rows, defaultOpen }: { title: string; rows: Row[]; def
             </div>
           ))}
         </dl>
+      )}
+    </section>
+  );
+};
+
+const PancasilaSection = ({ defaultOpen }: { defaultOpen?: boolean }) => {
+  const [open, setOpen] = useState(!!defaultOpen);
+  return (
+    <section className="bg-card rounded-2xl border border-sky-300/60 overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-4 py-3 flex items-center gap-2 text-left bg-sky-400/10"
+      >
+        <span className="flex-1 text-sm font-semibold text-sky-800">건국 이념 · 판차실라(Pancasila)</span>
+        {open ? (
+          <ChevronUp size={16} className="text-sky-600 shrink-0" />
+        ) : (
+          <ChevronDown size={16} className="text-sky-600 shrink-0" />
+        )}
+      </button>
+      {open && (
+        <div className="border-t border-sky-300/40">
+          <p className="px-4 pt-3 pb-1 text-[13px] font-gothic text-gray-600 leading-relaxed">
+            산스크리트어로 &lsquo;판차(pañca, 다섯)&rsquo; + &lsquo;실라(śīla, 원칙)&rsquo;.
+            초대 대통령 수카르노가 1945년 제시한 다섯 가지 건국 원칙으로, 헌법 전문에 담겨
+            있습니다. 이슬람 국가와 세속 국가 사이의 &lsquo;타협&rsquo;으로 탄생했습니다.
+          </p>
+          <div className="divide-y divide-gray-100">
+            {PANCASILA.map((s) => (
+              <div key={s.no} className="px-4 py-3 flex gap-3">
+                <span className="w-7 h-7 shrink-0 rounded-full bg-sky-500 text-white text-sm font-bold flex items-center justify-center">
+                  {s.no}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 leading-snug">{s.ko}</p>
+                  <p className="mt-0.5 text-xs font-word italic text-sky-700 leading-snug break-words">{s.id}</p>
+                  <p className="mt-1 text-[13px] font-gothic text-gray-600 leading-relaxed">{s.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </section>
   );
@@ -112,6 +194,7 @@ const InsightOverview = () => {
         <Section title="경제" rows={ECONOMY} />
         <Section title="사회" rows={SOCIETY} />
         <Section title="한국과 인도네시아" rows={KOREA} />
+        <PancasilaSection />
       </div>
 
       <p className="mt-4 text-[11px] font-gothic text-white/35 px-1">
