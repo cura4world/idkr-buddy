@@ -66,6 +66,7 @@ const IndoMap = () => {
   const vs = useRef({ k: 1, tx: 0, ty: 0 });
   const pointers = useRef<Record<number, { x: number; y: number }>>({});
   const gesture = useRef<{ mode: "pan" | "pinch"; d?: number; t?: number; moved?: number; sx?: number; sy?: number } | null>(null);
+  const multiTouched = useRef(false); // 이번 제스처 동안 두 손가락이 닿은 적이 있는지 (핀치)
   const lastTap = useRef(0);
   const pinVisible = useRef<boolean[]>(PINS.map(() => false));
 
@@ -230,6 +231,11 @@ const IndoMap = () => {
         const a = pointers.current[+ids[0]];
         const b = pointers.current[+ids[1]];
         gesture.current = { mode: "pinch", d: Math.hypot(a.x - b.x, a.y - b.y) };
+        multiTouched.current = true;
+      }
+      if (ids.length === 1 && Object.keys(pointers.current).length === 1) {
+        // 완전히 새로운 단일 터치 시작 → 핀치 이력 초기화
+        multiTouched.current = false;
       }
     };
 
@@ -265,11 +271,13 @@ const IndoMap = () => {
 
       if (wasPan && remain === 0) {
         const dt = performance.now() - t0;
-        // 탭 판정: 이동 총량이 아니라 시작점→끝점 직선거리로 (미세 흔들림 허용). 반경 16px.
+        // 탭 판정: 시작점→끝점 직선거리(미세 흔들림 허용) 12px + 핀치 이력 없을 때만.
         const sx = g && g.sx != null ? g.sx : e.clientX;
         const sy = g && g.sy != null ? g.sy : e.clientY;
         const dist = Math.hypot(e.clientX - sx, e.clientY - sy);
-        if (dist < 16 && dt < 400) {
+        const wasPinch = multiTouched.current;
+        multiTouched.current = false; // 소진
+        if (!wasPinch && dist < 12 && dt < 300) {
           // 핀 히트가 있으면 즉시 열기(더블탭 대기 없음). 핀이 없을 때만 더블탭 줌 후보.
           const hit = findPin(e.clientX, e.clientY);
           if (hit) {
@@ -290,6 +298,7 @@ const IndoMap = () => {
         gesture.current = { mode: "pan", t: performance.now(), moved: 99 };
       } else if (remain === 0) {
         gesture.current = null;
+        multiTouched.current = false;
       }
     };
 
@@ -377,8 +386,8 @@ const IndoMap = () => {
     <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
       <style>{`
         .kkm-country { fill: #17555c; stroke: #3e8d95; stroke-width: 0.7; }
-        .kkm-neighbor { fill: #2a3d45; stroke: #4a6068; stroke-width: 0.6; pointer-events: none; }
-        .kkm-neighbor-label { font-family: inherit; font-size: 15px; fill: #6b8288; text-anchor: middle;
+        .kkm-neighbor { fill: #123c42; stroke: #2c5860; stroke-width: 0.6; pointer-events: none; }
+        .kkm-neighbor-label { font-family: inherit; font-size: 15px; fill: #5c7f84; text-anchor: middle;
           pointer-events: none; letter-spacing: 0.5px; }
         .kkm-isl { font-family: Lora, serif; font-style: italic; fill: #c4e0e3; text-anchor: middle;
           letter-spacing: 0.5px; paint-order: stroke; stroke: rgba(9,34,40,0.7); stroke-width: 2.5px; }
