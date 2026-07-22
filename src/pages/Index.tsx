@@ -44,7 +44,6 @@ type MenuCardProps = {
   icon: LucideIcon | ((p: { size?: number; className?: string }) => JSX.Element);
   grad: string;
   border: string;
-  inner: string;
   tile: string;
   mark: string;
   title: string;
@@ -52,13 +51,12 @@ type MenuCardProps = {
   badge?: string;
 };
 
-const MenuCard = ({ onClick, icon: Icon, grad, border, inner, tile, mark, title, sub, badge }: MenuCardProps) => (
+const MenuCard = ({ onClick, icon: Icon, grad, border, tile, mark, title, sub, badge }: MenuCardProps) => (
   <button
     type="button"
     onClick={onClick}
     className={`${CARD_BASE} text-left bg-gradient-to-br from-transparent ${grad} ${border}`}
   >
-    <span aria-hidden className={`pointer-events-none absolute inset-[3px] rounded-[13px] border ${inner}`} />
     <Icon size={110} className={`absolute -right-3.5 top-1/2 -translate-y-1/2 ${mark} -rotate-12 pointer-events-none`} />
     <div className="relative h-full flex items-center gap-3.5">
       <span className={`w-12 h-12 rounded-2xl ${tile} flex items-center justify-center shrink-0 shadow-lg shadow-black/30`}>
@@ -113,13 +111,13 @@ const Index = () => {
         .kk-glow { position: fixed; border-radius: 50%; pointer-events: none; will-change: opacity, transform; }
         .kk-glow-a { width:130vmax; height:130vmax; right:-55vmax; bottom:-55vmax;
           background:radial-gradient(circle, #2f95aa 0%, rgba(47,149,170,0.5) 38%, transparent 66%);
-          animation: kkBreatheA 13s ease-in-out infinite, kkWanderA 34s ease-in-out infinite; }
+          animation: kkBreatheA 6s ease-in-out infinite, kkWanderA 18s ease-in-out infinite; }
         .kk-glow-b { width:112vmax; height:112vmax; left:50%; top:50%; margin-left:-56vmax; margin-top:-56vmax;
           background:radial-gradient(circle, #26877a 0%, rgba(38,135,122,0.45) 40%, transparent 68%);
-          animation: kkBreatheB 16s ease-in-out infinite, kkWanderB 41s ease-in-out infinite; }
+          animation: kkBreatheB 7s ease-in-out infinite, kkWanderB 22s ease-in-out infinite; }
         .kk-glow-c { width:120vmax; height:120vmax; left:-50vmax; top:-50vmax;
           background:radial-gradient(circle, #2b7e96 0%, rgba(43,126,150,0.48) 38%, transparent 66%);
-          animation: kkBreatheC 14.5s ease-in-out infinite, kkWanderC 47s ease-in-out infinite; }
+          animation: kkBreatheC 6.5s ease-in-out infinite, kkWanderC 25s ease-in-out infinite; }
         .kk-undertow { position: fixed; left:-25%; top:-25%; right:-25%; bottom:-25%; pointer-events:none;
           background:radial-gradient(circle at 50% 50%, transparent 28%, rgba(3,16,20,0.7) 82%);
           animation: kkUndertow 19s ease-in-out infinite; }
@@ -169,7 +167,6 @@ const Index = () => {
           icon={BookOpen}
           grad="to-primary/25"
           border="border-primary/40"
-          inner="border-primary/50"
           tile="bg-[hsl(172_45%_32%)]"
           mark="text-primary/10"
           title="인도네시아어 사전"
@@ -180,7 +177,6 @@ const Index = () => {
           icon={Newspaper}
           grad="to-indigo-300/35"
           border="border-indigo-300/70"
-          inner="border-indigo-500/40"
           tile="bg-indigo-500"
           mark="text-indigo-500/10"
           title="인도네시아 뉴스"
@@ -191,7 +187,6 @@ const Index = () => {
           icon={ScrollText}
           grad="to-amber-300/35"
           border="border-amber-300/70"
-          inner="border-amber-500/40"
           tile="bg-amber-500"
           mark="text-amber-500/10"
           title="인도네시아 이야기"
@@ -202,7 +197,6 @@ const Index = () => {
           icon={ChurchCross}
           grad="to-rose-300/35"
           border="border-rose-300/70"
-          inner="border-rose-500/40"
           tile="bg-rose-500"
           mark="text-rose-500/10"
           title="인도네시아어 묵상"
@@ -214,7 +208,6 @@ const Index = () => {
           icon={Heart}
           grad="to-emerald-300/35"
           border="border-emerald-300/70"
-          inner="border-emerald-500/40"
           tile="bg-emerald-400"
           mark="text-emerald-500/10"
           title="인도네시아어 기도"
@@ -225,7 +218,6 @@ const Index = () => {
           icon={Library}
           grad="to-sky-300/35"
           border="border-sky-300/70"
-          inner="border-sky-500/40"
           tile="bg-sky-400"
           mark="text-sky-500/10"
           title="인도네시아어 단어장"
@@ -235,7 +227,6 @@ const Index = () => {
         {/* 내 단어장 - 같은 높이, 오른쪽에 Quiz/Card */}
         {hasMyWordbook && (
           <div className={`${CARD_BASE} bg-gradient-to-br from-transparent to-violet-300/35 border-violet-300/70`}>
-            <span aria-hidden className="pointer-events-none absolute inset-[3px] rounded-[13px] border border-violet-500/40" />
             <Star size={110} className="absolute -right-3.5 top-1/2 -translate-y-1/2 text-violet-500/10 -rotate-12 pointer-events-none" />
             <div className="relative h-full flex items-center gap-3.5">
               <button
@@ -278,7 +269,6 @@ const Index = () => {
           icon={MapIcon}
           grad="to-orange-300/35"
           border="border-orange-300/70"
-          inner="border-orange-500/40"
           tile="bg-orange-500"
           mark="text-orange-500/10"
           title="인도네시아 지도"
