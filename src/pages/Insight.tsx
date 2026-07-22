@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Globe,
   Landmark,
+  Users,
   Cross,
   Hourglass,
   Map as MapIcon,
@@ -78,6 +79,14 @@ const Insight = () => {
           tile="bg-violet-500"
           title="인도네시아 종교"
           sub="6개 공인 종교와 분포"
+        />
+        <SubCard
+          onClick={() => navigate("/insight/ethnic")}
+          icon={Users}
+          border="border-teal-300/70"
+          tile="bg-teal-500"
+          title="인도네시아 종족"
+          sub="300여 종족과 분포"
         />
         <SubCard
           onClick={() => navigate("/insight/christian")}
