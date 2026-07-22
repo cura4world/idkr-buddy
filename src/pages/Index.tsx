@@ -163,14 +163,14 @@ const Index = () => {
 
       <div className="relative space-y-2">
         <MenuCard
-          onClick={() => navigate("/dictionary")}
-          icon={BookOpen}
-          grad="to-primary/25"
-          border="border-primary/40"
-          tile="bg-[hsl(172_45%_32%)]"
-          mark="text-primary/10"
-          title="인도네시아어 사전"
-          sub="Kamus"
+          onClick={() => navigate("/insight")}
+          icon={Compass}
+          grad="to-orange-300/35"
+          border="border-orange-300/70"
+          tile="bg-orange-500"
+          mark="text-orange-500/10"
+          title="인도네시아 이해"
+          sub="Wawasan"
         />
         <MenuCard
           onClick={() => navigate("/news")}
@@ -202,7 +202,6 @@ const Index = () => {
           title="인도네시아어 묵상"
           sub="Saat Teduh"
         />
-
         <MenuCard
           onClick={() => navigate("/prayer")}
           icon={Heart}
@@ -212,6 +211,16 @@ const Index = () => {
           mark="text-emerald-500/10"
           title="인도네시아어 기도"
           sub="Doa"
+        />
+        <MenuCard
+          onClick={() => navigate("/dictionary")}
+          icon={BookOpen}
+          grad="to-primary/25"
+          border="border-primary/40"
+          tile="bg-[hsl(172_45%_32%)]"
+          mark="text-primary/10"
+          title="인도네시아어 사전"
+          sub="Kamus"
         />
         <MenuCard
           onClick={() => navigate("/wordbooks")}
@@ -263,18 +272,7 @@ const Index = () => {
             </div>
           </div>
         )}
-
-        <MenuCard
-          onClick={() => navigate("/insight")}
-          icon={Compass}
-          grad="to-orange-300/35"
-          border="border-orange-300/70"
-          tile="bg-orange-500"
-          mark="text-orange-500/10"
-          title="인도네시아 이해"
-          sub="Wawasan"
-        />
-      </div>
+            </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <AddCategoryDialog open={addCatOpen} onOpenChange={setAddCatOpen} onAdded={refresh} />
