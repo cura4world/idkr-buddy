@@ -13,6 +13,7 @@ import Insight from "./pages/Insight";
 import InsightOverview from "./pages/InsightOverview";
 import InsightReligion from "./pages/InsightReligion";
 import InsightChristian from "./pages/InsightChristian";
+import InsightHistory from "./pages/InsightHistory";
 import Wordbooks from "./pages/Wordbooks";
 import CategoryDetail from "./pages/CategoryDetail";
 import StudyMode from "./pages/StudyMode";
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/insight/overview" element={<InsightOverview />} />
           <Route path="/insight/religion" element={<InsightReligion />} />
           <Route path="/insight/christian" element={<InsightChristian />} />
+          <Route path="/insight/history" element={<InsightHistory />} />
           <Route path="/wordbooks" element={<Wordbooks />} />
           <Route path="/category/:id" element={<CategoryDetail />} />
           <Route path="/study/:id" element={<StudyMode />} />
