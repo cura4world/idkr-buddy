@@ -1,8 +1,9 @@
 // src/pages/InsightReligion.tsx
 // 인도네시아 종교 — 고정 콘텐츠 (6개 공인 종교의 분포와 특징)
 
+import { useState, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Landmark, Cross, ChevronRight } from "lucide-react";
+import { ArrowLeft, Landmark, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Religion {
   name: string;
@@ -11,6 +12,27 @@ interface Religion {
   color: string;
   desc: string[];
 }
+
+// 접이식 섹션
+const Fold = ({ title, defaultOpen, children }: { title: string; defaultOpen?: boolean; children: ReactNode }) => {
+  const [open, setOpen] = useState(!!defaultOpen);
+  return (
+    <section className="bg-card rounded-2xl border border-violet-300/60 overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-4 py-3 flex items-center gap-2 text-left bg-violet-400/10"
+      >
+        <span className="flex-1 text-sm font-semibold text-violet-800">{title}</span>
+        {open ? (
+          <ChevronUp size={16} className="text-violet-600 shrink-0" />
+        ) : (
+          <ChevronDown size={16} className="text-violet-600 shrink-0" />
+        )}
+      </button>
+      {open && <div className="px-4 py-3.5 border-t border-violet-300/40">{children}</div>}
+    </section>
+  );
+};
 
 const RELIGIONS: Religion[] = [
   {
@@ -95,23 +117,18 @@ const InsightReligion = () => {
         </div>
       </header>
 
-      {/* 판차실라와 종교 */}
-      <section className="bg-card rounded-2xl border border-violet-300/60 px-4 py-3.5 mb-3">
-        <h2 className="text-sm font-semibold text-violet-800 mb-2">종교 국가도, 세속 국가도 아닌 나라</h2>
+      <div className="space-y-2">
+      <Fold title="종교 국가도, 세속 국가도 아닌 나라">
         <p className="text-sm font-gothic text-gray-700 leading-relaxed">
           인도네시아는 이슬람 국가가 아닙니다. 건국 이념 판차실라의 첫 번째 원칙이
           &ldquo;유일신에 대한 믿음&rdquo;이어서, 특정 종교를 국교로 삼지 않되 모든 국민이
           종교를 가질 것을 전제합니다. 주민등록증(KTP)에는 종교가 표기되며,
           정부가 공인한 종교는 이슬람·개신교·가톨릭·힌두교·불교·유교 6개입니다.
         </p>
-      </section>
+      </Fold>
 
-      {/* 종교별 분포 */}
-      <section className="bg-card rounded-2xl border border-violet-300/60 overflow-hidden mb-3">
-        <h2 className="px-4 py-3 text-sm font-semibold text-violet-800 bg-violet-400/10 border-b border-violet-300/40">
-          6개 공인 종교
-        </h2>
-        <div className="divide-y divide-gray-100">
+      <Fold title="6개 공인 종교" defaultOpen>
+        <div className="-mx-4 -my-3.5 divide-y divide-gray-100">
           {RELIGIONS.map((r) => (
             <div key={r.name} className="px-4 py-3.5">
               <div className="flex items-center gap-2 mb-1.5">
@@ -129,43 +146,26 @@ const InsightReligion = () => {
             </div>
           ))}
         </div>
-      </section>
+      </Fold>
 
-      {/* 지역별 분포 */}
-      <section className="bg-card rounded-2xl border border-violet-300/60 px-4 py-3.5 mb-3">
-        <h2 className="text-sm font-semibold text-violet-800 mb-2">서쪽에서 동쪽으로 — 종교의 지도</h2>
+      <Fold title="서쪽에서 동쪽으로 — 종교의 지도">
         <p className="text-sm font-gothic text-gray-700 leading-relaxed">
           이슬람은 무역로를 따라 서쪽 해안에서 동쪽으로 퍼졌습니다. 그래서 서부(수마트라·자바)는
           이슬람이 압도적이고, 동쪽으로 갈수록 기독교 비율이 높아집니다. 발리(힌두)를 지나
           동누사틍가라·말루쿠·파푸아에 이르면 기독교가 다수가 됩니다. 아체는 유일하게
           샤리아(이슬람법)가 시행되는 특별 자치주입니다.
         </p>
-      </section>
+      </Fold>
 
-      {/* 종교 간 관계 */}
-      <section className="bg-card rounded-2xl border border-violet-300/60 px-4 py-3.5 mb-3">
-        <h2 className="text-sm font-semibold text-violet-800 mb-2">공존과 긴장</h2>
+      <Fold title="공존과 긴장">
         <p className="text-sm font-gothic text-gray-700 leading-relaxed">
           6개 종교의 명절이 모두 국경일입니다 — 이슬람의 르바란, 기독교의 성탄절과 부활절,
           힌두교의 녀피, 불교의 와이삭, 유교의 설날까지. 이웃 종교의 명절을 서로 축하하는
           문화가 뿌리내려 있습니다. 다만 신성모독법, 일부 지역의 교회 설립 제한, 소수 종파에 대한
           차별 등 긴장 요소도 함께 존재합니다.
         </p>
-      </section>
-
-      {/* 기독교 페이지로 */}
-      <button
-        onClick={() => navigate("/insight/christian")}
-        className="w-full flex items-center gap-3 bg-card rounded-2xl border border-rose-300/60 px-4 py-3.5 active:scale-[0.98] transition-transform"
-      >
-        <span className="w-9 h-9 rounded-xl bg-rose-500 flex items-center justify-center shadow-md shrink-0">
-          <Cross size={17} className="text-white" />
-        </span>
-        <span className="flex-1 text-left text-sm font-semibold text-gray-900">
-          인도네시아 기독교 자세히 보기
-        </span>
-        <ChevronRight size={18} className="text-gray-400" />
-      </button>
+      </Fold>
+      </div>
 
       <p className="mt-4 text-[11px] font-gothic text-white/35 px-1">
         ※ 비율은 2023~2024년 인도네시아 종교부 통계 기준입니다.
