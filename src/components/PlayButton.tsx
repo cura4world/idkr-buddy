@@ -19,12 +19,10 @@ interface PlayButtonProps {
 const PlayButton = ({ cacheKey, text, label = "듣기", className = "" }: PlayButtonProps) => {
   const [state, setState] = useState<TtsState>("idle");
   const [activeKey, setActiveKey] = useState<string | null>(null);
-  const [usedFallback, setUsedFallback] = useState(false);
 
   useEffect(() => {
     const unsub = ttsPlayer.subscribe((s) => {
       setActiveKey(s.key);
-      setUsedFallback(s.usedFallback);
       // 이 버튼이 담당하는 글이 활성 대상일 때만 상태를 반영
       setState(s.key === cacheKey ? s.state : "idle");
     });
@@ -55,9 +53,10 @@ const PlayButton = ({ cacheKey, text, label = "듣기", className = "" }: PlayBu
       <div className={"inline-flex items-center gap-1.5 " + className}>
         <button
           onClick={onMain}
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-primary text-white"
+          className="inline-flex items-center justify-center rounded-full w-8 h-8 bg-primary text-white"
+          title={playing ? "일시정지" : "이어듣기"}
         >
-          {playing ? <><Pause size={14} /> 일시정지</> : <><Play size={14} /> 이어듣기</>}
+          {playing ? <Pause size={14} /> : <Play size={14} />}
         </button>
         <button
           onClick={onStop}
@@ -66,7 +65,6 @@ const PlayButton = ({ cacheKey, text, label = "듣기", className = "" }: PlayBu
         >
           <Square size={13} />
         </button>
-        {usedFallback && <span className="text-[10px] text-gray-400">기본 음성</span>}
       </div>
     );
   }
