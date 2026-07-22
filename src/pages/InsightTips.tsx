@@ -94,7 +94,7 @@ const InsightTips = () => {
           <span className="w-9 h-9 rounded-xl bg-emerald-400 flex items-center justify-center shadow-lg shadow-black/30">
             <Lightbulb size={18} className="text-white" />
           </span>
-          <h1 className="text-xl font-semibold text-white leading-none">인도네시아 정보</h1>
+          <h1 className="text-lg font-semibold text-white leading-none">인도네시아 정보</h1>
         </div>
       </header>
 
@@ -102,7 +102,7 @@ const InsightTips = () => {
       <button
         onClick={handleGenerate}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-semibold bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 disabled:opacity-60 active:scale-[0.99] transition-transform mb-5"
+        className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-gothic font-semibold bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 disabled:opacity-60 active:scale-[0.99] transition-transform mb-5"
       >
         {loading ? (
           <>
@@ -110,7 +110,7 @@ const InsightTips = () => {
           </>
         ) : (
           <>
-            <Sparkles size={17} /> 정보 하나 가져오기
+            <Sparkles size={17} /> 정보 가져오기
           </>
         )}
       </button>
@@ -144,7 +144,7 @@ const InsightTips = () => {
               className="w-full px-4 py-3.5 flex items-center gap-2.5 text-left"
             >
               <span className="text-2xl leading-none shrink-0">{t.emoji}</span>
-              <h2 className="flex-1 text-sm font-semibold text-gray-900 leading-snug">{t.title}</h2>
+              <h2 className="flex-1 text-sm font-gothic font-semibold text-gray-900 leading-snug">{t.title}</h2>
               <ChevronDown
                 size={17}
                 className={"text-emerald-500 shrink-0 transition-transform " + (isOpen ? "rotate-180" : "")}
