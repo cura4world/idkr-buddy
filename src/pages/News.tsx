@@ -365,12 +365,19 @@ const News = () => {
               {!flipped ? (
                 <>
                   {/* 앞면: 인니어 기사 */}
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className={`text-xs font-medium rounded-full px-2 py-0.5 ${catStyle(article.category)}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-xs font-medium rounded-full px-2 py-0.5 shrink-0 ${catStyle(article.category)}`}>
                       {article.category}
                     </span>
-                    <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">
+                    <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5 shrink-0">
                       {fmtDate(selected.date)}
+                    </span>
+                    <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <PlayButton
+                        cacheKey={"news-" + selected.date + "-" + articleIdx}
+                        text={[article.title, article.lead, article.body].filter(Boolean).join("\n\n")}
+                        label="듣기"
+                      />
                     </span>
                   </div>
                   <div className="mb-2 min-w-0">
@@ -383,13 +390,6 @@ const News = () => {
                       {renderTokens(article.lead, "lead-")}
                     </p>
                   )}
-                  <div className="mb-3" onClick={(e) => e.stopPropagation()}>
-                    <PlayButton
-                      cacheKey={"news-" + selected.date + "-" + articleIdx}
-                      text={[article.title, article.lead, article.body].filter(Boolean).join("\n\n")}
-                      label="전체 듣기"
-                    />
-                  </div>
                   {renderIndonesian(article.body)}
                 </>
               ) : (
