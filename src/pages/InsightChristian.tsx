@@ -7,8 +7,8 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Cross, ChevronDown, ChevronUp } from "lucide-react";
 
 // ---------- 접이식 섹션 ----------
-const Fold = ({ title, badge, children }: { title: string; badge?: string; children: ReactNode }) => {
-  const [open, setOpen] = useState(false);
+const Fold = ({ title, badge, defaultOpen, children }: { title: string; badge?: string; defaultOpen?: boolean; children: ReactNode }) => {
+  const [open, setOpen] = useState(!!defaultOpen);
   return (
     <div className="bg-card rounded-2xl border border-rose-300/60 overflow-hidden">
       <button
@@ -195,8 +195,8 @@ const InsightChristian = () => {
         </div>
       </header>
 
-      {/* 핵심 통계 */}
-      <section className="bg-card rounded-2xl border border-rose-300/60 px-4 py-4 mb-3">
+      <div className="space-y-2">
+      <Fold title="핵심 통계" defaultOpen>
         <div className="grid grid-cols-3 gap-2 text-center mb-3">
           <div className="bg-rose-500/5 rounded-xl py-2.5">
             <p className="text-lg font-bold text-rose-600">10.5%</p>
@@ -216,11 +216,9 @@ const InsightChristian = () => {
           동남아시아 최대 개신교 인구 보유국이자 아시아에서 필리핀·중국 다음 세 번째,
           그리고 나이지리아에 이어 무슬림 세계에서 두 번째로 큰 기독교 인구를 가진 나라입니다.
         </p>
-      </section>
+      </Fold>
 
-      {/* 왜 이 지역들인가 */}
-      <section className="bg-card rounded-2xl border border-rose-300/60 px-4 py-3.5 mb-3">
-        <h2 className="text-sm font-semibold text-rose-800 mb-2.5">왜 동부·내륙이 기독교가 되었나 — 3가지 패턴</h2>
+      <Fold title="왜 동부·내륙이 기독교가 되었나 — 3가지 패턴">
         <ol className="space-y-2.5">
           <li className="text-[13px] font-gothic text-gray-700 leading-relaxed">
             <span className="font-semibold text-gray-900">1. 이슬람이 늦게 닿은 곳.</span>{" "}
@@ -238,11 +236,9 @@ const InsightChristian = () => {
             기독교가 종족 문화의 뿌리로 자리 잡게 했습니다.
           </li>
         </ol>
-      </section>
+      </Fold>
 
-      {/* 교파별 지역 분담 */}
-      <section className="bg-card rounded-2xl border border-rose-300/60 px-4 py-3.5 mb-3">
-        <h2 className="text-sm font-semibold text-rose-800 mb-2">교파별 지역 분담</h2>
+      <Fold title="교파별 지역 분담">
         <p className="text-[13px] font-gothic text-gray-600 leading-relaxed mb-2.5">
           네덜란드는 개신교-가톨릭 갈등을 피하려 지역별로 교파를 나눴고, 그 구조가 지금도 남아 있습니다.
         </p>
@@ -261,7 +257,8 @@ const InsightChristian = () => {
             </div>
           ))}
         </div>
-      </section>
+      </Fold>
+      </div>
 
       {/* 지역·종족별 상세 (접이식) */}
       <h2 className="text-sm font-semibold text-white/80 px-1 mb-2 mt-5">지역·종족별 상세</h2>
@@ -278,8 +275,8 @@ const InsightChristian = () => {
       </div>
 
       {/* 에큐메니컬 구조 */}
-      <section className="bg-card rounded-2xl border border-rose-300/60 px-4 py-3.5 mb-5">
-        <h2 className="text-sm font-semibold text-rose-800 mb-2.5">교회 연합 구조</h2>
+      <div className="mb-5">
+      <Fold title="교회 연합 구조">
         <div className="space-y-2 text-[13px] font-gothic">
           {[
             ["PGI", "인도네시아 교회협의회 — 개혁·루터교 중심 104개 교단 (2024)"],
@@ -293,7 +290,8 @@ const InsightChristian = () => {
             </div>
           ))}
         </div>
-      </section>
+      </Fold>
+      </div>
 
       {/* 교단 현황 (접이식) */}
       <h2 className="text-sm font-semibold text-white/80 px-1 mb-2">주요 교단 현황</h2>
