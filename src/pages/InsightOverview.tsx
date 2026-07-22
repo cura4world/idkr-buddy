@@ -180,7 +180,7 @@ const InsightOverview = () => {
           <span className="w-9 h-9 rounded-xl bg-sky-400 flex items-center justify-center shadow-lg shadow-black/30">
             <Globe size={18} className="text-white" />
           </span>
-          <h1 className="text-xl font-semibold text-white leading-none">인도네시아 개관</h1>
+          <h1 className="text-lg font-semibold text-white leading-none">인도네시아 개관</h1>
         </div>
       </header>
 
