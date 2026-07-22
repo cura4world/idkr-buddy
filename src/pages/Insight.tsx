@@ -14,7 +14,6 @@ import {
   ChevronRight,
   LucideIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 
 interface SubCardProps {
   onClick: () => void;
@@ -46,7 +45,6 @@ const SubCard = ({ onClick, icon: Icon, border, tile, title, sub }: SubCardProps
 
 const Insight = () => {
   const navigate = useNavigate();
-  const soon = () => toast("준비 중이에요");
 
   return (
     <div className="min-h-screen bg-background px-4 pt-4 pb-6 max-w-lg mx-auto relative">
@@ -106,7 +104,7 @@ const Insight = () => {
           sub="도시와 관광지 탐험"
         />
         <SubCard
-          onClick={soon}
+          onClick={() => navigate("/insight/tips")}
           icon={Lightbulb}
           border="border-emerald-300/70"
           tile="bg-emerald-400"
