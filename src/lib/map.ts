@@ -128,10 +128,10 @@ export async function fetchPlaceInfo(
 
   const typeLabel = type === "spot" ? "관광지" : "도시";
   const prompt =
-    "인도네시아어를 배우는 한국인을 위한 학습 지도 앱입니다. 아래 지점의 설명을 JSON으로 작성해주세요.\n\n" +
-    "[지점] " + ko + " (" + id + ") — " + typeLabel + "\n\n" +
+    "한국인을 위한 인도네시아 학습 지도 앱입니다. 아래 지역에 대한 충실한 한국어 설명을 JSON으로 작성해주세요.\n\n" +
+    "[지역] " + ko + " (" + id + ") — " + typeLabel + "\n\n" +
     "[작성 지침]\n" +
-    "desc: 한국어 설명 3~5문장. 지리적 위치, 특징, 왜 중요한지, 그리고 인도네시아어 학습자가 알아두면 좋은 문화·언어 포인트를 담습니다. 사실에 근거하고 과장하지 않습니다.\n\n" +
+    "desc: 한국어 설명 5~7문장. 다음을 풍부하게 담습니다 — 지리적 위치와 속한 섬/주, 역사적 배경, 대표적인 명소·자연·볼거리, 그 지역만의 문화·민족·음식·특산물, 방문자가 알면 좋은 흥미로운 사실. 사실에 근거하고 구체적으로 씁니다. 인도네시아어 학습 조언은 넣지 않습니다.\n\n" +
     "[출력 — 유효한 JSON 하나만]\n" +
     '{"desc":"..."}';
 
@@ -151,57 +151,92 @@ export async function fetchPlaceInfo(
   return info;
 }
 
-// ---------- 지점 이미지 생성 (사전 이미지와 같은 모델 폴백) ----------
-const IMAGE_MODEL_CANDIDATES = ["gemini-3.1-flash-image", "gemini-2.5-flash-image"];
+// ---------- 지점 실제 사진 (위키피디아, 무과금) ----------
+// 위키피디아 페이지 제목 매핑 (영문 위키). 없으면 id를 그대로 시도합니다.
+const WIKI_TITLE: Record<string, string> = {
+  "Yogyakarta": "Yogyakarta",
+  "Danau Toba": "Lake Toba",
+  "Raja Ampat": "Raja Ampat Islands",
+  "Gunung Bromo": "Mount Bromo",
+  "Kawah Ijen": "Ijen",
+  "Pulau Komodo": "Komodo (island)",
+  "Gunung Rinjani": "Mount Rinjani",
+  "Tana Toraja": "Tana Toraja Regency",
+  "Pulau Belitung": "Belitung",
+  "Nusa Penida": "Nusa Penida",
+  "Gili Trawangan": "Gili Islands",
+  "Dataran Tinggi Dieng": "Dieng Plateau",
+  "Tangkuban Perahu": "Tangkuban Perahu",
+  "Ujung Kulon": "Ujung Kulon National Park",
+  "Kepulauan Mentawai": "Mentawai Islands",
+  "Pulau Nias": "Nias",
+  "Pulau Weh": "Weh Island",
+  "Bukit Lawang": "Bukit Lawang",
+  "Gunung Kerinci": "Mount Kerinci",
+  "Krakatau": "Krakatoa",
+  "Kepulauan Derawan": "Derawan Islands",
+  "Tanjung Puting": "Tanjung Puting",
+  "Kepulauan Togean": "Togian Islands",
+  "Kepulauan Banda": "Banda Islands",
+  "Lembah Baliem": "Baliem Valley",
+  "Pulau Sumba": "Sumba",
+  "Danau Kelimutu": "Kelimutu",
+  "Kuta": "Kuta",
+  "Ubud": "Ubud",
+  "Bunaken": "Bunaken",
+  "Wakatobi": "Wakatobi Regency",
+  "Nusantara": "Nusantara (planned city)",
+  "Surakarta": "Surakarta",
+};
 
-export async function generatePlaceImage(id: string, hint: string): Promise<string> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
+// 위키피디아 페이지의 대표 이미지 + 본문 내 이미지들에서 최대 3장을 뽑습니다.
+export async function fetchPlacePhotos(id: string): Promise<string[]> {
+  const title = WIKI_TITLE[id] || id;
+  const urls: string[] = [];
 
-  const imgPrompt =
-    "A beautiful travel illustration of " + id + ", Indonesia (" + hint + "). " +
-    "Show its most iconic landmark, scenery, or atmosphere. " +
-    "Warm colors, clean flat travel-poster style, no text or letters in the image.";
-
-  let lastStatus = 0;
-
-  for (const model of IMAGE_MODEL_CANDIDATES) {
-    const endpoint =
-      "https://generativelanguage.googleapis.com/v1beta/models/" +
-      model +
-      ":generateContent?key=" +
-      encodeURIComponent(apiKey);
-
-    let res: Response;
-    try {
-      res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: imgPrompt }] }] }),
-      });
-    } catch (e) {
-      lastStatus = -1;
-      continue;
+  try {
+    // 1) 페이지 대표 이미지 (원본 + 썸네일)
+    const sumRes = await fetch(
+      "https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title)
+    );
+    if (sumRes.ok) {
+      const s = await sumRes.json();
+      if (s?.originalimage?.source) urls.push(s.originalimage.source);
+      else if (s?.thumbnail?.source) urls.push(s.thumbnail.source);
     }
+  } catch (e) {}
 
-    if (!res.ok) {
-      lastStatus = res.status;
-      continue;
-    }
+  try {
+    // 2) 본문 내 이미지들 (600px 폭 썸네일)
+    const imgRes = await fetch(
+      "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=images&imlimit=20&titles=" +
+        encodeURIComponent(title)
+    );
+    if (imgRes.ok) {
+      const data = await imgRes.json();
+      const pages = data?.query?.pages || {};
+      const first = Object.values(pages)[0] as any;
+      const files: string[] = (first?.images || [])
+        .map((x: any) => x.title as string)
+        .filter((t: string) => /\.(jpg|jpeg|png)$/i.test(t) && !/logo|icon|map|flag|seal|coat|svg/i.test(t))
+        .slice(0, 6);
 
-    const data = await res.json();
-    const parts = data?.candidates?.[0]?.content?.parts ?? [];
-    for (const p of parts) {
-      const inline = p?.inlineData || p?.inline_data;
-      if (inline?.data) {
-        const mime = inline.mimeType || inline.mime_type || "image/png";
-        return "data:" + mime + ";base64," + inline.data;
+      for (const f of files) {
+        if (urls.length >= 3) break;
+        try {
+          const ii = await fetch(
+            "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=imageinfo&iiprop=url&iiurlwidth=600&titles=" +
+              encodeURIComponent(f)
+          );
+          if (!ii.ok) continue;
+          const d = await ii.json();
+          const p = Object.values(d?.query?.pages || {})[0] as any;
+          const u = p?.imageinfo?.[0]?.thumburl || p?.imageinfo?.[0]?.url;
+          if (u && !urls.includes(u)) urls.push(u);
+        } catch (e) {}
       }
     }
-    lastStatus = 200;
-  }
+  } catch (e) {}
 
-  if (lastStatus === 429) throw new Error("RATE_LIMIT");
-  if (lastStatus === 200) throw new Error("NO_IMAGE");
-  throw new Error("IMAGE_FAILED_" + lastStatus);
+  return urls.slice(0, 3);
 }
