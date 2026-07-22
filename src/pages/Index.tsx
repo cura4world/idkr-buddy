@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, restoreSharedCategories } from "@/lib/store";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import SettingsDialog from "@/components/SettingsDialog";
-import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, ChevronRight, Heart, Newspaper, Map as MapIcon } from "lucide-react";
+import { RotateCcw, Settings, BookOpen, ScrollText, Library, Star, ChevronRight, Heart, Newspaper, Compass } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -265,14 +265,14 @@ const Index = () => {
         )}
 
         <MenuCard
-          onClick={() => navigate("/map")}
-          icon={MapIcon}
+          onClick={() => navigate("/insight")}
+          icon={Compass}
           grad="to-orange-300/35"
           border="border-orange-300/70"
           tile="bg-orange-500"
           mark="text-orange-500/10"
-          title="인도네시아 지도"
-          sub="Peta"
+          title="인도네시아 이해"
+          sub="Wawasan"
         />
       </div>
 
