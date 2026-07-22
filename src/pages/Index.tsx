@@ -165,10 +165,10 @@ const Index = () => {
         <MenuCard
           onClick={() => navigate("/insight")}
           icon={Compass}
-          grad="to-orange-300/35"
-          border="border-orange-300/70"
-          tile="bg-orange-500"
-          mark="text-orange-500/10"
+          grad="to-primary/25"
+          border="border-primary/40"
+          tile="bg-[hsl(172_45%_32%)]"
+          mark="text-primary/10"
           title="인도네시아 이해"
           sub="Wawasan"
         />
@@ -215,10 +215,10 @@ const Index = () => {
         <MenuCard
           onClick={() => navigate("/dictionary")}
           icon={BookOpen}
-          grad="to-primary/25"
-          border="border-primary/40"
-          tile="bg-[hsl(172_45%_32%)]"
-          mark="text-primary/10"
+          grad="to-orange-300/35"
+          border="border-orange-300/70"
+          tile="bg-orange-500"
+          mark="text-orange-500/10"
           title="인도네시아어 사전"
           sub="Kamus"
         />
