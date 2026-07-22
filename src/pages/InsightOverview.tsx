@@ -1,8 +1,9 @@
 // src/pages/InsightOverview.tsx
 // 인도네시아 개관 — 고정 콘텐츠 (2025~2026 기준 최신 수치)
 
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Globe } from "lucide-react";
+import { ArrowLeft, Globe, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Row {
   label: string;
@@ -51,21 +52,34 @@ const KOREA: Row[] = [
   { label: "문화", value: "한류(K-pop·드라마·음식) 인기가 매우 높은 나라 중 하나" },
 ];
 
-const Section = ({ title, rows }: { title: string; rows: Row[] }) => (
-  <section className="bg-card rounded-2xl border border-sky-300/60 overflow-hidden">
-    <h2 className="px-4 py-3 text-sm font-semibold text-sky-800 bg-sky-400/10 border-b border-sky-300/40">
-      {title}
-    </h2>
-    <dl className="divide-y divide-gray-100">
-      {rows.map((r) => (
-        <div key={r.label} className="px-4 py-2.5 flex gap-3">
-          <dt className="w-24 shrink-0 text-xs font-gothic font-semibold text-gray-400 pt-0.5">{r.label}</dt>
-          <dd className="flex-1 text-sm font-gothic text-gray-800 leading-relaxed">{r.value}</dd>
-        </div>
-      ))}
-    </dl>
-  </section>
-);
+const Section = ({ title, rows, defaultOpen }: { title: string; rows: Row[]; defaultOpen?: boolean }) => {
+  const [open, setOpen] = useState(!!defaultOpen);
+  return (
+    <section className="bg-card rounded-2xl border border-sky-300/60 overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-4 py-3 flex items-center gap-2 text-left bg-sky-400/10"
+      >
+        <span className="flex-1 text-sm font-semibold text-sky-800">{title}</span>
+        {open ? (
+          <ChevronUp size={16} className="text-sky-600 shrink-0" />
+        ) : (
+          <ChevronDown size={16} className="text-sky-600 shrink-0" />
+        )}
+      </button>
+      {open && (
+        <dl className="divide-y divide-gray-100 border-t border-sky-300/40">
+          {rows.map((r) => (
+            <div key={r.label} className="px-4 py-2.5 flex gap-3">
+              <dt className="w-24 shrink-0 text-xs font-gothic font-semibold text-gray-400 pt-0.5">{r.label}</dt>
+              <dd className="flex-1 text-sm font-gothic text-gray-800 leading-relaxed">{r.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </section>
+  );
+};
 
 const InsightOverview = () => {
   const navigate = useNavigate();
@@ -94,7 +108,7 @@ const InsightOverview = () => {
       </p>
 
       <div className="space-y-3">
-        <Section title="기본 정보" rows={BASIC} />
+        <Section title="기본 정보" rows={BASIC} defaultOpen />
         <Section title="경제" rows={ECONOMY} />
         <Section title="사회" rows={SOCIETY} />
         <Section title="한국과 인도네시아" rows={KOREA} />
