@@ -37,7 +37,7 @@ const ChurchCross = ({ size = 24, className = "" }: { size?: number; className?:
 
 // 5개 박스 공통 골격 (높이 통일: 5.5rem — 글자크기 설정에 따라 함께 커짐)
 const CARD_BASE =
-  "w-full relative overflow-hidden rounded-2xl bg-card h-[5.5rem] px-4 card-lift border transition-transform duration-150 active:scale-[0.98]";
+  "w-full relative overflow-hidden rounded-2xl bg-card h-[5rem] px-4 card-lift border transition-transform duration-150 active:scale-[0.98]";
 
 type MenuCardProps = {
   onClick: () => void;
@@ -107,7 +107,7 @@ const Index = () => {
     "w-9 h-9 rounded-full flex items-center justify-center text-white/85 hover:bg-white/10 active:bg-white/15 transition-colors";
 
   return (
-    <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto relative">
+    <div className="min-h-screen bg-background px-4 pt-4 pb-5 max-w-lg mx-auto relative">
       {/* 확정 배경: 그라데이션 물결 — 빛무리 3개가 임의 궤적으로 표류하며 명암 호흡 (blur 없음, WebView 안전) */}
       <style>{`
         .kk-glow { position: fixed; border-radius: 50%; pointer-events: none; will-change: opacity, transform; }
@@ -137,7 +137,7 @@ const Index = () => {
       <div aria-hidden className="kk-glow kk-glow-c" />
       <div aria-hidden className="kk-undertow" />
 
-      <header className="relative flex items-start justify-between mb-7 pr-1">
+      <header className="relative flex items-start justify-between mb-4 pr-1">
         <div>
           <h1 className="font-word text-3xl font-semibold tracking-tight text-white leading-none">
             Kata kata<span className="text-accent">.</span>
@@ -163,7 +163,7 @@ const Index = () => {
         </div>
       </header>
 
-      <div className="relative space-y-2.5">
+      <div className="relative space-y-2">
         <MenuCard
           onClick={() => navigate("/dictionary")}
           icon={BookOpen}
