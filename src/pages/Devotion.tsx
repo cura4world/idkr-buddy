@@ -428,8 +428,11 @@ const Devotion = () => {
               {!flipped ? (
                 <>
                   {/* 앞면: 인니어 */}
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">Saat Teduh</span>
+                    <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <PlayButton cacheKey={current.id + "-helper"} text={c.helper} label="묵상 듣기" />
+                    </span>
                   </div>
                   <div className="mb-3 min-w-0">
                     <h2 className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">
@@ -482,9 +485,6 @@ const Devotion = () => {
                   </div>
 
                   {/* 묵상 도우미 */}
-                  <div className="mb-3" onClick={(e) => e.stopPropagation()}>
-                    <PlayButton cacheKey={current.id + "-helper"} text={c.helper} label="묵상 듣기" />
-                  </div>
                   {renderIndoParagraphs(c.helper)}
 
                   {/* 기도 */}
@@ -494,7 +494,7 @@ const Devotion = () => {
                         <span className="not-italic font-semibold text-rose-600 text-sm mr-1">Doa</span>
                         {renderTokens(c.doa, "doa-")}
                       </p>
-                      <div className="mb-2 pl-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="mb-2 flex justify-end" onClick={(e) => e.stopPropagation()}>
                         <PlayButton cacheKey={current.id + "-doa"} text={c.doa} label="기도 듣기" />
                       </div>
                     </>
@@ -503,9 +503,6 @@ const Devotion = () => {
               ) : (
                 <>
                   {/* 뒷면: 한국어 */}
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">QT</span>
-                  </div>
                   <h2 className="text-base font-bold text-gray-900 break-words mb-3">{c.titleKo}</h2>
 
                   {/* 우리말성경 본문 — 토글 (레코드에 저장돼 있어 즉시 표시) */}
