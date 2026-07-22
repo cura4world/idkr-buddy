@@ -346,7 +346,13 @@ const InsightHistory = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 pt-4 pb-10 max-w-lg mx-auto">
+    <div
+      className="min-h-screen px-4 pt-4 pb-10 max-w-lg mx-auto"
+      style={{
+        backgroundImage:
+          "linear-gradient(180deg, hsl(201 76% 14%) 0%, hsl(196 72% 22%) 55%, hsl(195 68% 30%) 100%)",
+      }}
+    >
       <header className="flex items-center gap-2 mb-2">
         <button
           onClick={() => navigate("/insight")}
@@ -392,7 +398,7 @@ const InsightHistory = () => {
                   <span className="absolute -left-[21px] top-2.5 w-2 h-2 rounded-full bg-amber-300/70 group-active:bg-amber-300" />
                   <span className="block bg-white/[0.06] active:bg-white/[0.12] border border-white/10 rounded-xl px-3.5 py-2.5 transition-colors">
                     <span className="block text-[11px] font-gothic font-semibold text-amber-300/80">{ev.y}</span>
-                    <span className="block text-sm font-medium text-white/90 mt-0.5 leading-snug">{ev.t}</span>
+                    <span className="block text-sm font-gothic font-medium text-white/90 mt-0.5 leading-snug">{ev.t}</span>
                   </span>
                 </button>
               ))}
