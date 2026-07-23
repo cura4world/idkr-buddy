@@ -44,6 +44,18 @@ const fmtDate = (t: number) => {
   return d.getFullYear() + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + String(d.getDate()).padStart(2, "0");
 };
 
+// 기도문 본문으로부터 TTS 캐시키를 만든다.
+// 본문이 수정되면 키가 자동으로 바뀌어 이전 음성이 재생되지 않는다.
+// (되돌리면 같은 키가 되어 기존 캐시를 재사용한다)
+const textHash = (t: string): string => {
+  let h = 5381;
+  const str = t || "";
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
+  }
+  return h.toString(36);
+};
+
 // 인도네시아어 기도문 글자 크기 단계 (기본: text-sm)
 const ID_FONT_SIZES = ["text-xs", "text-sm", "text-base", "text-lg", "text-xl"];
 const ID_FONT_KEY = "prayer-id-font-step";
@@ -352,6 +364,7 @@ const Prayer = () => {
       const newIndonesian = await revisePrayer(current.indonesian, edited);
       if (genToken.current !== token) return;
       const upd = { ...current, indonesian: newIndonesian, korean: edited };
+      ttsPlayer.stop(); // 이전 기도문 음성이 재생 중이면 중단
       await savePrayer(upd);
       setCurrent(upd);
       setRecords(await listPrayers());
@@ -558,7 +571,7 @@ const Prayer = () => {
                   </span>
                   {!flipped && (
                     <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <PlayButton cacheKey={"prayer-" + current.id} text={current.indonesian} label="기도 듣기" />
+                      <PlayButton cacheKey={"prayer-" + current.id + "-" + textHash(current.indonesian)} text={current.indonesian} label="기도 듣기" />
                     </span>
                   )}
                 </div>
