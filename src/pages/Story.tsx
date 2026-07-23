@@ -356,7 +356,11 @@ const Story = () => {
                   <span className="text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 truncate">{current.category}</span>
                   <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5 shrink-0">난이도 {current.difficulty}</span>
                   <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <PlayButton cacheKey={"story-" + current.id} text={current.indonesian} label="듣기" />
+                    <PlayButton
+                      cacheKey={"story-v2-" + current.id}
+                      text={[current.title, current.indonesian].filter(Boolean).join("\n\n")}
+                      label="듣기"
+                    />
                   </span>
                 </div>
                 <div className="mb-3 min-w-0">
