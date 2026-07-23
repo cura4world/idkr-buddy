@@ -431,7 +431,11 @@ const Devotion = () => {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">Saat Teduh</span>
                     <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <PlayButton cacheKey={current.id + "-helper"} text={c.helper} label="묵상 듣기" />
+                      <PlayButton
+                        cacheKey={current.id + "-helper-v2"}
+                        text={[c.title, c.helper].filter(Boolean).join("\n\n")}
+                        label="묵상 듣기"
+                      />
                     </span>
                   </div>
                   <div className="mb-3 min-w-0">
