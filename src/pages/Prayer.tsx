@@ -552,9 +552,16 @@ const Prayer = () => {
             <div className="flex-1 min-w-0 bg-card border border-border/60 rounded-xl px-5 py-5 min-h-[72vh] content-bump select-none">
               {/* 제목(상황) 한 줄, 다음 줄 우측: 날짜 + 글자크기(-,+) 또는 연필 */}
               <div className="mb-3">
-                <span className={`inline-block max-w-full truncate font-bold text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5 ${isLords ? "font-gothic text-sm" : "text-xs"}`}>
-                  {isLords && !flipped ? idName : current.situationLabel}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-block min-w-0 truncate font-bold text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5 ${isLords ? "font-gothic text-sm" : "text-xs"}`}>
+                    {isLords && !flipped ? idName : current.situationLabel}
+                  </span>
+                  {!flipped && (
+                    <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <PlayButton cacheKey={"prayer-" + current.id} text={current.indonesian} label="기도 듣기" />
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center justify-end gap-2 mt-1.5">
                   {!isLords && (
                     <span className="text-xs text-gray-400 font-gothic">{fmtDate(current.createdAt)}</span>
@@ -595,9 +602,6 @@ const Prayer = () => {
               {!flipped ? (
                 <>
                   {/* 앞면: 인도네시아어 기도문 (단어 탭 가능) */}
-                  <div className="mb-3" onClick={(e) => e.stopPropagation()}>
-                    <PlayButton cacheKey={"prayer-" + current.id} text={current.indonesian} label="기도 듣기" />
-                  </div>
                   {renderIndoBody(current.indonesian)}
 
                   {/* 앞면 하단 액션 (주기도문 제외) */}
