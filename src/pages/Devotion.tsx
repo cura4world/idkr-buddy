@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Sunrise, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import { ArrowLeft, Sunrise, BookOpen, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import { getBookByKo, fetchQtTbVerses, BibleVerse } from "@/lib/bible";
+import { getBook, getBookByKo, fetchQtTbVerses, BibleVerse } from "@/lib/bible";
 import { fetchTodayQt, QtToday, QtVerse } from "@/lib/qtToday";
 import { generateQtDevotion } from "@/lib/devotion";
 import { saveDevotion, listDevotions, qtIdFor, DevotionRecord } from "@/lib/devotionStore";
@@ -15,6 +15,19 @@ import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
 
 const MY_WORDBOOK_ID = "my-wordbook";
+
+// 성경 읽기 카드의 위치 배지 (BibleRead와 같은 localStorage 키 사용)
+const bibleLastLabel = (): string => {
+  try {
+    const raw = localStorage.getItem("bible-last-pos");
+    if (raw) {
+      const p = JSON.parse(raw);
+      const b = p && typeof p.bookId === "string" ? getBook(p.bookId) : undefined;
+      if (b && typeof p.chapter === "number") return b.ko + " " + p.chapter + "\uC7A5";
+    }
+  } catch (e) {}
+  return "\uCC3D\uC138\uAE30 1\uC7A5";
+};
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
 const speak = (text: string, lang: "id" | "ko" = "id") => {
@@ -703,6 +716,21 @@ const Devotion = () => {
           </button>
           </>
         )}
+
+        {/* 성경 읽기 */}
+        <button
+          onClick={() => navigate("/bible")}
+          className="mt-2.5 w-full text-left rounded-xl border border-sky-300/60 bg-card bg-gradient-to-br from-transparent to-sky-300/35 px-4 py-3.5"
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-xs font-medium text-sky-600 font-gothic inline-flex items-center gap-1">
+              <BookOpen size={13} /> 성경 읽기
+            </p>
+            <span className="text-[11px] font-medium text-sky-600 bg-sky-500/10 rounded-full px-2 py-0.5">
+              {bibleLastLabel()}
+            </span>
+          </div>
+        </button>
 
         {/* 지난 묵상 */}
         {records.filter((r) => !todayRec || r.id !== todayRec.id).length > 0 && (
