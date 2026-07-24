@@ -16,6 +16,7 @@ import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { ttsPlayer } from "@/lib/tts";
 import BiblePicker from "@/components/BiblePicker";
+import PlayButton from "@/components/PlayButton";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 const LAST_POS_KEY = "bible-last-pos";
@@ -273,7 +274,7 @@ const BibleRead = () => {
     </p>
   );
 
-  const posLabel = book ? `${book.idName} ${pos.chapter} · ${book.ko} ${pos.chapter}장` : "";
+  const posLabel = book ? `${book.idName.toUpperCase()} ${pos.chapter} · ${book.ko} ${pos.chapter}장` : "";
 
   // ---------- 화면 ----------
   return (
@@ -298,13 +299,24 @@ const BibleRead = () => {
           <div className="flex items-stretch">
             <div className="flex-1 min-w-0 px-5 py-5">
               {/* 위치 필 (탭 → 책 선택 시트) */}
-              <button
-                onClick={() => { setPickerOpen(true); pushSub(); }}
-                className="inline-flex items-center gap-1 max-w-full font-bold text-sky-600 bg-sky-500/10 rounded-full px-3 py-1 text-sm mb-4"
-              >
-                <span className="truncate">{posLabel}</span>
-                <ChevronDown size={13} className="shrink-0" />
-              </button>
+              <div className="flex items-center gap-2 mb-4 min-w-0">
+                <button
+                  onClick={() => { setPickerOpen(true); pushSub(); }}
+                  className="inline-flex items-center gap-1 min-w-0 font-bold text-sky-600 bg-sky-500/10 rounded-full px-3 py-1 text-sm"
+                >
+                  <span className="truncate">{posLabel}</span>
+                  <ChevronDown size={13} className="shrink-0" />
+                </button>
+                {!flipped && !loading && !error && verses && verses.length > 0 && (
+                  <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <PlayButton
+                      cacheKey={"bible-" + pos.bookId + "-" + pos.chapter}
+                      text={verses.map((v) => v.text).join("\n\n")}
+                      label="듣기"
+                    />
+                  </span>
+                )}
+              </div>
 
               {/* 본문 */}
               {loading ? (
@@ -324,8 +336,10 @@ const BibleRead = () => {
               ) : !flipped ? (
                 <div>
                   {(verses || []).map(renderTbVerse)}
-                  <p className="mt-5 text-[10px] text-gray-400 font-gothic text-right">
-                    Alkitab Terjemahan Baru (TB) · Lembaga Alkitab Indonesia
+                  <p className="mt-5 text-[10px] text-gray-400 font-gothic text-right leading-relaxed">
+                    Alkitab Terjemahan Baru (TB)
+                    <br />
+                    Lembaga Alkitab Indonesia
                   </p>
                 </div>
               ) : versesKo ? (
