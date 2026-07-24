@@ -7,6 +7,7 @@ import Dictionary from "./pages/Dictionary";
 import Story from "./pages/Story";
 import News from "./pages/News";
 import Devotion from "./pages/Devotion";
+import BibleRead from "./pages/BibleRead";
 import Prayer from "./pages/Prayer";
 import IndoMap from "./pages/IndoMap";
 import Insight from "./pages/Insight";
@@ -38,6 +39,7 @@ const App = () => (
           <Route path="/story" element={<Story />} />
           <Route path="/news" element={<News />} />
           <Route path="/devotion" element={<Devotion />} />
+          <Route path="/bible" element={<BibleRead />} />
           <Route path="/prayer" element={<Prayer />} />
           <Route path="/map" element={<IndoMap />} />
           <Route path="/insight" element={<Insight />} />
