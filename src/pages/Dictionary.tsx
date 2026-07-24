@@ -157,6 +157,10 @@ const Dictionary = () => {
   const [fromDevotion] = useState(() => {
     try { return new URLSearchParams(window.location.search).get("from") === "devotion"; } catch (e) { return false; }
   });
+  // 성경 읽기의 "사전에서 보기"로 진입했는지 (성경으로 돌아가기 버튼 표시)
+  const [fromBible] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get("from") === "bible"; } catch (e) { return false; }
+  });
   // 뉴스 기사의 "사전에서 보기"로 진입했는지 (뉴스로 돌아가기 버튼 표시)
   const [fromNews] = useState(() => {
     try { return new URLSearchParams(window.location.search).get("from") === "news"; } catch (e) { return false; }
@@ -496,6 +500,16 @@ const Dictionary = () => {
           className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
         >
           <ScrollText size={16} /> 이야기로
+        </button>
+      )}
+
+      {/* 성경으로 돌아가기 플로팅 버튼 */}
+      {fromBible && (
+        <button
+          onClick={() => navigate("/bible")}
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
+        >
+          <ScrollText size={16} /> 성경으로
         </button>
       )}
 
