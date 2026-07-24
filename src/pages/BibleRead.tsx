@@ -15,6 +15,7 @@ import { quickLookupWord } from "@/lib/story";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { ttsPlayer } from "@/lib/tts";
+import BiblePicker from "@/components/BiblePicker";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 const LAST_POS_KEY = "bible-last-pos";
@@ -71,9 +72,8 @@ const BibleRead = () => {
 
   const book = getBook(pos.bookId);
 
-  // ---------- 시트 (책 선택 / 장 선택) ----------
-  const [bookSheet, setBookSheet] = useState(false);
-  const [chapterSheet, setChapterSheet] = useState<string | null>(null); // 장 시트가 가리키는 bookId
+  // ---------- 책/장 선택 피커 ----------
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // ---------- 뒤로가기 (시트/팝업만 한 단계 닫기) ----------
   const subOpenRef = useRef(false);
@@ -84,8 +84,7 @@ const BibleRead = () => {
     }
   };
   const resetSub = () => {
-    setBookSheet(false);
-    setChapterSheet(null);
+    setPickerOpen(false);
     setPopupWord(null);
   };
   const closeSub = () => {
@@ -300,8 +299,8 @@ const BibleRead = () => {
             <div className="flex-1 min-w-0 px-5 py-5">
               {/* 위치 필 (탭 → 책 선택 시트) */}
               <button
-                onClick={() => { setBookSheet(true); pushSub(); }}
-                className="inline-flex items-center gap-1 max-w-full font-bold text-sky-600 bg-sky-500/10 rounded-full px-3 py-1 text-xs mb-4"
+                onClick={() => { setPickerOpen(true); pushSub(); }}
+                className="inline-flex items-center gap-1 max-w-full font-bold text-sky-600 bg-sky-500/10 rounded-full px-3 py-1 text-sm mb-4"
               >
                 <span className="truncate">{posLabel}</span>
                 <ChevronDown size={13} className="shrink-0" />
@@ -323,9 +322,19 @@ const BibleRead = () => {
                   </button>
                 </div>
               ) : !flipped ? (
-                <div>{(verses || []).map(renderTbVerse)}</div>
+                <div>
+                  {(verses || []).map(renderTbVerse)}
+                  <p className="mt-5 text-[10px] text-gray-400 font-gothic text-right">
+                    Alkitab Terjemahan Baru (TB) · Lembaga Alkitab Indonesia
+                  </p>
+                </div>
               ) : versesKo ? (
-                <div>{versesKo.map(renderKoVerse)}</div>
+                <div>
+                  {versesKo.map(renderKoVerse)}
+                  <p className="mt-5 text-[10px] text-gray-400 font-gothic text-right">
+                    성경전서 새번역 · 대한성서공회
+                  </p>
+                </div>
               ) : koError ? (
                 <div className="text-center py-8">
                   <p className="text-sm text-gray-600 font-gothic mb-3">한국어 본문을 불러오지 못했어요</p>
@@ -375,112 +384,18 @@ const BibleRead = () => {
         )}
       </div>
 
-      {/* 책 선택 시트 (66권, 구약/신약 색 구분) */}
-      {bookSheet && (
-        <div className="fixed inset-0 z-50" onClick={closeSub}>
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className="absolute bottom-0 left-0 right-0 max-w-lg mx-auto bg-card rounded-t-2xl overflow-hidden flex flex-col"
-            style={{ maxHeight: "80dvh" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-5 pt-4 pb-2 flex items-center gap-2 shrink-0">
-              <p className="text-sm font-semibold text-gray-900">성경 선택</p>
-              <button
-                onClick={closeSub}
-                className="ml-auto w-8 h-8 rounded-full bg-black/5 text-gray-500 flex items-center justify-center"
-                title="닫기"
-              >
-                <X size={15} />
-              </button>
-            </div>
-            <div className="overflow-y-auto px-3 pb-6" style={{ WebkitOverflowScrolling: "touch" as any }}>
-              <p className="text-[11px] font-gothic font-semibold text-teal-600 px-2 pt-2 pb-1">구약 Perjanjian Lama</p>
-              {BIBLE_BOOKS.filter((b) => b.folder === "pl").map((b) => (
-                <button
-                  key={b.id}
-                  onClick={() => setChapterSheet(b.id)}
-                  className={`w-full flex items-baseline gap-2 text-left px-2 py-2 rounded-lg active:bg-black/5 ${
-                    b.id === pos.bookId ? "bg-sky-500/10" : ""
-                  }`}
-                >
-                  <span className="text-sm font-word font-semibold text-teal-700">{b.idName}</span>
-                  <span className="text-xs font-gothic text-gray-600">{b.ko}</span>
-                </button>
-              ))}
-              <p className="text-[11px] font-gothic font-semibold text-blue-600 px-2 pt-3 pb-1">신약 Perjanjian Baru</p>
-              {BIBLE_BOOKS.filter((b) => b.folder === "pb").map((b) => (
-                <button
-                  key={b.id}
-                  onClick={() => setChapterSheet(b.id)}
-                  className={`w-full flex items-baseline gap-2 text-left px-2 py-2 rounded-lg active:bg-black/5 ${
-                    b.id === pos.bookId ? "bg-sky-500/10" : ""
-                  }`}
-                >
-                  <span className="text-sm font-word font-semibold text-blue-700">{b.idName}</span>
-                  <span className="text-xs font-gothic text-gray-600">{b.ko}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 장 선택 시트 */}
-      {chapterSheet && (() => {
-        const cb = getBook(chapterSheet);
-        if (!cb) return null;
-        return (
-          <div className="fixed inset-0 z-50" onClick={() => setChapterSheet(null)}>
-            <div className="absolute inset-0 bg-black/40" />
-            <div
-              className="absolute bottom-0 left-0 right-0 max-w-lg mx-auto bg-card rounded-t-2xl overflow-hidden flex flex-col"
-              style={{ maxHeight: "80dvh" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="px-5 pt-4 pb-2 flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => setChapterSheet(null)}
-                  className="w-8 h-8 -ml-2 rounded-full text-gray-500 flex items-center justify-center"
-                  title="책 목록으로"
-                >
-                  <ChevronLeft size={17} />
-                </button>
-                <p className="text-sm font-semibold text-gray-900">
-                  <span className="font-word">{cb.idName}</span>{" "}
-                  <span className="font-gothic text-gray-500 text-xs">{cb.ko}</span>
-                </p>
-                <button
-                  onClick={closeSub}
-                  className="ml-auto w-8 h-8 rounded-full bg-black/5 text-gray-500 flex items-center justify-center"
-                  title="닫기"
-                >
-                  <X size={15} />
-                </button>
-              </div>
-              <div className="overflow-y-auto px-3 pb-6" style={{ WebkitOverflowScrolling: "touch" as any }}>
-                {Array.from({ length: cb.chapters }, (_, i) => i + 1).map((ch) => (
-                  <button
-                    key={ch}
-                    onClick={() => {
-                      setPos({ bookId: cb.id, chapter: ch });
-                      closeSub();
-                      scrollTopRef.current?.scrollIntoView?.();
-                    }}
-                    className={`w-full text-left px-2 py-2 rounded-lg text-sm font-gothic active:bg-black/5 ${
-                      cb.id === pos.bookId && ch === pos.chapter
-                        ? "bg-sky-500/10 text-sky-700 font-semibold"
-                        : "text-gray-800"
-                    }`}
-                  >
-                    {ch}장
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* 책/장 선택 피커 */}
+      <BiblePicker
+        open={pickerOpen}
+        currentBookId={pos.bookId}
+        currentChapter={pos.chapter}
+        onClose={closeSub}
+        onSelect={(bookId, chapter) => {
+          setPos({ bookId, chapter });
+          closeSub();
+          scrollTopRef.current?.scrollIntoView?.();
+        }}
+      />
 
       {/* 단어 미니 팝업 */}
       {popupWord && (
