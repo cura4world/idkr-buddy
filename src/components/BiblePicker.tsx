@@ -33,8 +33,10 @@ const BiblePicker = ({ open, currentBookId, currentChapter, onClose, onSelect }:
     <div className="fixed inset-0 z-50" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40" />
       <div
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 max-w-[85vw] bg-card rounded-t-2xl overflow-hidden flex flex-col"
-        style={{ maxHeight: "80dvh" }}
+        className={`absolute bottom-24 left-1/2 -translate-x-1/2 ml-6 max-w-[85vw] bg-card rounded-2xl shadow-xl overflow-hidden flex flex-col ${
+          stageBook ? "w-44" : "w-64"
+        }`}
+        style={{ maxHeight: "72dvh" }}
         onClick={(e) => e.stopPropagation()}
       >
         {!stageBook ? (
@@ -50,7 +52,7 @@ const BiblePicker = ({ open, currentBookId, currentChapter, onClose, onSelect }:
               </button>
             </div>
             <div className="overflow-y-auto px-2 pb-6" style={{ WebkitOverflowScrolling: "touch" as any }}>
-              <p className="text-[11px] font-gothic font-semibold text-teal-600 px-2 pt-2 pb-1">
+              <p className="text-xs font-gothic font-semibold text-teal-600 px-2 pt-2 pb-1">
                 구약 Perjanjian Lama
               </p>
               {BIBLE_BOOKS.filter((b) => b.folder === "pl").map((b) => (
@@ -65,7 +67,7 @@ const BiblePicker = ({ open, currentBookId, currentChapter, onClose, onSelect }:
                   <span className="text-xs font-gothic text-gray-600 whitespace-nowrap">{b.ko}</span>
                 </button>
               ))}
-              <p className="text-[11px] font-gothic font-semibold text-blue-600 px-2 pt-3 pb-1">
+              <p className="text-xs font-gothic font-semibold text-blue-600 px-2 pt-3 pb-1">
                 신약 Perjanjian Baru
               </p>
               {BIBLE_BOOKS.filter((b) => b.folder === "pb").map((b) => (
@@ -109,7 +111,7 @@ const BiblePicker = ({ open, currentBookId, currentChapter, onClose, onSelect }:
                 <button
                   key={ch}
                   onClick={() => onSelect(stageBook.id, ch)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-gothic active:bg-black/5 ${
+                  className={`w-full text-center px-3 py-2 rounded-lg text-sm font-gothic active:bg-black/5 ${
                     stageBook.id === currentBookId && ch === currentChapter
                       ? "bg-sky-500/10 text-sky-700 font-semibold"
                       : "text-gray-800"
