@@ -12,6 +12,7 @@ import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { hasClaudeApiKey } from "@/lib/claude";
 import SettingsDialog from "@/components/SettingsDialog";
 import PlayButton from "@/components/PlayButton";
+import BiblePicker from "@/components/BiblePicker";
 import { ttsPlayer } from "@/lib/tts";
 
 const MY_WORDBOOK_ID = "my-wordbook";
@@ -139,6 +140,10 @@ const Devotion = () => {
   const popupReqId = useRef(0);
   const wordCache = useRef(new Map<string, { meaning: string; info: string; sentenceKo: string }>());
 
+  // 성경 읽기 카드 (책/장 선택 피커 + 위치 배지)
+  const [biblePickerOpen, setBiblePickerOpen] = useState(false);
+  const [bibleLabel, setBibleLabel] = useState<string>(() => bibleLastLabel());
+
   const subOpenRef = useRef(false);
 
   const pushSub = () => {
@@ -159,6 +164,7 @@ const Devotion = () => {
     setPopupWord(null);
     setCardVerses(null);
     setCardError(false);
+    setBiblePickerOpen(false);
     wordCache.current.clear();
   };
 
@@ -667,6 +673,28 @@ const Devotion = () => {
       </header>
 
       <div className="px-4 py-4">
+        {/* 성경 읽기 (책/장 선택 후 읽기 버튼으로 이동) */}
+        <div className="mb-2.5 w-full rounded-xl border border-sky-300/60 bg-card bg-gradient-to-br from-transparent to-sky-300/35 px-4 py-3.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="text-xs font-medium text-sky-600 font-gothic inline-flex items-center gap-1 shrink-0">
+              <BookOpen size={13} /> 성경 읽기
+            </p>
+            <button
+              onClick={() => { setBiblePickerOpen(true); pushSub(); }}
+              className="min-w-0 truncate text-xs font-medium text-sky-600 bg-sky-500/10 rounded-full px-2.5 py-0.5"
+              title="성경 변경"
+            >
+              {bibleLabel}
+            </button>
+            <button
+              onClick={() => navigate("/bible")}
+              className="ml-auto shrink-0 rounded-full px-4 py-1.5 text-xs font-medium bg-sky-500 text-white"
+            >
+              읽기
+            </button>
+          </div>
+        </div>
+
         {qtLoading ? (
           <div className="bg-card border border-border/60 rounded-xl px-4 py-8 text-center">
             <Loader2 size={22} className="mx-auto mb-2 text-rose-500 animate-spin" />
@@ -717,21 +745,6 @@ const Devotion = () => {
           </>
         )}
 
-        {/* 성경 읽기 */}
-        <button
-          onClick={() => navigate("/bible")}
-          className="mt-2.5 w-full text-left rounded-xl border border-sky-300/60 bg-card bg-gradient-to-br from-transparent to-sky-300/35 px-4 py-3.5"
-        >
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-xs font-medium text-sky-600 font-gothic inline-flex items-center gap-1">
-              <BookOpen size={13} /> 성경 읽기
-            </p>
-            <span className="text-[11px] font-medium text-sky-600 bg-sky-500/10 rounded-full px-2 py-0.5">
-              {bibleLastLabel()}
-            </span>
-          </div>
-        </button>
-
         {/* 지난 묵상 */}
         {records.filter((r) => !todayRec || r.id !== todayRec.id).length > 0 && (
           <div className="mt-5">
@@ -760,6 +773,16 @@ const Devotion = () => {
           </div>
         )}
       </div>
+
+      <BiblePicker
+        open={biblePickerOpen}
+        onClose={() => { if (subOpenRef.current) window.history.back(); else setBiblePickerOpen(false); }}
+        onSelect={(bookId, chapter) => {
+          try { localStorage.setItem("bible-last-pos", JSON.stringify({ bookId, chapter })); } catch (e) {}
+          setBibleLabel(bibleLastLabel());
+          if (subOpenRef.current) window.history.back(); else setBiblePickerOpen(false);
+        }}
+      />
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
