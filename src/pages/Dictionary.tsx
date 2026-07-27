@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home, Mic, ScrollText, Newspaper, Map as MapIcon, Lightbulb, Library } from "lucide-react";
+import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home, Mic, ScrollText, Newspaper, Map as MapIcon, Lightbulb, Library, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
@@ -19,6 +19,7 @@ import {
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { getStoredImage, saveStoredImage } from "@/lib/imageStore";
+import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const MY_WORDBOOK_ID = "my-wordbook";
@@ -204,6 +205,9 @@ const Dictionary = () => {
   const [error, setError] = useState("");
   // 한국어 단어 결과에서 인니어 표제어를 눌러 들어왔을 때, 돌아갈 한국어 단어
   const [koBackTerm, setKoBackTerm] = useState<string | null>(null);
+  // 지금 화면에 떠 있는 결과의 검색어. query는 검색 직후 비워지므로 따로 들고 있어야
+  // "다시 검색"이 무엇을 다시 찾을지 알 수 있습니다.
+  const [lastTerm, setLastTerm] = useState("");
 
   const [imgUrl, setImgUrl] = useState("");
   const [imgLoading, setImgLoading] = useState(false);
@@ -223,8 +227,24 @@ const Dictionary = () => {
   // 검색 결과를 볼 때 히스토리를 한 칸 쌓아두었는지 여부
   const resultStateRef = useRef(false);
 
+  // 이미 본 단어면 저장된 이미지를 자동 표시. 안 본 단어면 버튼이 뜸(비용 절감).
+  const showStoredImageFor = async (word: string) => {
+    const key = word.toLowerCase();
+    const mem = imageCache.get(key);
+    if (mem) {
+      setImgUrl(mem);
+      return;
+    }
+    const stored = await getStoredImage(word);
+    if (stored) {
+      imageCache.set(key, stored);
+      setImgUrl(stored);
+    }
+  };
+
   // backTerm: 한국어 단어 결과의 인니어 표제어를 눌러 들어온 경우, 돌아갈 한국어 단어
-  const handleSearch = async (term?: string, backTerm?: string) => {
+  // forceRefresh: 캐시를 무시하고 새로 받아 캐시를 덮어씀 ("다시 검색" 버튼)
+  const handleSearch = async (term?: string, backTerm?: string, forceRefresh?: boolean) => {
     const w = (term ?? query).trim();
     if (!w) return;
     if (!hasGeminiApiKey()) {
@@ -236,51 +256,83 @@ const Dictionary = () => {
     inputRef.current?.blur();
     setQuery("");
     const detected = detectInputKind(w);
+    const cacheKey = dictCacheKey(detected, w);
+
+    // 결과 종류와 무관한 공통 초기화. 캐시 적중 경로와 API 경로가 함께 씁니다.
+    const resetForNewSearch = () => {
+      setError("");
+      setResult(null);
+      setIdSentence(null);
+      setKoWord(null);
+      setKoSentence(null);
+      setImgUrl("");
+      setImgError("");
+      setSaved(false);
+      setKind(detected);
+      setKoBackTerm(backTerm ? backTerm.trim() : null);
+      setLastTerm(w); // "다시 검색" 버튼이 쓸 현재 검색어
+    };
+
+    // 결과를 띄운 뒤 공통 마무리 (히스토리 기록 + 뒤로가기용 상태 쌓기)
+    const finishSuccess = () => {
+      setHistory(pushHistory(w));
+      // 결과 화면 진입 시 히스토리를 한 칸 쌓아, 뒤로가기가 최근 검색 화면으로 오게 함
+      if (!resultStateRef.current) {
+        resultStateRef.current = true;
+        try { window.history.pushState({ dictResult: true }, ""); } catch (e) {}
+      }
+    };
+
+    // 캐시 적중: setLoading(true)를 아예 거치지 않아 로딩 화면이 깜빡이지 않습니다.
+    if (!forceRefresh) {
+      const cached = await getCachedResult(cacheKey);
+      if (cached) {
+        resetForNewSearch();
+        if (detected === "id_word") {
+          const r = cached as DictResult;
+          setResult(r);
+          if (hasWordInCategory(MY_WORDBOOK_ID, r.word)) setSaved(true);
+          await showStoredImageFor(r.word);
+        } else if (detected === "id_sentence") {
+          setIdSentence(cached as IdSentenceResult);
+        } else if (detected === "ko_word") {
+          setKoWord(cached as KoWordResult);
+        } else {
+          setKoSentence(cached as KoSentenceResult);
+        }
+        finishSuccess();
+        return;
+      }
+    }
+
     setLoading(true);
-    setError("");
-    setResult(null);
-    setIdSentence(null);
-    setKoWord(null);
-    setKoSentence(null);
-    setImgUrl("");
-    setImgError("");
-    setSaved(false);
-    setKind(detected);
-    setKoBackTerm(backTerm ? backTerm.trim() : null);
+    resetForNewSearch();
     try {
       if (detected === "id_word") {
         const r = await lookupWord(w);
         setResult(r);
         // 이미 내 단어장에 있는 단어면 "저장됨"으로 표시
         if (hasWordInCategory(MY_WORDBOOK_ID, r.word)) setSaved(true);
-        // 이미 본 단어면 저장된 이미지를 자동 표시. 안 본 단어면 버튼이 뜸(비용 절감).
-        const key = r.word.toLowerCase();
-        const mem = imageCache.get(key);
-        if (mem) {
-          setImgUrl(mem);
-        } else {
-          const stored = await getStoredImage(r.word);
-          if (stored) {
-            imageCache.set(key, stored);
-            setImgUrl(stored);
-          }
-        }
+        await showStoredImageFor(r.word);
+        await saveCachedResult(cacheKey, detected, w, r);
       } else if (detected === "id_sentence") {
-        setIdSentence(await analyzeIdSentence(w));
+        const r = await analyzeIdSentence(w);
+        setIdSentence(r);
+        await saveCachedResult(cacheKey, detected, w, r);
       } else if (detected === "ko_word") {
-        setKoWord(await lookupKoWord(w));
+        const r = await lookupKoWord(w);
+        setKoWord(r);
+        await saveCachedResult(cacheKey, detected, w, r);
       } else {
-        setKoSentence(await translateKoSentence(w));
+        const r = await translateKoSentence(w);
+        setKoSentence(r);
+        await saveCachedResult(cacheKey, detected, w, r);
       }
-      setHistory(pushHistory(w)); // 검색 성공 시 히스토리 기록
-      // 결과 화면 진입 시 히스토리를 한 칸 쌓아, 뒤로가기가 최근 검색 화면으로 오게 함
-      if (!resultStateRef.current) {
-        resultStateRef.current = true;
-        try { window.history.pushState({ dictResult: true }, ""); } catch (e) {}
-      }
+      finishSuccess();
     } catch (e: any) {
       setError(errorMessage(e?.message || ""));
       setQuery(w); // 검색 실패 시 입력한 내용을 검색창에 되돌려 둠 (다시 타이핑할 필요 없음)
+      // 실패한 결과는 캐시에 저장하지 않습니다.
     } finally {
       setLoading(false);
     }
@@ -298,6 +350,7 @@ const Dictionary = () => {
     setKind(null);
     setQuery("");
     setKoBackTerm(null);
+    setLastTerm("");
     setHistory(loadHistory());
   };
 
@@ -728,6 +781,20 @@ const Dictionary = () => {
                 </div>
               </>
             )}
+          </div>
+        )}
+
+        {/* 다시 검색: 캐시를 무시하고 새로 받음. 결과 4종에 공통이라 카드 바로 위에 둡니다. */}
+        {!loading && !error && lastTerm && (result || idSentence || koWord || koSentence) && (
+          <div className="flex justify-end mb-1.5">
+            <button
+              onClick={() => handleSearch(lastTerm, koBackTerm ? koBackTerm : undefined, true)}
+              className="p-1.5 text-white/50 hover:text-white/90"
+              title={`"${lastTerm}" 다시 검색 (저장된 결과 무시)`}
+              aria-label="다시 검색"
+            >
+              <RotateCcw size={15} />
+            </button>
           </div>
         )}
 
