@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getCategories, getWordsByCategory, Word } from "@/lib/store";
+import { goBackOr, wordbookFallback } from "@/lib/nav";
 import { ArrowLeft, RotateCcw, Shuffle } from "lucide-react";
 
 function shuffle<T>(arr: T[]): T[] {
@@ -15,7 +16,10 @@ function shuffle<T>(arr: T[]): T[] {
 export default function QuizMode() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const categories = getCategories();
+  // 뒤로가기: 직전 화면으로 한 단계만
+  const handleBack = () => goBackOr(navigate, location.key, wordbookFallback(id));
   const category = categories.find((c) => c.id === id);
   const allWords = id ? getWordsByCategory(id) : [];
 
@@ -78,7 +82,7 @@ export default function QuizMode() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
         <p className="text-muted-foreground">퀴즈를 위해 최소 2개의 단어가 필요합니다.</p>
-        <button onClick={() => navigate("/")} className="mt-4 text-primary underline underline-offset-4">돌아가기</button>
+        <button onClick={handleBack} className="mt-4 text-primary underline underline-offset-4">돌아가기</button>
       </div>
     );
   }
@@ -122,7 +126,7 @@ export default function QuizMode() {
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
       {/* 헤더 — 뒤로가기·숫자 흰색 */}
       <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={() => navigate("/")} className="text-white hover:text-white/80">
+        <button onClick={handleBack} className="text-white hover:text-white/80">
           <ArrowLeft size={20} />
         </button>
         <span className="text-sm text-white font-body">

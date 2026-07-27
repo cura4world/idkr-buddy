@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getCategories, getWordsByCategory, Word, reorderWords, deleteWord } from "@/lib/store";
+import { goBackOr, wordbookFallback } from "@/lib/nav";
 import AddWordDialog from "@/components/AddWordDialog";
 import EditWordDialog from "@/components/EditWordDialog";
 import CSVImportDialog from "@/components/CSVImportDialog";
@@ -11,6 +12,7 @@ import { toast } from "sonner";
 export default function CategoryDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const [addOpen, setAddOpen] = useState(false);
@@ -57,8 +59,8 @@ export default function CategoryDetail() {
   const infoOpened = useRef(false);
   const SWIPE_THRESHOLD = 80;
   const DRAG_MOVE_THRESHOLD = 12;
-  const ARM_MS = 500;   // 여기까지 누르면 끌어서 순서 이동 가능
-  const INFO_MS = 1000; // 움직이지 않고 여기까지 누르면 단어정보가 저절로 열림
+  const ARM_MS = 500;  // 여기까지 누르면 끌어서 순서 이동 가능
+  const INFO_MS = 800; // 움직이지 않고 여기까지 누르면 단어정보가 저절로 열림
 
   // Android WebView / 브라우저 공통 TTS
   const speak = (text: string) => {
@@ -73,6 +75,13 @@ export default function CategoryDetail() {
       speechSynthesis?.cancel?.();
       setTimeout(() => { try { speechSynthesis?.speak?.(utterance); } catch(e) {} }, 150);
     } catch(e) {}
+  };
+
+  // 헤더 뒤로가기: 직전 화면으로 한 단계만. 상태 변경 없이 타이머만 정리하고 이동합니다.
+  const handleBack = () => {
+    cancelLongPress();
+    stopAutoScroll();
+    goBackOr(navigate, location.key, wordbookFallback(id));
   };
 
   // 단어카드의 사전 아이콘: 그 단어를 사전에서 바로 검색 (사전에는 "단어장으로" 버튼이 뜸)
@@ -248,6 +257,15 @@ export default function CategoryDetail() {
     };
     document.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => document.removeEventListener("touchmove", onTouchMove);
+  }, []);
+
+  // 화면을 떠날 때 남아 있는 타이머 정리 (뒤로가기 직후 콜백이 튀지 않도록)
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+      if (infoTimer.current) clearTimeout(infoTimer.current);
+      if (autoScrollTimer.current) clearInterval(autoScrollTimer.current);
+    };
   }, []);
 
   const handleTouchStart = (index: number, e: React.TouchEvent) => {
@@ -450,7 +468,7 @@ export default function CategoryDetail() {
       <div className="sticky top-0 z-30 bg-background -mx-4 px-4 pt-2 pb-3 mb-3">
         <header className="flex items-center gap-2 mb-2 pr-2">
           <button
-            onClick={() => navigate("/")}
+            onClick={handleBack}
             className="text-white hover:text-white/70 w-8 h-8 flex items-center justify-center -ml-2 shrink-0"
             title="뒤로"
           >

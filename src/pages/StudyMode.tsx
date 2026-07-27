@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getCategories, getWordsByCategory, getSavedWordIds, toggleSavedWord, Word } from "@/lib/store";
+import { goBackOr, wordbookFallback } from "@/lib/nav";
 import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Play, Square, Bookmark, RefreshCw, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
 
 export default function StudyMode() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const categories = getCategories();
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
@@ -170,6 +172,12 @@ export default function StudyMode() {
     releaseWakeLock();
   };
 
+  // 뒤로가기: 직전 화면으로 한 단계만. 재생/타이머만 정리하고(상태 변경 없음) 이동합니다.
+  const handleBack = () => {
+    cancelOperations();
+    goBackOr(navigate, location.key, wordbookFallback(id));
+  };
+
   const stopAutoPlay = useCallback(() => {
     isAutoPlayingRef.current = false;
     setIsAutoPlaying(false); setIsAutoRandom(false); setIsScreenLocked(false);
@@ -244,7 +252,7 @@ export default function StudyMode() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
         <p className="text-muted-foreground">학습할 단어가 없습니다.</p>
-        <button onClick={() => navigate("/")} className="mt-4 text-primary underline underline-offset-4">돌아가기</button>
+        <button onClick={handleBack} className="mt-4 text-primary underline underline-offset-4">돌아가기</button>
       </div>
     );
   }
@@ -261,7 +269,7 @@ export default function StudyMode() {
         </div>
       )}
       <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={() => { cancelOperations(); navigate("/"); }} className="text-white hover:text-white/80">
+        <button onClick={handleBack} className="text-white hover:text-white/80">
           <ArrowLeft size={20} />
         </button>
         <span className="text-sm text-white font-body">
