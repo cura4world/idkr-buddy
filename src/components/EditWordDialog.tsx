@@ -22,7 +22,7 @@ const UnderlineField = ({
   font: string;
 }) => (
   <label className="block">
-    <span className="block text-[11px] font-gothic font-bold uppercase tracking-[0.14em] text-muted-foreground">
+    <span className="block text-xs font-gothic font-bold uppercase tracking-[0.14em] text-muted-foreground">
       {label}
     </span>
     <input
@@ -159,7 +159,7 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
           style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
         >
           <div className="flex items-start justify-between gap-2">
-            <span className="text-base font-gothic font-bold uppercase tracking-[0.16em] text-muted-foreground">
+            <span className="text-base font-gothic font-bold uppercase tracking-[0.16em] text-card-foreground">
               단어 정보
             </span>
             <button
