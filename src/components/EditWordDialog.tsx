@@ -43,6 +43,8 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 손가락을 떼기 전에 열린 경우, 뒤따라오는 click이 백드롭을 눌러 바로 닫는 것을 막습니다.
+  const openedAt = useRef(0);
 
   // 다른 단어가 들어오면 렌더 중에 즉시 값을 맞춰, 이전 단어가 한 프레임 비치는 것을 막습니다.
   if (word && word.id !== editingId) {
@@ -57,6 +59,7 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
   // 열려 있는 동안 뒤 배경 스크롤 잠금 + Escape로 닫기
   useEffect(() => {
     if (!open) return;
+    openedAt.current = Date.now();
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
@@ -143,7 +146,10 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
       {/* 단어장이 은은하게 비치는 백드롭 */}
       <div
         className="kk-wi-backdrop fixed inset-0 z-50 bg-black/35 backdrop-blur-[2px]"
-        onClick={() => onOpenChange(false)}
+        onClick={() => {
+          if (Date.now() - openedAt.current < 350) return; // 열자마자 닫히는 것 방지
+          onOpenChange(false);
+        }}
       />
 
       {/* 떠오르는 플로팅 카드 */}
@@ -159,7 +165,8 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
           style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
         >
           <div className="flex items-start justify-between gap-2">
-            <span className="text-base font-gothic font-bold uppercase tracking-[0.16em] text-card-foreground">
+            {/* 메인 화면 '내 단어장'과 같은 서체 (Gowun Dodum, text-base, semibold) */}
+            <span className="font-body text-base font-semibold text-card-foreground">
               단어 정보
             </span>
             <button

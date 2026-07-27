@@ -50,8 +50,15 @@ export default function CategoryDetail() {
   const touchOnControl = useRef(false);
   // 롱프레스로 단어정보를 열었을 때 뒤따르는 click(선택 토글) 무시
   const suppressClick = useRef(false);
+  // 누르고 있는 동안 카드가 서서히 작아지는 진행 표시 (얼마나 더 눌러야 하는지 눈에 보이게)
+  const [pressedIndex, setPressedIndex] = useState<number | null>(null);
+  // 손을 떼기 전에 단어정보가 이미 열렸는지
+  const infoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const infoOpened = useRef(false);
   const SWIPE_THRESHOLD = 80;
   const DRAG_MOVE_THRESHOLD = 12;
+  const ARM_MS = 500;   // 여기까지 누르면 끌어서 순서 이동 가능
+  const INFO_MS = 1000; // 움직이지 않고 여기까지 누르면 단어정보가 저절로 열림
 
   // Android WebView / 브라우저 공통 TTS
   const speak = (text: string) => {
@@ -125,6 +132,24 @@ export default function CategoryDetail() {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
+    if (infoTimer.current) {
+      clearTimeout(infoTimer.current);
+      infoTimer.current = null;
+    }
+  };
+
+  // 움직이지 않고 계속 누르고 있으면 손을 떼기 전에 단어정보를 바로 띄웁니다.
+  const openInfoFromPress = (index: number) => {
+    const w = words[index];
+    if (!w) return;
+    infoOpened.current = true;
+    isDragging.current = false;
+    armedIndex.current = null;
+    dragMoved.current = false;
+    suppressClick.current = true;
+    stopAutoScroll();
+    setPressedIndex(null);
+    setEditWord(w);
   };
 
   const getOverIndex = (clientX: number, clientY: number): number => {
@@ -142,6 +167,8 @@ export default function CategoryDetail() {
   const beginDragVisuals = (clientX: number, clientY: number) => {
     const idx = armedIndex.current;
     if (idx === null) return;
+    cancelLongPress(); // 끌기 시작했으면 단어정보 자동 열기는 취소
+    setPressedIndex(null);
     setDragging(idx);
     setDragOver(idx);
     setFloatPos({ x: clientX, y: clientY });
@@ -161,6 +188,7 @@ export default function CategoryDetail() {
     setDragging(null);
     setDragOver(null);
     setFloatPos(null);
+    setPressedIndex(null);
     isDragging.current = false;
     armedIndex.current = null;
   };
@@ -233,6 +261,7 @@ export default function CategoryDetail() {
     isSwipe.current = false;
     dragMoved.current = false;
     armedIndex.current = null;
+    infoOpened.current = false;
     suppressClick.current = false; // 이전 제스처의 잔여 플래그 정리
     touchIntent.current = "none";
     swipeIndexRef.current = index;
@@ -244,17 +273,30 @@ export default function CategoryDetail() {
       touchIntent.current = "drag";
       armedIndex.current = index;
       try { (navigator as any).vibrate?.(15); } catch (e) {}
+      setPressedIndex(index); // 카드가 서서히 작아지며 "조금만 더" 를 알려줌
       const cardEl = cardRefs.current[index];
       if (cardEl) {
         const rect = cardEl.getBoundingClientRect();
         setFloatWidth(rect.width);
         floatOffsetY.current = t.clientY - rect.top;
       }
-    }, 500);
+    }, ARM_MS);
+    infoTimer.current = setTimeout(() => {
+      if (isSwipe.current || touchIntent.current === "swipe" || touchIntent.current === "scroll") return;
+      if (dragMoved.current) return; // 끌고 있는 중이면 열지 않음
+      openInfoFromPress(index);
+    }, INFO_MS);
   };
 
   const handleTouchEnd = (index: number, word: Word) => {
     if (touchOnControl.current) { touchOnControl.current = false; return; }
+    // 손을 떼기 전에 단어정보가 이미 열린 경우: 정리만 하고 끝
+    if (infoOpened.current) {
+      infoOpened.current = false;
+      handleEnd();
+      touchIntent.current = "none";
+      return;
+    }
     const wasDragging = isDragging.current;
     const wasMoved = dragMoved.current;
     const wasSwipe = touchIntent.current === "swipe";
@@ -301,19 +343,25 @@ export default function CategoryDetail() {
     isDragging.current = false;
     dragMoved.current = false;
     armedIndex.current = null;
+    infoOpened.current = false;
     suppressClick.current = false; // 이전 제스처의 잔여 플래그 정리
     const start = { x: e.clientX, y: e.clientY };
     longPressTimer.current = setTimeout(() => {
       // 터치와 동일하게 "끌 준비"만 하고, 화면 변화는 실제로 움직일 때 시작합니다.
       isDragging.current = true;
       armedIndex.current = index;
+      setPressedIndex(index);
       const cardEl = cardRefs.current[index];
       if (cardEl) {
         const rect = cardEl.getBoundingClientRect();
         setFloatWidth(rect.width);
         floatOffsetY.current = e.clientY - rect.top;
       }
-    }, 500);
+    }, ARM_MS);
+    infoTimer.current = setTimeout(() => {
+      if (dragMoved.current) return;
+      openInfoFromPress(index);
+    }, INFO_MS);
     const onMouseMove = (ev: MouseEvent) => {
       if (!isDragging.current) return;
       if (!dragMoved.current) {
@@ -334,9 +382,12 @@ export default function CategoryDetail() {
     const onMouseUp = () => {
       const wasDragging = isDragging.current;
       const wasMoved = dragMoved.current;
+      const alreadyOpened = infoOpened.current;
+      infoOpened.current = false;
       handleEnd();
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+      if (alreadyOpened) return; // 떼기 전에 이미 열렸음
       // 꾸욱 누르고 끌지 않고 그대로 떼면 단어정보 창 (뒤따르는 click은 무시)
       if (wasDragging && !wasMoved) {
         suppressClick.current = true;
@@ -424,6 +475,7 @@ export default function CategoryDetail() {
           const isDropTarget = dragOverIndex === index && draggingIndex !== index;
           const isSelected = selectedIds.includes(w.id);
           const isSwiping = swipingIndex === index;
+          const isPressed = pressedIndex === index;
           const currentSwipeX = isSwiping ? swipeX : 0;
           const swipingRight = isSwiping && swipeDirState === 1;
           const swipingLeft = isSwiping && swipeDirState === -1;
@@ -459,8 +511,13 @@ export default function CategoryDetail() {
                 ].join(" ")}
                 style={{
                   ...(isSelected ? { backgroundColor: "hsl(30, 20%, 88%)" } : {}),
-                  transform: `translateX(${currentSwipeX}px)`,
-                  transition: isSwiping ? "none" : "transform 0.25s ease",
+                  // 누르고 있는 동안 남은 시간만큼 서서히 작아집니다 (다 작아지면 단어정보가 열림)
+                  transform: `translateX(${currentSwipeX}px)${isPressed ? " scale(0.96)" : ""}`,
+                  transition: isSwiping
+                    ? "none"
+                    : isPressed
+                      ? `transform ${INFO_MS - ARM_MS}ms ease-out`
+                      : "transform 0.25s ease",
                 }}
                 onTouchStart={(e) => handleTouchStart(index, e)}
                 onTouchEnd={() => handleTouchEnd(index, w)}
