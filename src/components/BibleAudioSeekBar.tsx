@@ -30,6 +30,9 @@ const BibleAudioSeekBar = ({ bookId, chapter }: BibleAudioSeekBarProps) => {
   const [dragging, setDragging] = useState(false);
   // 구독 콜백에서 즉시 참조해야 하므로 ref로도 들고 있습니다(state는 다음 렌더까지 갱신 지연).
   const draggingRef = useRef(false);
+  // 놓는 시점에 seek할 값. onChange(pointerdown 직후)와 pointerup은 서로 다른 이벤트라
+  // state 클로저에 의존하면 렌더 타이밍에 좌우됩니다. ref로 읽으면 항상 최신값입니다.
+  const dragValueRef = useRef(0);
 
   useEffect(() => {
     const unsub = bibleAudioPlayer.subscribe((s) => {
@@ -66,13 +69,18 @@ const BibleAudioSeekBar = ({ bookId, chapter }: BibleAudioSeekBarProps) => {
   const startDrag = () => {
     if (disabled) return;
     draggingRef.current = true;
+    dragValueRef.current = value;
     setDragValue(value);
     setDragging(true);
   };
+  // 손을 뗄 때 딱 한 번만 seek 합니다. 드래그 중에 매번 currentTime을 바꾸면
+  // 진행 중인 Range 요청이 취소·재개설을 반복하다 error 이벤트로 재생이 끊깁니다.
+  // 트랙을 그냥 탭한 경우도 pointerdown -> onChange -> pointerup 순서라 여기서 처리됩니다.
   const endDrag = () => {
     if (!draggingRef.current) return;
     draggingRef.current = false;
     setDragging(false);
+    bibleAudioPlayer.seek(dragValueRef.current);
   };
 
   return (
@@ -93,8 +101,14 @@ const BibleAudioSeekBar = ({ bookId, chapter }: BibleAudioSeekBarProps) => {
         onTouchCancel={endDrag}
         onChange={(e) => {
           const v = Number(e.target.value);
-          if (draggingRef.current) setDragValue(v);
-          bibleAudioPlayer.seek(v);
+          if (draggingRef.current) {
+            // 드래그(및 트랙 탭) 중: thumb만 움직이고 seek는 놓을 때 한 번만
+            dragValueRef.current = v;
+            setDragValue(v);
+          } else {
+            // 포인터 없이 값이 바뀌는 경우(키보드 화살표 등)는 즉시 이동
+            bibleAudioPlayer.seek(v);
+          }
         }}
         style={{
           backgroundImage:
