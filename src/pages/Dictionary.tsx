@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home, Mic, ScrollText, Newspaper, Map as MapIcon, Lightbulb } from "lucide-react";
+import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home, Mic, ScrollText, Newspaper, Map as MapIcon, Lightbulb, Library } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
@@ -184,6 +184,14 @@ const Dictionary = () => {
   // 정보(팁)의 "사전에서 보기"로 진입했는지 (정보로 돌아가기 버튼 표시)
   const [fromTips] = useState(() => {
     try { return new URLSearchParams(window.location.search).get("from") === "tips"; } catch (e) { return false; }
+  });
+  // 단어장의 단어카드 사전 아이콘으로 진입했는지 (단어장으로 돌아가기 버튼 표시)
+  // 값은 돌아갈 단어장 id. 진입이 아니면 null.
+  const [fromWordbook] = useState<string | null>(() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      return p.get("from") === "wordbook" ? (p.get("cat") || "") : null;
+    } catch (e) { return null; }
   });
   const [query, setQuery] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory());
@@ -560,12 +568,24 @@ const Dictionary = () => {
         </button>
       )}
 
+      {/* 단어장으로 돌아가기 플로팅 버튼 */}
+      {fromWordbook !== null && (
+        <button
+          onClick={() => navigate(fromWordbook ? `/category/${fromWordbook}` : "/wordbooks")}
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
+        >
+          <Library size={16} /> 단어장으로
+        </button>
+      )}
+
       {/* 검색했던 한국어 단어로 돌아가기 플로팅 버튼 (인니어 표제어를 눌러 들어온 경우) */}
       {koBackTerm && !isHome && (
         <button
           onClick={() => handleSearch(koBackTerm)}
           className={`fixed right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg ${
-            fromStory || fromBible || fromDevotion || fromNews || fromMap || fromTips ? "bottom-20" : "bottom-5"
+            fromStory || fromBible || fromDevotion || fromNews || fromMap || fromTips || fromWordbook !== null
+              ? "bottom-20"
+              : "bottom-5"
           }`}
           title={`"${koBackTerm}" 검색 결과로 돌아가기`}
         >

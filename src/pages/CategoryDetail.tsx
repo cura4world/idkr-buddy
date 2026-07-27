@@ -4,7 +4,7 @@ import { getCategories, getWordsByCategory, Word, reorderWords, deleteWord } fro
 import AddWordDialog from "@/components/AddWordDialog";
 import EditWordDialog from "@/components/EditWordDialog";
 import CSVImportDialog from "@/components/CSVImportDialog";
-import { ArrowLeft, Volume2, Settings, Copy, Trash2 } from "lucide-react";
+import { ArrowLeft, Volume2, BookOpen, Copy, Trash2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
@@ -42,7 +42,14 @@ export default function CategoryDetail() {
   const swipeIndexRef = useRef<number | null>(null);
   const lastTapTime = useRef<number>(0);
   const lastTapIndex = useRef<number | null>(null);
+  // 꾸욱 누른 뒤 실제로 끌었는지 (끌었으면 순서 이동, 그대로 떼면 단어정보 창)
+  const dragMoved = useRef(false);
+  // 카드 안의 아이콘 버튼에서 시작한 터치인지 (드래그/롱프레스 대상 아님)
+  const touchOnControl = useRef(false);
+  // 마우스 롱프레스로 단어정보를 열었을 때 뒤따르는 click(선택 토글) 무시
+  const suppressClick = useRef(false);
   const SWIPE_THRESHOLD = 80;
+  const DRAG_MOVE_THRESHOLD = 12;
 
   // Android WebView / 브라우저 공통 TTS
   const speak = (text: string) => {
@@ -57,6 +64,13 @@ export default function CategoryDetail() {
       speechSynthesis?.cancel?.();
       setTimeout(() => { try { speechSynthesis?.speak?.(utterance); } catch(e) {} }, 150);
     } catch(e) {}
+  };
+
+  // 단어카드의 사전 아이콘: 그 단어를 사전에서 바로 검색 (사전에는 "단어장으로" 버튼이 뜸)
+  const openInDictionary = (word: Word) => {
+    navigate(
+      `/dictionary?q=${encodeURIComponent(word.word)}&from=wordbook&cat=${encodeURIComponent(id || "")}`
+    );
   };
 
   const copyToClipboard = async (word: Word) => {
@@ -140,6 +154,7 @@ export default function CategoryDetail() {
   useEffect(() => {
     const onTouchMove = (e: TouchEvent) => {
       const t = e.touches[0];
+      if (touchOnControl.current) return;
       if (!touchStartPos.current) return;
       const dx = t.clientX - touchStartPos.current.x;
       const dy = t.clientY - touchStartPos.current.y;
@@ -177,6 +192,7 @@ export default function CategoryDetail() {
 
       if (isDragging.current) {
         e.preventDefault();
+        if (adx > DRAG_MOVE_THRESHOLD || ady > DRAG_MOVE_THRESHOLD) dragMoved.current = true;
         setFloatPos({ x: t.clientX, y: t.clientY });
         startAutoScroll(t.clientY);
         const over = getOverIndex(t.clientX, t.clientY);
@@ -188,11 +204,16 @@ export default function CategoryDetail() {
   }, []);
 
   const handleTouchStart = (index: number, e: React.TouchEvent) => {
+    // 스피커·사전 아이콘에서 시작한 터치는 카드 드래그/롱프레스로 보지 않습니다.
+    touchOnControl.current = !!(e.target as HTMLElement)?.closest?.("button");
+    if (touchOnControl.current) return;
     const t = e.touches[0];
     touchStartPos.current = { x: t.clientX, y: t.clientY };
     touchMoved.current = false;
     isDragging.current = false;
     isSwipe.current = false;
+    dragMoved.current = false;
+    suppressClick.current = false; // 이전 제스처의 잔여 플래그 정리
     touchIntent.current = "none";
     swipeIndexRef.current = index;
     swipeXRef.current = 0;
@@ -200,6 +221,7 @@ export default function CategoryDetail() {
       if (isSwipe.current || touchIntent.current === "swipe" || touchIntent.current === "scroll") return;
       isDragging.current = true;
       touchIntent.current = "drag";
+      try { (navigator as any).vibrate?.(15); } catch (e) {}
       const cardEl = cardRefs.current[index];
       if (cardEl) {
         const rect = cardEl.getBoundingClientRect();
@@ -214,7 +236,9 @@ export default function CategoryDetail() {
   };
 
   const handleTouchEnd = (index: number, word: Word) => {
+    if (touchOnControl.current) { touchOnControl.current = false; return; }
     const wasDragging = isDragging.current;
+    const wasMoved = dragMoved.current;
     const wasSwipe = touchIntent.current === "swipe";
     if (wasSwipe) {
       if (swipeDir.current === 1 && swipeXRef.current >= SWIPE_THRESHOLD) {
@@ -234,6 +258,12 @@ export default function CategoryDetail() {
     }
     handleEnd();
     touchIntent.current = "none";
+    // 꾸욱 누르고 끌지 않고 그대로 떼면 단어정보 창 (뒤따르는 click의 선택 토글은 무시)
+    if (wasDragging && !wasMoved) {
+      suppressClick.current = true;
+      setEditWord(word);
+      return;
+    }
     if (!wasDragging && !touchMoved.current) {
       const now = Date.now();
       const timeSinceLastTap = now - lastTapTime.current;
@@ -251,6 +281,9 @@ export default function CategoryDetail() {
   const handleMouseDown = (index: number, e: React.MouseEvent) => {
     if (e.button !== 0) return;
     isDragging.current = false;
+    dragMoved.current = false;
+    suppressClick.current = false; // 이전 제스처의 잔여 플래그 정리
+    const start = { x: e.clientX, y: e.clientY };
     longPressTimer.current = setTimeout(() => {
       isDragging.current = true;
       const cardEl = cardRefs.current[index];
@@ -265,21 +298,36 @@ export default function CategoryDetail() {
     }, 500);
     const onMouseMove = (ev: MouseEvent) => {
       if (!isDragging.current) return;
+      if (
+        Math.abs(ev.clientX - start.x) > DRAG_MOVE_THRESHOLD ||
+        Math.abs(ev.clientY - start.y) > DRAG_MOVE_THRESHOLD
+      ) {
+        dragMoved.current = true;
+      }
       setFloatPos({ x: ev.clientX, y: ev.clientY });
       startAutoScroll(ev.clientY);
       const over = getOverIndex(ev.clientX, ev.clientY);
       if (over >= 0) setDragOver(over);
     };
     const onMouseUp = () => {
+      const wasDragging = isDragging.current;
+      const wasMoved = dragMoved.current;
       handleEnd();
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+      // 꾸욱 누르고 끌지 않고 그대로 떼면 단어정보 창 (뒤따르는 click은 무시)
+      if (wasDragging && !wasMoved) {
+        suppressClick.current = true;
+        const w = words[index];
+        if (w) setEditWord(w);
+      }
     };
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
   };
 
   const handleMouseClick = (index: number) => {
+    if (suppressClick.current) { suppressClick.current = false; return; }
     if (isDragging.current) return;
     const w = words[index];
     if (w) toggleSelect(w.id);
@@ -424,10 +472,11 @@ export default function CategoryDetail() {
                   )}
                   <button
                     onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => { e.stopPropagation(); setEditWord(w); }}
+                    onClick={(e) => { e.stopPropagation(); openInDictionary(w); }}
                     className="text-card-foreground/40 hover:text-primary p-1"
+                    title="사전에서 보기"
                   >
-                    <Settings size={16} />
+                    <BookOpen size={16} />
                   </button>
                 </div>
               </div>
@@ -458,7 +507,7 @@ export default function CategoryDetail() {
           <div className="flex flex-col items-center justify-between self-stretch gap-3 shrink-0 pt-0.5 pb-0.5">
             <Volume2 size={16} className="text-muted-foreground" />
             {draggingWord.example && <Volume2 size={16} className="text-sky-400/70" />}
-            <Settings size={16} className="text-muted-foreground" />
+            <BookOpen size={16} className="text-muted-foreground" />
           </div>
         </div>
       )}
