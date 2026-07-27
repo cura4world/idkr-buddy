@@ -33,10 +33,18 @@ const BiblePicker = ({ open, currentBookId, currentChapter, onClose, onSelect }:
     <div className="fixed inset-0 z-50" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40" />
       <div
-        className={`absolute bottom-24 left-1/2 -translate-x-1/2 ml-6 max-w-[85vw] bg-card rounded-2xl shadow-xl overflow-hidden flex flex-col ${
-          stageBook ? "w-44" : "w-64"
+        className={`absolute left-1/2 -translate-x-1/2 ml-6 max-w-[85vw] bg-card rounded-2xl shadow-xl overflow-hidden flex flex-col ${
+          stageBook ? "w-44" : "w-64 bottom-24"
         }`}
-        style={{ maxHeight: "72dvh" }}
+        // 장 선택 단계에서는 위에서 아래로 자라게 합니다. 책 목록 패널의 윗변
+        // (100dvh - 6rem - 72dvh = 28dvh - 6rem)에 맞춰 시작해서, 장수가 많은 책은
+        // 이전과 동일한 위치·높이로 보이고 룻기처럼 짧은 책만 위쪽에 뜹니다.
+        // 화면이 아주 낮을 때(≈343px 미만) 값이 음수가 되므로 max()로 1rem 이상을 보장합니다.
+        style={
+          stageBook
+            ? { top: "max(1rem, calc(28dvh - 6rem))", maxHeight: "72dvh" }
+            : { maxHeight: "72dvh" }
+        }
         onClick={(e) => e.stopPropagation()}
       >
         {!stageBook ? (
@@ -52,9 +60,12 @@ const BiblePicker = ({ open, currentBookId, currentChapter, onClose, onSelect }:
               </button>
             </div>
             <div className="overflow-y-auto px-2 pb-6" style={{ WebkitOverflowScrolling: "touch" as any }}>
-              <p className="text-xs font-gothic font-semibold text-teal-600 px-2 pt-2 pb-1">
-                구약 Perjanjian Lama
-              </p>
+              {/* 구분 배지: 시트 배경(bg-card)이 밝은 면이라 불투명 배경을 씁니다 */}
+              <div className="px-2 pt-2 pb-1">
+                <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-gothic font-semibold whitespace-nowrap bg-teal-600 text-white">
+                  구약 Perjanjian Lama
+                </span>
+              </div>
               {BIBLE_BOOKS.filter((b) => b.folder === "pl").map((b) => (
                 <button
                   key={b.id}
@@ -67,9 +78,11 @@ const BiblePicker = ({ open, currentBookId, currentChapter, onClose, onSelect }:
                   <span className="text-xs font-gothic text-gray-600 whitespace-nowrap">{b.ko}</span>
                 </button>
               ))}
-              <p className="text-xs font-gothic font-semibold text-blue-600 px-2 pt-3 pb-1">
-                신약 Perjanjian Baru
-              </p>
+              <div className="px-2 pt-3 pb-1">
+                <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-gothic font-semibold whitespace-nowrap bg-blue-600 text-white">
+                  신약 Perjanjian Baru
+                </span>
+              </div>
               {BIBLE_BOOKS.filter((b) => b.folder === "pb").map((b) => (
                 <button
                   key={b.id}
