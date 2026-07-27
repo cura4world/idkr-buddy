@@ -137,6 +137,18 @@ function renderPattern(text: string): React.ReactNode[] {
   });
 }
 
+// "복숭아" → "복숭아로", "사람" → "사람으로" (받침에 따라 조사 선택)
+function withRo(word: string): string {
+  const t = (word || "").trim();
+  if (!t) return t;
+  const code = t.charCodeAt(t.length - 1);
+  if (code >= 0xac00 && code <= 0xd7a3) {
+    const jong = (code - 0xac00) % 28;
+    return t + (jong === 0 || jong === 8 ? "로" : "으로"); // 받침 없음 / ㄹ 받침 → "로"
+  }
+  return t + "로";
+}
+
 // 끊어읽기 문장: "/"로 연결하고 문장 끝 마침표를 보장합니다.
 function chunkedSentence(r: IdSentenceResult): string {
   const base =
@@ -182,6 +194,8 @@ const Dictionary = () => {
   const [koWord, setKoWord] = useState<KoWordResult | null>(null);
   const [koSentence, setKoSentence] = useState<KoSentenceResult | null>(null);
   const [error, setError] = useState("");
+  // 한국어 단어 결과에서 인니어 표제어를 눌러 들어왔을 때, 돌아갈 한국어 단어
+  const [koBackTerm, setKoBackTerm] = useState<string | null>(null);
 
   const [imgUrl, setImgUrl] = useState("");
   const [imgLoading, setImgLoading] = useState(false);
@@ -201,7 +215,8 @@ const Dictionary = () => {
   // 검색 결과를 볼 때 히스토리를 한 칸 쌓아두었는지 여부
   const resultStateRef = useRef(false);
 
-  const handleSearch = async (term?: string) => {
+  // backTerm: 한국어 단어 결과의 인니어 표제어를 눌러 들어온 경우, 돌아갈 한국어 단어
+  const handleSearch = async (term?: string, backTerm?: string) => {
     const w = (term ?? query).trim();
     if (!w) return;
     if (!hasGeminiApiKey()) {
@@ -223,6 +238,7 @@ const Dictionary = () => {
     setImgError("");
     setSaved(false);
     setKind(detected);
+    setKoBackTerm(backTerm ? backTerm.trim() : null);
     try {
       if (detected === "id_word") {
         const r = await lookupWord(w);
@@ -273,6 +289,7 @@ const Dictionary = () => {
     setImgError("");
     setKind(null);
     setQuery("");
+    setKoBackTerm(null);
     setHistory(loadHistory());
   };
 
@@ -543,6 +560,19 @@ const Dictionary = () => {
         </button>
       )}
 
+      {/* 검색했던 한국어 단어로 돌아가기 플로팅 버튼 (인니어 표제어를 눌러 들어온 경우) */}
+      {koBackTerm && !isHome && (
+        <button
+          onClick={() => handleSearch(koBackTerm)}
+          className={`fixed right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg ${
+            fromStory || fromBible || fromDevotion || fromNews || fromMap || fromTips ? "bottom-20" : "bottom-5"
+          }`}
+          title={`"${koBackTerm}" 검색 결과로 돌아가기`}
+        >
+          <ArrowLeft size={16} /> {withRo(koBackTerm)}
+        </button>
+      )}
+
       {/* 정보로 돌아가기 플로팅 버튼 */}
       {fromTips && (
         <button
@@ -804,7 +834,14 @@ const Dictionary = () => {
               <div key={i} className={i === 0 ? "min-w-0" : "min-w-0 mt-4 pt-4 border-t border-gray-200"}>
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="shrink-0 text-gray-900 font-bold">{i + 1}</span>
-                  <p className="text-base font-bold text-primary break-words min-w-0">{c.id}</p>
+                  {/* 표제어를 누르면 그 인니어 단어로 바로 사전 검색 */}
+                  <button
+                    onClick={() => handleSearch(c.id, koWord.query)}
+                    className="text-base font-bold text-primary break-words min-w-0 text-left underline decoration-primary/30 underline-offset-4 hover:decoration-primary active:opacity-70"
+                    title={`"${c.id}" 사전 검색`}
+                  >
+                    {c.id}
+                  </button>
                   <button
                     onClick={() => speak(c.id, "id")}
                     className="shrink-0 text-primary/70 hover:text-primary"

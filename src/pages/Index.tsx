@@ -161,36 +161,69 @@ const Index = () => {
         </div>
       </header>
 
+      {/* 메뉴 순서: 사전 → 내 단어장 → 단어장 → 묵상 → 기도 → 이야기 → 뉴스 → 이해
+          (색깔은 자리에 고정 — 순서만 바뀌고 1~8번째 칸의 색은 그대로 유지) */}
       <div className="relative space-y-2">
         <MenuCard
-          onClick={() => navigate("/insight")}
-          icon={Compass}
+          onClick={() => navigate("/dictionary")}
+          icon={BookOpen}
           grad="to-primary/25"
           border="border-primary/40"
           tile="bg-[hsl(172_45%_32%)]"
           mark="text-primary/10"
-          title="인도네시아 이해"
-          sub="Wawasan"
+          title="인도네시아어 사전"
+          sub="Kamus"
         />
+
+        {/* 내 단어장 - 같은 높이, 오른쪽에 Quiz/Card */}
+        {hasMyWordbook && (
+          <div className={`${CARD_BASE} bg-gradient-to-br from-transparent to-indigo-300/35 border-indigo-300/70`}>
+            <Star size={110} className="absolute -right-3.5 top-1/2 -translate-y-1/2 text-indigo-500/10 -rotate-12 pointer-events-none" />
+            <div className="relative h-full flex items-center gap-3.5">
+              <button
+                type="button"
+                onClick={() => navigate(`/category/${MY_WORDBOOK_ID}`)}
+                className="flex-1 min-w-0 h-full flex items-center gap-3.5 text-left"
+              >
+                <span className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center shrink-0 shadow-lg shadow-black/30">
+                  <Star size={23} className="text-white" />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-semibold text-gray-900 truncate">내 단어장</p>
+                  <p className="mt-0.5 text-xs font-gothic tracking-wide text-gray-500 truncate">
+                    Kosakataku · {myWordCount}개
+                  </p>
+                </div>
+              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/quiz/${MY_WORDBOOK_ID}`)}
+                  className="text-xs font-medium text-indigo-700 bg-indigo-500/10 hover:bg-indigo-500/20 active:bg-indigo-500/25 px-3 py-1.5 rounded-full transition-colors"
+                >
+                  Quiz
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/study/${MY_WORDBOOK_ID}`)}
+                  className="text-xs font-medium text-indigo-700 bg-indigo-500/10 hover:bg-indigo-500/20 active:bg-indigo-500/25 px-3 py-1.5 rounded-full transition-colors"
+                >
+                  Card
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <MenuCard
-          onClick={() => navigate("/news")}
-          icon={Newspaper}
-          grad="to-indigo-300/35"
-          border="border-indigo-300/70"
-          tile="bg-indigo-500"
-          mark="text-indigo-500/10"
-          title="인도네시아 뉴스"
-          sub="Berita"
-        />
-        <MenuCard
-          onClick={() => navigate("/story")}
-          icon={ScrollText}
+          onClick={() => navigate("/wordbooks")}
+          icon={Library}
           grad="to-amber-300/35"
           border="border-amber-300/70"
           tile="bg-amber-500"
           mark="text-amber-500/10"
-          title="인도네시아 이야기"
-          sub="Cerita"
+          title="인도네시아어 단어장"
+          sub={folderCount > 0 ? `Kosakata · ${folderCount}권` : "Kosakata"}
         />
         <MenuCard
           onClick={() => navigate("/devotion")}
@@ -213,66 +246,36 @@ const Index = () => {
           sub="Doa"
         />
         <MenuCard
-          onClick={() => navigate("/dictionary")}
-          icon={BookOpen}
+          onClick={() => navigate("/story")}
+          icon={ScrollText}
           grad="to-orange-300/35"
           border="border-orange-300/70"
           tile="bg-orange-500"
           mark="text-orange-500/10"
-          title="인도네시아어 사전"
-          sub="Kamus"
+          title="인도네시아 이야기"
+          sub="Cerita"
         />
         <MenuCard
-          onClick={() => navigate("/wordbooks")}
-          icon={Library}
+          onClick={() => navigate("/news")}
+          icon={Newspaper}
           grad="to-sky-300/35"
           border="border-sky-300/70"
           tile="bg-sky-400"
           mark="text-sky-500/10"
-          title="인도네시아어 단어장"
-          sub={folderCount > 0 ? `Kosakata · ${folderCount}권` : "Kosakata"}
+          title="인도네시아 뉴스"
+          sub="Berita"
         />
-
-        {/* 내 단어장 - 같은 높이, 오른쪽에 Quiz/Card */}
-        {hasMyWordbook && (
-          <div className={`${CARD_BASE} bg-gradient-to-br from-transparent to-violet-300/35 border-violet-300/70`}>
-            <Star size={110} className="absolute -right-3.5 top-1/2 -translate-y-1/2 text-violet-500/10 -rotate-12 pointer-events-none" />
-            <div className="relative h-full flex items-center gap-3.5">
-              <button
-                type="button"
-                onClick={() => navigate(`/category/${MY_WORDBOOK_ID}`)}
-                className="flex-1 min-w-0 h-full flex items-center gap-3.5 text-left"
-              >
-                <span className="w-12 h-12 rounded-2xl bg-violet-500 flex items-center justify-center shrink-0 shadow-lg shadow-black/30">
-                  <Star size={23} className="text-white" />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-semibold text-gray-900 truncate">내 단어장</p>
-                  <p className="mt-0.5 text-xs font-gothic tracking-wide text-gray-500 truncate">
-                    Kosakataku · {myWordCount}개
-                  </p>
-                </div>
-              </button>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/quiz/${MY_WORDBOOK_ID}`)}
-                  className="text-xs font-medium text-violet-700 bg-violet-500/10 hover:bg-violet-500/20 active:bg-violet-500/25 px-3 py-1.5 rounded-full transition-colors"
-                >
-                  Quiz
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate(`/study/${MY_WORDBOOK_ID}`)}
-                  className="text-xs font-medium text-violet-700 bg-violet-500/10 hover:bg-violet-500/20 active:bg-violet-500/25 px-3 py-1.5 rounded-full transition-colors"
-                >
-                  Card
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-            </div>
+        <MenuCard
+          onClick={() => navigate("/insight")}
+          icon={Compass}
+          grad="to-violet-300/35"
+          border="border-violet-300/70"
+          tile="bg-violet-500"
+          mark="text-violet-500/10"
+          title="인도네시아 이해"
+          sub="Wawasan"
+        />
+      </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <AddCategoryDialog open={addCatOpen} onOpenChange={setAddCatOpen} onAdded={refresh} />

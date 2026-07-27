@@ -23,6 +23,7 @@ const WORDS_KEY = "kata-words";
 const CATEGORIES_KEY = "kata-categories";
 const MY_WORDBOOK_ID = "my-wordbook";
 const MY_WORDBOOK_FLAG = "my_wordbook_created";
+const MY_WORDBOOK_SORT_FLAG = "my_wordbook_newest_first";
 const PRIVATE_FOLDER_KEY = "private_folder_name";
 
 // 이 기기에서만 보이는 개인 단어장 폴더 이름 (GitHub data/private/<이름>)
@@ -151,8 +152,26 @@ function ensureMyWordbook() {
   } catch (e) {}
 }
 
+// 이미 담아둔 '내 단어장' 단어들을 최신순으로 한 번만 뒤집습니다.
+// (이후의 직접 정렬을 덮어쓰지 않도록 최초 1회만 실행)
+function sortMyWordbookNewestFirstOnce() {
+  try {
+    if (localStorage.getItem(MY_WORDBOOK_SORT_FLAG) === "1") return;
+    const words = getWords();
+    const mine = words.filter((w) => w.categoryId === MY_WORDBOOK_ID);
+    if (mine.length > 1) {
+      const others = words.filter((w) => w.categoryId !== MY_WORDBOOK_ID);
+      // 담은 시각 내림차순. 같은 시각(CSV 일괄 가져오기 등)이면 나중에 담긴 것이 위로.
+      const sorted = mine.slice().reverse().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      saveWords([...others, ...sorted]);
+    }
+    localStorage.setItem(MY_WORDBOOK_SORT_FLAG, "1");
+  } catch (e) {}
+}
+
 initSharedCategories();
 ensureMyWordbook();
+sortMyWordbookNewestFirstOnce();
 
 // 공용 단어장 복구 (리프레시 버튼용)
 export function restoreSharedCategories() {
@@ -240,7 +259,13 @@ export function moveCategoryToBottom(id: string) {
 export function addWord(word: Omit<Word, "id" | "createdAt">): Word {
   const words = getWords();
   const newWord: Word = { ...word, id: crypto.randomUUID(), createdAt: Date.now() };
-  words.push(newWord);
+  if (word.categoryId === MY_WORDBOOK_ID) {
+    // '내 단어장'은 최신 단어가 맨 위 (표시 순서 = 저장 순서라 드래그 정렬과도 어긋나지 않음)
+    const firstIdx = words.findIndex((w) => w.categoryId === MY_WORDBOOK_ID);
+    words.splice(firstIdx < 0 ? words.length : firstIdx, 0, newWord);
+  } else {
+    words.push(newWord);
+  }
   saveWords(words);
   return newWord;
 }

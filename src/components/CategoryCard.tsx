@@ -149,10 +149,10 @@ export default function CategoryCard({
       <EditCategoryDialog
         open={editOpen}
         onOpenChange={setEditOpen}
-        category={category}
+        categoryId={category.id}
         currentName={category.name}
         currentEmoji={category.emoji}
-        onChanged={onChanged}
+        onUpdated={() => onChanged?.()}
       />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
