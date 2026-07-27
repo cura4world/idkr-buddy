@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { updateWord, Word, deleteWord } from "@/lib/store";
-import { Volume2, Trash2, X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -8,22 +8,6 @@ interface Props {
   word: Word | null;
   onUpdated: () => void;
 }
-
-// Android WebView / 브라우저 공통 TTS (앱 공통 패턴)
-const speak = (text: string) => {
-  if (!text) return;
-  if ((window as any).AndroidTTS) {
-    try { (window as any).AndroidTTS.speak(text, "id-ID"); } catch (e) {}
-    return;
-  }
-  try {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "id-ID";
-    utterance.rate = 0.9;
-    speechSynthesis?.cancel?.();
-    setTimeout(() => { try { speechSynthesis?.speak?.(utterance); } catch (e) {} }, 150);
-  } catch (e) {}
-};
 
 // 밑줄형 입력 한 줄. 컴포넌트 밖에 두어야 입력 중 포커스가 풀리지 않습니다.
 const UnderlineField = ({
@@ -38,7 +22,7 @@ const UnderlineField = ({
   font: string;
 }) => (
   <label className="block">
-    <span className="block text-[10px] font-gothic font-bold uppercase tracking-[0.14em] text-muted-foreground">
+    <span className="block text-[11px] font-gothic font-bold uppercase tracking-[0.14em] text-muted-foreground">
       {label}
     </span>
     <input
@@ -175,7 +159,7 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
           style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
         >
           <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-gothic font-bold uppercase tracking-[0.16em] text-muted-foreground">
+            <span className="text-base font-gothic font-bold uppercase tracking-[0.16em] text-muted-foreground">
               단어 정보
             </span>
             <button
@@ -188,27 +172,7 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
             </button>
           </div>
 
-          {/* 헤드: 단어 + 뜻 + 발음 */}
-          <div className="mt-2 flex items-start gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="font-word text-2xl leading-tight text-card-foreground break-words">
-                {wordText || word.word}
-              </p>
-              {meaning && (
-                <p className="mt-1 font-gothic text-sm text-muted-foreground break-words">{meaning}</p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => speak(wordText || word.word)}
-              className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
-              title="발음 듣기"
-            >
-              <Volume2 size={16} />
-            </button>
-          </div>
-
-          <div className="h-px bg-border/50 my-4" />
+          <div className="h-px bg-border/50 mt-3 mb-4" />
 
           <form onSubmit={handleSubmit}>
             <div className="space-y-4">
@@ -224,7 +188,7 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
               <button
                 type="button"
                 onClick={handleDeleteClick}
-                className="flex items-center gap-1.5 text-sm font-gothic text-red-500/80 hover:text-red-500 transition-colors"
+                className="flex items-center gap-1.5 text-sm font-gothic font-bold text-red-500/80 hover:text-red-500 transition-colors"
               >
                 <Trash2 size={14} />
                 {confirmDelete ? "정말 삭제?" : "삭제"}
@@ -232,7 +196,7 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
               <button
                 type="submit"
                 disabled={!canSave}
-                className={`rounded-full bg-primary text-primary-foreground px-6 h-10 font-gothic text-sm transition-opacity ${
+                className={`rounded-full bg-primary text-primary-foreground px-6 h-10 font-gothic font-bold text-sm transition-opacity ${
                   canSave ? "" : "opacity-50"
                 }`}
               >
