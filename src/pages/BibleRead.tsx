@@ -15,8 +15,9 @@ import { quickLookupWord } from "@/lib/story";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { ttsPlayer } from "@/lib/tts";
+import { bibleAudioPlayer } from "@/lib/bibleAudio";
 import BiblePicker from "@/components/BiblePicker";
-import PlayButton from "@/components/PlayButton";
+import BibleAudioButton from "@/components/BibleAudioButton";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 const LAST_POS_KEY = "bible-last-pos";
@@ -100,7 +101,12 @@ const BibleRead = () => {
       }
     };
     window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      // 페이지를 벗어나면 낭독도 함께 정지 (setState 없이 정리만)
+      bibleAudioPlayer.stop();
+      ttsPlayer.stop();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -114,6 +120,7 @@ const BibleRead = () => {
     setVersesKo(null);
     setFlipped(false);
     ttsPlayer.stop();
+    bibleAudioPlayer.stop();
     try {
       const tb = await fetchChapter(p.bookId, p.chapter);
       if (loadToken.current !== token) return;
@@ -309,9 +316,9 @@ const BibleRead = () => {
                 </button>
                 {!flipped && !loading && !error && verses && verses.length > 0 && (
                   <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <PlayButton
-                      cacheKey={"bible-" + pos.bookId + "-" + pos.chapter}
-                      text={verses.map((v) => v.text).join("\n\n")}
+                    <BibleAudioButton
+                      bookId={pos.bookId}
+                      chapter={pos.chapter}
                       label="듣기"
                     />
                   </span>
