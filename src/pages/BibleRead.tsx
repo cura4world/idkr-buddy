@@ -18,6 +18,7 @@ import { ttsPlayer } from "@/lib/tts";
 import { bibleAudioPlayer } from "@/lib/bibleAudio";
 import BiblePicker from "@/components/BiblePicker";
 import BibleAudioButton from "@/components/BibleAudioButton";
+import BibleAudioSeekBar from "@/components/BibleAudioSeekBar";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 const LAST_POS_KEY = "bible-last-pos";
@@ -281,7 +282,12 @@ const BibleRead = () => {
     </p>
   );
 
-  const posLabel = book ? `${book.idName.toUpperCase()} ${pos.chapter} · ${book.ko} ${pos.chapter}장` : "";
+  // 위치 필 라벨: 앞면은 인니어만("RUT 1"), 뒷면은 한국어만("룻기 1장")
+  const posLabel = book
+    ? (flipped
+        ? `${book.ko} ${pos.chapter}장`
+        : `${book.idName.toUpperCase()} ${pos.chapter}`)
+    : "";
 
   // ---------- 화면 ----------
   return (
@@ -324,6 +330,9 @@ const BibleRead = () => {
                   </span>
                 )}
               </div>
+
+              {/* 낭독 시크바 — 재생 중이 아니면 컴포넌트가 null을 반환합니다 */}
+              {!flipped && <BibleAudioSeekBar bookId={pos.bookId} chapter={pos.chapter} />}
 
               {/* 본문 */}
               {loading ? (
