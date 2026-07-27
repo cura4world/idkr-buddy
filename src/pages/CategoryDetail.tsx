@@ -42,11 +42,13 @@ export default function CategoryDetail() {
   const swipeIndexRef = useRef<number | null>(null);
   const lastTapTime = useRef<number>(0);
   const lastTapIndex = useRef<number | null>(null);
+  // 롱프레스로 "끌 준비"만 된 카드. 실제로 움직이기 전까지는 화면에 아무 변화도 주지 않습니다.
+  const armedIndex = useRef<number | null>(null);
   // 꾸욱 누른 뒤 실제로 끌었는지 (끌었으면 순서 이동, 그대로 떼면 단어정보 창)
   const dragMoved = useRef(false);
   // 카드 안의 아이콘 버튼에서 시작한 터치인지 (드래그/롱프레스 대상 아님)
   const touchOnControl = useRef(false);
-  // 마우스 롱프레스로 단어정보를 열었을 때 뒤따르는 click(선택 토글) 무시
+  // 롱프레스로 단어정보를 열었을 때 뒤따르는 click(선택 토글) 무시
   const suppressClick = useRef(false);
   const SWIPE_THRESHOLD = 80;
   const DRAG_MOVE_THRESHOLD = 12;
@@ -136,12 +138,23 @@ export default function CategoryDetail() {
     return -1;
   };
 
+  // 실제로 끌기 시작한 순간에만 드래그 UI(복제 카드 + 원본 반투명 + 드롭선)를 켭니다.
+  const beginDragVisuals = (clientX: number, clientY: number) => {
+    const idx = armedIndex.current;
+    if (idx === null) return;
+    setDragging(idx);
+    setDragOver(idx);
+    setFloatPos({ x: clientX, y: clientY });
+    startAutoScroll(clientY);
+  };
+
   const handleEnd = () => {
     cancelLongPress();
     stopAutoScroll();
     const from = draggingIndexRef.current;
     const to = dragOverIndexRef.current;
-    if (isDragging.current && from !== null && to !== null && from !== to) {
+    // 끌지 않고 누르기만 한 경우에는 순서를 건드리지 않습니다.
+    if (isDragging.current && dragMoved.current && from !== null && to !== null && from !== to) {
       reorderWords(id!, from, to);
       setTick((t) => t + 1);
     }
@@ -149,6 +162,7 @@ export default function CategoryDetail() {
     setDragOver(null);
     setFloatPos(null);
     isDragging.current = false;
+    armedIndex.current = null;
   };
 
   useEffect(() => {
@@ -192,7 +206,12 @@ export default function CategoryDetail() {
 
       if (isDragging.current) {
         e.preventDefault();
-        if (adx > DRAG_MOVE_THRESHOLD || ady > DRAG_MOVE_THRESHOLD) dragMoved.current = true;
+        if (!dragMoved.current) {
+          // 손가락이 12px 넘게 움직인 순간부터가 진짜 드래그
+          if (adx <= DRAG_MOVE_THRESHOLD && ady <= DRAG_MOVE_THRESHOLD) return;
+          dragMoved.current = true;
+          beginDragVisuals(t.clientX, t.clientY);
+        }
         setFloatPos({ x: t.clientX, y: t.clientY });
         startAutoScroll(t.clientY);
         const over = getOverIndex(t.clientX, t.clientY);
@@ -213,14 +232,17 @@ export default function CategoryDetail() {
     isDragging.current = false;
     isSwipe.current = false;
     dragMoved.current = false;
+    armedIndex.current = null;
     suppressClick.current = false; // 이전 제스처의 잔여 플래그 정리
     touchIntent.current = "none";
     swipeIndexRef.current = index;
     swipeXRef.current = 0;
     longPressTimer.current = setTimeout(() => {
       if (isSwipe.current || touchIntent.current === "swipe" || touchIntent.current === "scroll") return;
+      // 여기서는 "끌 준비"만 합니다. 화면 변화는 실제로 움직일 때(beginDragVisuals) 시작합니다.
       isDragging.current = true;
       touchIntent.current = "drag";
+      armedIndex.current = index;
       try { (navigator as any).vibrate?.(15); } catch (e) {}
       const cardEl = cardRefs.current[index];
       if (cardEl) {
@@ -228,10 +250,6 @@ export default function CategoryDetail() {
         setFloatWidth(rect.width);
         floatOffsetY.current = t.clientY - rect.top;
       }
-      setDragging(index);
-      setDragOver(index);
-      setFloatPos({ x: t.clientX, y: t.clientY });
-      startAutoScroll(t.clientY);
     }, 500);
   };
 
@@ -282,27 +300,31 @@ export default function CategoryDetail() {
     if (e.button !== 0) return;
     isDragging.current = false;
     dragMoved.current = false;
+    armedIndex.current = null;
     suppressClick.current = false; // 이전 제스처의 잔여 플래그 정리
     const start = { x: e.clientX, y: e.clientY };
     longPressTimer.current = setTimeout(() => {
+      // 터치와 동일하게 "끌 준비"만 하고, 화면 변화는 실제로 움직일 때 시작합니다.
       isDragging.current = true;
+      armedIndex.current = index;
       const cardEl = cardRefs.current[index];
       if (cardEl) {
         const rect = cardEl.getBoundingClientRect();
         setFloatWidth(rect.width);
         floatOffsetY.current = e.clientY - rect.top;
       }
-      setDragging(index);
-      setDragOver(index);
-      setFloatPos({ x: e.clientX, y: e.clientY });
     }, 500);
     const onMouseMove = (ev: MouseEvent) => {
       if (!isDragging.current) return;
-      if (
-        Math.abs(ev.clientX - start.x) > DRAG_MOVE_THRESHOLD ||
-        Math.abs(ev.clientY - start.y) > DRAG_MOVE_THRESHOLD
-      ) {
+      if (!dragMoved.current) {
+        if (
+          Math.abs(ev.clientX - start.x) <= DRAG_MOVE_THRESHOLD &&
+          Math.abs(ev.clientY - start.y) <= DRAG_MOVE_THRESHOLD
+        ) {
+          return;
+        }
         dragMoved.current = true;
+        beginDragVisuals(ev.clientX, ev.clientY);
       }
       setFloatPos({ x: ev.clientX, y: ev.clientY });
       startAutoScroll(ev.clientY);
@@ -411,16 +433,19 @@ export default function CategoryDetail() {
           const deleteCount = selectedIds.includes(w.id) ? selectedIds.length : 1;
           return (
             <div key={w.id} className="relative overflow-hidden rounded-lg">
-              {swipingLeft ? (
-                <div className={`absolute inset-0 flex items-center justify-end px-5 rounded-lg transition-colors duration-100 ${showDeleteConfirm ? "bg-red-600" : "bg-red-500/70"}`}>
-                  <span className="text-white text-sm font-body mr-2">{showDeleteConfirm ? (deleteCount > 1 ? deleteCount + "개 삭제!" : "삭제!") : "삭제"}</span>
-                  <Trash2 size={18} className="text-white" />
-                </div>
-              ) : (
-                <div className={`absolute inset-0 flex items-center px-5 rounded-lg transition-colors duration-100 ${showCopyConfirm ? "bg-sky-500" : "bg-sky-400/70"}`}>
-                  <Copy size={18} className="text-white" />
-                  <span className="text-white text-sm font-body ml-2">{showCopyConfirm ? "복사!" : "복사"}</span>
-                </div>
+              {/* 복사/삭제 배경은 실제로 스와이프하는 동안에만 렌더링합니다. */}
+              {isSwiping && (
+                swipingLeft ? (
+                  <div className={`absolute inset-0 flex items-center justify-end px-5 rounded-lg transition-colors duration-100 ${showDeleteConfirm ? "bg-red-600" : "bg-red-500/70"}`}>
+                    <span className="text-white text-sm font-body mr-2">{showDeleteConfirm ? (deleteCount > 1 ? deleteCount + "개 삭제!" : "삭제!") : "삭제"}</span>
+                    <Trash2 size={18} className="text-white" />
+                  </div>
+                ) : (
+                  <div className={`absolute inset-0 flex items-center px-5 rounded-lg transition-colors duration-100 ${showCopyConfirm ? "bg-sky-500" : "bg-sky-400/70"}`}>
+                    <Copy size={18} className="text-white" />
+                    <span className="text-white text-sm font-body ml-2">{showCopyConfirm ? "복사!" : "복사"}</span>
+                  </div>
+                )
               )}
               {isDropTarget && (
                 <div className="h-0.5 bg-sky-400 rounded-full mx-1 mb-1 shadow-sm shadow-sky-400/50" />
@@ -556,4 +581,4 @@ export default function CategoryDetail() {
       </AlertDialog>
     </div>
   );
-        }
+}
