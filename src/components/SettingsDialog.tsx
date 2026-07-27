@@ -11,6 +11,7 @@ import { Copy, Download, Upload, Trash2, Minus, Plus, Type, Volume2 } from "luci
 import { toast } from "sonner";
 import { clearStoredImages, countStoredImages } from "@/lib/imageStore";
 import { clearLookupWords, countLookupWords } from "@/lib/wordStore";
+import { clearCachedResults, countCachedResults } from "@/lib/dictStore";
 import { getFontStep, getStepCount, stepFont } from "@/lib/fontScale";
 import { getTtsVoice, setTtsVoice, TTS_VOICES, TtsVoiceId, clearTtsCache } from "@/lib/tts";
 
@@ -51,15 +52,18 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const handleClearImages = async () => {
     const imgN = await countStoredImages();
     const wordN = await countLookupWords();
-    if (imgN === 0 && wordN === 0) {
-      toast("저장된 사전 이미지·단어가 없습니다");
+    const resN = await countCachedResults();
+    if (imgN === 0 && wordN === 0 && resN === 0) {
+      toast("저장된 사전 이미지·단어·검색 결과가 없습니다");
       return;
     }
     await clearStoredImages();
     await clearLookupWords();
+    await clearCachedResults();
     const parts: string[] = [];
     if (imgN > 0) parts.push("이미지 " + imgN + "장");
     if (wordN > 0) parts.push("단어 " + wordN + "개");
+    if (resN > 0) parts.push("검색 결과 " + resN + "건");
     toast(parts.join(", ") + "를 비웠습니다");
   };
 
@@ -256,7 +260,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             </Button>
             <Button type="button" variant="outline" className="w-full mt-2" onClick={handleClearImages}>
               <Trash2 className="w-4 h-4 mr-1.5" />
-              저장된 사전 이미지·단어 비우기
+              저장된 사전 이미지·단어·검색 결과 비우기
             </Button>
             <Button type="button" variant="outline" className="w-full mt-2" onClick={handleClearTts}>
               <Trash2 className="w-4 h-4 mr-1.5" />
