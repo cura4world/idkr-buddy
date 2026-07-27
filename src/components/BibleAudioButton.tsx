@@ -2,7 +2,7 @@
 // 성경 읽기 전용 낭독 재생 컨트롤 (Alkitab Suara, R2 스트리밍).
 // - 대기: ▶ 듣기
 // - 로딩: 스피너 (음원 여는 중)
-// - 재생/일시정지: ⏸/▶ + ⏹ + 남은 시간 표시
+// - 재생/일시정지: ⏸/▶ + ⏹ + 경과/전체 시간 표시
 // 모양은 PlayButton과 맞추되, 엔진은 TTS가 아니라 실제 낭독 mp3입니다.
 
 import { useEffect, useRef, useState } from "react";
