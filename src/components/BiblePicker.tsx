@@ -62,7 +62,7 @@ const BiblePicker = ({ open, currentBookId, currentChapter, onClose, onSelect }:
             <div className="overflow-y-auto px-2 pb-6" style={{ WebkitOverflowScrolling: "touch" as any }}>
               {/* 구분 배지: 시트 배경(bg-card)이 밝은 면이라 불투명 배경을 씁니다 */}
               <div className="px-2 pt-2 pb-1">
-                <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-gothic font-semibold whitespace-nowrap bg-teal-600 text-white">
+                <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-gothic font-semibold whitespace-nowrap bg-teal-700 text-white">
                   구약 Perjanjian Lama
                 </span>
               </div>
