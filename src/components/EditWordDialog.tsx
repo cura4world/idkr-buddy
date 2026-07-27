@@ -22,7 +22,7 @@ const UnderlineField = ({
   font: string;
 }) => (
   <label className="block">
-    <span className="block text-xs font-gothic font-bold uppercase tracking-[0.14em] text-muted-foreground">
+    <span className="block text-sm font-gothic font-bold uppercase tracking-[0.14em] text-muted-foreground">
       {label}
     </span>
     <input
