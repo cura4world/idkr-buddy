@@ -42,7 +42,7 @@ const PlayButton = ({ cacheKey, text, label = "듣기", className = "" }: PlayBu
 
   if (loading) {
     return (
-      <div className={"inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary " + className}>
+      <div className={"inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium bg-primary/10 text-primary " + className}>
         <Loader2 size={14} className="animate-spin" /> 음성 준비 중...
       </div>
     );
@@ -72,7 +72,7 @@ const PlayButton = ({ cacheKey, text, label = "듣기", className = "" }: PlayBu
   return (
     <button
       onClick={onMain}
-      className={"inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary active:bg-primary/20 " + className}
+      className={"inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium bg-primary/10 text-primary active:bg-primary/20 " + className}
     >
       <Play size={14} /> {label}
     </button>

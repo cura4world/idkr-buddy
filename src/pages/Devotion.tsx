@@ -48,13 +48,15 @@ const speak = (text: string, lang: "id" | "ko" = "id") => {
 
 const fmtQtDate = (dateStr: string) => dateStr.replace(new RegExp("-", "g"), ".");
 
-// 카드 헤더용 날짜 라벨: 앞면(인니어) "QT 21 Juli" / 뒷면(한국어) "7월 21일 QT"
-const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+// 카드 헤더용 날짜 라벨: 앞면(인니어) "QT 260727" / 뒷면(한국어) "7월 27일 QT"
+const pad2 = (n: number) => (n < 10 ? "0" + n : String(n));
 const qtDateLabel = (dateStr: string, ko: boolean) => {
   const parts = dateStr.split("-");
   const m = Number(parts[1]) || 1;
   const d = Number(parts[2]) || 1;
-  return ko ? m + "월 " + d + "일 QT" : "QT " + d + " " + (BULAN[m - 1] || "");
+  if (ko) return m + "월 " + d + "일 QT";
+  const yy = String(parts[0] || "").slice(-2);
+  return "QT " + yy + pad2(m) + pad2(d);
 };
 
 const tbRangeLabel = (rec: DevotionRecord) =>
