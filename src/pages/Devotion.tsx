@@ -587,7 +587,7 @@ const Devotion = () => {
               title="카드 뒤집기"
             />
           </div>
-          <p className="text-center text-white/50 text-xs mt-3">
+          <p className="text-center text-muted-foreground text-xs mt-3">
             {flipped ? "오른쪽 바를 누르면 원문이 보입니다" : "오른쪽 바를 누르면 해석, 단어를 탭하면 뜻이 나옵니다"}
           </p>
         </div>
@@ -750,7 +750,7 @@ const Devotion = () => {
         {/* 지난 묵상 */}
         {records.filter((r) => !todayRec || r.id !== todayRec.id).length > 0 && (
           <div className="mt-5">
-            <p className="text-xs text-white mb-2 px-1 font-gothic">지난 묵상</p>
+            <p className="text-xs text-muted-foreground mb-2 px-1 font-gothic">지난 묵상</p>
             <ul className="space-y-2">
               {records
                 .filter((r) => !todayRec || r.id !== todayRec.id)
