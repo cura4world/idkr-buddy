@@ -537,10 +537,10 @@ const Dictionary = () => {
   return (
     <div className={`w-full max-w-lg mx-auto overflow-x-hidden bg-background flex flex-col ${isHome ? "h-[100dvh]" : "min-h-screen"}`}>
       {/* 헤더 */}
-      <header className="sticky top-0 z-30 bg-primary text-white px-4 py-3 flex items-center gap-3">
+      <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => { if (resultStateRef.current) { window.history.back(); } else { navigate("/"); } }}
-          className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+          className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >
           <ArrowLeft size={20} />
@@ -548,7 +548,7 @@ const Dictionary = () => {
         <h1 className="flex-1 text-lg font-semibold truncate">인도네시아어 사전</h1>
         <button
           onClick={goHome}
-          className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -mr-1 shrink-0"
+          className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -mr-1 shrink-0"
           title="처음으로"
         >
           <Home size={20} />
