@@ -150,7 +150,13 @@ const koChapterCache = new Map<string, BibleVerse[]>();
 // TB 본문에는 예수님의 말씀을 감싸는 마커(시작 "/", 끝 "*")가 들어 있어 표시 전에 제거합니다.
 function stripTbMarks(text: string): string {
   return text
+    // 예수님의 말씀을 감싸는 마커 (시작 "/", 끝 "*")
     .replace(new RegExp("[/*]", "g"), "")
+    // 인쇄본에서 딸려 들어온 쪽 머리글 + 쪽 번호 (예: "Yunus 1.6-10 2")
+    .replace(
+      new RegExp("\\s*[A-Z][A-Za-z]*(?:-[A-Za-z]+)*\\s\\d+[.:]\\d+[\\u2013\\u2014-]\\d+\\s+\\d+\\s*", "g"),
+      " "
+    )
     .replace(new RegExp("\\s{2,}", "g"), " ")
     .trim();
 }
