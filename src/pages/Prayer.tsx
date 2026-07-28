@@ -280,6 +280,11 @@ const Prayer = () => {
     listPrayers().then(setRecords);
   }, []);
 
+  // 스크롤을 내린 상태에서 들어와도 맨 위부터 보이게 합니다.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, []);
+
   // ---------- 화면 이동 ----------
   const openWizard = (cid: string) => {
     const cat = getPrayerCategory(cid);
@@ -297,6 +302,7 @@ const Prayer = () => {
     } catch (e) {}
     setLength(saved);
     setView("wizard");
+    window.scrollTo({ top: 0 });
     pushSub();
   };
 
@@ -309,6 +315,7 @@ const Prayer = () => {
     setEditingKo(false);
     setCurrent(rec);
     setView("prayer");
+    window.scrollTo({ top: 0 });
     pushSub();
   };
 
@@ -362,6 +369,7 @@ const Prayer = () => {
       setEditingKo(false);
       setCurrent(rec);
       setView("prayer");
+      window.scrollTo({ top: 0 });
       if (!subOpenRef.current) pushSub();
     } catch (e: any) {
       if (genToken.current !== token) return;
