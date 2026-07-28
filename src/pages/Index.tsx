@@ -145,6 +145,8 @@ const Index = () => {
   const [history, setHistory] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const hideHistoryRef = useRef<any>(null);
+  const searchAreaRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const allCategories = getCategories();
   const hasMyWordbook = allCategories.some((c) => c.id === MY_WORDBOOK_ID);
@@ -219,6 +221,21 @@ const Index = () => {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  // 최근 검색어 목록은 검색 영역 바깥을 누르면 닫습니다.
+  // 폰에서는 카드처럼 포커스를 받지 않는 요소를 눌러도 input 의 blur 가 안 나는 경우가 있어
+  // blur 만으로는 목록이 남아 있게 됩니다.
+  useEffect(() => {
+    if (!showHistory) return;
+    const onDown = (e: any) => {
+      const area = searchAreaRef.current;
+      if (area && e.target && area.contains(e.target)) return;
+      setShowHistory(false);
+      try { searchInputRef.current?.blur(); } catch (err) {}
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [showHistory]);
 
   const openPhrase = () => {
     if (!phrase) return;
@@ -390,11 +407,12 @@ const Index = () => {
         </div>
 
         {/* 검색 */}
-        <div className="relative mt-4">
+        <div ref={searchAreaRef} className="relative mt-4">
           <div className="flex items-center gap-2 min-w-0">
           <div className="flex-1 min-w-0 h-[46px] flex items-center gap-2 rounded-full bg-card px-4">
             <Search size={18} className="shrink-0 text-muted-foreground" />
             <input
+              ref={searchInputRef}
               size={1}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
