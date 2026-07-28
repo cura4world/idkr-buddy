@@ -171,7 +171,7 @@ const InsightOverview = () => {
       <header className="flex items-center gap-2 mb-4">
         <button
           onClick={() => navigate("/insight")}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 hover:bg-white/10 active:bg-white/15 -ml-1"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-white/10 active:bg-white/15 -ml-1"
           title="뒤로"
         >
           <ArrowLeft size={20} />
@@ -180,11 +180,11 @@ const InsightOverview = () => {
           <span className="w-9 h-9 rounded-xl bg-sky-400 flex items-center justify-center shadow-lg shadow-black/30">
             <Globe size={18} className="text-white" />
           </span>
-          <h1 className="text-lg font-semibold text-white leading-none">인도네시아 개관</h1>
+          <h1 className="text-lg font-semibold text-foreground leading-none">인도네시아 개관</h1>
         </div>
       </header>
 
-      <p className="mb-4 text-[13px] font-gothic text-white/60 leading-relaxed px-1">
+      <p className="mb-4 text-[13px] font-gothic text-muted-foreground leading-relaxed px-1">
         적도에 걸친 세계 최대의 섬나라. 인구 세계 4위, 동남아시아 최대 경제국이자
         세계에서 무슬림이 가장 많이 사는 나라입니다.
       </p>
@@ -197,7 +197,7 @@ const InsightOverview = () => {
         <PancasilaSection />
       </div>
 
-      <p className="mt-4 text-[11px] font-gothic text-white/35 px-1">
+      <p className="mt-4 text-[11px] font-gothic text-muted-foreground px-1">
         ※ 수치는 2025~2026년 IMF·세계은행·인도네시아 통계청 자료 기준입니다.
       </p>
     </div>
