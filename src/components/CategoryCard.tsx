@@ -129,7 +129,7 @@ export default function CategoryCard({
       )}
 
       <div className="flex items-center justify-between mt-2">
-        <span className="text-xs text-muted-foreground">{words.length}개의 단어</span>
+        <span className="text-xs text-muted-foreground font-gothic">{words.length}개의 단어</span>
         <div className="flex gap-2">
           <button
             onClick={() => navigate(`/quiz/${category.id}`)}
