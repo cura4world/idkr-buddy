@@ -720,7 +720,7 @@ const Dictionary = () => {
 
         {/* 로딩 */}
         {loading && (
-          <div className="flex flex-col items-center justify-center py-16 text-white/70">
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Loader2 size={28} className="animate-spin mb-3" />
             <p className="text-sm">사전을 찾고 있어요...</p>
           </div>
@@ -728,7 +728,7 @@ const Dictionary = () => {
 
         {/* 에러 */}
         {!loading && error && (
-          <div className="text-center py-12 text-white/80">
+          <div className="text-center py-12 text-foreground/80">
             <p className="text-sm">{error}</p>
           </div>
         )}
@@ -736,7 +736,7 @@ const Dictionary = () => {
         {/* 초기 화면: 안내 문구 + 최근 검색 (바닥까지 이어지는 시트) */}
         {isHome && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <div className="pt-1 pb-4 text-white/60">
+            <div className="pt-1 pb-4 text-muted-foreground">
               <p className="text-xs flex items-center justify-center gap-1">
                 <Search size={13} className="opacity-60 shrink-0" />
                 <span>인니어·한국어 단어나 문장을 검색해보세요</span>
@@ -744,7 +744,7 @@ const Dictionary = () => {
             </div>
             {history.length > 0 && (
               <>
-                <p className="text-xs text-white mb-1 px-1 font-gothic">최근 검색</p>
+                <p className="text-xs text-muted-foreground mb-1 px-1 font-gothic">최근 검색</p>
                 {/* 바깥: 바닥까지 이어지는 흰 시트 / 안쪽: 리스트만 스크롤 + 아래로 갈수록 흐려지는 페이드 */}
                 <div className="flex-1 min-h-0 bg-card rounded-t-xl overflow-hidden flex flex-col">
                   <ul
@@ -789,7 +789,7 @@ const Dictionary = () => {
           <div className="flex justify-end mb-1.5">
             <button
               onClick={() => handleSearch(lastTerm, koBackTerm ? koBackTerm : undefined, true)}
-              className="p-1.5 text-white/50 hover:text-white/90"
+              className="p-1.5 text-muted-foreground hover:text-foreground/80"
               title={`"${lastTerm}" 다시 검색 (저장된 결과 무시)`}
               aria-label="다시 검색"
             >
