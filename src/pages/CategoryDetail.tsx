@@ -469,7 +469,7 @@ export default function CategoryDetail() {
         <header className="flex items-center gap-2 mb-2 pr-2">
           <button
             onClick={handleBack}
-            className="text-white hover:text-white/70 w-8 h-8 flex items-center justify-center -ml-2 shrink-0"
+            className="text-foreground hover:text-foreground/70 w-8 h-8 flex items-center justify-center -ml-2 shrink-0"
             title="뒤로"
           >
             <ArrowLeft size={18} />
@@ -479,10 +479,10 @@ export default function CategoryDetail() {
           </h1>
         </header>
         <div className="flex justify-end gap-4">
-          <button onClick={() => setCsvOpen(true)} className="text-sm text-white hover:underline underline-offset-4 font-gothic">
+          <button onClick={() => setCsvOpen(true)} className="text-sm text-foreground hover:underline underline-offset-4 font-gothic">
             CSV 가져오기
           </button>
-          <button onClick={() => setAddOpen(true)} className="text-sm text-white hover:underline underline-offset-4 font-gothic">
+          <button onClick={() => setAddOpen(true)} className="text-sm text-foreground hover:underline underline-offset-4 font-gothic">
             + 단어 추가
           </button>
         </div>
