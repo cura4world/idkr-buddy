@@ -539,7 +539,7 @@ const Prayer = () => {
         <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
           <button
             onClick={closeSub}
-            className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+            className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
             title="뒤로"
           >
             <ArrowLeft size={20} />
@@ -551,7 +551,7 @@ const Prayer = () => {
             <button
               onClick={togglePin}
               className={`shrink-0 w-9 h-9 flex items-center justify-center ${
-                current.pinned ? "text-amber-400" : "text-white/50 hover:text-white/70"
+                current.pinned ? "text-amber-400" : "text-muted-foreground hover:text-foreground/70"
               }`}
               title={current.pinned ? "고정 해제" : "고정"}
             >
@@ -705,7 +705,7 @@ const Prayer = () => {
               title={flipped ? "원문 보기" : "번역 보기"}
             />
           </div>
-          <p className="text-center text-white/50 text-xs mt-3">
+          <p className="text-center text-muted-foreground text-xs mt-3">
             {flipped ? "오른쪽 바를 누르면 원문이 보입니다" : "오른쪽 바를 누르면 번역, 단어를 탭하면 뜻이 나옵니다"}
           </p>
         </div>
@@ -795,7 +795,7 @@ const Prayer = () => {
         <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
           <button
             onClick={closeSub}
-            className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+            className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
             title="뒤로"
           >
             <ArrowLeft size={20} />
@@ -813,7 +813,7 @@ const Prayer = () => {
                   value={customText}
                   onChange={(e) => setCustomText(e.target.value)}
                   placeholder="예: 이사한 가정을 위한 기도"
-                  className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-white font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-white/40"
+                  className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-foreground font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-muted-foreground"
                 />
               </>
             ) : (
@@ -833,7 +833,7 @@ const Prayer = () => {
                     value={customText}
                     onChange={(e) => setCustomText(e.target.value)}
                     placeholder="상황을 직접 적어주세요"
-                    className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-white font-gothic -mt-2 mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-white/40"
+                    className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-foreground font-gothic -mt-2 mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-muted-foreground"
                   />
                 )}
               </>
@@ -856,7 +856,7 @@ const Prayer = () => {
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
               placeholder="예: Johan (비워두면 이름 없이)"
-              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-white font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-white/40"
+              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-foreground font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-muted-foreground"
             />
 
             {/* 사정 한 줄 (선택) */}
@@ -865,7 +865,7 @@ const Prayer = () => {
               value={noteInput}
               onChange={(e) => setNoteInput(e.target.value)}
               placeholder="예: 내일 수술 예정 / 비자 연장 심사 중"
-              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-white font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-white/40"
+              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-foreground font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-muted-foreground"
             />
 
             {/* 길이 */}
@@ -908,7 +908,7 @@ const Prayer = () => {
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
         <button
           onClick={() => navigate("/")}
-          className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+          className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="홈으로"
         >
           <ArrowLeft size={20} />
@@ -964,7 +964,7 @@ const Prayer = () => {
         </div>
 
         {/* 저장된 기도문 */}
-        <p className="text-sm font-bold text-white/90 mb-2 px-1 font-gothic">저장된 기도문</p>
+        <p className="text-sm font-bold text-foreground/80 mb-2 px-1 font-gothic">저장된 기도문</p>
         {records.length === 0 ? (
           <div className="bg-card/60 border border-border/40 rounded-xl px-5 py-8 text-center">
             <p className="text-sm text-gray-500 font-gothic">
