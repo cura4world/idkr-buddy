@@ -176,7 +176,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                   key={v.id}
                   type="button"
                   onClick={() => { setVoice(v.id); setTtsVoice(v.id); }}
-                  className={`flex-1 rounded-lg py-2 text-sm font-body border ${
+                  className={`flex-1 rounded-lg py-2 text-xs font-body border ${
                     voice === v.id
                       ? "bg-primary text-white border-primary"
                       : "bg-transparent text-gray-700 border-border"
@@ -234,7 +234,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 autoComplete="off"
                 className="flex-1 text-sm"
               />
-              <Button type="button" variant="outline" onClick={handleApplyPrivateFolder}>
+              <Button type="button" variant="outline" className="text-xs" onClick={handleApplyPrivateFolder}>
                 적용
               </Button>
             </div>
@@ -245,24 +245,24 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               모든 단어장을 CSV로 백업하고 복원합니다. 앱에서는 파일 저장이 되지 않으니 '복사'를 눌러 메모장이나 메신저에 붙여넣어 보관하세요.
             </p>
             <div className="flex gap-2 mt-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={handleExportCopy}>
+              <Button type="button" variant="outline" className="flex-1 text-xs" onClick={handleExportCopy}>
                 <Copy className="w-4 h-4 mr-1.5" />
                 복사
               </Button>
-              <Button type="button" variant="outline" className="flex-1" onClick={handleExportDownload}>
+              <Button type="button" variant="outline" className="flex-1 text-xs" onClick={handleExportDownload}>
                 <Download className="w-4 h-4 mr-1.5" />
                 파일 저장
               </Button>
             </div>
-            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug" onClick={() => setImportOpen(true)}>
+            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={() => setImportOpen(true)}>
               <Upload className="w-4 h-4 mr-1.5" />
               CSV 가져오기 (복원)
             </Button>
-            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug" onClick={handleClearImages}>
+            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={handleClearImages}>
               <Trash2 className="w-4 h-4 mr-1.5" />
               저장된 사전 이미지·단어·검색 결과 비우기
             </Button>
-            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug" onClick={handleClearTts}>
+            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={handleClearTts}>
               <Trash2 className="w-4 h-4 mr-1.5" />
               저장된 읽기 음성 비우기
             </Button>
