@@ -279,12 +279,12 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
         <CSVImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={() => {}} />
 
         <AlertDialog open={confirmClearData} onOpenChange={setConfirmClearData}>
-          <AlertDialogContent className="bg-card">
+          <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
             <AlertDialogHeader>
-              <AlertDialogTitle className="font-body text-gray-900">
+              <AlertDialogTitle className="font-body text-base text-gray-900">
                 저장된 단어·검색 결과를 비울까요?
               </AlertDialogTitle>
-              <AlertDialogDescription className="font-gothic">
+              <AlertDialogDescription className="font-gothic text-xs leading-relaxed">
                 사전에서 찾아둔 단어 풀이와 검색 결과가 지워집니다.
                 다음에 같은 단어를 찾으면 새로 불러옵니다.
                 단어장에 저장한 단어는 지워지지 않습니다.
@@ -298,12 +298,12 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
         </AlertDialog>
 
         <AlertDialog open={confirmClearTts} onOpenChange={setConfirmClearTts}>
-          <AlertDialogContent className="bg-card">
+          <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
             <AlertDialogHeader>
-              <AlertDialogTitle className="font-body text-gray-900">
+              <AlertDialogTitle className="font-body text-base text-gray-900">
                 저장된 읽기 음성을 비울까요?
               </AlertDialogTitle>
-              <AlertDialogDescription className="font-gothic">
+              <AlertDialogDescription className="font-gothic text-xs leading-relaxed">
                 미리 받아둔 음성 파일이 지워집니다.
                 다음에 “전체 듣기”를 누르면 새로 받아옵니다.
               </AlertDialogDescription>
