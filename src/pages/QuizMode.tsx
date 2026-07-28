@@ -47,15 +47,17 @@ export default function QuizMode() {
     (choice: string) => {
       if (selected) return;
       setSelected(choice);
-      if (choice === currentQ.correctAnswer) {
+      const isCorrect = choice === currentQ.correctAnswer;
+      if (isCorrect) {
         setCorrectCount((c) => c + 1);
       } else {
         setReviewList((r) => [...r, currentQ.word]);
       }
+      // 틀렸을 때는 정답을 읽을 시간이 필요해 더 오래 보여줍니다.
       setTimeout(() => {
         setSelected(null);
         setQuestionIndex((i) => i + 1);
-      }, 1200);
+      }, isCorrect ? 1200 : 2600);
     },
     [selected, currentQ]
   );
