@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Volume2, Loader2, RotateCcw, BookA } from "lucide-react";
+import { ArrowLeft, Volume2, Loader2, RotateCcw, BookOpen } from "lucide-react";
 import { goBackOr } from "@/lib/nav";
 import { getPhraseDetail, PhraseDetail as PhraseDetailData } from "@/lib/phrase";
 import { fetchChapterKo, getBook } from "@/lib/bible";
@@ -226,7 +226,7 @@ const PhraseDetail = () => {
                           className="ml-auto shrink-0 text-muted-foreground active:text-primary"
                           title="사전에서 보기"
                         >
-                          <BookA size={15} />
+                          <BookOpen size={15} />
                         </button>
                       </div>
                       <p className="mt-1 text-[13.5px] leading-snug text-foreground/85">{w.ko}</p>
