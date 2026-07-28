@@ -10,6 +10,7 @@ import { quickLookupWord } from "@/lib/story";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { hasClaudeApiKey } from "@/lib/claude";
+import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import SettingsDialog from "@/components/SettingsDialog";
 import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
@@ -91,6 +92,8 @@ const Devotion = () => {
     pendingPara.current = currentParaIndex(side);
     setFlipped((f) => !f);
   };
+
+  const { swipeHandlers, shouldIgnoreTap } = useSwipeFlip(handleFlip);
 
   useEffect(() => {
     const idx = pendingPara.current;
@@ -271,6 +274,7 @@ const Devotion = () => {
 
   // ---------- 단어 탭 → 미니 팝업 ----------
   const openWordPopup = async (rawToken: string, sentence: string) => {
+    if (shouldIgnoreTap()) return;
     const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
     if (!word) return;
     const key = word.toLowerCase();
@@ -425,8 +429,8 @@ const Devotion = () => {
         </header>
 
         <div className="px-4 py-4">
-          <div className="bg-card border border-border/60 rounded-xl pl-5 pr-2 py-5 min-h-[72vh] content-bump select-none flex gap-2">
-            <div className="flex-1 min-w-0">
+          <div {...swipeHandlers}
+            className="-mx-4 bg-card border-y border-border/60 px-3 py-5 min-h-[72vh] content-bump select-none">
               {!flipped ? (
                 <>
                   {/* 앞면: 인니어 */}
@@ -559,17 +563,9 @@ const Devotion = () => {
                   </div>
                 </>
               )}
-            </div>
-            {/* 뒤집기 바 */}
-            <button
-              onClick={(e) => { e.stopPropagation(); handleFlip(); }}
-              className="shrink-0 w-2 self-stretch rounded-full bg-rose-500/15 active:bg-rose-500/40"
-              aria-label="카드 뒤집기"
-              title="카드 뒤집기"
-            />
           </div>
           <p className="text-center text-muted-foreground text-xs mt-3">
-            {flipped ? "오른쪽 바를 누르면 원문이 보입니다" : "오른쪽 바를 누르면 해석, 단어를 탭하면 뜻이 나옵니다"}
+            {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 해석, 단어를 탭하면 뜻이 나옵니다"}
           </p>
         </div>
 
