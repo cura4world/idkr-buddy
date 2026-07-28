@@ -313,7 +313,7 @@ const Index = () => {
           >
             <div className="flex items-center gap-2">
               <p className="flex-1 min-w-0 truncate text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                Bahasa Hari Ini · 오늘의 인도네시아어
+                Bahasa Hari Ini
               </p>
               <button
                 type="button"
