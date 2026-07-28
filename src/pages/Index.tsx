@@ -458,6 +458,9 @@ const Index = () => {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") goSearch(); }}
               onFocus={openSearchHistory}
+              // 뒤로가기로 닫은 뒤에도 입력창은 포커스를 유지합니다.
+              // 그때는 onFocus 가 안 떠므로 탭 자체로도 다시 열어줍니다.
+              onClick={openSearchHistory}
               onBlur={() => {
                 // 목록을 탭할 때 먼저 닫히지 않도록 잠깐 기다립니다.
                 hideHistoryRef.current = window.setTimeout(() => closeSearchHistory(), 160);
