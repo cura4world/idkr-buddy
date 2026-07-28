@@ -431,7 +431,7 @@ const Story = () => {
               title="카드 뒤집기"
             />
           </div>
-          <p className="text-center text-white/50 text-xs mt-3">
+          <p className="text-center text-muted-foreground text-xs mt-3">
             {flipped ? "오른쪽 바를 누르면 원문이 보입니다" : "오른쪽 바를 누르면 해석, 단어를 탭하면 뜻이 나옵니다"}
           </p>
         </div>
@@ -553,7 +553,7 @@ const Story = () => {
         {/* 지난 이야기 */}
         {stories.length > 0 ? (
           <div className="mt-5">
-            <p className="text-xs text-white mb-2 px-1 font-gothic">지난 이야기</p>
+            <p className="text-xs text-muted-foreground mb-2 px-1 font-gothic">지난 이야기</p>
             <ul className="space-y-2">
               {stories.map((s) => (
                 <li key={s.id}>
@@ -574,7 +574,7 @@ const Story = () => {
             </ul>
           </div>
         ) : (
-          <div className="text-center py-12 text-white/60">
+          <div className="text-center py-12 text-muted-foreground">
             <BookOpen size={30} className="mx-auto mb-3 opacity-60" />
             <p className="text-sm">첫 이야기를 만들어보세요</p>
           </div>
