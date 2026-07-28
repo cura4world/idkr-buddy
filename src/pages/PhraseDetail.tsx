@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { ArrowLeft, Volume2, Loader2, RotateCcw, Search } from "lucide-react";
+import { ArrowLeft, Volume2, Loader2, RotateCcw, BookA } from "lucide-react";
 import { goBackOr } from "@/lib/nav";
 import { getPeribahasa } from "@/lib/peribahasa";
 import { getPhraseDetail, PhraseDetail as PhraseDetailData } from "@/lib/phrase";
@@ -85,14 +85,14 @@ const PhraseDetail = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="flex-1 text-lg font-semibold truncate">오늘의 인도네시아어</h1>
+        <h1 className="flex-1 font-gothic text-base font-semibold uppercase tracking-[0.08em] truncate">Bahasa Hari Ini</h1>
       </header>
 
       <div className="px-4 pt-5">
         {/* 문장 */}
         <div className="rounded-2xl border border-border bg-card px-4 py-5">
           <div className="flex items-start gap-2">
-            <p className="flex-1 font-word text-[21px] font-medium leading-[1.45] text-foreground">
+            <p className="flex-1 font-word text-[19px] font-medium leading-[1.5] text-foreground">
               {item.id}
             </p>
             <button
@@ -133,20 +133,11 @@ const PhraseDetail = () => {
           </div>
         ) : data ? (
           <>
-            {data.literal ? (
-              <section className="mt-6">
-                <Label>직역</Label>
-                <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-                  <p className="text-[14px] leading-[1.7] text-foreground/85">{data.literal}</p>
-                </div>
-              </section>
-            ) : null}
-
             {data.meaning ? (
               <section className="mt-5">
                 <Label>어떤 뜻인가요</Label>
                 <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-                  <p className="text-[14px] leading-[1.75] text-foreground/85">{data.meaning}</p>
+                  <p className="font-gothic text-[14px] leading-[1.75] text-foreground/85">{data.meaning}</p>
                 </div>
               </section>
             ) : null}
@@ -178,7 +169,7 @@ const PhraseDetail = () => {
                           className="ml-auto shrink-0 text-muted-foreground active:text-primary"
                           title="사전에서 보기"
                         >
-                          <Search size={15} />
+                          <BookA size={15} />
                         </button>
                       </div>
                       <p className="mt-1 text-[13.5px] leading-snug text-foreground/85">{w.ko}</p>
@@ -232,16 +223,18 @@ const PhraseDetail = () => {
               <section className="mt-5">
                 <Label>알아두기</Label>
                 <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-                  <p className="text-[14px] leading-[1.75] text-foreground/85">{data.note}</p>
+                  <p className="font-gothic text-[14px] leading-[1.75] text-foreground/85">{data.note}</p>
                 </div>
               </section>
             ) : null}
 
             <button
               onClick={() => load(true)}
-              className="mx-auto mt-7 flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-[12.5px] font-gothic text-muted-foreground active:bg-muted"
+              className="mx-auto mt-7 w-10 h-10 flex items-center justify-center rounded-full border border-border text-muted-foreground active:bg-muted"
+              title="설명 다시 만들기"
+              aria-label="설명 다시 만들기"
             >
-              <RotateCcw size={13} /> 설명 다시 만들기
+              <RotateCcw size={16} />
             </button>
           </>
         ) : null}
