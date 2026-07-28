@@ -325,9 +325,12 @@ const Index = () => {
     <div className="min-h-screen bg-background max-w-lg mx-auto pb-9">
       {/* ── 상단 브랜드 블록 ── */}
       <div
-        className="relative overflow-hidden px-5 pt-7 pb-6"
+        className="relative px-5 pt-7 pb-6"
         style={{ backgroundColor: "hsl(var(--brand-deep))" }}
       >
+        {/* 배경 장식만 블록 안에서 잘라냅니다.
+            (블록 자체에 overflow-hidden 을 주면 최근 검색어 플로팅 박스가 잘립니다) */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* 피니시 범선 (술라웨시 전통 목조선) */}
         <svg
           className="absolute -right-1.5 top-1.5 pointer-events-none"
@@ -368,6 +371,7 @@ const Index = () => {
           <path d="M-10 22 Q50 14 110 22 T230 22 T350 22 T470 22" opacity="0.13" />
           <path d="M-10 31 Q60 24 130 31 T270 31 T410 31" opacity="0.09" />
         </svg>
+        </div>
 
         <div className="relative flex items-start justify-between">
           <div className="min-w-0">
@@ -386,7 +390,8 @@ const Index = () => {
         </div>
 
         {/* 검색 */}
-        <div className="relative mt-4 flex items-center gap-2 min-w-0">
+        <div className="relative mt-4">
+          <div className="flex items-center gap-2 min-w-0">
           <div className="flex-1 min-w-0 h-[46px] flex items-center gap-2 rounded-full bg-card px-4">
             <Search size={18} className="shrink-0 text-muted-foreground" />
             <input
@@ -432,28 +437,29 @@ const Index = () => {
           >
             검색
           </button>
-        </div>
-
-        {/* 최근 검색어 — 검색창을 눌렀을 때만 (최대 10개) */}
-        {showHistory && query.trim() === "" && history.length > 0 ? (
-          <div className="relative mt-2 overflow-hidden rounded-2xl bg-card">
-            {history.map((term, i) => (
-              <button
-                key={term + i}
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => goSearch(term)}
-                className={
-                  "w-full flex items-center gap-2.5 px-4 py-2.5 text-left active:bg-muted/60 transition-colors " +
-                  (i === history.length - 1 ? "" : "border-b border-border")
-                }
-              >
-                <Search size={14} className="shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate text-[14px] text-foreground/80">{term}</span>
-              </button>
-            ))}
           </div>
-        ) : null}
+
+          {/* 최근 검색어 — 검색창을 눌렀을 때만 (최대 10개). 본문 위에 떠있는 플로팅 박스 */}
+          {showHistory && query.trim() === "" && history.length > 0 ? (
+            <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl bg-card shadow-[0_10px_24px_-8px_rgba(8,32,38,0.35)]">
+              {history.map((term, i) => (
+                <button
+                  key={term + i}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => goSearch(term)}
+                  className={
+                    "w-full flex items-center gap-2.5 px-4 py-2.5 text-left active:bg-muted/60 transition-colors " +
+                    (i === history.length - 1 ? "" : "border-b border-border")
+                  }
+                >
+                  <Search size={14} className="shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate text-[14px] text-foreground/80">{term}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </div>
 
       <div className="px-4">
