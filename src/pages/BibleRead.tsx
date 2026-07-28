@@ -19,6 +19,7 @@ import { bibleAudioPlayer } from "@/lib/bibleAudio";
 import BiblePicker from "@/components/BiblePicker";
 import BibleAudioButton from "@/components/BibleAudioButton";
 import BibleAudioSeekBar from "@/components/BibleAudioSeekBar";
+import { useSwipeFlip } from "@/lib/useSwipeFlip";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 const LAST_POS_KEY = "bible-last-pos";
@@ -70,6 +71,9 @@ const BibleRead = () => {
   const [error, setError] = useState(false);
   const [koError, setKoError] = useState(false);
   const [flipped, setFlipped] = useState(false);
+
+  const { swipeHandlers, shouldIgnoreTap } = useSwipeFlip(() => setFlipped((f) => !f));
+
   const loadToken = useRef(0);
   const scrollTopRef = useRef<HTMLDivElement | null>(null);
 
@@ -177,6 +181,7 @@ const BibleRead = () => {
   const wordCache = useRef(new Map<string, { meaning: string; info: string; sentenceKo: string }>());
 
   const openWordPopup = async (rawToken: string, sentence: string) => {
+    if (shouldIgnoreTap()) return;
     const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
     if (!word) return;
     const key = word.toLowerCase();
@@ -308,9 +313,7 @@ const BibleRead = () => {
       </header>
 
       <div className="px-4 py-4">
-        <div className="bg-card border border-border/60 rounded-xl overflow-hidden">
-          <div className="flex items-stretch">
-            <div className="flex-1 min-w-0 px-5 py-5">
+        <div {...swipeHandlers} className="-mx-4 bg-card border-y border-border/60 overflow-hidden px-3 py-5">
               {/* 위치 필 (탭 → 책 선택 시트) */}
               <div className="flex items-center gap-2 mb-4 min-w-0">
                 <button
@@ -380,17 +383,6 @@ const BibleRead = () => {
                   <Loader2 size={16} className="animate-spin" /> 한국어 본문을 불러오는 중...
                 </div>
               )}
-            </div>
-
-            {/* 뒤집기 바 */}
-            {!loading && !error && (
-              <button
-                onClick={() => setFlipped((f) => !f)}
-                className="shrink-0 w-2 self-stretch rounded-full bg-sky-500/15 active:bg-sky-500/40 my-4 mr-1.5"
-                aria-label="카드 뒤집기"
-              />
-            )}
-          </div>
         </div>
 
         {/* 이전 장 / 다음 장 */}
