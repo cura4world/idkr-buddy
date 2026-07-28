@@ -182,7 +182,7 @@ const InsightChristian = () => {
       <header className="flex items-center gap-2 mb-4">
         <button
           onClick={() => navigate("/insight")}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 hover:bg-white/10 active:bg-white/15 -ml-1"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-white/10 active:bg-white/15 -ml-1"
           title="뒤로"
         >
           <ArrowLeft size={20} />
@@ -191,7 +191,7 @@ const InsightChristian = () => {
           <span className="w-9 h-9 rounded-xl bg-rose-500 flex items-center justify-center shadow-lg shadow-black/30">
             <Cross size={18} className="text-white" />
           </span>
-          <h1 className="text-lg font-semibold text-white leading-none">인도네시아 기독교</h1>
+          <h1 className="text-lg font-semibold text-foreground leading-none">인도네시아 기독교</h1>
         </div>
       </header>
 
@@ -261,7 +261,7 @@ const InsightChristian = () => {
       </div>
 
       {/* 지역·종족별 상세 (접이식) */}
-      <h2 className="text-sm font-semibold text-white/80 px-1 mb-2 mt-5">지역·종족별 상세</h2>
+      <h2 className="text-sm font-semibold text-foreground/80 px-1 mb-2 mt-5">지역·종족별 상세</h2>
       <div className="space-y-2 mb-5">
         {REGIONS.map((r) => (
           <Fold key={r.t} title={r.t} badge={r.b}>
@@ -294,7 +294,7 @@ const InsightChristian = () => {
       </div>
 
       {/* 교단 현황 (접이식) */}
-      <h2 className="text-sm font-semibold text-white/80 px-1 mb-2">주요 교단 현황</h2>
+      <h2 className="text-sm font-semibold text-foreground/80 px-1 mb-2">주요 교단 현황</h2>
       <div className="space-y-2 mb-5">
         <Fold title="수마트라 — 바탁·니아스 루터교 계열" badge="8개">
           <DenomList items={D_SUMATRA} />
@@ -324,7 +324,7 @@ const InsightChristian = () => {
       </div>
 
       {/* 부가 정보 (접이식) */}
-      <h2 className="text-sm font-semibold text-white/80 px-1 mb-2">더 알아보기</h2>
+      <h2 className="text-sm font-semibold text-foreground/80 px-1 mb-2">더 알아보기</h2>
       <div className="space-y-2">
         <Fold title="말레이시아와 비교하면">
           <div className="space-y-1.5 text-[13px] font-gothic">
@@ -354,7 +354,7 @@ const InsightChristian = () => {
         </Fold>
       </div>
 
-      <p className="mt-4 text-[11px] font-gothic text-white/35 px-1 leading-relaxed">
+      <p className="mt-4 text-[11px] font-gothic text-muted-foreground px-1 leading-relaxed">
         ※ 교인 수는 각 교단 자체 보고·WCC·LWF 자료 기반 추정치입니다 (2020~2025).
       </p>
     </div>
