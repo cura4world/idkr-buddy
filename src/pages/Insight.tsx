@@ -52,13 +52,13 @@ const Insight = () => {
       <header className="relative flex items-center gap-2 mb-4">
         <button
           onClick={() => navigate("/")}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 hover:bg-white/10 active:bg-white/15 -ml-1"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-white/10 active:bg-white/15 -ml-1"
           title="홈으로"
         >
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-lg font-semibold text-white leading-none">인도네시아 이해</h1>
+          <h1 className="text-lg font-semibold text-foreground leading-none">인도네시아 이해</h1>
         </div>
       </header>
 
