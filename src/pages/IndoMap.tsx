@@ -428,14 +428,14 @@ const IndoMap = () => {
       <header className="relative flex items-center gap-2 px-4 pt-5 pb-3 shrink-0">
         <button
           onClick={() => navigate("/")}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 hover:bg-white/10 active:bg-white/15"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-white/10 active:bg-white/15"
           title="홈으로"
         >
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-xl font-semibold text-white leading-none">인도네시아 지도</h1>
-          <p className="mt-1 text-xs font-word italic text-white/45">Peta Indonesia</p>
+          <h1 className="text-xl font-semibold text-foreground leading-none">인도네시아 지도</h1>
+          <p className="mt-1 text-xs font-word italic text-muted-foreground">Peta Indonesia</p>
         </div>
       </header>
 
