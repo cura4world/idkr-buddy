@@ -137,6 +137,7 @@ export async function fetchChapter(bookId: string, chapter: number): Promise<Bib
   if (!Array.isArray(verses) || verses.length === 0) throw new Error("CHAPTER_NOT_FOUND");
   return [...verses]
     .filter((v) => v && typeof v.verse === "number" && typeof v.text === "string")
+    .map((v) => ({ verse: v.verse, text: stripTbMarks(v.text) }))
     .sort((a, b) => a.verse - b.verse);
 }
 
@@ -145,6 +146,14 @@ export async function fetchChapter(bookId: string, chapter: number): Promise<Bib
 // 대한성서공회의 허락을 받아 배포되는 번역이며, 본문은 저장하지 않고 세션 메모리에만 캐시합니다.
 
 const koChapterCache = new Map<string, BibleVerse[]>();
+
+// TB 본문에는 예수님의 말씀을 감싸는 마커(시작 "/", 끝 "*")가 들어 있어 표시 전에 제거합니다.
+function stripTbMarks(text: string): string {
+  return text
+    .replace(new RegExp("[/*]", "g"), "")
+    .replace(new RegExp("\\s{2,}", "g"), " ")
+    .trim();
+}
 
 // bolls.life 응답의 text는 HTML 문자열(예: <i>...</i>)일 수 있어 태그를 제거합니다.
 function stripHtml(html: string): string {
