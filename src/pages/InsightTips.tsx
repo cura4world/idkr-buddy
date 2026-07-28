@@ -85,7 +85,7 @@ const InsightTips = () => {
       <header className="flex items-center gap-2 mb-3">
         <button
           onClick={() => navigate("/insight")}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 hover:bg-white/10 active:bg-white/15 -ml-1"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-white/10 active:bg-white/15 -ml-1"
           title="뒤로"
         >
           <ArrowLeft size={20} />
@@ -94,7 +94,7 @@ const InsightTips = () => {
           <span className="w-9 h-9 rounded-xl bg-emerald-400 flex items-center justify-center shadow-lg shadow-black/30">
             <Lightbulb size={18} className="text-white" />
           </span>
-          <h1 className="text-lg font-semibold text-white leading-none">인도네시아 정보</h1>
+          <h1 className="text-lg font-semibold text-foreground leading-none">인도네시아 정보</h1>
         </div>
       </header>
 
@@ -118,8 +118,8 @@ const InsightTips = () => {
       {/* 카드 목록 */}
       {loaded && tips.length === 0 && !loading && (
         <div className="text-center py-16 px-6">
-          <Lightbulb size={40} className="mx-auto text-white/20 mb-3" />
-          <p className="text-sm font-gothic text-white/45 leading-relaxed">
+          <Lightbulb size={40} className="mx-auto text-muted-foreground/40 mb-3" />
+          <p className="text-sm font-gothic text-muted-foreground leading-relaxed">
             아직 정보가 없어요.
             <br />
             위 버튼을 눌러 첫 번째 정보를 열어보세요.
@@ -190,7 +190,7 @@ const InsightTips = () => {
       </div>
 
       {tips.length > 0 && (
-        <p className="mt-5 text-[11px] font-gothic text-white/30 text-center flex items-center justify-center gap-1">
+        <p className="mt-5 text-[11px] font-gothic text-muted-foreground text-center flex items-center justify-center gap-1">
           <Trash2 size={11} /> 카드를 길게 누르면 삭제할 수 있어요
         </p>
       )}
