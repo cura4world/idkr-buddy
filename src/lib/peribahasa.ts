@@ -36,7 +36,10 @@ export interface Phrase {
   id: string;   // 인도네시아어
   ko: string;   // 한국어
   kind: PhraseKind;
-  ref?: string; // 성경 장절, 원래 단어 등 출처 표시용
+  ref?: string;      // 화면에 보여줄 출처 (예: "Filipi 4:13", 또는 원래 단어)
+  bookId?: string;   // 성경일 때만: 한국어 본문을 불러오기 위한 정보
+  chapter?: number;
+  verse?: number;
 }
 
 /* ── 내장 문장 ── */
@@ -183,7 +186,7 @@ export function loadSavedPhrase(): Phrase | null {
     if (!raw) return null;
     const o = JSON.parse(raw);
     if (o && o.date === todayStamp() && typeof o.id === "string" && typeof o.ko === "string") {
-      return { id: o.id, ko: o.ko, kind: o.kind, ref: o.ref };
+      return { id: o.id, ko: o.ko, kind: o.kind, ref: o.ref, bookId: o.bookId, chapter: o.chapter, verse: o.verse };
     }
   } catch (e) { /* 무시 */ }
   return null;
@@ -193,7 +196,10 @@ export function savePhraseForToday(p: Phrase): void {
   try {
     localStorage.setItem(
       TODAY_KEY,
-      JSON.stringify({ date: todayStamp(), id: p.id, ko: p.ko, kind: p.kind, ref: p.ref })
+      JSON.stringify({
+        date: todayStamp(), id: p.id, ko: p.ko, kind: p.kind,
+        ref: p.ref, bookId: p.bookId, chapter: p.chapter, verse: p.verse,
+      })
     );
   } catch (e) { /* 무시 */ }
 }
@@ -237,7 +243,15 @@ async function pickFromAlkitab(): Promise<Phrase | null> {
     const verses = await fetchChapter(ref.bookId, ref.chapter);
     const found = verses.find((v) => v.verse === ref.verse);
     if (!found || !found.text) return null;
-    return { kind: "alkitab", id: found.text.trim(), ko: "", ref: ref.label };
+    return {
+      kind: "alkitab",
+      id: found.text.trim(),
+      ko: "",
+      ref: ref.label,
+      bookId: ref.bookId,
+      chapter: ref.chapter,
+      verse: ref.verse,
+    };
   } catch (e) {
     return null;
   }
