@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Volume2, Loader2, RotateCcw, BookA } from "lucide-react";
 import { goBackOr } from "@/lib/nav";
-import { getPeribahasa } from "@/lib/peribahasa";
 import { getPhraseDetail, PhraseDetail as PhraseDetailData } from "@/lib/phrase";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import SettingsDialog from "@/components/SettingsDialog";
@@ -34,10 +33,11 @@ const Label = ({ children }: { children: React.ReactNode }) => (
 const PhraseDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const params = useParams();
+  const [searchParams] = useSearchParams();
 
-  const index = Number(params.idx);
-  const item = getPeribahasa(Number.isFinite(index) ? index : 0);
+  const sentence = (searchParams.get("s") || "").trim();
+  const sentenceKo = (searchParams.get("ko") || "").trim();
+  const item = { id: sentence, ko: sentenceKo };
 
   const [data, setData] = useState<PhraseDetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,13 +61,19 @@ const PhraseDetail = () => {
   }, [item.id, item.ko]);
 
   useEffect(() => {
+    if (!item.id) {
+      setLoading(false);
+      setError("문장을 찾을 수 없어요");
+      return;
+    }
     if (!hasGeminiApiKey()) {
       setLoading(false);
       setError("API_KEY");
       return;
     }
     load(false);
-  }, [load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, item.id]);
 
   useEffect(() => {
     return () => {
@@ -103,7 +109,9 @@ const PhraseDetail = () => {
               <Volume2 size={18} />
             </button>
           </div>
-          <p className="mt-2.5 text-[13.5px] leading-[1.65] text-muted-foreground">{item.ko}</p>
+          {item.ko ? (
+            <p className="mt-2.5 text-[13.5px] leading-[1.65] text-muted-foreground">{item.ko}</p>
+          ) : null}
         </div>
 
         {loading ? (
