@@ -216,6 +216,13 @@ const Dictionary = () => {
   const [saved, setSaved] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // 검색창을 누르면 최근 검색어를 플로팅으로 보여줍니다.
+  const [showHistory, setShowHistory] = useState(false);
+  const histAreaRef = useRef<HTMLDivElement>(null);
+  const histOpenRef = useRef(false);
+  const histPushedRef = useRef(false);
+  const histHideTimer = useRef<any>(null);
+
   const errorMessage = (code: string): string => {
     if (code === "NO_API_KEY") return "Gemini API 키가 필요합니다. 설정에서 키를 입력해주세요.";
     if (code === "INVALID_API_KEY") return "API 키가 올바르지 않습니다. 설정에서 다시 확인해주세요.";
@@ -347,6 +354,61 @@ const Dictionary = () => {
   };
 
   // 초기(홈) 화면 여부: 결과·로딩·에러가 전혀 없는 상태
+  const openHistoryPanel = () => {
+    if (histOpenRef.current) return;
+    if (histHideTimer.current) window.clearTimeout(histHideTimer.current);
+    setHistory(loadHistory());
+    setShowHistory(true);
+    histOpenRef.current = true;
+    // 폰의 뒤로가기로도 닫히도록 히스토리를 한 칸 쌓습니다.
+    try {
+      window.history.pushState({ dictHistoryPanel: true }, "");
+      histPushedRef.current = true;
+    } catch (e) {
+      histPushedRef.current = false;
+    }
+  };
+
+  const closeHistoryPanel = () => {
+    if (!histOpenRef.current) return;
+    histOpenRef.current = false;
+    setShowHistory(false);
+    if (histPushedRef.current) {
+      histPushedRef.current = false;
+      try { window.history.back(); } catch (e) {}
+    }
+  };
+
+  // 검색 영역 바깥을 누르면 닫습니다 (카드 등은 blur 가 안 나는 경우가 있음).
+  useEffect(() => {
+    if (!showHistory) return;
+    const onDown = (e: any) => {
+      const area = histAreaRef.current;
+      if (area && e.target && area.contains(e.target)) return;
+      closeHistoryPanel();
+      try { inputRef.current?.blur(); } catch (err) {}
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showHistory]);
+
+  // 폰의 뒤로가기
+  useEffect(() => {
+    const onPop = () => {
+      if (histOpenRef.current) {
+        histOpenRef.current = false;
+        histPushedRef.current = false;
+        setShowHistory(false);
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      if (histHideTimer.current) window.clearTimeout(histHideTimer.current);
+    };
+  }, []);
+
   const isHome = !loading && !error && !result && !idSentence && !koWord && !koSentence;
 
   // ---- 음성 검색 ----
@@ -621,7 +683,8 @@ const Dictionary = () => {
 
       <div className={isHome ? "px-4 pt-4 pb-0 flex-1 min-h-0 flex flex-col" : "px-4 py-4"}>
         {/* 검색창 */}
-        <div className={`flex items-center gap-2 min-w-0 ${isHome ? "mb-2" : "mb-4"}`}>
+        <div ref={histAreaRef} className={`relative ${isHome ? "mb-2" : "mb-4"}`}>
+        <div className="flex items-center gap-2 min-w-0">
           <div className="flex-1 min-w-0 flex items-center gap-2 bg-card border border-border rounded-full px-4 py-2.5">
             <Search size={18} className="text-gray-400 shrink-0" />
             <input
@@ -630,6 +693,11 @@ const Dictionary = () => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
+              onFocus={openHistoryPanel}
+              onBlur={() => {
+                // 목록을 탭할 때 먼저 닫히지 않도록 잠깐 기다립니다.
+                histHideTimer.current = window.setTimeout(() => closeHistoryPanel(), 160);
+              }}
               placeholder="단어·문장 (인니어/한국어)"
               className="flex-1 min-w-0 w-full bg-transparent outline-none text-sm text-gray-900 placeholder:text-gray-400"
               autoCapitalize="none"
@@ -659,6 +727,28 @@ const Dictionary = () => {
           >
             {loading ? <Loader2 size={18} className="animate-spin" /> : "검색"}
           </button>
+        </div>
+
+        {/* 최근 검색어 — 본문 위에 떠있는 플로팅 박스 (상단 기본 화면에는 같은 목록이 이미 있어 안 띄웁니다) */}
+        {showHistory && !isHome && query.trim() === "" && history.length > 0 ? (
+          <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl bg-card shadow-[0_10px_24px_-8px_rgba(8,32,38,0.35)]">
+            {history.slice(0, 10).map((term, i, arr) => (
+              <button
+                key={term + i}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { closeHistoryPanel(); handleSearch(term); }}
+                className={
+                  "w-full flex items-center gap-2.5 px-4 py-2.5 text-left active:bg-muted/60 transition-colors " +
+                  (i === arr.length - 1 ? "" : "border-b border-border")
+                }
+              >
+                <Search size={14} className="shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1 truncate text-[14px] text-foreground/80">{term}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
         </div>
 
         {/* 음성 듣는 중 오버레이 */}
@@ -1000,7 +1090,7 @@ const Dictionary = () => {
               <>
                 <Divider />
                 <SectionTitle>단어 분석</SectionTitle>
-                <ul className="space-y-1.5 text-xs text-gray-800 font-gothic">
+                <ul className="space-y-1.5 text-xs text-foreground/80 font-gothic">
                   {result.root && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">어근:</span> {result.root}</span></li>}
                   {result.affix && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">접사:</span> {result.affix}</span></li>}
                   {result.register && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">문어체/구어체:</span> {result.register}</span></li>}
@@ -1013,7 +1103,7 @@ const Dictionary = () => {
               <>
                 <Divider />
                 <SectionTitle>단어 배경</SectionTitle>
-                <ul className="space-y-1.5 text-xs text-gray-800 font-gothic">
+                <ul className="space-y-1.5 text-xs text-foreground/80 font-gothic">
                   {result.etymology.map((e, i) => (
                     <li key={i} className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words">{e}</span></li>
                   ))}
