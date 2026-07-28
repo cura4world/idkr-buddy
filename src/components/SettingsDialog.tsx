@@ -54,7 +54,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     const wordN = await countLookupWords();
     const resN = await countCachedResults();
     if (imgN === 0 && wordN === 0 && resN === 0) {
-      toast("저장된 사전 이미지·단어·검색 결과가 없습니다");
+      toast("저장된 단어·검색 결과가 없습니다");
       return;
     }
     await clearStoredImages();
@@ -260,7 +260,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             </Button>
             <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={handleClearImages}>
               <Trash2 className="w-4 h-4 mr-1.5" />
-              저장된 사전 이미지·단어·검색 결과 비우기
+              저장된 단어·검색 결과 비우기
             </Button>
             <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={handleClearTts}>
               <Trash2 className="w-4 h-4 mr-1.5" />
