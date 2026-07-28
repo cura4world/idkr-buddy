@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Mic, ScrollText, Newspaper, Map as MapIcon, Lightbulb, Library, RotateCcw } from "lucide-react";
+import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Mic, ScrollText, Newspaper, Map as MapIcon, Lightbulb, Library } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
@@ -655,7 +655,7 @@ const Dictionary = () => {
           <button
             onClick={() => handleSearch()}
             disabled={loading}
-            className="shrink-0 w-11 h-11 rounded-full bg-muted border border-border text-foreground/75 text-[12px] font-gothic font-medium flex items-center justify-center disabled:opacity-50"
+            className="shrink-0 w-11 h-11 rounded-full bg-primary/10 text-primary text-[12px] font-gothic font-medium flex items-center justify-center disabled:opacity-50"
           >
             {loading ? <Loader2 size={18} className="animate-spin" /> : "검색"}
           </button>
@@ -744,20 +744,6 @@ const Dictionary = () => {
                 </div>
               </>
             )}
-          </div>
-        )}
-
-        {/* 다시 검색: 캐시를 무시하고 새로 받음. 결과 4종에 공통이라 카드 바로 위에 둡니다. */}
-        {!loading && !error && lastTerm && (result || idSentence || koWord || koSentence) && (
-          <div className="flex justify-end mb-1.5">
-            <button
-              onClick={() => handleSearch(lastTerm, koBackTerm ? koBackTerm : undefined, true)}
-              className="p-1.5 text-muted-foreground hover:text-foreground/80"
-              title={`"${lastTerm}" 다시 검색 (저장된 결과 무시)`}
-              aria-label="다시 검색"
-            >
-              <RotateCcw size={15} />
-            </button>
           </div>
         )}
 
@@ -978,7 +964,7 @@ const Dictionary = () => {
             </div>
             <p className="text-sm font-medium text-gray-900 break-words">{result.meaning}</p>
             {result.meaningDetail && (
-              <p className="text-xs text-gray-500 mt-1 break-words font-gothic">{result.meaningDetail}</p>
+              <p className="text-[11px] text-gray-500 mt-1 break-words font-gothic leading-relaxed">{result.meaningDetail}</p>
             )}
 
             {/* 예문 */}
@@ -1014,7 +1000,7 @@ const Dictionary = () => {
               <>
                 <Divider />
                 <SectionTitle>단어 분석</SectionTitle>
-                <ul className="space-y-1.5 text-xs text-gray-800">
+                <ul className="space-y-1.5 text-xs text-gray-800 font-gothic">
                   {result.root && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">어근:</span> {result.root}</span></li>}
                   {result.affix && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">접사:</span> {result.affix}</span></li>}
                   {result.register && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">문어체/구어체:</span> {result.register}</span></li>}
@@ -1027,7 +1013,7 @@ const Dictionary = () => {
               <>
                 <Divider />
                 <SectionTitle>단어 배경</SectionTitle>
-                <ul className="space-y-1.5 text-xs text-gray-800">
+                <ul className="space-y-1.5 text-xs text-gray-800 font-gothic">
                   {result.etymology.map((e, i) => (
                     <li key={i} className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words">{e}</span></li>
                   ))}
