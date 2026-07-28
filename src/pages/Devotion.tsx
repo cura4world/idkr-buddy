@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Sunrise, BookOpen, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import { ArrowLeft, Sunrise, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import { getBook, getBookByKo, fetchQtTbVerses, BibleVerse } from "@/lib/bible";
+import { getBookByKo, fetchQtTbVerses, BibleVerse } from "@/lib/bible";
 import { fetchTodayQt, QtToday, QtVerse } from "@/lib/qtToday";
 import { generateQtDevotion } from "@/lib/devotion";
 import { saveDevotion, listDevotions, qtIdFor, DevotionRecord } from "@/lib/devotionStore";
@@ -12,23 +12,9 @@ import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { hasClaudeApiKey } from "@/lib/claude";
 import SettingsDialog from "@/components/SettingsDialog";
 import PlayButton from "@/components/PlayButton";
-import BiblePicker from "@/components/BiblePicker";
 import { ttsPlayer } from "@/lib/tts";
 
 const MY_WORDBOOK_ID = "my-wordbook";
-
-// 성경 읽기 카드의 위치 배지 (BibleRead와 같은 localStorage 키 사용)
-const bibleLastLabel = (): string => {
-  try {
-    const raw = localStorage.getItem("bible-last-pos");
-    if (raw) {
-      const p = JSON.parse(raw);
-      const b = p && typeof p.bookId === "string" ? getBook(p.bookId) : undefined;
-      if (b && typeof p.chapter === "number") return b.ko + " " + p.chapter + "\uC7A5";
-    }
-  } catch (e) {}
-  return "\uCC3D\uC138\uAE30 1\uC7A5";
-};
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
 const speak = (text: string, lang: "id" | "ko" = "id") => {
@@ -142,10 +128,6 @@ const Devotion = () => {
   const popupReqId = useRef(0);
   const wordCache = useRef(new Map<string, { meaning: string; info: string; sentenceKo: string }>());
 
-  // 성경 읽기 카드 (책/장 선택 피커 + 위치 배지)
-  const [biblePickerOpen, setBiblePickerOpen] = useState(false);
-  const [bibleLabel, setBibleLabel] = useState<string>(() => bibleLastLabel());
-
   const subOpenRef = useRef(false);
 
   const pushSub = () => {
@@ -166,7 +148,6 @@ const Devotion = () => {
     setPopupWord(null);
     setCardVerses(null);
     setCardError(false);
-    setBiblePickerOpen(false);
     wordCache.current.clear();
   };
 
@@ -671,32 +652,10 @@ const Devotion = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="flex-1 text-lg font-semibold truncate">인도네시아어 묵상</h1>
+        <h1 className="flex-1 text-lg font-semibold truncate">오늘의 묵상</h1>
       </header>
 
       <div className="px-4 py-4">
-        {/* 성경 읽기 (책/장 선택 후 읽기 버튼으로 이동) */}
-        <div className="mb-2.5 w-full rounded-xl border border-sky-300/60 bg-card bg-gradient-to-br from-transparent to-sky-300/35 px-4 py-3.5">
-          <div className="flex items-center gap-2 min-w-0">
-            <p className="text-xs font-medium text-sky-600 font-gothic inline-flex items-center gap-1 shrink-0">
-              <BookOpen size={13} /> 성경 읽기
-            </p>
-            <button
-              onClick={() => { setBiblePickerOpen(true); pushSub(); }}
-              className="min-w-0 truncate text-xs font-medium text-sky-600 bg-sky-500/10 rounded-full px-2.5 py-0.5"
-              title="성경 변경"
-            >
-              {bibleLabel}
-            </button>
-            <button
-              onClick={() => navigate("/bible")}
-              className="ml-auto shrink-0 rounded-full px-4 py-1.5 text-xs font-medium bg-sky-500 text-white"
-            >
-              읽기
-            </button>
-          </div>
-        </div>
-
         {qtLoading ? (
           <div className="bg-card border border-border/60 rounded-xl px-4 py-8 text-center">
             <Loader2 size={22} className="mx-auto mb-2 text-rose-500 animate-spin" />
@@ -775,16 +734,6 @@ const Devotion = () => {
           </div>
         )}
       </div>
-
-      <BiblePicker
-        open={biblePickerOpen}
-        onClose={() => { if (subOpenRef.current) window.history.back(); else setBiblePickerOpen(false); }}
-        onSelect={(bookId, chapter) => {
-          try { localStorage.setItem("bible-last-pos", JSON.stringify({ bookId, chapter })); } catch (e) {}
-          setBibleLabel(bibleLastLabel());
-          if (subOpenRef.current) window.history.back(); else setBiblePickerOpen(false);
-        }}
-      />
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
