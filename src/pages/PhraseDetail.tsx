@@ -183,7 +183,7 @@ const PhraseDetail = () => {
                 <section className="mt-5">
                   <Label>어떤 뜻인가요</Label>
                   <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-                    <p className="font-gothic text-[14.5px] leading-[1.8] text-foreground/85">{koVerse}</p>
+                    <p className="font-gothic text-[13.5px] leading-[1.8] text-foreground/85">{koVerse}</p>
                     <p className="mt-2.5 text-[11.5px] font-gothic text-muted-foreground">
                       {koRefLabel ? koRefLabel + " · 새번역" : "새번역"}
                     </p>
@@ -284,15 +284,6 @@ const PhraseDetail = () => {
                 </div>
               </section>
             ) : null}
-
-            <button
-              onClick={() => load(true)}
-              className="mx-auto mt-7 w-10 h-10 flex items-center justify-center rounded-full border border-border text-muted-foreground active:bg-muted"
-              title="설명 다시 만들기"
-              aria-label="설명 다시 만들기"
-            >
-              <RotateCcw size={16} />
-            </button>
           </>
         ) : null}
       </div>
