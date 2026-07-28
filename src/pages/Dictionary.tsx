@@ -655,7 +655,7 @@ const Dictionary = () => {
           <button
             onClick={() => handleSearch()}
             disabled={loading}
-            className="shrink-0 bg-primary text-white rounded-full px-4 py-2.5 text-sm font-medium disabled:opacity-50"
+            className="shrink-0 w-11 h-11 rounded-full bg-muted border border-border text-foreground/75 text-[12px] font-gothic font-medium flex items-center justify-center disabled:opacity-50"
           >
             {loading ? <Loader2 size={18} className="animate-spin" /> : "검색"}
           </button>
@@ -980,36 +980,6 @@ const Dictionary = () => {
             {result.meaningDetail && (
               <p className="text-xs text-gray-500 mt-1 break-words font-gothic">{result.meaningDetail}</p>
             )}
-
-            {/* 단어 이미지 (수동 버튼으로 생성, 세션 캐시) */}
-            <div className="mt-4">
-              {imgLoading && (
-                <div className="w-full flex flex-col items-center justify-center border border-dashed border-gray-300 rounded-lg py-8 text-gray-400">
-                  <Loader2 size={22} className="animate-spin mb-2" />
-                  <span className="text-xs">이미지를 그리고 있어요...</span>
-                </div>
-              )}
-              {!imgLoading && imgUrl && (
-                <img src={imgUrl} alt={result.word} className="w-full rounded-lg border border-gray-200" />
-              )}
-              {!imgLoading && !imgUrl && !imgError && (
-                <button
-                  onClick={() => loadImage(result.word, result.meaning)}
-                  className="w-full flex items-center justify-center gap-1.5 border border-dashed border-gray-300 rounded-lg py-3 text-xs text-gray-500 hover:bg-black/5"
-                >
-                  <ImageIcon size={13} /> 이미지 보기
-                </button>
-              )}
-              {!imgLoading && !imgUrl && imgError && (
-                <button
-                  onClick={() => loadImage(result.word, result.meaning)}
-                  className="w-full flex flex-col items-center justify-center gap-1 border border-dashed border-gray-300 rounded-lg py-4 text-gray-500 hover:bg-black/5"
-                >
-                  <span className="text-xs text-gray-400">{imgError}</span>
-                  <span className="flex items-center gap-1.5 text-sm"><ImageIcon size={15} /> 이미지 다시 만들기</span>
-                </button>
-              )}
-            </div>
 
             {/* 예문 */}
             {result.examples.length > 0 && (
