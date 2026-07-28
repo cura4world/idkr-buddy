@@ -99,7 +99,7 @@ export default function SavedWords() {
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
       <button
         onClick={() => navigate("/")}
-        className="flex items-center gap-2 text-sm text-white mb-6 hover:text-white/80"
+        className="flex items-center gap-2 text-sm text-foreground mb-6 hover:text-foreground/80"
       >
         <ArrowLeft size={16} />
         <span className="font-body">돌아가기</span>
