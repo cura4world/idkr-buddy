@@ -164,6 +164,19 @@ const Index = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const openPhrase = () => {
+    if (!phrase) return;
+    const q = new URLSearchParams();
+    q.set("s", phrase.id);
+    if (phrase.ko) q.set("ko", phrase.ko);
+    q.set("k", phrase.kind);
+    if (phrase.ref) q.set("ref", phrase.ref);
+    if (phrase.bookId) q.set("b", phrase.bookId);
+    if (typeof phrase.chapter === "number") q.set("c", String(phrase.chapter));
+    if (typeof phrase.verse === "number") q.set("v", String(phrase.verse));
+    navigate("/phrase?" + q.toString());
+  };
+
   const toggleKind = (key: PhraseKind) => {
     setKinds((prev) => {
       const on = prev.indexOf(key) >= 0;
@@ -362,8 +375,8 @@ const Index = () => {
           <div
             role="button"
             tabIndex={0}
-            onClick={() => { if (phrase) navigate("/phrase?s=" + encodeURIComponent(phrase.id) + "&ko=" + encodeURIComponent(phrase.ko)); }}
-            onKeyDown={(e) => { if (e.key === "Enter" && phrase) navigate("/phrase?s=" + encodeURIComponent(phrase.id) + "&ko=" + encodeURIComponent(phrase.ko)); }}
+            onClick={() => openPhrase()}
+            onKeyDown={(e) => { if (e.key === "Enter") openPhrase(); }}
             className="rounded-2xl border border-border bg-card px-4 py-4 active:bg-muted/40 transition-colors"
           >
             <div className="flex items-center gap-1">
