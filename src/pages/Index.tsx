@@ -117,6 +117,8 @@ const Index = () => {
   const [phrase, setPhrase] = useState<Phrase | null>(() => loadSavedPhrase());
   const [phraseLoading, setPhraseLoading] = useState(false);
   const [kindSheetOpen, setKindSheetOpen] = useState(false);
+  const sheetOpenRef = useRef(false);
+  const sheetPushedRef = useRef(false);
 
   // 검색
   const [query, setQuery] = useState("");
@@ -162,6 +164,40 @@ const Index = () => {
       .finally(() => { if (alive) setPhraseLoading(false); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 옵션 시트: 폰의 뒤로가기로도 닫히도록 히스토리를 한 칸 쌓습니다.
+  const openKindSheet = () => {
+    setKindSheetOpen(true);
+    sheetOpenRef.current = true;
+    try {
+      window.history.pushState({ kindSheet: true }, "");
+      sheetPushedRef.current = true;
+    } catch (e) {
+      sheetPushedRef.current = false;
+    }
+  };
+
+  const closeKindSheet = () => {
+    if (sheetPushedRef.current) {
+      sheetPushedRef.current = false;
+      sheetOpenRef.current = false;
+      try { window.history.back(); return; } catch (e) { /* 아래에서 직접 닫습니다 */ }
+    }
+    sheetOpenRef.current = false;
+    setKindSheetOpen(false);
+  };
+
+  useEffect(() => {
+    const onPop = () => {
+      if (sheetOpenRef.current) {
+        sheetOpenRef.current = false;
+        sheetPushedRef.current = false;
+        setKindSheetOpen(false);
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
   }, []);
 
   const openPhrase = () => {
@@ -394,7 +430,7 @@ const Index = () => {
               </button>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setKindSheetOpen(true); }}
+                onClick={(e) => { e.stopPropagation(); openKindSheet(); }}
                 className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
                 title="어떤 문장을 볼지 고르기"
                 aria-label="어떤 문장을 볼지 고르기"
@@ -411,7 +447,14 @@ const Index = () => {
             ) : phrase ? (
               <>
                 <div className="mt-2.5 flex items-start gap-2">
-                  <p className="flex-1 font-word text-[19px] font-medium leading-[1.5] text-foreground">
+                  <p
+                    className={
+                      "flex-1 font-word font-medium text-foreground " +
+                      (phrase.kind === "alkitab"
+                        ? "text-[17px] leading-[1.6]"
+                        : "text-[19px] leading-[1.5]")
+                    }
+                  >
                     {phrase.id}
                   </p>
                   <button
@@ -428,7 +471,7 @@ const Index = () => {
                   <p className="mt-1.5 text-[13px] leading-[1.6] text-muted-foreground">{phrase.ko}</p>
                 ) : null}
                 {phrase.ref ? (
-                  <p className="mt-1.5 font-word text-[11.5px] text-muted-foreground">{phrase.ref}</p>
+                  <p className="mt-2 font-word text-[12.5px] text-muted-foreground">{phrase.ref}</p>
                 ) : null}
               </>
             ) : null}
@@ -514,7 +557,7 @@ const Index = () => {
         <>
           <div
             className="fixed inset-0 z-40 bg-black/40"
-            onClick={() => setKindSheetOpen(false)}
+            onClick={closeKindSheet}
           />
           <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
             <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border" />
@@ -541,7 +584,7 @@ const Index = () => {
                       <Check size={13} strokeWidth={3} />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-[15px] leading-tight text-foreground">{info.ko}</span>
+                      <span className="block text-[14px] leading-tight text-foreground">{info.ko}</span>
                       <span className="mt-0.5 block font-word text-[11.5px] text-muted-foreground">
                         {info.id}
                       </span>
@@ -552,7 +595,7 @@ const Index = () => {
             </div>
             <button
               type="button"
-              onClick={() => setKindSheetOpen(false)}
+              onClick={closeKindSheet}
               className="mx-4 mt-4 h-12 w-[calc(100%-2rem)] rounded-[13px] bg-primary text-[15px] font-medium text-white"
             >
               완료
