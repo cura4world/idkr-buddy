@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Volume2, Loader2, RotateCcw, BookA } from "lucide-react";
 import { goBackOr } from "@/lib/nav";
 import { getPhraseDetail, PhraseDetail as PhraseDetailData } from "@/lib/phrase";
+import { fetchChapterKo, getBook } from "@/lib/bible";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import SettingsDialog from "@/components/SettingsDialog";
 
@@ -37,18 +38,32 @@ const PhraseDetail = () => {
 
   const sentence = (searchParams.get("s") || "").trim();
   const sentenceKo = (searchParams.get("ko") || "").trim();
+  const kind = (searchParams.get("k") || "").trim();
+  const refLabel = (searchParams.get("ref") || "").trim();
+  const refBookId = (searchParams.get("b") || "").trim();
+  const refChapter = Number(searchParams.get("c"));
+  const refVerse = Number(searchParams.get("v"));
+  const isAyat = kind === "alkitab" && refBookId !== "" && refChapter > 0 && refVerse > 0;
   const item = { id: sentence, ko: sentenceKo };
+
+  // 성경일 때 한국어 본문(새번역)을 보여줍니다.
+  const [koVerse, setKoVerse] = useState("");
+  const koRefLabel = (() => {
+    if (!isAyat) return "";
+    const b = getBook(refBookId);
+    return b ? b.ko + " " + refChapter + ":" + refVerse : "";
+  })();
 
   const [data, setData] = useState<PhraseDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const load = useCallback(async (force = false) => {
+  const load = useCallback(async (force = false, koHint?: string) => {
     setLoading(true);
     setError("");
     try {
-      const d = await getPhraseDetail(item.id, item.ko, force);
+      const d = await getPhraseDetail(item.id, koHint !== undefined ? koHint : item.ko, force);
       setData(d);
     } catch (e: any) {
       const msg = String(e?.message || "");
@@ -70,6 +85,20 @@ const PhraseDetail = () => {
       setLoading(false);
       setError("API_KEY");
       return;
+    }
+    if (isAyat) {
+      let alive = true;
+      setLoading(true);
+      fetchChapterKo(refBookId, refChapter)
+        .then((verses) => {
+          const found = verses.find((v) => v.verse === refVerse);
+          const text = found && found.text ? found.text.trim() : "";
+          if (!alive) return;
+          setKoVerse(text);
+          load(false, text);
+        })
+        .catch(() => { if (alive) load(false, ""); });
+      return () => { alive = false; };
     }
     load(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,6 +141,9 @@ const PhraseDetail = () => {
           {item.ko ? (
             <p className="mt-2.5 text-[13.5px] leading-[1.65] text-muted-foreground">{item.ko}</p>
           ) : null}
+          {refLabel ? (
+            <p className="mt-2.5 font-word text-[12.5px] text-muted-foreground">{refLabel}</p>
+          ) : null}
         </div>
 
         {loading ? (
@@ -141,7 +173,19 @@ const PhraseDetail = () => {
           </div>
         ) : data ? (
           <>
-            {data.meaning ? (
+            {isAyat ? (
+              koVerse ? (
+                <section className="mt-5">
+                  <Label>어떤 뜻인가요</Label>
+                  <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
+                    <p className="font-gothic text-[14.5px] leading-[1.8] text-foreground/85">{koVerse}</p>
+                    <p className="mt-2.5 text-[11.5px] font-gothic text-muted-foreground">
+                      {koRefLabel ? koRefLabel + " · 새번역" : "새번역"}
+                    </p>
+                  </div>
+                </section>
+              ) : null
+            ) : data.meaning ? (
               <section className="mt-5">
                 <Label>어떤 뜻인가요</Label>
                 <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
