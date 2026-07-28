@@ -26,7 +26,6 @@ export interface PhraseExample {
 export interface PhraseDetail {
   sentence: string;
   ko: string;
-  literal: string;      // 직역
   meaning: string;      // 뜻풀이
   words: PhraseWord[];
   examples: PhraseExample[];
@@ -128,7 +127,6 @@ function buildPrompt(sentence: string, ko: string): string {
     "",
     "아래 JSON 형식으로만 답하세요.",
     '{',
-    '  "literal": "직역 (한국어)",',
     '  "meaning": "이 표현이 실제로 뜻하는 바와 언제 쓰는지 2~3문장 (한국어)",',
     '  "words": [{"word": "단어", "arti": "쉬운 인니어 뜻풀이", "ko": "한국어 뜻"}],',
     '  "examples": [{"id": "인니어 예문", "ko": "한국어 해석", "situasi": "어떤 상황인지 한국어로 짧게"}],',
@@ -203,7 +201,6 @@ export async function getPhraseDetail(
   const detail: PhraseDetail = {
     sentence,
     ko,
-    literal: asString(raw.literal),
     meaning: asString(raw.meaning),
     words,
     examples,
