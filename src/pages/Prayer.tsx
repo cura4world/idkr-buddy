@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Volume2, Loader2, Plus, Minus, Check, X, Bookmark, Trash2, RefreshCw, Pencil } from "lucide-react";
+import { ArrowLeft, Volume2, Loader2, Plus, Minus, Check, X, Bookmark, Trash2, RefreshCw, Pencil, ChevronRight, Utensils, Users, HeartHandshake, Church, Sparkles, ScrollText, Cross } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   PRAYER_CATEGORIES,
@@ -21,6 +22,59 @@ import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
 
 const MY_WORDBOOK_ID = "my-wordbook";
+
+/* 기도 메뉴 — 메인화면 목록과 같은 어법 (아이콘 + 한국어 + 인니어) */
+const MENU_ICONS: Record<string, LucideIcon> = {
+  meal: Utensils,
+  meeting: Users,
+  comfort: HeartHandshake,
+  worship: Church,
+  etc: Sparkles,
+};
+
+const MENU_ID_NAMES: Record<string, string> = {
+  meal: "Doa Makan",
+  meeting: "Doa Persekutuan",
+  comfort: "Doa Penghiburan",
+  worship: "Doa Ibadah",
+  etc: "Doa Lainnya",
+};
+
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <p className="mb-2.5 px-1 text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+    {children}
+  </p>
+);
+
+const PrayerRow = ({
+  icon: Icon,
+  title,
+  sub,
+  onClick,
+  last,
+}: {
+  icon: LucideIcon;
+  title: string;
+  sub: string;
+  onClick: () => void;
+  last?: boolean;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={
+      "w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-muted/60 transition-colors " +
+      (last ? "" : "border-b border-border")
+    }
+  >
+    <Icon size={20} strokeWidth={1.6} className="text-muted-foreground shrink-0" />
+    <div className="flex-1 min-w-0">
+      <p className="text-[15px] leading-tight text-foreground truncate">{title}</p>
+      <p className="mt-0.5 font-word text-[11.5px] text-muted-foreground truncate">{sub}</p>
+    </div>
+    <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
+  </button>
+);
 const LENGTH_KEY_PREFIX = "prayer-length-"; // 카테고리별 마지막 길이 기억
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -903,9 +957,11 @@ const Prayer = () => {
   // ================================================================
   // 홈: 카테고리 + 저장된 기도문
   // ================================================================
+  const madeList = PRAYER_CATEGORIES.filter((c) => MENU_ICONS[c.id]);
+
   return (
     <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
-      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
+      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-2">
         <button
           onClick={() => navigate("/")}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
@@ -916,87 +972,86 @@ const Prayer = () => {
         <h1 className="flex-1 min-w-0 text-lg font-semibold">인도네시아어 기도</h1>
       </header>
 
-      <div className="px-4 py-4">
-        {/* 위 4개 기도: 2열 x 2줄 (설명 없이 높이만 콤팩트하게) */}
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          {PRAYER_CATEGORIES.filter((c) => c.id !== "etc").map((c) => (
-            <button
+    <div className="px-4 pt-4 pb-8">
+      {/* 상황을 골라 만드는 기도 */}
+      <section>
+        <SectionLabel>기도문 만들기</SectionLabel>
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          {madeList.map((c, i) => (
+            <PrayerRow
               key={c.id}
+              icon={MENU_ICONS[c.id]}
+              title={c.label}
+              sub={MENU_ID_NAMES[c.id] || ""}
               onClick={() => openWizard(c.id)}
-              className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-4 py-3 text-left card-lift active:scale-[0.98] transition-transform"
-            >
-              <span className="text-2xl">{c.emoji}</span>
-              <p className="mt-1 text-sm font-bold text-gray-900">{c.label}</p>
-            </button>
+              last={i === madeList.length - 1}
+            />
           ))}
         </div>
+      </section>
 
-        {/* 셋째 줄: 그외 기도 / 사도신경 / 주기도문 (3열) */}
-        <div className="grid grid-cols-3 gap-2.5 mb-6">
-          {/* 그외 기도 */}
-          <button
-            onClick={() => openWizard("etc")}
-            className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-3 py-3 text-left card-lift active:scale-[0.98] transition-transform"
-          >
-            <span className="text-2xl">🙏</span>
-            <p className="mt-1 text-sm font-bold text-gray-900 leading-tight">그외 기도</p>
-          </button>
-
-          {/* 사도신경 — 고정 카드 */}
-          <button
-            onClick={() => openPrayer(APOSTLES_CREED)}
-            className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-3 py-3 text-left card-lift active:scale-[0.98] transition-transform"
-          >
-            <span className="text-2xl">📜</span>
-            <p className="mt-1 text-sm font-bold text-gray-900 leading-tight">사도신경</p>
-            <p className="text-[10px] text-gray-500 font-gothic mt-0.5 leading-tight">Pengakuan Iman Rasuli</p>
-          </button>
-
-          {/* 주기도문 — 고정 카드 */}
-          <button
+      {/* 고정 기도문 */}
+      <section className="mt-6">
+        <SectionLabel>함께 외우는 기도</SectionLabel>
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <PrayerRow
+            icon={Cross}
+            title="주기도문"
+            sub="Doa Bapa Kami"
             onClick={() => openPrayer(LORDS_PRAYER)}
-            className="rounded-xl bg-card border border-emerald-300/40 bg-gradient-to-br from-transparent to-emerald-300/20 px-3 py-3 text-left card-lift active:scale-[0.98] transition-transform"
-          >
-            <span className="text-2xl">✝️</span>
-            <p className="mt-1 text-sm font-bold text-gray-900 leading-tight">주기도문</p>
-            <p className="text-[10px] text-gray-500 font-gothic mt-0.5 leading-tight">Doa Bapa Kami</p>
-          </button>
+          />
+          <PrayerRow
+            icon={ScrollText}
+            title="사도신경"
+            sub="Pengakuan Iman Rasuli"
+            onClick={() => openPrayer(APOSTLES_CREED)}
+            last
+          />
         </div>
+      </section>
 
-        {/* 저장된 기도문 */}
-        <p className="text-sm font-bold text-foreground/80 mb-2 px-1 font-gothic">저장된 기도문</p>
+      {/* 저장된 기도문 */}
+      <section className="mt-6">
+        <SectionLabel>저장된 기도문 · Doa Tersimpan</SectionLabel>
         {records.length === 0 ? (
-          <div className="bg-card/60 border border-border/40 rounded-xl px-5 py-8 text-center">
-            <p className="text-sm text-gray-500 font-gothic">
+          <div className="rounded-2xl border border-border bg-card px-5 py-9 text-center">
+            <p className="font-gothic text-[13.5px] leading-relaxed text-muted-foreground">
               아직 만든 기도문이 없어요.
               <br />
               위에서 상황을 골라 첫 기도문을 만들어보세요.
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {records.map((r) => {
-              const cat = getPrayerCategory(r.categoryId);
+          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+            {records.map((r, i) => {
+              const Icon = MENU_ICONS[r.categoryId] || Sparkles;
               return (
                 <button
                   key={r.id}
+                  type="button"
                   onClick={() => openPrayer(r)}
-                  className="w-full text-left bg-card border border-border/50 rounded-xl px-4 py-3 flex items-center gap-3 active:bg-emerald-500/5"
+                  className={
+                    "w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-muted/60 transition-colors " +
+                    (i === records.length - 1 ? "" : "border-b border-border")
+                  }
                 >
-                  <span className="shrink-0 text-lg">{cat ? cat.emoji : "🙏"}</span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-semibold text-gray-900 truncate">{r.title}</span>
-                    <span className="block text-[11px] text-gray-500 font-gothic truncate">
+                  <Icon size={20} strokeWidth={1.6} className="text-muted-foreground shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] leading-tight text-foreground truncate">{r.title}</p>
+                    <p className="mt-0.5 font-gothic text-[11.5px] text-muted-foreground truncate">
                       {r.situationLabel}
                       {r.name ? " · " + r.name : ""} · {fmtDate(r.createdAt)}
-                    </span>
-                  </span>
-                  {r.pinned && <Bookmark size={14} className="shrink-0 text-amber-400" fill="currentColor" />}
+                    </p>
+                  </div>
+                  {r.pinned ? (
+                    <Bookmark size={14} className="shrink-0 text-accent" fill="currentColor" />
+                  ) : null}
                 </button>
               );
             })}
           </div>
         )}
+      </section>
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
