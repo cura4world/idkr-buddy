@@ -17,6 +17,7 @@ import { quickLookupWord } from "@/lib/story";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { hasClaudeApiKey } from "@/lib/claude";
+import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import SettingsDialog from "@/components/SettingsDialog";
 import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
@@ -198,6 +199,13 @@ const Prayer = () => {
   const [editingKo, setEditingKo] = useState(false); // 한국어 수정 모드
   const [koDraft, setKoDraft] = useState("");
   const [revising, setRevising] = useState(false);
+
+  // 편집·수정 중에는 스와이프를 막습니다
+  const { swipeHandlers, shouldIgnoreTap } = useSwipeFlip(
+    () => setFlipped((f) => !f),
+    !editingKo && !revising
+  );
+
   const [idFontStep, setIdFontStep] = useState<number>(() => {
     try {
       const v = parseInt(localStorage.getItem(ID_FONT_KEY) || "1", 10);
@@ -472,6 +480,7 @@ const Prayer = () => {
 
   // ---------- 단어 탭 → 미니 팝업 (카드 메모리 → 폰 저장소 → API) ----------
   const openWordPopup = async (rawToken: string, sentence: string) => {
+    if (shouldIgnoreTap()) return;
     const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
     if (!word) return;
     const key = word.toLowerCase();
@@ -623,8 +632,7 @@ const Prayer = () => {
         </header>
 
         <div className="px-4 py-4">
-          <div className="flex items-stretch gap-2">
-            <div className="flex-1 min-w-0 bg-card border border-border/60 rounded-xl px-5 py-5 min-h-[72vh] content-bump select-none">
+          <div {...swipeHandlers} className="-mx-4 bg-card border-y border-border/60 px-3 py-5 min-h-[72vh] content-bump select-none">
               {/* 제목(상황) 한 줄, 다음 줄 우측: 날짜 + 글자크기(-,+) 또는 연필 */}
               <div className="mb-3">
                 <div className="flex items-center gap-2">
@@ -758,17 +766,9 @@ const Prayer = () => {
                   </div>
                 </>
               )}
-            </div>
-
-            {/* 오른쪽 세로 바: 누르면 뒤집기 */}
-            <button
-              onClick={(e) => { e.stopPropagation(); if (editingKo || revising) return; setFlipped((f) => !f); }}
-              className="shrink-0 w-2 self-stretch rounded-full bg-emerald-500/15 active:bg-emerald-500/40"
-              title={flipped ? "원문 보기" : "번역 보기"}
-            />
           </div>
           <p className="text-center text-muted-foreground text-xs mt-3">
-            {flipped ? "오른쪽 바를 누르면 원문이 보입니다" : "오른쪽 바를 누르면 번역, 단어를 탭하면 뜻이 나옵니다"}
+            {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 번역, 단어를 탭하면 뜻이 나옵니다"}
           </p>
         </div>
 
