@@ -85,11 +85,11 @@ export default function SavedQuizMode() {
         <div className="text-center">
           <p className="text-4xl mb-4">🍃</p>
           <p className="text-lg font-body font-medium">{questions.length}개 중 {correctCount}개</p>
-          <p className="text-sm text-white font-body mt-1">수고하셨습니다</p>
+          <p className="text-sm text-foreground font-body mt-1">수고하셨습니다</p>
         </div>
         {reviewList.length > 0 && (
           <div className="mt-8 w-full">
-            <p className="text-sm text-white font-body mb-3">다시 볼 단어</p>
+            <p className="text-sm text-foreground font-body mb-3">다시 볼 단어</p>
             <div className="space-y-2">
               {reviewList.map((w) => (
                 <div key={w.id} className="bg-card rounded-lg p-3 border border-border/50">
@@ -101,11 +101,11 @@ export default function SavedQuizMode() {
           </div>
         )}
         <div className="flex gap-3 mt-8">
-          <button onClick={restart} className="flex items-center gap-2 text-sm text-white font-body hover:underline underline-offset-4">
+          <button onClick={restart} className="flex items-center gap-2 text-sm text-foreground font-body hover:underline underline-offset-4">
             <RotateCcw size={14} />
             다시 하기
           </button>
-          <button onClick={() => navigate("/saved")} className="text-sm text-white font-body hover:underline underline-offset-4">
+          <button onClick={() => navigate("/saved")} className="text-sm text-foreground font-body hover:underline underline-offset-4">
             돌아가기
           </button>
         </div>
@@ -116,10 +116,10 @@ export default function SavedQuizMode() {
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
       <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={() => navigate("/saved")} className="text-white hover:text-white/80">
+        <button onClick={() => navigate("/saved")} className="text-foreground hover:text-foreground/80">
           <ArrowLeft size={20} />
         </button>
-        <span className="text-sm text-white font-body">
+        <span className="text-sm text-foreground font-body">
           {questionIndex + 1} / {questions.length}
         </span>
         <div className="w-5" />
@@ -129,7 +129,7 @@ export default function SavedQuizMode() {
         <div className="mb-10 text-center">
           <p className="font-word text-3xl font-semibold">{currentQ.word.word}</p>
           {currentQ.word.example && (
-            <p className="text-base text-white font-word mt-2">{currentQ.word.example}</p>
+            <p className="text-base text-foreground font-word mt-2">{currentQ.word.example}</p>
           )}
         </div>
         <div className="w-full max-w-sm space-y-3">
