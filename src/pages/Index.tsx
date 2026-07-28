@@ -1,11 +1,22 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCategories, getWordsByCategory } from "@/lib/store";
 import { getBook } from "@/lib/bible";
-import { getPeribahasa, todayPeribahasaIndex, nextRandomIndex } from "@/lib/peribahasa";
+import {
+  PHRASE_KINDS,
+  PhraseKind,
+  Phrase,
+  loadKinds,
+  saveKinds,
+  loadSavedPhrase,
+  savePhraseForToday,
+  pickPhrase,
+} from "@/lib/peribahasa";
 import SettingsDialog from "@/components/SettingsDialog";
 import {
   RotateCcw,
+  SlidersHorizontal,
+  Check,
   Settings,
   Search,
   Mic,
@@ -102,7 +113,10 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 const Index = () => {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [phraseIdx, setPhraseIdx] = useState(() => todayPeribahasaIndex());
+  const [kinds, setKinds] = useState<PhraseKind[]>(() => loadKinds());
+  const [phrase, setPhrase] = useState<Phrase | null>(() => loadSavedPhrase());
+  const [phraseLoading, setPhraseLoading] = useState(false);
+  const [kindSheetOpen, setKindSheetOpen] = useState(false);
 
   // 검색
   const [query, setQuery] = useState("");
@@ -118,7 +132,48 @@ const Index = () => {
   // 오늘 날짜(인니어 표기) + 오늘의 문장
   const now = new Date();
   const dateLabel = HARI[now.getDay()] + ", " + now.getDate() + " " + BULAN[now.getMonth()];
-  const today = getPeribahasa(phraseIdx);
+
+  // 오늘의 문장: 저장된 것이 있으면 그대로, 없으면 새로 뽑습니다.
+  const refreshPhrase = useCallback((next: PhraseKind[]) => {
+    let alive = true;
+    setPhraseLoading(true);
+    pickPhrase(next)
+      .then((p) => {
+        if (!alive) return;
+        setPhrase(p);
+        savePhraseForToday(p);
+      })
+      .catch(() => {})
+      .finally(() => { if (alive) setPhraseLoading(false); });
+    return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    if (phrase) return;
+    let alive = true;
+    setPhraseLoading(true);
+    pickPhrase(kinds)
+      .then((p) => {
+        if (!alive) return;
+        setPhrase(p);
+        savePhraseForToday(p);
+      })
+      .catch(() => {})
+      .finally(() => { if (alive) setPhraseLoading(false); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggleKind = (key: PhraseKind) => {
+    setKinds((prev) => {
+      const on = prev.indexOf(key) >= 0;
+      if (on && prev.length <= 1) return prev; // 최소 하나는 남깁니다
+      const next = on ? prev.filter((k) => k !== key) : prev.concat([key]);
+      saveKinds(next);
+      refreshPhrase(next);
+      return next;
+    });
+  };
 
   // 성경 마지막 읽은 위치
   const [biblePos, setBiblePos] = useState("");
@@ -307,38 +362,63 @@ const Index = () => {
           <div
             role="button"
             tabIndex={0}
-            onClick={() => navigate("/phrase/" + phraseIdx)}
-            onKeyDown={(e) => { if (e.key === "Enter") navigate("/phrase/" + phraseIdx); }}
+            onClick={() => { if (phrase) navigate("/phrase?s=" + encodeURIComponent(phrase.id) + "&ko=" + encodeURIComponent(phrase.ko)); }}
+            onKeyDown={(e) => { if (e.key === "Enter" && phrase) navigate("/phrase?s=" + encodeURIComponent(phrase.id) + "&ko=" + encodeURIComponent(phrase.ko)); }}
             className="rounded-2xl border border-border bg-card px-4 py-4 active:bg-muted/40 transition-colors"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <p className="flex-1 min-w-0 truncate text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 Bahasa Hari Ini
               </p>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setPhraseIdx((i) => nextRandomIndex(i)); }}
+                onClick={(e) => { e.stopPropagation(); refreshPhrase(kinds); }}
                 className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
                 title="다른 문장 보기"
+                aria-label="다른 문장 보기"
               >
                 <RotateCcw size={15} />
               </button>
-            </div>
-
-            <div className="mt-2.5 flex items-start gap-2">
-              <p className="flex-1 font-word text-[19px] font-medium leading-[1.5] text-foreground">
-                {today.id}
-              </p>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); speak(today.id); }}
-                className="mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-primary active:bg-muted"
-                title="발음 듣기"
+                onClick={(e) => { e.stopPropagation(); setKindSheetOpen(true); }}
+                className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
+                title="어떤 문장을 볼지 고르기"
+                aria-label="어떤 문장을 볼지 고르기"
               >
-                <Volume2 size={17} />
+                <SlidersHorizontal size={15} />
               </button>
             </div>
-            <p className="mt-1.5 text-[13px] leading-[1.6] text-muted-foreground">{today.ko}</p>
+
+            {phraseLoading && !phrase ? (
+              <div className="mt-3.5 space-y-2">
+                <div className="h-4 w-4/5 rounded bg-muted" />
+                <div className="h-3 w-3/5 rounded bg-muted" />
+              </div>
+            ) : phrase ? (
+              <>
+                <div className="mt-2.5 flex items-start gap-2">
+                  <p className="flex-1 font-word text-[19px] font-medium leading-[1.5] text-foreground">
+                    {phrase.id}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); speak(phrase.id); }}
+                    className="mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-primary active:bg-muted"
+                    title="발음 듣기"
+                    aria-label="발음 듣기"
+                  >
+                    <Volume2 size={17} />
+                  </button>
+                </div>
+                {phrase.ko ? (
+                  <p className="mt-1.5 text-[13px] leading-[1.6] text-muted-foreground">{phrase.ko}</p>
+                ) : null}
+                {phrase.ref ? (
+                  <p className="mt-1.5 font-word text-[11.5px] text-muted-foreground">{phrase.ref}</p>
+                ) : null}
+              </>
+            ) : null}
           </div>
         </section>
 
@@ -416,6 +496,57 @@ const Index = () => {
           </div>
         </section>
       </div>
+
+      {kindSheetOpen ? (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40"
+            onClick={() => setKindSheetOpen(false)}
+          />
+          <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
+            <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border" />
+            <h2 className="px-4 text-base font-semibold text-foreground">어떤 문장을 보시겠어요?</h2>
+            <p className="px-4 pb-3.5 pt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
+              여러 개를 고르면 그중 하나가 무작위로 나옵니다.
+            </p>
+            <div className="border-t border-border">
+              {PHRASE_KINDS.map((info) => {
+                const on = kinds.indexOf(info.key) >= 0;
+                return (
+                  <button
+                    key={info.key}
+                    type="button"
+                    onClick={() => toggleKind(info.key)}
+                    className="flex w-full items-center gap-3 border-b border-border px-4 py-3.5 text-left active:bg-muted/60"
+                  >
+                    <span
+                      className={
+                        "flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-md border-2 " +
+                        (on ? "border-primary bg-primary text-white" : "border-border text-transparent")
+                      }
+                    >
+                      <Check size={13} strokeWidth={3} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-[15px] leading-tight text-foreground">{info.ko}</span>
+                      <span className="mt-0.5 block font-word text-[11.5px] text-muted-foreground">
+                        {info.id}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => setKindSheetOpen(false)}
+              className="mx-4 mt-4 h-12 w-[calc(100%-2rem)] rounded-[13px] bg-primary text-[15px] font-medium text-white"
+            >
+              완료
+            </button>
+          </div>
+        </>
+      ) : null}
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
