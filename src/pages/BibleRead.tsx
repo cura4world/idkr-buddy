@@ -295,7 +295,7 @@ const BibleRead = () => {
       <div ref={scrollTopRef} />
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => navigate("/devotion")}
+          onClick={() => navigate("/")}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >
