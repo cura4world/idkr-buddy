@@ -25,6 +25,25 @@ const speak = (text: string, lang: "id" | "ko") => {
   } catch (e) { /* 지원하지 않는 기기는 조용히 넘어갑니다 */ }
 };
 
+/* 인니어 단어는 사전형이 소문자입니다. 고유명사와 약어만 대문자를 살립니다. */
+const PROPER_NOUNS = new Set([
+  "allah", "tuhan", "yesus", "kristus", "roh", "kudus", "alkitab", "injil", "kristen",
+  "indonesia", "jakarta", "bali", "jawa",
+  "minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu",
+  "januari", "februari", "maret", "april", "mei", "juni",
+  "juli", "agustus", "september", "oktober", "november", "desember",
+]);
+
+const lowerFirstWord = (word: string): string => {
+  const t = word.trim();
+  if (t === "") return word;
+  // 약어(TB, PGI 등)는 그대로 둡니다.
+  if (t.length > 1 && t === t.toUpperCase()) return t;
+  const head = t.split(new RegExp("[\\s-]"))[0].toLowerCase();
+  if (PROPER_NOUNS.has(head)) return t;
+  return t.charAt(0).toLowerCase() + t.slice(1);
+};
+
 const Label = ({ children }: { children: React.ReactNode }) => (
   <p className="mb-2 text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
     {children}
@@ -211,7 +230,7 @@ const PhraseDetail = () => {
                       }
                     >
                       <div className="flex items-center gap-2">
-                        <p className="font-word text-[16px] font-semibold text-foreground">{w.word}</p>
+                        <p className="font-word text-[16px] font-semibold text-foreground">{lowerFirstWord(w.word)}</p>
                         <button
                           onClick={() => speak(w.word, "id")}
                           className="shrink-0 text-muted-foreground active:text-primary"
@@ -253,7 +272,7 @@ const PhraseDetail = () => {
                       }
                     >
                       {ex.situasi ? (
-                        <p className="mb-2 text-[11.5px] font-gothic text-muted-foreground">
+                        <p className="mb-2 text-[11.5px] font-gothic font-semibold text-muted-foreground">
                           {ex.situasi}
                         </p>
                       ) : null}
