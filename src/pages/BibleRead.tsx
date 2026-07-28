@@ -313,7 +313,7 @@ const BibleRead = () => {
       </header>
 
       <div className="px-4 py-4">
-        <div {...swipeHandlers} className="-mx-4 bg-card border-y border-border/60 overflow-hidden px-3 py-5">
+        <div {...swipeHandlers} className="-mx-4 bg-card border-y border-border/60 overflow-hidden px-4 py-5">
               {/* 위치 필 (탭 → 책 선택 시트) */}
               <div className="flex items-center gap-2 mb-4 min-w-0">
                 <button
@@ -384,6 +384,9 @@ const BibleRead = () => {
                 </div>
               )}
         </div>
+        <p className="text-center text-muted-foreground text-xs mt-3">
+          {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 해석, 단어를 탭하면 뜻이 나옵니다"}
+        </p>
 
         {/* 이전 장 / 다음 장 */}
         {!loading && !error && book && (

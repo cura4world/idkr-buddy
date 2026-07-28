@@ -632,7 +632,7 @@ const Prayer = () => {
         </header>
 
         <div className="px-4 py-4">
-          <div {...swipeHandlers} className="-mx-4 bg-card border-y border-border/60 px-3 py-5 min-h-[72vh] content-bump select-none">
+          <div {...swipeHandlers} className="-mx-4 bg-card border-y border-border/60 px-4 py-5 min-h-[72vh] content-bump select-none">
               {/* 제목(상황) 한 줄, 다음 줄 우측: 날짜 + 글자크기(-,+) 또는 연필 */}
               <div className="mb-3">
                 <div className="flex items-center gap-2">

@@ -351,7 +351,7 @@ const Story = () => {
         <div className="px-4 py-4">
           <div
             {...swipeHandlers}
-            className="-mx-4 bg-card border-y border-border/60 px-3 py-5 min-h-[72vh] content-bump select-none"
+            className="-mx-4 bg-card border-y border-border/60 px-4 py-5 min-h-[72vh] content-bump select-none"
           >
             {!flipped ? (
               <>
