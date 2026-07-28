@@ -123,7 +123,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm mx-auto bg-card max-h-[85dvh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-sm mx-auto bg-card max-h-[85dvh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="font-body text-gray-900">설정</DialogTitle>
         </DialogHeader>
@@ -162,7 +162,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground font-body">
+            <p className="mt-2 text-xs text-muted-foreground font-gothic">
               앱 전체 글자 크기를 조절합니다. 이 기기에만 적용됩니다.
             </p>
           </div>
@@ -186,7 +186,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-xs text-muted-foreground font-body">
+            <p className="mt-2 text-xs text-muted-foreground font-gothic">
               묵상·이야기·뉴스·기도의 "전체 듣기"에 쓰이는 목소리입니다. 이 기기에만 적용됩니다.
             </p>
           </div>
@@ -200,7 +200,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               placeholder="AIza..."
               className="mt-1"
             />
-            <p className="mt-2 text-xs text-muted-foreground font-body">
+            <p className="mt-2 text-xs text-muted-foreground font-gothic">
               단어 추가 시 뜻과 예문을 자동으로 채우는 데 사용됩니다. 키는 이 기기에만 저장되며, Google AI Studio에서 무료로 발급받을 수 있습니다. 비워두고 저장하면 키가 삭제됩니다.
             </p>
           </div>
@@ -214,7 +214,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               placeholder="sk-ant-..."
               className="mt-1"
             />
-            <p className="mt-2 text-xs text-muted-foreground font-body">
+            <p className="mt-2 text-xs text-muted-foreground font-gothic">
               인도네시아어 묵상 생성에 사용됩니다. console.anthropic.com에서 발급받을 수 있습니다. 비워두고 저장하면 키가 삭제됩니다.
             </p>
           </div>
@@ -223,7 +223,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
           </Button>
           <div className="pt-3 border-t border-border/60">
             <Label className="font-body text-sm text-gray-900">개인 단어장 (선택)</Label>
-            <p className="mt-1 text-xs text-muted-foreground font-body">
+            <p className="mt-1 text-xs text-muted-foreground font-gothic">
               GitHub의 data/private/폴더이름 단어장을 이 기기에서만 추가로 불러옵니다. 비워두고 적용하면 해제됩니다.
             </p>
             <div className="flex gap-2 mt-2">
@@ -241,7 +241,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
           </div>
           <div className="pt-3 border-t border-border/60">
             <Label className="font-body text-sm text-gray-900">데이터 백업</Label>
-            <p className="mt-1 text-xs text-muted-foreground font-body">
+            <p className="mt-1 text-xs text-muted-foreground font-gothic">
               모든 단어장을 CSV로 백업하고 복원합니다. 앱에서는 파일 저장이 되지 않으니 '복사'를 눌러 메모장이나 메신저에 붙여넣어 보관하세요.
             </p>
             <div className="flex gap-2 mt-2">
@@ -254,15 +254,15 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 파일 저장
               </Button>
             </div>
-            <Button type="button" variant="outline" className="w-full mt-2" onClick={() => setImportOpen(true)}>
+            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug" onClick={() => setImportOpen(true)}>
               <Upload className="w-4 h-4 mr-1.5" />
               CSV 가져오기 (복원)
             </Button>
-            <Button type="button" variant="outline" className="w-full mt-2" onClick={handleClearImages}>
+            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug" onClick={handleClearImages}>
               <Trash2 className="w-4 h-4 mr-1.5" />
               저장된 사전 이미지·단어·검색 결과 비우기
             </Button>
-            <Button type="button" variant="outline" className="w-full mt-2" onClick={handleClearTts}>
+            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug" onClick={handleClearTts}>
               <Trash2 className="w-4 h-4 mr-1.5" />
               저장된 읽기 음성 비우기
             </Button>
