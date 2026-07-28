@@ -346,10 +346,10 @@ const News = () => {
   if (article && selected) {
     return (
       <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
-        <header className="sticky top-0 z-30 bg-primary text-white px-4 py-3 flex items-center gap-3">
+        <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
           <button
             onClick={closeArticle}
-            className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+            className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
             title="신문으로"
           >
             <ArrowLeft size={20} />
@@ -488,10 +488,10 @@ const News = () => {
 
   return (
     <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
-      <header className="sticky top-0 z-30 bg-primary text-white px-4 py-3 flex items-center gap-3">
+      <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => navigate("/")}
-          className="text-white hover:text-white/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+          className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >
           <ArrowLeft size={20} />
