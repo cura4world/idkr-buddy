@@ -137,7 +137,7 @@ const PhraseDetail = () => {
               <section className="mt-5">
                 <Label>어떤 뜻인가요</Label>
                 <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-                  <p className="font-gothic text-[14px] leading-[1.75] text-foreground/85">{data.meaning}</p>
+                  <p className="font-gothic text-[13px] leading-[1.75] text-foreground/85">{data.meaning}</p>
                 </div>
               </section>
             ) : null}
@@ -223,7 +223,7 @@ const PhraseDetail = () => {
               <section className="mt-5">
                 <Label>알아두기</Label>
                 <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-                  <p className="font-gothic text-[14px] leading-[1.75] text-foreground/85">{data.note}</p>
+                  <p className="font-gothic text-[13px] leading-[1.75] text-foreground/85">{data.note}</p>
                 </div>
               </section>
             ) : null}
