@@ -98,7 +98,7 @@
     height: 4px;
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(0 0% 100% / 0.18);
+    background: hsl(200 10% 55% / 0.35);
     border-radius: 999px;
   }
   ::-webkit-scrollbar-track {
@@ -116,36 +116,12 @@
   font-family: 'Gowun Dodum', sans-serif;
 }
 
-/* App background: deep-sea depth gradient (page roots only, inputs unaffected)
-   사전 홈은 min-h-screen 대신 h-[100dvh]를 쓰므로 그 셀렉터도 함께 포함 (헤더 색과 일치용) */
-.min-h-screen.bg-background,
-.h-\[100dvh\].bg-background {
-  background-image: linear-gradient(180deg, hsl(195 68% 26%) 0%, hsl(196 72% 22%) 38%, hsl(201 76% 14%) 100%);
-}
-
-/* 콘텐츠 페이지 상단 헤더/바 — 색 배경 박스 없이 페이지 배경에 녹아들게 (모든 폴더 통일).
-   대상: 사전·이야기·묵상·뉴스(bg-primary), 기도(bg-background/95), 단어장 상세(sticky 바).
-   페이지 그라디언트 최상단 색과 정확히 맞춰, 정지 상태에선 박스가 안 보이고
-   스크롤 시엔 본문 글자를 깔끔히 덮습니다. */
-header.bg-primary,
-header.bg-background\/95,
-.sticky.top-0.z-30.bg-background {
-  background-color: hsl(195 68% 26%);
-  background-image: none;
-  box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
 /* Soft layered lift for cards sitting on the deep background
    — 상단 인셋 하이라이트(위에서 받는 빛) + 겹층 그림자로 종이 같은 입체감 */
 .card-lift {
   box-shadow:
-    inset 0 1px 0 hsl(45 70% 99% / 0.65),
-    inset 0 0 0 1px hsl(45 40% 99% / 0.10),
-    0 1px 2px hsl(200 60% 8% / 0.16),
-    0 6px 14px -8px hsl(202 65% 6% / 0.35),
-    0 16px 32px -16px hsl(202 65% 6% / 0.5);
+    0 1px 2px hsl(200 20% 40% / 0.06),
+    0 4px 10px -6px hsl(200 25% 30% / 0.10);
 }
 
 /* Breathing card pulse animation */
