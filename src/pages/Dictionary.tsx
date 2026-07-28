@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Home, Mic, ScrollText, Newspaper, Map as MapIcon, Lightbulb, Library, RotateCcw } from "lucide-react";
+import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Mic, ScrollText, Newspaper, Map as MapIcon, Lightbulb, Library, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
@@ -224,9 +224,6 @@ const Dictionary = () => {
     return "검색에 실패했습니다. 잠시 후 다시 시도해주세요.";
   };
 
-  // 검색 결과를 볼 때 히스토리를 한 칸 쌓아두었는지 여부
-  const resultStateRef = useRef(false);
-
   // 이미 본 단어면 저장된 이미지를 자동 표시. 안 본 단어면 버튼이 뜸(비용 절감).
   const showStoredImageFor = async (word: string) => {
     const key = word.toLowerCase();
@@ -276,11 +273,6 @@ const Dictionary = () => {
     // 결과를 띄운 뒤 공통 마무리 (히스토리 기록 + 뒤로가기용 상태 쌓기)
     const finishSuccess = () => {
       setHistory(pushHistory(w));
-      // 결과 화면 진입 시 히스토리를 한 칸 쌓아, 뒤로가기가 최근 검색 화면으로 오게 함
-      if (!resultStateRef.current) {
-        resultStateRef.current = true;
-        try { window.history.pushState({ dictResult: true }, ""); } catch (e) {}
-      }
     };
 
     // 캐시 적중: setLoading(true)를 아예 거치지 않아 로딩 화면이 깜빡이지 않습니다.
@@ -353,28 +345,6 @@ const Dictionary = () => {
     setLastTerm("");
     setHistory(loadHistory());
   };
-
-  // 홈 버튼: 결과를 보고 있었다면 쌓아둔 히스토리를 되돌려 뒤로가기와 동작을 일치시킴
-  const goHome = () => {
-    if (resultStateRef.current) {
-      window.history.back(); // popstate 핸들러가 resetToHome 처리
-    } else {
-      resetToHome();
-    }
-  };
-
-  // 폰의 뒤로가기: 결과 화면이면 최근 검색 화면으로만 이동 (사전을 벗어나지 않음)
-  useEffect(() => {
-    const onPop = () => {
-      if (resultStateRef.current) {
-        resultStateRef.current = false;
-        resetToHome();
-      }
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // 초기(홈) 화면 여부: 결과·로딩·에러가 전혀 없는 상태
   const isHome = !loading && !error && !result && !idSentence && !koWord && !koSentence;
@@ -539,20 +509,13 @@ const Dictionary = () => {
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => { if (resultStateRef.current) { window.history.back(); } else { navigate("/"); } }}
+          onClick={() => navigate("/")}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >
           <ArrowLeft size={20} />
         </button>
         <h1 className="flex-1 text-lg font-semibold truncate">인도네시아어 사전</h1>
-        <button
-          onClick={goHome}
-          className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -mr-1 shrink-0"
-          title="처음으로"
-        >
-          <Home size={20} />
-        </button>
       </header>
 
       {/* 최근 검색 항목 삭제 확인 */}
