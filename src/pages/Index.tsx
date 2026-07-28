@@ -147,6 +147,8 @@ const Index = () => {
   const hideHistoryRef = useRef<any>(null);
   const searchAreaRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const histOpenRef = useRef(false);
+  const histPushedRef = useRef(false);
 
   const allCategories = getCategories();
   const hasMyWordbook = allCategories.some((c) => c.id === MY_WORDBOOK_ID);
@@ -222,6 +224,44 @@ const Index = () => {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
+  const openSearchHistory = () => {
+    if (histOpenRef.current) return;
+    if (hideHistoryRef.current) window.clearTimeout(hideHistoryRef.current);
+    setHistory(loadSearchHistory());
+    setShowHistory(true);
+    histOpenRef.current = true;
+    // 폰의 뒤로가기로도 닫힐 수 있도록 히스토리를 한 칸 쌓습니다.
+    try {
+      window.history.pushState({ homeHistoryPanel: true }, "");
+      histPushedRef.current = true;
+    } catch (e) {
+      histPushedRef.current = false;
+    }
+  };
+
+  const closeSearchHistory = () => {
+    if (!histOpenRef.current) return;
+    histOpenRef.current = false;
+    setShowHistory(false);
+    if (histPushedRef.current) {
+      histPushedRef.current = false;
+      try { window.history.back(); } catch (e) {}
+    }
+  };
+
+  // 폰의 뒤로가기 — 목록만 닫고 메인에 머무릅니다.
+  useEffect(() => {
+    const onPopHistory = () => {
+      if (histOpenRef.current) {
+        histOpenRef.current = false;
+        histPushedRef.current = false;
+        setShowHistory(false);
+      }
+    };
+    window.addEventListener("popstate", onPopHistory);
+    return () => window.removeEventListener("popstate", onPopHistory);
+  }, []);
+
   // 최근 검색어 목록은 검색 영역 바깥을 누르면 닫습니다.
   // 폰에서는 카드처럼 포커스를 받지 않는 요소를 눌러도 input 의 blur 가 안 나는 경우가 있어
   // blur 만으로는 목록이 남아 있게 됩니다.
@@ -230,7 +270,7 @@ const Index = () => {
     const onDown = (e: any) => {
       const area = searchAreaRef.current;
       if (area && e.target && area.contains(e.target)) return;
-      setShowHistory(false);
+      closeSearchHistory();
       try { searchInputRef.current?.blur(); } catch (err) {}
     };
     document.addEventListener("pointerdown", onDown);
@@ -417,14 +457,10 @@ const Index = () => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") goSearch(); }}
-              onFocus={() => {
-                if (hideHistoryRef.current) window.clearTimeout(hideHistoryRef.current);
-                setHistory(loadSearchHistory());
-                setShowHistory(true);
-              }}
+              onFocus={openSearchHistory}
               onBlur={() => {
                 // 목록을 탭할 때 먼저 닫히지 않도록 잠깐 기다립니다.
-                hideHistoryRef.current = window.setTimeout(() => setShowHistory(false), 160);
+                hideHistoryRef.current = window.setTimeout(() => closeSearchHistory(), 160);
               }}
               placeholder="단어·문장 (인니어/한국어)"
               className="flex-1 min-w-0 w-full bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
