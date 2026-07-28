@@ -346,17 +346,11 @@ const InsightHistory = () => {
   };
 
   return (
-    <div
-      className="min-h-screen px-4 pt-4 pb-10 max-w-lg mx-auto"
-      style={{
-        backgroundImage:
-          "linear-gradient(180deg, hsl(201 76% 14%) 0%, hsl(196 72% 22%) 55%, hsl(195 68% 30%) 100%)",
-      }}
-    >
+    <div className="min-h-screen bg-background px-4 pt-4 pb-10 max-w-lg mx-auto">
       <header className="flex items-center gap-2 mb-2">
         <button
           onClick={() => navigate("/insight")}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 hover:bg-white/10 active:bg-white/15 -ml-1"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-black/5 active:bg-black/10 -ml-1"
           title="뒤로"
         >
           <ArrowLeft size={20} />
@@ -365,26 +359,26 @@ const InsightHistory = () => {
           <span className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center shadow-lg shadow-black/30">
             <Hourglass size={18} className="text-white" />
           </span>
-          <h1 className="text-lg font-semibold text-white leading-none">인도네시아 역사</h1>
+          <h1 className="text-lg font-semibold text-foreground leading-none">인도네시아 역사</h1>
         </div>
       </header>
 
-      <p className="mb-5 text-[13px] font-gothic text-white/55 leading-relaxed px-1">
+      <p className="mb-5 text-[13px] font-gothic text-muted-foreground leading-relaxed px-1">
         위가 오늘, 아래로 내려갈수록 옛날입니다. 제목을 누르면 자세한 이야기가 열립니다.
       </p>
 
       {/* 세로 타임라인 */}
       <div className="relative pl-6">
         {/* 세로 라인 */}
-        <div className="absolute left-[7px] top-1 bottom-1 w-[2px] bg-amber-400/25 rounded-full" />
+        <div className="absolute left-[7px] top-1 bottom-1 w-[2px] bg-amber-500/40 rounded-full" />
 
         {ERAS.map((era) => (
           <div key={era.era} className="mb-7 last:mb-0">
             {/* 시대 헤더 */}
             <div className="relative mb-3">
               <span className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-amber-400 border-[3px] border-background shadow" />
-              <h2 className="text-[15px] font-semibold text-amber-300 leading-tight">{era.era}</h2>
-              <p className="text-[11px] font-gothic text-amber-200/50 mt-0.5">{era.period}</p>
+              <h2 className="text-[15px] font-semibold text-amber-700 leading-tight">{era.era}</h2>
+              <p className="text-[11px] font-gothic text-muted-foreground mt-0.5">{era.period}</p>
             </div>
 
             {/* 사건들 */}
@@ -395,10 +389,10 @@ const InsightHistory = () => {
                   onClick={() => openPopup(ev)}
                   className="relative w-full text-left group"
                 >
-                  <span className="absolute -left-[21px] top-2.5 w-2 h-2 rounded-full bg-amber-300/70 group-active:bg-amber-300" />
-                  <span className="block bg-white/[0.06] active:bg-white/[0.12] border border-white/10 rounded-xl px-3.5 py-2.5 transition-colors">
-                    <span className="block text-[11px] font-gothic font-semibold text-amber-300/80">{ev.y}</span>
-                    <span className="block text-sm font-gothic font-medium text-white/90 mt-0.5 leading-snug">{ev.t}</span>
+                  <span className="absolute -left-[21px] top-2.5 w-2 h-2 rounded-full bg-amber-500 group-active:bg-amber-600" />
+                  <span className="block bg-card active:bg-muted border border-border rounded-xl px-3.5 py-2.5 transition-colors">
+                    <span className="block text-[11px] font-gothic font-semibold text-amber-700">{ev.y}</span>
+                    <span className="block text-sm font-gothic font-medium text-foreground mt-0.5 leading-snug">{ev.t}</span>
                   </span>
                 </button>
               ))}
