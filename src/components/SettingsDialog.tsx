@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import CSVImportDialog from "@/components/CSVImportDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Copy, Download, Upload, Trash2, Minus, Plus, Type, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { clearStoredImages, countStoredImages } from "@/lib/imageStore";
@@ -24,6 +25,8 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const [apiKey, setApiKey] = useState("");
   const [claudeKey, setClaudeKey] = useState("");
   const [importOpen, setImportOpen] = useState(false);
+  const [confirmClearData, setConfirmClearData] = useState(false);
+  const [confirmClearTts, setConfirmClearTts] = useState(false);
   const [privateFolder, setPrivateFolder] = useState("");
   const [fontStep, setFontStepState] = useState(3);
   const [voice, setVoice] = useState<TtsVoiceId>("male");
@@ -258,11 +261,11 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               <Upload className="w-4 h-4 mr-1.5" />
               CSV 가져오기 (복원)
             </Button>
-            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={handleClearImages}>
+            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={() => setConfirmClearData(true)}>
               <Trash2 className="w-4 h-4 mr-1.5" />
               저장된 단어·검색 결과 비우기
             </Button>
-            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={handleClearTts}>
+            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={() => setConfirmClearTts(true)}>
               <Trash2 className="w-4 h-4 mr-1.5" />
               저장된 읽기 음성 비우기
             </Button>
@@ -274,6 +277,43 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
           </div>
         </div>
         <CSVImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={() => {}} />
+
+        <AlertDialog open={confirmClearData} onOpenChange={setConfirmClearData}>
+          <AlertDialogContent className="bg-card">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-body text-gray-900">
+                저장된 단어·검색 결과를 비울까요?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="font-gothic">
+                사전에서 찾아둔 단어 풀이와 검색 결과가 지워집니다.
+                다음에 같은 단어를 찾으면 새로 불러옵니다.
+                단어장에 저장한 단어는 지워지지 않습니다.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="font-body">취소</AlertDialogCancel>
+              <AlertDialogAction onClick={handleClearImages} className="font-body bg-red-600 hover:bg-red-700 text-white">비우기</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={confirmClearTts} onOpenChange={setConfirmClearTts}>
+          <AlertDialogContent className="bg-card">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-body text-gray-900">
+                저장된 읽기 음성을 비울까요?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="font-gothic">
+                미리 받아둔 음성 파일이 지워집니다.
+                다음에 “전체 듣기”를 누르면 새로 받아옵니다.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="font-body">취소</AlertDialogCancel>
+              <AlertDialogAction onClick={handleClearTts} className="font-body bg-red-600 hover:bg-red-700 text-white">비우기</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );
