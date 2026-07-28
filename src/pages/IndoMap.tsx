@@ -428,7 +428,7 @@ const IndoMap = () => {
       <header className="relative flex items-center gap-2 px-4 pt-5 pb-3 shrink-0">
         <button
           onClick={() => navigate("/")}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-white/10 active:bg-white/15"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-black/5 active:bg-black/10"
           title="홈으로"
         >
           <ArrowLeft size={20} />
@@ -440,7 +440,7 @@ const IndoMap = () => {
       </header>
 
       {/* 지도 */}
-      <div ref={wrapRef} className="relative flex-1 min-h-0 touch-none overflow-hidden">
+      <div ref={wrapRef} className="relative flex-1 min-h-0 touch-none overflow-hidden" style={{ backgroundColor: "#0b2f37" }}>
         <svg
           ref={svgRef}
           className="w-full h-full block"
