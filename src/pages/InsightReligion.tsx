@@ -194,7 +194,7 @@ const InsightReligion = () => {
       <header className="flex items-center gap-2 mb-4">
         <button
           onClick={() => navigate("/insight")}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 hover:bg-white/10 active:bg-white/15 -ml-1"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-white/10 active:bg-white/15 -ml-1"
           title="뒤로"
         >
           <ArrowLeft size={20} />
@@ -203,7 +203,7 @@ const InsightReligion = () => {
           <span className="w-9 h-9 rounded-xl bg-violet-500 flex items-center justify-center shadow-lg shadow-black/30">
             <Landmark size={18} className="text-white" />
           </span>
-          <h1 className="text-lg font-semibold text-white leading-none">인도네시아 종교</h1>
+          <h1 className="text-lg font-semibold text-foreground leading-none">인도네시아 종교</h1>
         </div>
       </header>
 
@@ -269,7 +269,7 @@ const InsightReligion = () => {
       </Fold>
       </div>
 
-      <p className="mt-4 text-[11px] font-gothic text-white/35 px-1">
+      <p className="mt-4 text-[11px] font-gothic text-muted-foreground px-1">
         ※ 비율은 2023~2024년 인도네시아 종교부 통계 기준입니다.
       </p>
     </div>
