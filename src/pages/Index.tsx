@@ -1,17 +1,17 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCategories, getWordsByCategory, restoreSharedCategories } from "@/lib/store";
+import { getCategories, getWordsByCategory } from "@/lib/store";
 import { getBook } from "@/lib/bible";
-import AddCategoryDialog from "@/components/AddCategoryDialog";
+import { getPeribahasa, todayPeribahasaIndex, nextRandomIndex } from "@/lib/peribahasa";
 import SettingsDialog from "@/components/SettingsDialog";
 import {
   RotateCcw,
   Settings,
   Search,
   Mic,
+  Volume2,
   Star,
   Library,
-  Sunrise,
   BookOpen,
   Heart,
   Newspaper,
@@ -31,37 +31,38 @@ const BULAN = [
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
 
-/* 오늘의 인도네시아어 — 널리 쓰이는 속담·관용구.
-   날짜를 기준으로 하나씩 돌아가며 보여줍니다 (API 호출 없음). */
-const PERIBAHASA: { id: string; ko: string }[] = [
-  { id: "Sedikit-sedikit, lama-lama menjadi bukit.", ko: "조금씩 모으다 보면 언덕이 됩니다. 티끌 모아 태산." },
-  { id: "Air tenang menghanyutkan.", ko: "잔잔한 물이 (배를) 떠내려 보냅니다. 조용한 사람이 더 깊습니다." },
-  { id: "Tak ada gading yang tak retak.", ko: "금 가지 않은 상아는 없습니다. 완벽한 사람은 없습니다." },
-  { id: "Malu bertanya, sesat di jalan.", ko: "묻기를 부끄러워하면 길에서 헤맵니다." },
-  { id: "Berakit-rakit ke hulu, berenang-renang ke tepian.", ko: "먼저 고생하고 나중에 즐깁니다. 고생 끝에 낙이 옵니다." },
-  { id: "Di mana bumi dipijak, di situ langit dijunjung.", ko: "밟고 선 땅에서는 그곳의 하늘을 받듭니다. 그 고장의 법을 따르세요." },
-  { id: "Sambil menyelam minum air.", ko: "잠수하면서 물도 마십니다. 일석이조." },
-  { id: "Bersatu kita teguh, bercerai kita runtuh.", ko: "뭉치면 굳건하고 흩어지면 무너집니다." },
-  { id: "Habis gelap terbitlah terang.", ko: "어둠이 지나면 빛이 떠오릅니다." },
-  { id: "Buah jatuh tidak jauh dari pohonnya.", ko: "열매는 나무에서 멀리 떨어지지 않습니다. 그 아버지에 그 아들." },
-  { id: "Tong kosong nyaring bunyinya.", ko: "빈 통이 소리가 큽니다. 빈 수레가 요란합니다." },
-  { id: "Nasi sudah menjadi bubur.", ko: "밥이 이미 죽이 되었습니다. 엎지른 물입니다." },
-  { id: "Seperti katak dalam tempurung.", ko: "껍데기 속 개구리 같습니다. 우물 안 개구리." },
-  { id: "Ringan sama dijinjing, berat sama dipikul.", ko: "가벼우면 같이 들고, 무거우면 같이 집니다." },
-  { id: "Tak kenal maka tak sayang.", ko: "알지 못하면 사랑하지 못합니다." },
-  { id: "Sepandai-pandai tupai melompat, sekali waktu jatuh juga.", ko: "다람쥐도 언젠가는 떨어집니다. 원숭이도 나무에서 떨어집니다." },
-  { id: "Rajin pangkal pandai.", ko: "부지런함이 지혜의 뿌리입니다." },
-  { id: "Hemat pangkal kaya.", ko: "절약이 넉넉함의 뿌리입니다." },
-  { id: "Ada gula, ada semut.", ko: "설탕이 있는 곳에 개미가 있습니다. 이익이 있는 곳에 사람이 모입니다." },
-  { id: "Bagai pinang dibelah dua.", ko: "빈랑을 둘로 쪼갠 것 같습니다. 붕어빵처럼 닮았습니다." },
-  { id: "Diam itu emas.", ko: "침묵은 금입니다." },
-  { id: "Guru yang baik belajar seumur hidup.", ko: "좋은 선생은 평생 배웁니다." },
-  { id: "Pelan-pelan saja, yang penting sampai.", ko: "천천히 가도 괜찮아요. 도착하는 게 중요하니까요." },
-  { id: "Sedia payung sebelum hujan.", ko: "비 오기 전에 우산을 준비합니다. 유비무환." },
-];
+/* 해뜨는 모양 (lucide Sunrise에는 위쪽 화살표가 있어 직접 그립니다) */
+const SunriseIcon = ({ size = 20, className = "" }: { size?: number; className?: string }) => (
+  <svg
+    width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+    className={className} aria-hidden="true"
+  >
+    <path d="M12 2v3M4.9 6.9l2.1 2.1M2 14h3M19 14h3M17 9l2.1-2.1" />
+    <path d="M8 14a4 4 0 0 1 8 0" />
+    <path d="M3 18h18M5 21h14" />
+  </svg>
+);
+
+/* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 */
+const speak = (text: string) => {
+  const w = window as any;
+  if (w.AndroidTTS) {
+    try { w.AndroidTTS.speak(text, "id-ID"); return; } catch (e) { /* 폴백 */ }
+  }
+  try {
+    window.speechSynthesis?.cancel?.();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "id-ID";
+    u.rate = 0.95;
+    window.speechSynthesis?.speak?.(u);
+  } catch (e) { /* 지원하지 않는 기기는 조용히 넘어갑니다 */ }
+};
+
+type IconComp = LucideIcon | ((p: { size?: number; className?: string }) => React.ReactElement);
 
 type RowProps = {
-  icon: LucideIcon;
+  icon: IconComp;
   title: string;
   sub: string;
   meta?: string;
@@ -78,7 +79,7 @@ const Row = ({ icon: Icon, title, sub, meta, onClick, last }: RowProps) => (
       (last ? "" : "border-b border-border")
     }
   >
-    <Icon size={20} strokeWidth={1.6} className="text-muted-foreground shrink-0" />
+    <Icon size={20} className="text-muted-foreground shrink-0" />
     <div className="flex-1 min-w-0">
       <p className="text-[15px] leading-tight text-foreground truncate">{title}</p>
       <p className="mt-0.5 font-word text-[11.5px] text-muted-foreground truncate">{sub}</p>
@@ -100,10 +101,8 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 
 const Index = () => {
   const navigate = useNavigate();
-  const [, setTick] = useState(0);
-  const refresh = useCallback(() => setTick((t) => t + 1), []);
-  const [addCatOpen, setAddCatOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [phraseIdx, setPhraseIdx] = useState(() => todayPeribahasaIndex());
 
   // 검색
   const [query, setQuery] = useState("");
@@ -119,11 +118,7 @@ const Index = () => {
   // 오늘 날짜(인니어 표기) + 오늘의 문장
   const now = new Date();
   const dateLabel = HARI[now.getDay()] + ", " + now.getDate() + " " + BULAN[now.getMonth()];
-  const dayIndex = Math.floor(
-    (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
-      new Date(now.getFullYear(), 0, 1).getTime()) / 86400000
-  );
-  const today = PERIBAHASA[((dayIndex % PERIBAHASA.length) + PERIBAHASA.length) % PERIBAHASA.length];
+  const today = getPeribahasa(phraseIdx);
 
   // 성경 마지막 읽은 위치
   const [biblePos, setBiblePos] = useState("");
@@ -143,6 +138,7 @@ const Index = () => {
   useEffect(() => {
     return () => {
       try { recognitionRef.current?.stop?.(); } catch (e) {}
+      try { window.speechSynthesis?.cancel?.(); } catch (e) {}
     };
   }, []);
 
@@ -194,16 +190,6 @@ const Index = () => {
     } catch (e) {
       setListening(false);
       toast("음성 검색을 시작하지 못했어요");
-    }
-  };
-
-  const handleRestore = () => {
-    const restored = restoreSharedCategories();
-    if (restored) {
-      refresh();
-      toast("공용 단어장이 복구되었습니다.");
-    } else {
-      toast("복구할 단어장이 없습니다.");
     }
   };
 
@@ -268,12 +254,6 @@ const Index = () => {
             </h1>
           </div>
           <div className="flex items-center shrink-0">
-            <button type="button" onClick={() => setAddCatOpen(true)} className={iconBtn} title="단어장 추가">
-              <span className="text-2xl font-light leading-none">+</span>
-            </button>
-            <button type="button" onClick={handleRestore} className={iconBtn} title="공용 단어장 복구">
-              <RotateCcw size={18} />
-            </button>
             <button type="button" onClick={() => setSettingsOpen(true)} className={iconBtn} title="설정">
               <Settings size={18} />
             </button>
@@ -324,13 +304,40 @@ const Index = () => {
       <div className="px-4">
         {/* ── 오늘의 인도네시아어 ── */}
         <section className="mt-3.5">
-          <div className="rounded-2xl border border-border bg-card px-4 py-4">
-            <p className="text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              Bahasa Hari Ini · 오늘의 인도네시아어
-            </p>
-            <p className="mt-3 font-word text-[19px] font-medium leading-[1.5] text-foreground">
-              {today.id}
-            </p>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate("/phrase/" + phraseIdx)}
+            onKeyDown={(e) => { if (e.key === "Enter") navigate("/phrase/" + phraseIdx); }}
+            className="rounded-2xl border border-border bg-card px-4 py-4 active:bg-muted/40 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <p className="flex-1 min-w-0 truncate text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                Bahasa Hari Ini · 오늘의 인도네시아어
+              </p>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setPhraseIdx((i) => nextRandomIndex(i)); }}
+                className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
+                title="다른 문장 보기"
+              >
+                <RotateCcw size={15} />
+              </button>
+            </div>
+
+            <div className="mt-2.5 flex items-start gap-2">
+              <p className="flex-1 font-word text-[19px] font-medium leading-[1.5] text-foreground">
+                {today.id}
+              </p>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); speak(today.id); }}
+                className="mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-primary active:bg-muted"
+                title="발음 듣기"
+              >
+                <Volume2 size={17} />
+              </button>
+            </div>
             <p className="mt-1.5 text-[13px] leading-[1.6] text-muted-foreground">{today.ko}</p>
           </div>
         </section>
@@ -354,18 +361,18 @@ const Index = () => {
                     </p>
                   </div>
                 </button>
-                <div className="flex shrink-0 items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
                     onClick={() => navigate("/study/" + MY_WORDBOOK_ID)}
-                    className="rounded-full border border-border px-3 py-1.5 text-[12px] font-gothic font-medium text-foreground/80 active:bg-muted"
+                    className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[11px] font-gothic font-medium text-foreground/80 active:bg-muted"
                   >
                     카드
                   </button>
                   <button
                     type="button"
                     onClick={() => navigate("/quiz/" + MY_WORDBOOK_ID)}
-                    className="rounded-full border border-border px-3 py-1.5 text-[12px] font-gothic font-medium text-foreground/80 active:bg-muted"
+                    className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[11px] font-gothic font-medium text-foreground/80 active:bg-muted"
                   >
                     퀴즈
                   </button>
@@ -387,7 +394,7 @@ const Index = () => {
         <section className="mt-6">
           <SectionLabel>말씀과 기도</SectionLabel>
           <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            <Row icon={Sunrise} title="오늘의 묵상" sub="Saat Teduh" onClick={() => navigate("/devotion")} />
+            <Row icon={SunriseIcon} title="오늘의 묵상" sub="Saat Teduh" onClick={() => navigate("/devotion")} />
             <Row
               icon={BookOpen}
               title="성경 읽기"
@@ -411,7 +418,6 @@ const Index = () => {
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-      <AddCategoryDialog open={addCatOpen} onOpenChange={setAddCatOpen} onAdded={refresh} />
     </div>
   );
 };
