@@ -36,7 +36,7 @@ const App = () => (
       <BrowserRouter basename="/idkr-buddy">
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/phrase/:idx" element={<PhraseDetail />} />
+          <Route path="/phrase" element={<PhraseDetail />} />
           <Route path="/dictionary" element={<Dictionary />} />
           <Route path="/story" element={<Story />} />
           <Route path="/news" element={<News />} />
