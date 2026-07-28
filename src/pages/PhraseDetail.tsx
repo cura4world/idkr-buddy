@@ -127,7 +127,12 @@ const PhraseDetail = () => {
         {/* 문장 */}
         <div className="rounded-2xl border border-border bg-card px-4 py-5">
           <div className="flex items-start gap-2">
-            <p className="flex-1 font-word text-[19px] font-medium leading-[1.5] text-foreground">
+            <p
+              className={
+                "flex-1 font-word font-medium text-foreground " +
+                (isAyat ? "text-[17px] leading-[1.65]" : "text-[19px] leading-[1.5]")
+              }
+            >
               {item.id}
             </p>
             <button
@@ -142,7 +147,7 @@ const PhraseDetail = () => {
             <p className="mt-2.5 text-[13.5px] leading-[1.65] text-muted-foreground">{item.ko}</p>
           ) : null}
           {refLabel ? (
-            <p className="mt-2.5 font-word text-[12.5px] text-muted-foreground">{refLabel}</p>
+            <p className="mt-3 font-word text-[13.5px] text-muted-foreground">{refLabel}</p>
           ) : null}
         </div>
 
