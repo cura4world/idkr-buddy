@@ -408,7 +408,7 @@ const News = () => {
               title="카드 뒤집기"
             />
           </div>
-          <p className="text-center text-white/50 text-xs mt-3">
+          <p className="text-center text-muted-foreground text-xs mt-3">
             {flipped ? "오른쪽 바를 누르면 원문이 보입니다" : "오른쪽 바를 누르면 해석, 단어를 탭하면 뜻이 나옵니다"}
           </p>
         </div>
@@ -594,7 +594,7 @@ const News = () => {
         {/* 지난 신문 */}
         {editions.length > 0 && (
           <div className="mt-5">
-            <p className="text-xs text-white mb-2 px-1 font-gothic">지난 신문</p>
+            <p className="text-xs text-muted-foreground mb-2 px-1 font-gothic">지난 신문</p>
             <ul className="space-y-2">
               {editions.map((e) => (
                 <li key={e.date}>
@@ -620,7 +620,7 @@ const News = () => {
         )}
 
         {editions.length === 0 && !generating && (
-          <div className="text-center py-10 text-white/60">
+          <div className="text-center py-10 text-muted-foreground">
             <Newspaper size={30} className="mx-auto mb-3 opacity-60" />
             <p className="text-sm">첫 신문을 만들어보세요</p>
           </div>
