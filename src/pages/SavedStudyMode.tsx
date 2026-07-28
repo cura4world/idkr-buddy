@@ -192,15 +192,15 @@ export default function SavedStudyMode() {
         </div>
       )}
       <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={() => { cancelOperations(); navigate("/saved"); }} className="text-white hover:text-white/80">
+        <button onClick={() => { cancelOperations(); navigate("/saved"); }} className="text-foreground hover:text-foreground/80">
           <ArrowLeft size={20} />
         </button>
-        <span className="text-sm text-white font-body">
+        <span className="text-sm text-foreground font-body">
           {currentIndex + 1} / {isAutoPlaying ? words.length : displayWords.length}
           {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">{"\u25B6"}</span>}
         </span>
         {isAutoPlaying ? (
-          <button onClick={() => setIsScreenLocked(true)} className="text-white hover:text-white/80"><Lock size={20} /></button>
+          <button onClick={() => setIsScreenLocked(true)} className="text-foreground hover:text-foreground/80"><Lock size={20} /></button>
         ) : (
           <div className="w-5" />
         )}
