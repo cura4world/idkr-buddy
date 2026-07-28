@@ -193,7 +193,7 @@ const InsightEthnic = () => {
       <header className="flex items-center gap-2 mb-4">
         <button
           onClick={() => navigate("/insight")}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 hover:bg-white/10 active:bg-white/15 -ml-1"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-white/10 active:bg-white/15 -ml-1"
           title="뒤로"
         >
           <ArrowLeft size={20} />
@@ -202,11 +202,11 @@ const InsightEthnic = () => {
           <span className="w-9 h-9 rounded-xl bg-teal-500 flex items-center justify-center shadow-lg shadow-black/30">
             <Users size={18} className="text-white" />
           </span>
-          <h1 className="text-lg font-semibold text-white leading-none">인도네시아 종족</h1>
+          <h1 className="text-lg font-semibold text-foreground leading-none">인도네시아 종족</h1>
         </div>
       </header>
 
-      <p className="mb-4 text-[13px] font-gothic text-white/60 leading-relaxed px-1">
+      <p className="mb-4 text-[13px] font-gothic text-muted-foreground leading-relaxed px-1">
         인도네시아에는 300개가 넘는 종족과 700개 이상의 언어가 있습니다. 그럼에도
         &ldquo;다양성 속의 통일(Bhinneka Tunggal Ika)&rdquo;이라는 표어 아래 하나의 나라를 이룹니다.
       </p>
@@ -258,7 +258,7 @@ const InsightEthnic = () => {
         </Fold>
       </div>
 
-      <p className="mt-4 text-[11px] font-gothic text-white/35 px-1">
+      <p className="mt-4 text-[11px] font-gothic text-muted-foreground px-1">
         ※ 비율은 2010년 인도네시아 통계청(BPS) 인구센서스 기준이며, 종족 통계에서 가장 널리
         인용되는 수치입니다.
       </p>
