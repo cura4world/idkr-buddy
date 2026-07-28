@@ -36,6 +36,21 @@ import { toast } from "sonner";
 const MY_WORDBOOK_ID = "my-wordbook";
 const BIBLE_LAST_POS_KEY = "bible-last-pos";
 
+// 사전 화면(Dictionary.tsx)이 저장하는 최근 검색어를 읽기만 합니다. 쓰기는 사전 쪽에서만 합니다.
+const DICT_HISTORY_KEY = "dict-search-history";
+const HOME_HISTORY_MAX = 10;
+
+function loadSearchHistory(): string[] {
+  try {
+    const raw = localStorage.getItem(DICT_HISTORY_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(arr)) return [];
+    return arr.filter((x) => typeof x === "string" && x.trim() !== "").slice(0, HOME_HISTORY_MAX);
+  } catch (e) {
+    return [];
+  }
+}
+
 const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const BULAN = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -125,6 +140,11 @@ const Index = () => {
   const [voiceLang, setVoiceLang] = useState<"ko" | "id">("ko");
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+
+  // 검색창을 누르면 최근 검색어를 보여줍니다.
+  const [history, setHistory] = useState<string[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const hideHistoryRef = useRef<any>(null);
 
   const allCategories = getCategories();
   const hasMyWordbook = allCategories.some((c) => c.id === MY_WORDBOOK_ID);
@@ -243,6 +263,7 @@ const Index = () => {
     return () => {
       try { recognitionRef.current?.stop?.(); } catch (e) {}
       try { window.speechSynthesis?.cancel?.(); } catch (e) {}
+      if (hideHistoryRef.current) window.clearTimeout(hideHistoryRef.current);
     };
   }, []);
 
@@ -373,6 +394,15 @@ const Index = () => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") goSearch(); }}
+              onFocus={() => {
+                if (hideHistoryRef.current) window.clearTimeout(hideHistoryRef.current);
+                setHistory(loadSearchHistory());
+                setShowHistory(true);
+              }}
+              onBlur={() => {
+                // 목록을 탭할 때 먼저 닫히지 않도록 잠깐 기다립니다.
+                hideHistoryRef.current = window.setTimeout(() => setShowHistory(false), 160);
+              }}
               placeholder="단어·문장 (인니어/한국어)"
               className="flex-1 min-w-0 w-full bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
               autoCapitalize="none"
@@ -403,6 +433,27 @@ const Index = () => {
             검색
           </button>
         </div>
+
+        {/* 최근 검색어 — 검색창을 눌렀을 때만 (최대 10개) */}
+        {showHistory && query.trim() === "" && history.length > 0 ? (
+          <div className="relative mt-2 overflow-hidden rounded-2xl bg-card">
+            {history.map((term, i) => (
+              <button
+                key={term + i}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => goSearch(term)}
+                className={
+                  "w-full flex items-center gap-2.5 px-4 py-2.5 text-left active:bg-muted/60 transition-colors " +
+                  (i === history.length - 1 ? "" : "border-b border-border")
+                }
+              >
+                <Search size={14} className="shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1 truncate text-[14px] text-foreground/80">{term}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <div className="px-4">
