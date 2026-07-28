@@ -171,7 +171,7 @@ const InsightOverview = () => {
       <header className="flex items-center gap-2 mb-4">
         <button
           onClick={() => navigate("/insight")}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-white/10 active:bg-white/15 -ml-1"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-black/5 active:bg-black/10 -ml-1"
           title="뒤로"
         >
           <ArrowLeft size={20} />
