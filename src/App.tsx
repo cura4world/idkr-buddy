@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
+import PhraseDetail from "./pages/PhraseDetail";
 import Dictionary from "./pages/Dictionary";
 import Story from "./pages/Story";
 import News from "./pages/News";
@@ -35,6 +36,7 @@ const App = () => (
       <BrowserRouter basename="/idkr-buddy">
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/phrase/:idx" element={<PhraseDetail />} />
           <Route path="/dictionary" element={<Dictionary />} />
           <Route path="/story" element={<Story />} />
           <Route path="/news" element={<News />} />
