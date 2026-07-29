@@ -4,7 +4,7 @@ import { getCategories, reorderCategoryById, moveCategoryToEdgeWithin, restoreSh
 import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
-import { ArrowLeft, RotateCcw } from "lucide-react";
+import { ArrowLeft, RotateCcw, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 const MY_WORDBOOK_ID = "my-wordbook";
@@ -186,74 +186,125 @@ const Wordbooks = () => {
     }
   };
 
+  const iconBtn =
+    "w-9 h-9 rounded-full flex items-center justify-center text-white/80 hover:bg-white/10 active:bg-white/20 transition-colors";
+
   return (
-    <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
-      <header className="flex items-center gap-2 mb-6 pr-2">
-        <button
-          onClick={() => navigate("/")}
-          className="text-foreground hover:text-foreground/70 w-8 h-8 flex items-center justify-center -ml-2 shrink-0"
-          title="뒤로"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <h1 className="flex-1 min-w-0 text-lg font-semibold font-body tracking-tight text-foreground truncate">
-          인도네시아어 단어장
-        </h1>
-        <button
-          onClick={handleRestore}
-          className="text-foreground hover:text-foreground/70 w-8 h-8 flex items-center justify-center shrink-0"
-          title="공용 단어장 복구"
-        >
-          <RotateCcw size={16} />
-        </button>
-        <button
-          onClick={() => setAddCatOpen(true)}
-          className="text-foreground hover:text-foreground/70 text-2xl font-light leading-none w-9 h-9 shrink-0"
-          title="단어장 추가"
-        >
-          +
-        </button>
-      </header>
+    <div className="min-h-screen bg-background max-w-lg mx-auto pb-9">
+      {/* ── 상단 브랜드 블록 (배는 홈 전용이라 물결만) ── */}
+      <div
+        className="relative px-5 pt-7 pb-6"
+        style={{ backgroundColor: "hsl(var(--brand-deep))" }}
+      >
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <svg
+            className="absolute left-0 right-0 bottom-0 w-full pointer-events-none"
+            height="34"
+            viewBox="0 0 400 34"
+            preserveAspectRatio="none"
+            fill="none"
+            stroke="#ffffff"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M-10 12 Q40 4 90 12 T190 12 T290 12 T390 12 T490 12" opacity="0.18" />
+            <path d="M-10 22 Q50 14 110 22 T230 22 T350 22 T470 22" opacity="0.13" />
+            <path d="M-10 31 Q60 24 130 31 T270 31 T410 31" opacity="0.09" />
+          </svg>
+        </div>
 
-      <div className="space-y-2">
-        {categories.map((cat, idx) => (
-          <CategoryCard
-            key={cat.id}
-            category={cat}
-            onAddWord={handleAddWord}
-            onChanged={refresh}
-            index={idx}
-            cardRef={(el) => { cardRefs.current[idx] = el; }}
-            isDragging={draggingIndex === idx}
-            isDropTarget={dragOverIndex === idx && draggingIndex !== idx}
-            onTouchStart={makeTouchStart(idx, cat)}
-            onTouchEnd={makeTouchEnd()}
-            onMouseDown={makeMouseDown(idx, cat)}
-            onCancelDrag={cancelLongPress}
-            onMoveTop={() => {
-              if (idx === 0) return;
-              moveCategoryToEdgeWithin(cat.id, categories.map((c) => c.id), true);
-              refresh();
-            }}
-            onMoveBottom={() => {
-              if (idx === categories.length - 1) return;
-              moveCategoryToEdgeWithin(cat.id, categories.map((c) => c.id), false);
-              refresh();
-            }}
-          />
-        ))}
-
-        {categories.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-lg mb-4">단어장이 없습니다</p>
+        <div className="relative flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start gap-1.5">
             <button
-              onClick={() => setAddCatOpen(true)}
-              className="text-primary hover:text-primary/80 text-sm"
+              type="button"
+              onClick={() => navigate("/")}
+              className={"-ml-2 mt-0.5 shrink-0 " + iconBtn}
+              title="뒤로"
             >
-              첫 카테고리를 만들어보세요
+              <ArrowLeft size={18} />
+            </button>
+            <div className="min-w-0">
+              <p className="text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-white/60">
+                Kosakata
+              </p>
+              <h1 className="mt-1.5 text-[22px] font-semibold leading-none tracking-tight text-white truncate">
+                단어장 폴더
+              </h1>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center">
+            <button
+              type="button"
+              onClick={handleRestore}
+              className={iconBtn}
+              title="공용 단어장 복구"
+            >
+              <RotateCcw size={17} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setAddCatOpen(true)}
+              className={iconBtn}
+              title="단어장 추가"
+            >
+              <Plus size={19} />
             </button>
           </div>
-        )}
+        </div>
+      </div>
+
+      <div className="px-4">
+        <section className="mt-3.5">
+          <p className="mb-2.5 px-1 text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            단어장 {categories.length}권
+          </p>
+
+          {categories.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
+              <p className="text-[15px] text-foreground">단어장이 없습니다</p>
+              <p className="mt-1 font-word text-[12px] text-muted-foreground">Belum ada kosakata</p>
+              <button
+                type="button"
+                onClick={() => setAddCatOpen(true)}
+                className="mt-4 h-10 px-4 rounded-full bg-primary text-[13px] font-gothic font-medium text-white active:opacity-90"
+              >
+                첫 단어장 만들기
+              </button>
+            </div>
+          ) : (
+            // 톱니 드롭다운이 잘리지 않도록 overflow-hidden 은 두지 않습니다.
+            <div className="rounded-2xl border border-border bg-card">
+              {categories.map((cat, idx) => (
+                <CategoryCard
+                  key={cat.id}
+                  category={cat}
+                  onAddWord={handleAddWord}
+                  onChanged={refresh}
+                  index={idx}
+                  last={idx === categories.length - 1}
+                  cardRef={(el) => { cardRefs.current[idx] = el; }}
+                  isDragging={draggingIndex === idx}
+                  isDropTarget={dragOverIndex === idx && draggingIndex !== idx}
+                  onTouchStart={makeTouchStart(idx, cat)}
+                  onTouchEnd={makeTouchEnd()}
+                  onMouseDown={makeMouseDown(idx, cat)}
+                  onCancelDrag={cancelLongPress}
+                  onMoveTop={() => {
+                    if (idx === 0) return;
+                    moveCategoryToEdgeWithin(cat.id, categories.map((c) => c.id), true);
+                    refresh();
+                  }}
+                  onMoveBottom={() => {
+                    if (idx === categories.length - 1) return;
+                    moveCategoryToEdgeWithin(cat.id, categories.map((c) => c.id), false);
+                    refresh();
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       {floatCat && floatPos && (
@@ -265,6 +316,8 @@ const Wordbooks = () => {
             category={floatCat}
             onAddWord={() => {}}
             isDragging={false}
+            floating
+            last
           />
         </div>
       )}
