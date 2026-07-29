@@ -462,23 +462,30 @@ export default function CategoryDetail() {
   }
 
   const draggingWord = draggingIndex !== null ? words[draggingIndex] : null;
+  // "내 단어장"만 인니어 대문자 표제(Lora), 사용자가 만든 폴더 이름은 한글이라 본문 폰트를 씁니다.
+  const isMine = category.id === "my-wordbook";
 
   return (
-    <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
-      <div className="sticky top-0 z-30 bg-background -mx-4 px-4 pt-2 pb-3 mb-3">
-        <header className="flex items-center gap-2 mb-2 pr-2">
-          <button
-            onClick={handleBack}
-            className="text-foreground hover:text-foreground/70 w-8 h-8 flex items-center justify-center -ml-2 shrink-0"
-            title="뒤로"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <h1 className="flex-1 min-w-0 text-lg font-semibold font-body tracking-tight truncate">
-            {category.name}
-          </h1>
-        </header>
-        <div className="flex justify-end gap-4">
+    <div className="min-h-screen bg-background max-w-lg mx-auto">
+      <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
+        <button
+          onClick={handleBack}
+          className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+          title="뒤로"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className={
+          "flex-1 min-w-0 truncate text-[17px] font-semibold " +
+          (isMine ? "font-word tracking-[0.06em]" : "font-body tracking-tight")
+        }>
+          {isMine ? "KOSAKATAKU" : category.name}
+        </h1>
+      </header>
+
+      <div className="px-4 pb-6">
+        {/* 표준 헤더 높이 61px(py-3 24 + 버튼 36 + 테두리 1) 바로 아래에 붙여둡니다. */}
+        <div className="sticky top-[61px] z-20 bg-background -mx-4 px-4 py-2.5 flex justify-end gap-4">
           <button onClick={() => setCsvOpen(true)} className="text-sm text-foreground hover:underline underline-offset-4 font-gothic">
             CSV 가져오기
           </button>
@@ -486,7 +493,6 @@ export default function CategoryDetail() {
             + 단어 추가
           </button>
         </div>
-      </div>
       <div className="space-y-2">
         {words.map((w, index) => {
           const isDraggingThis = draggingIndex === index;
@@ -654,6 +660,7 @@ export default function CategoryDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 }
