@@ -340,7 +340,7 @@ const News = () => {
       <p
         key={i}
         ref={(el) => { paraRefs.current["ko-" + i] = el; }}
-        className="mb-4 text-xs leading-relaxed text-gray-800 font-body"
+        className="mb-4 text-xs leading-relaxed text-gray-800 font-gothic"
       >
         {para}
       </p>
@@ -399,7 +399,7 @@ const News = () => {
               ) : (
                 <>
                   {/* 뒷면: 한국어 번역 */}
-                  <h2 className="text-base font-bold text-gray-900 break-words mb-3">{article.titleKo}</h2>
+                  <h2 className="text-sm font-bold text-gray-900 break-words mb-3">{article.titleKo}</h2>
                   {renderKorean(article.korean)}
                 </>
               )}

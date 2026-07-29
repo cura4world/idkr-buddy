@@ -327,7 +327,7 @@ const Story = () => {
       <p
         key={i}
         ref={(el) => { paraRefs.current["ko-" + i] = el; }}
-        className="mb-4 text-xs leading-relaxed text-gray-800 font-body"
+        className="mb-4 text-xs leading-relaxed text-gray-800 font-gothic"
       >
         {para}
       </p>
@@ -377,7 +377,7 @@ const Story = () => {
             ) : (
               <>
                 {/* 뒷면: 한국어 번역 + 단어 학습 */}
-                <h2 className="text-base font-bold text-gray-900 break-words mb-3">{current.titleKo}</h2>
+                <h2 className="text-sm font-bold text-gray-900 break-words mb-3">{current.titleKo}</h2>
                 {renderKorean(current.korean)}
                 {current.background && current.background.length > 0 ? (
                   <>
