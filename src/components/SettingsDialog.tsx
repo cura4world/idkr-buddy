@@ -15,6 +15,7 @@ import { clearLookupWords, countLookupWords } from "@/lib/wordStore";
 import { clearCachedResults, countCachedResults } from "@/lib/dictStore";
 import { getFontStep, getStepCount, stepFont } from "@/lib/fontScale";
 import { getTtsVoice, setTtsVoice, TTS_VOICES, TtsVoiceId, clearTtsCache } from "@/lib/tts";
+import { getSermonBase, setSermonBase, getSermonKey, setSermonKey } from "@/lib/sermon";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -30,6 +31,9 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const [privateFolder, setPrivateFolder] = useState("");
   const [fontStep, setFontStepState] = useState(3);
   const [voice, setVoice] = useState<TtsVoiceId>("male");
+  // lib 의 setSermonBase / setSermonKey 와 이름이 겹치지 않도록 setter 에 _ 를 붙입니다.
+  const [sermonBase, setSermonBaseState] = useState("");
+  const [sermonKey, setSermonKeyState] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -38,6 +42,8 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
       setPrivateFolder(getPrivateFolderName());
       setFontStepState(getFontStep());
       setVoice(getTtsVoice());
+      setSermonBaseState(getSermonBase());
+      setSermonKeyState(getSermonKey());
     }
   }, [open]);
 
@@ -48,6 +54,8 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const handleSave = () => {
     setGeminiApiKey(apiKey);
     setClaudeApiKey(claudeKey);
+    setSermonBase(sermonBase);
+    setSermonKey(sermonKey);
     toast("API 키 설정이 저장되었습니다");
     onOpenChange(false);
   };
@@ -191,6 +199,28 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             </div>
             <p className="mt-2 text-xs text-muted-foreground font-gothic">
               묵상·이야기·뉴스·기도의 "전체 듣기"에 쓰이는 목소리입니다. 이 기기에만 적용됩니다.
+            </p>
+          </div>
+          <div>
+            <Label className="font-body text-sm text-gray-900">설교문 서버</Label>
+            <Input
+              type="text"
+              autoComplete="off"
+              value={sermonBase}
+              onChange={(e) => setSermonBaseState(e.target.value)}
+              placeholder="https://kata-sermon.○○○.workers.dev"
+              className="mt-1"
+            />
+            <Input
+              type="password"
+              autoComplete="off"
+              value={sermonKey}
+              onChange={(e) => setSermonKeyState(e.target.value)}
+              placeholder="비밀키"
+              className="mt-2"
+            />
+            <p className="mt-2 text-xs text-muted-foreground font-gothic">
+              PC에서 올린 설교문을 이 폰으로 가져오는 데 씁니다. 주소와 비밀키는 이 기기에만 저장됩니다.
             </p>
           </div>
           <div>
