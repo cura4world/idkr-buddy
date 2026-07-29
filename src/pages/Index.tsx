@@ -543,15 +543,6 @@ const Index = () => {
               </p>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); refreshPhrase(kinds); }}
-                className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
-                title="다른 문장 보기"
-                aria-label="다른 문장 보기"
-              >
-                <RotateCcw size={15} />
-              </button>
-              <button
-                type="button"
                 onClick={(e) => { e.stopPropagation(); openKindSheet(); }}
                 className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
                 title="어떤 문장을 볼지 고르기"
@@ -579,15 +570,26 @@ const Index = () => {
                   >
                     {phrase.id}
                   </p>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); speak(phrase.id); }}
-                    className="mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-primary active:bg-muted"
-                    title="발음 듣기"
-                    aria-label="발음 듣기"
-                  >
-                    <Volume2 size={17} />
-                  </button>
+                  <div className="flex flex-col items-center shrink-0 gap-0.5">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); speak(phrase.id); }}
+                      className="mt-0.5 w-8 h-8 rounded-full flex items-center justify-center text-primary active:bg-muted"
+                      title="발음 듣기"
+                      aria-label="발음 듣기"
+                    >
+                      <Volume2 size={17} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); refreshPhrase(kinds); }}
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
+                      title="다른 문장 보기"
+                      aria-label="다른 문장 보기"
+                    >
+                      <RotateCcw size={15} />
+                    </button>
+                  </div>
                 </div>
                 {phrase.ko ? (
                   <p className="mt-1.5 text-[13px] leading-[1.6] text-muted-foreground">{phrase.ko}</p>
