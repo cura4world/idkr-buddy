@@ -359,7 +359,7 @@ const News = () => {
             <ArrowLeft size={20} />
           </button>
           <h1 className="flex-1 min-w-0 text-base font-semibold leading-snug line-clamp-2 break-words">
-            {article.titleKo || article.title}
+            BERITA HARI INI
           </h1>
         </header>
 
