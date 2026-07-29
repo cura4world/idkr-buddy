@@ -13,6 +13,8 @@ interface CategoryCardProps {
   index?: number;
   isDragging?: boolean;
   isDropTarget?: boolean;
+  last?: boolean;
+  floating?: boolean;
   onTouchStart?: (e: React.TouchEvent) => void;
   onTouchEnd?: (e: React.TouchEvent) => void;
   onMouseDown?: (e: React.MouseEvent) => void;
@@ -26,8 +28,11 @@ export default function CategoryCard({
   onAddWord,
   onChanged,
   cardRef,
+  index,
   isDragging,
   isDropTarget,
+  last,
+  floating,
   onTouchStart,
   onTouchEnd,
   onMouseDown,
@@ -47,76 +52,111 @@ export default function CategoryCard({
     onChanged?.();
   };
 
+  const rootCls =
+    "relative select-none bg-card px-4 py-3 transition-colors " +
+    (last ? "" : "border-b border-border ") +
+    (floating ? "rounded-2xl border border-border shadow-[0_10px_24px_-8px_rgba(8,32,38,0.35)] " : "") +
+    (isDragging ? "opacity-20 " : "") +
+    (isDropTarget ? "bg-muted " : "");
+
   return (
     <div
       ref={cardRef}
-      className={`relative rounded-xl bg-card px-5 py-3 card-lift border border-border/60 select-none ${isDragging ? "opacity-20" : ""} ${isDropTarget ? "ring-2 ring-primary ring-offset-2" : ""}`}
+      data-cat-index={index}
+      className={rootCls}
+      // 임의값 링은 Tailwind 쪽에서 깨질 수 있어 인라인 style 로 안쪽 링을 줍니다.
+      style={isDropTarget ? { boxShadow: "inset 0 0 0 2px hsl(var(--primary))" } : undefined}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       onMouseDown={onMouseDown}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="relative">
-        <div
-          className="flex items-center gap-2 cursor-pointer pr-8"
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
           onClick={() => navigate(`/category/${category.id}`)}
+          className="flex flex-1 min-w-0 items-center gap-3 text-left"
         >
-          <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-base shrink-0">{category.emoji}</span>
-          <h2 className="text-base font-semibold font-body text-card-foreground truncate">{category.name}</h2>
-        </div>
+          <span className="w-9 h-9 shrink-0 rounded-full border border-border flex items-center justify-center text-[17px]">
+            {category.emoji}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] leading-tight text-foreground truncate">{category.name}</span>
+            <span className="mt-0.5 block font-word text-[11.5px] text-muted-foreground truncate">
+              Kosakata · {words.length}단어
+            </span>
+          </span>
+        </button>
 
-        <div className="absolute -top-2 -right-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
-            onMouseDown={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
-            onTouchStart={(e) => { e.stopPropagation(); e.preventDefault(); onCancelDrag?.(); }}
-            onTouchEnd={(e) => { e.stopPropagation(); }}
-            onClick={(e) => { e.stopPropagation(); setGearOpen((o) => !o); }}
-            className="p-2 text-muted-foreground hover:text-foreground"
+            type="button"
+            onClick={() => navigate(`/study/${category.id}`)}
+            className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[11px] font-gothic font-medium text-foreground/80 active:bg-muted"
           >
-            <Settings size={18} />
+            카드
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`/quiz/${category.id}`)}
+            className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[11px] font-gothic font-medium text-foreground/80 active:bg-muted"
+          >
+            퀴즈
           </button>
 
-          {gearOpen && (
-            <div
-              className="absolute right-0 top-8 z-50 min-w-[10rem] rounded-md border bg-popover shadow-md"
+          <div className="relative">
+            <button
               onMouseDown={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
-              onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
-              onClick={(e) => e.stopPropagation()}
+              onTouchStart={(e) => { e.stopPropagation(); e.preventDefault(); onCancelDrag?.(); }}
+              onTouchEnd={(e) => { e.stopPropagation(); }}
+              onClick={(e) => { e.stopPropagation(); setGearOpen((o) => !o); }}
+              className="-mr-1 w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
             >
-              <button
-                className="flex w-full items-center rounded-sm px-2 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
+              <Settings size={17} />
+            </button>
+
+            {gearOpen && (
+              <div
+                className="absolute right-0 top-10 z-50 min-w-[10rem] rounded-xl border border-border bg-popover shadow-lg overflow-hidden"
+                onMouseDown={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
                 onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
-                onClick={() => { setGearOpen(false); onMoveTop?.(); }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <ChevronsUp className="mr-2 h-4 w-4" />
-                맨 위로
-              </button>
-              <button
-                className="flex w-full items-center rounded-sm px-2 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
-                onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
-                onClick={() => { setGearOpen(false); onMoveBottom?.(); }}
-              >
-                <ChevronsDown className="mr-2 h-4 w-4" />
-                맨 아래로
-              </button>
-              <button
-                className="flex w-full items-center rounded-sm px-2 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
-                onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
-                onClick={() => { setGearOpen(false); setEditOpen(true); }}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                이름 변경
-              </button>
-              <button
-                className="flex w-full items-center rounded-sm px-2 py-2 text-sm text-destructive hover:bg-accent"
-                onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
-                onClick={() => { setGearOpen(false); setDeleteOpen(true); }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                단어장 삭제
-              </button>
-            </div>
-          )}
+                <button
+                  className="flex w-full items-center px-3 py-2.5 text-sm text-popover-foreground active:bg-muted"
+                  onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
+                  onClick={() => { setGearOpen(false); onMoveTop?.(); }}
+                >
+                  <ChevronsUp className="mr-2 h-4 w-4" />
+                  맨 위로
+                </button>
+                <button
+                  className="flex w-full items-center px-3 py-2.5 text-sm text-popover-foreground active:bg-muted"
+                  onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
+                  onClick={() => { setGearOpen(false); onMoveBottom?.(); }}
+                >
+                  <ChevronsDown className="mr-2 h-4 w-4" />
+                  맨 아래로
+                </button>
+                <button
+                  className="flex w-full items-center px-3 py-2.5 text-sm text-popover-foreground active:bg-muted"
+                  onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
+                  onClick={() => { setGearOpen(false); setEditOpen(true); }}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  이름 변경
+                </button>
+                <button
+                  className="flex w-full items-center px-3 py-2.5 text-sm text-destructive active:bg-muted"
+                  onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); }}
+                  onClick={() => { setGearOpen(false); setDeleteOpen(true); }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  단어장 삭제
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -127,24 +167,6 @@ export default function CategoryCard({
           onTouchStart={(e) => { e.stopPropagation(); onCancelDrag?.(); setGearOpen(false); }}
         />
       )}
-
-      <div className="flex items-center justify-between mt-2">
-        <span className="text-xs text-muted-foreground font-gothic">{words.length}개의 단어</span>
-        <div className="flex gap-2">
-          <button
-            onClick={() => navigate(`/study/${category.id}`)}
-            className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[11px] font-gothic font-medium text-foreground/80 active:bg-muted"
-          >
-            카드
-          </button>
-          <button
-            onClick={() => navigate(`/quiz/${category.id}`)}
-            className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[11px] font-gothic font-medium text-foreground/80 active:bg-muted"
-          >
-            퀴즈
-          </button>
-        </div>
-      </div>
 
       <EditCategoryDialog
         open={editOpen}
