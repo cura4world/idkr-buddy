@@ -169,38 +169,39 @@ export function saveKinds(kinds: PhraseKind[]): void {
   } catch (e) { /* 무시 */ }
 }
 
-/* ── 오늘 문장 저장 (앱을 다시 열어도 같은 문장이 보이도록) ── */
+/* ── 이번 실행 동안만 문장 기억 ── */
+//
+// 앱을 껐다 켜면(= 페이지가 새로 뜨면) 새 문장이 나와야 하므로 폰에 저장하지 않고
+// 모듈 변수에만 담아 둡니다. 모듈 변수는 실행할 때마다 비어 있으므로 앱을 다시 켜면
+// 자동으로 새로 뽑히고, 실행 중에 다른 화면에 갔다 돌아왔을 때는 그대로 남아 있습니다.
+//
+// 예전에는 날짜 도장을 찍어 localStorage(phrase-today)에 두고 하루 종일 같은 문장을
+// 보여줬는데, 앱을 다시 켜도 바뀌지 않아 이 방식으로 바꿨습니다.
 
-const TODAY_KEY = "phrase-today";
+let sessionPhrase: Phrase | null = null;
 
-function todayStamp(): string {
-  const d = new Date();
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-  return d.getFullYear() + "-" + (m < 10 ? "0" + m : m) + "-" + (day < 10 ? "0" + day : day);
+// 바로 직전에 보여준 문장 (앱을 다시 켰을 때 같은 게 또 나오지 않도록)
+const LAST_ID_KEY = "phrase-last-id";
+const OLD_TODAY_KEY = "phrase-today";
+
+function getLastPhraseId(): string {
+  try {
+    return localStorage.getItem(LAST_ID_KEY) || "";
+  } catch (e) {
+    return "";
+  }
 }
 
 export function loadSavedPhrase(): Phrase | null {
-  try {
-    const raw = localStorage.getItem(TODAY_KEY);
-    if (!raw) return null;
-    const o = JSON.parse(raw);
-    if (o && o.date === todayStamp() && typeof o.id === "string" && typeof o.ko === "string") {
-      return { id: o.id, ko: o.ko, kind: o.kind, ref: o.ref, bookId: o.bookId, chapter: o.chapter, verse: o.verse };
-    }
-  } catch (e) { /* 무시 */ }
-  return null;
+  return sessionPhrase;
 }
 
-export function savePhraseForToday(p: Phrase): void {
+export function rememberPhrase(p: Phrase): void {
+  sessionPhrase = p;
   try {
-    localStorage.setItem(
-      TODAY_KEY,
-      JSON.stringify({
-        date: todayStamp(), id: p.id, ko: p.ko, kind: p.kind,
-        ref: p.ref, bookId: p.bookId, chapter: p.chapter, verse: p.verse,
-      })
-    );
+    localStorage.setItem(LAST_ID_KEY, p.id);
+    // 더 이상 쓰지 않는 예전 키를 치웁니다
+    localStorage.removeItem(OLD_TODAY_KEY);
   } catch (e) { /* 무시 */ }
 }
 
@@ -261,7 +262,7 @@ async function pickFromAlkitab(): Promise<Phrase | null> {
  * 고른 종류들 중에서 문장 하나를 뽑습니다.
  * 성경·내 단어장을 못 가져오면 다른 종류로 자동 대체됩니다.
  */
-export async function pickPhrase(kinds: PhraseKind[]): Promise<Phrase> {
+async function pickOnce(kinds: PhraseKind[]): Promise<Phrase> {
   const pool = (kinds.length > 0 ? kinds : DEFAULT_KINDS).slice();
 
   while (pool.length > 0) {
@@ -284,4 +285,17 @@ export async function pickPhrase(kinds: PhraseKind[]): Promise<Phrase> {
   }
 
   return pickOne(STATIC_PHRASES.filter((p) => p.kind === "peribahasa"));
+}
+
+/**
+ * 문장 하나를 뽑되, 바로 직전에 보여준 것과 같으면 몇 번 다시 뽑습니다.
+ * (고른 종류에 문장이 하나뿐이면 어쩔 수 없이 같은 것이 나옵니다)
+ */
+export async function pickPhrase(kinds: PhraseKind[]): Promise<Phrase> {
+  const last = getLastPhraseId();
+  let p = await pickOnce(kinds);
+  for (let i = 0; i < 3 && last !== "" && p.id === last; i += 1) {
+    p = await pickOnce(kinds);
+  }
+  return p;
 }

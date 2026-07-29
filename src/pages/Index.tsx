@@ -9,7 +9,7 @@ import {
   loadKinds,
   saveKinds,
   loadSavedPhrase,
-  savePhraseForToday,
+  rememberPhrase,
   pickPhrase,
 } from "@/lib/peribahasa";
 import SettingsDialog from "@/components/SettingsDialog";
@@ -169,7 +169,7 @@ const Index = () => {
       .then((p) => {
         if (!alive) return;
         setPhrase(p);
-        savePhraseForToday(p);
+        rememberPhrase(p);
       })
       .catch(() => {})
       .finally(() => { if (alive) setPhraseLoading(false); });
@@ -184,7 +184,7 @@ const Index = () => {
       .then((p) => {
         if (!alive) return;
         setPhrase(p);
-        savePhraseForToday(p);
+        rememberPhrase(p);
       })
       .catch(() => {})
       .finally(() => { if (alive) setPhraseLoading(false); });
