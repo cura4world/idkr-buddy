@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, BookMarked, RefreshCw, ChevronRight } from "lucide-react";
+import { ArrowLeft, RefreshCw, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import {
   SermonMeta,
@@ -104,10 +104,7 @@ const Sermons = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <span className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shrink-0">
-          <BookMarked size={16} className="text-white" />
-        </span>
-        <h1 className="text-lg font-semibold leading-none">설교문</h1>
+        <h1 className="flex-1 min-w-0 truncate font-word text-[17px] font-semibold tracking-[0.06em]">KHOTBAH</h1>
       </header>
 
       <div className="px-4 py-4">
