@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, BookOpen, ChevronLeft, ChevronRight, ChevronDown,
+  ArrowLeft, ChevronLeft, ChevronRight, ChevronDown,
   Loader2, RotateCcw, Volume2, X, Check, Plus,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -306,10 +306,7 @@ const BibleRead = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <span className="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center shrink-0">
-          <BookOpen size={16} className="text-white" />
-        </span>
-        <h1 className="text-lg font-semibold leading-none">성경 읽기</h1>
+        <h1 className="flex-1 min-w-0 truncate font-word text-[17px] font-semibold tracking-[0.06em]">ALKITAB</h1>
       </header>
 
       <div className="px-4 py-4">
