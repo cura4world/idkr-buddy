@@ -474,18 +474,10 @@ const Index = () => {
                 hideHistoryRef.current = window.setTimeout(() => closeSearchHistory(), 160);
               }}
               placeholder="단어·문장 (인니어/한국어)"
-              className="flex-1 min-w-0 w-full bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
+              className="flex-1 min-w-0 w-full bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground placeholder:text-xs"
               autoCapitalize="none"
               autoCorrect="off"
             />
-            <button
-              type="button"
-              onClick={() => setVoiceLang((v) => (v === "ko" ? "id" : "ko"))}
-              className="shrink-0 rounded-full border border-primary/40 px-1.5 py-0.5 text-[11px] font-bold leading-none text-primary"
-              title="음성 인식 언어 전환"
-            >
-              {voiceLang === "ko" ? "한" : "IN"}
-            </button>
             <button
               type="button"
               onClick={startVoice}

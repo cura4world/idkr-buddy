@@ -132,16 +132,16 @@ export default function CategoryCard({
         <span className="text-xs text-muted-foreground font-gothic">{words.length}개의 단어</span>
         <div className="flex gap-2">
           <button
-            onClick={() => navigate(`/quiz/${category.id}`)}
-            className="text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3.5 py-1 rounded-full transition-colors"
+            onClick={() => navigate(`/study/${category.id}`)}
+            className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[11px] font-gothic font-medium text-foreground/80 active:bg-muted"
           >
-            Quiz
+            카드
           </button>
           <button
-            onClick={() => navigate(`/study/${category.id}`)}
-            className="text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3.5 py-1 rounded-full transition-colors"
+            onClick={() => navigate(`/quiz/${category.id}`)}
+            className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[11px] font-gothic font-medium text-foreground/80 active:bg-muted"
           >
-            Card
+            퀴즈
           </button>
         </div>
       </div>
