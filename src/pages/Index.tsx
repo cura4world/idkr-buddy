@@ -587,7 +587,20 @@ const Index = () => {
                   </div>
                 ) : null}
                 {phrase.ref ? (
-                  <p className="mt-2 font-word text-[12.5px] text-muted-foreground">{phrase.ref}</p>
+                  <div className="mt-2 flex items-end gap-2">
+                    <p className="flex-1 font-word text-[12.5px] text-muted-foreground">{phrase.ref}</p>
+                    {!phrase.ko && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); refreshPhrase(kinds); }}
+                        className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
+                        title="다른 문장 보기"
+                        aria-label="다른 문장 보기"
+                      >
+                        <RotateCcw size={15} />
+                      </button>
+                    )}
+                  </div>
                 ) : null}
               </>
             ) : null}
