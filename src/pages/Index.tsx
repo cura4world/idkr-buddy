@@ -13,6 +13,7 @@ import {
   pickPhrase,
 } from "@/lib/peribahasa";
 import SettingsDialog from "@/components/SettingsDialog";
+import { hasSermonConfig } from "@/lib/sermon";
 import {
   RotateCcw,
   SlidersHorizontal,
@@ -29,6 +30,7 @@ import {
   ScrollText,
   Compass,
   ChevronRight,
+  BookMarked,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -300,6 +302,12 @@ const Index = () => {
       return next;
     });
   };
+
+  // 설교문: 이 기기 설정에 서버 주소와 비밀키가 다 들어 있을 때만 메뉴를 보여줍니다.
+  const [sermonOn, setSermonOn] = useState(false);
+  useEffect(() => {
+    setSermonOn(hasSermonConfig());
+  }, []);
 
   // 성경 마지막 읽은 위치
   const [biblePos, setBiblePos] = useState("");
@@ -652,7 +660,10 @@ const Index = () => {
               meta={biblePos || undefined}
               onClick={() => navigate("/bible")}
             />
-            <Row icon={Heart} title="기도문" sub="Doa" onClick={() => navigate("/prayer")} last />
+            <Row icon={Heart} title="기도문" sub="Doa" onClick={() => navigate("/prayer")} last={!sermonOn} />
+            {sermonOn ? (
+              <Row icon={BookMarked} title="설교문" sub="Khotbah" onClick={() => navigate("/sermon")} last />
+            ) : null}
           </div>
         </section>
 
