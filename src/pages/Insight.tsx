@@ -61,7 +61,7 @@ const Insight = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="flex-1 text-lg font-semibold truncate">인도네시아 이해</h1>
+        <h1 className="flex-1 min-w-0 truncate font-word text-[17px] font-semibold tracking-[0.06em]">WAWASAN INDONESIA</h1>
       </header>
 
       <div className="px-4 pt-4">
