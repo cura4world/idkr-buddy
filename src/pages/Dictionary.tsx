@@ -706,14 +706,6 @@ const Dictionary = () => {
               autoCapitalize="none"
               autoCorrect="off"
             />
-            {/* 음성 언어 토글 */}
-            <button
-              onClick={() => setVoiceLang((v) => (v === "ko" ? "id" : "ko"))}
-              className="shrink-0 text-[11px] font-bold text-primary border border-primary/40 rounded-full px-1.5 py-0.5 leading-none"
-              title="음성 인식 언어 전환"
-            >
-              {voiceLang === "ko" ? "한" : "IN"}
-            </button>
             {/* 마이크 */}
             <button
               onClick={startVoice}

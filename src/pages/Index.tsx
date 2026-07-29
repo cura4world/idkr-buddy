@@ -474,7 +474,7 @@ const Index = () => {
                 hideHistoryRef.current = window.setTimeout(() => closeSearchHistory(), 160);
               }}
               placeholder="단어·문장 (인니어/한국어)"
-              className="flex-1 min-w-0 w-full bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground placeholder:text-xs"
+              className="flex-1 min-w-0 w-full bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
               autoCapitalize="none"
               autoCorrect="off"
             />
