@@ -389,7 +389,7 @@ const Devotion = () => {
       <p
         key={i}
         ref={(el) => { paraRefs.current["ko-" + i] = el; }}
-        className="mb-4 text-xs leading-relaxed text-gray-800 font-body"
+        className="mb-4 text-xs leading-relaxed text-gray-800 font-gothic"
       >
         {para}
       </p>
@@ -513,7 +513,7 @@ const Devotion = () => {
               ) : (
                 <>
                   {/* 뒷면: 한국어 */}
-                  <h2 className="text-base font-bold text-gray-900 break-words mb-3">{c.titleKo}</h2>
+                  <h2 className="text-sm font-bold text-gray-900 break-words mb-3">{c.titleKo}</h2>
 
                   {/* 우리말성경 본문 — 토글 (레코드에 저장돼 있어 즉시 표시) */}
                   <div className="rounded-lg bg-rose-500/5 border border-rose-200/60 px-3 py-2.5 mb-4">
