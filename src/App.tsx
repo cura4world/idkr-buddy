@@ -10,6 +10,8 @@ import News from "./pages/News";
 import Devotion from "./pages/Devotion";
 import BibleRead from "./pages/BibleRead";
 import Prayer from "./pages/Prayer";
+import Sermons from "./pages/Sermons";
+import SermonRead from "./pages/SermonRead";
 import IndoMap from "./pages/IndoMap";
 import Insight from "./pages/Insight";
 import InsightOverview from "./pages/InsightOverview";
@@ -43,6 +45,8 @@ const App = () => (
           <Route path="/devotion" element={<Devotion />} />
           <Route path="/bible" element={<BibleRead />} />
           <Route path="/prayer" element={<Prayer />} />
+          <Route path="/sermon" element={<Sermons />} />
+          <Route path="/sermon/:id" element={<SermonRead />} />
           <Route path="/map" element={<IndoMap />} />
           <Route path="/insight" element={<Insight />} />
           <Route path="/insight/overview" element={<InsightOverview />} />
