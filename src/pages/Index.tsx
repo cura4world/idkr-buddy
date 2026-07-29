@@ -570,29 +570,29 @@ const Index = () => {
                   >
                     {phrase.id}
                   </p>
-                  <div className="flex flex-col items-center shrink-0 gap-0.5">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); speak(phrase.id); }}
-                      className="mt-0.5 w-8 h-8 rounded-full flex items-center justify-center text-primary active:bg-muted"
-                      title="발음 듣기"
-                      aria-label="발음 듣기"
-                    >
-                      <Volume2 size={17} />
-                    </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); speak(phrase.id); }}
+                    className="mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-primary active:bg-muted"
+                    title="발음 듣기"
+                    aria-label="발음 듣기"
+                  >
+                    <Volume2 size={17} />
+                  </button>
+                </div>
+                {phrase.ko ? (
+                  <div className="mt-1.5 flex items-end gap-2">
+                    <p className="flex-1 text-[13px] leading-[1.6] text-muted-foreground">{phrase.ko}</p>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); refreshPhrase(kinds); }}
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
+                      className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
                       title="다른 문장 보기"
                       aria-label="다른 문장 보기"
                     >
                       <RotateCcw size={15} />
                     </button>
                   </div>
-                </div>
-                {phrase.ko ? (
-                  <p className="mt-1.5 text-[13px] leading-[1.6] text-muted-foreground">{phrase.ko}</p>
                 ) : null}
                 {phrase.ref ? (
                   <p className="mt-2 font-word text-[12.5px] text-muted-foreground">{phrase.ref}</p>
