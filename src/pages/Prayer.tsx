@@ -969,7 +969,7 @@ const Prayer = () => {
 
   return (
     <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
-      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-2">
+      <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => navigate("/")}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
@@ -977,7 +977,7 @@ const Prayer = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="flex-1 min-w-0 text-lg font-semibold">인도네시아어 기도</h1>
+        <h1 className="flex-1 min-w-0 truncate font-word text-[17px] font-semibold tracking-[0.06em]">DOA</h1>
       </header>
 
     <div className="px-4 pt-4 pb-8">
