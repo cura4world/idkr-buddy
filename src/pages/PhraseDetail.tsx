@@ -265,16 +265,10 @@ const PhraseDetail = () => {
 
       <div className="px-4 pt-5">
         {/* 문장 */}
-        <div className="rounded-2xl border border-border bg-card px-4 py-5">
-          <div className="flex items-start gap-2">
-            <p
-              className={
-                "flex-1 font-word font-medium text-foreground " +
-                (isAyat ? "text-[17px] leading-[1.65]" : "text-[19px] leading-[1.5]")
-              }
-            >
-              {renderTokens(item.id)}
-            </p>
+        <div className="rounded-2xl border border-border bg-card px-4 pt-2.5 pb-5">
+          {/* 아이콘 줄: 오른쪽 끝 스피커, 그 왼쪽 저장 리본 */}
+          <div className="flex items-center justify-end gap-1">
+            {saveRibbon}
             <button
               onClick={() => speak(item.id, "id")}
               className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-primary active:bg-muted"
@@ -283,21 +277,19 @@ const PhraseDetail = () => {
               <Volume2 size={18} />
             </button>
           </div>
-          {/* 저장 리본은 카드의 마지막 줄 오른쪽 끝에 붙입니다 */}
+          <p
+            className={
+              "mt-0.5 font-word font-medium text-foreground " +
+              (isAyat ? "text-[17px] leading-[1.65]" : "text-[19px] leading-[1.5]")
+            }
+          >
+            {renderTokens(item.id)}
+          </p>
           {item.ko ? (
-            <div className="mt-2.5 flex items-end gap-2">
-              <p className="flex-1 text-[13.5px] leading-[1.65] text-muted-foreground">{item.ko}</p>
-              {refLabel ? null : saveRibbon}
-            </div>
+            <p className="mt-2.5 text-[13.5px] leading-[1.65] text-muted-foreground">{item.ko}</p>
           ) : null}
           {refLabel ? (
-            <div className="mt-3 flex items-end gap-2">
-              <p className="flex-1 font-word text-[13.5px] text-muted-foreground">{refLabel}</p>
-              {saveRibbon}
-            </div>
-          ) : null}
-          {!item.ko && !refLabel ? (
-            <div className="mt-2 flex justify-end">{saveRibbon}</div>
+            <p className="mt-3 font-word text-[13.5px] text-muted-foreground">{refLabel}</p>
           ) : null}
         </div>
 

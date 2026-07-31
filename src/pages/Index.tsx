@@ -26,7 +26,6 @@ import {
   Settings,
   Search,
   Mic,
-  Volume2,
   Star,
   Library,
   BookOpen,
@@ -76,21 +75,6 @@ const SunriseIcon = ({ size = 20, className = "" }: { size?: number; className?:
     <path d="M3 18h18M5 21h14" />
   </svg>
 );
-
-/* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 */
-const speak = (text: string) => {
-  const w = window as any;
-  if (w.AndroidTTS) {
-    try { w.AndroidTTS.speak(text, "id-ID"); return; } catch (e) { /* 폴백 */ }
-  }
-  try {
-    window.speechSynthesis?.cancel?.();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "id-ID";
-    u.rate = 0.95;
-    window.speechSynthesis?.speak?.(u);
-  } catch (e) { /* 지원하지 않는 기기는 조용히 넘어갑니다 */ }
-};
 
 type IconComp = LucideIcon | ((p: { size?: number; className?: string }) => React.ReactElement);
 
@@ -567,6 +551,15 @@ const Index = () => {
               </button>
               <button
                 type="button"
+                onClick={(e) => { e.stopPropagation(); refreshPhrase(kinds); }}
+                className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
+                title="다른 문장 보기"
+                aria-label="다른 문장 보기"
+              >
+                <RotateCcw size={15} />
+              </button>
+              <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); openKindSheet(); }}
                 className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
                 title="어떤 문장을 볼지 고르기"
@@ -583,56 +576,21 @@ const Index = () => {
               </div>
             ) : phrase ? (
               <>
-                <div className="mt-2.5 flex items-start gap-2">
-                  <p
-                    className={
-                      "flex-1 font-word font-medium text-foreground " +
-                      (phrase.kind === "alkitab"
-                        ? "text-[17px] leading-[1.6]"
-                        : "text-[19px] leading-[1.5]")
-                    }
-                  >
-                    {phrase.id}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); speak(phrase.id); }}
-                    className="mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-primary active:bg-muted"
-                    title="발음 듣기"
-                    aria-label="발음 듣기"
-                  >
-                    <Volume2 size={17} />
-                  </button>
-                </div>
+                <p
+                  className={
+                    "mt-2.5 font-word font-medium text-foreground " +
+                    (phrase.kind === "alkitab"
+                      ? "text-[17px] leading-[1.6]"
+                      : "text-[19px] leading-[1.5]")
+                  }
+                >
+                  {phrase.id}
+                </p>
                 {phrase.ko ? (
-                  <div className="mt-1.5 flex items-end gap-2">
-                    <p className="flex-1 text-[13px] leading-[1.6] text-muted-foreground">{phrase.ko}</p>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); refreshPhrase(kinds); }}
-                      className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
-                      title="다른 문장 보기"
-                      aria-label="다른 문장 보기"
-                    >
-                      <RotateCcw size={15} />
-                    </button>
-                  </div>
+                  <p className="mt-1.5 text-[13px] leading-[1.6] text-muted-foreground">{phrase.ko}</p>
                 ) : null}
                 {phrase.ref ? (
-                  <div className="mt-2 flex items-end gap-2">
-                    <p className="flex-1 font-word text-[12.5px] text-muted-foreground">{phrase.ref}</p>
-                    {!phrase.ko && (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); refreshPhrase(kinds); }}
-                        className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
-                        title="다른 문장 보기"
-                        aria-label="다른 문장 보기"
-                      >
-                        <RotateCcw size={15} />
-                      </button>
-                    )}
-                  </div>
+                  <p className="mt-2 font-word text-[12.5px] text-muted-foreground">{phrase.ref}</p>
                 ) : null}
               </>
             ) : null}
