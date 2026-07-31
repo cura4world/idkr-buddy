@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, ChevronRight } from "lucide-react";
+import { ArrowLeft, RefreshCw, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
+import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
 import {
   SermonMeta,
@@ -32,6 +33,7 @@ const lastSyncLabel = (ms: number): string => {
 
 const Sermons = () => {
   const navigate = useNavigate();
+  const { widthClass, canWide, wide, toggle } = useWideMode();
 
   const [items, setItems] = useState<SermonMeta[]>([]);
   const [syncing, setSyncing] = useState(false);
@@ -95,7 +97,7 @@ const Sermons = () => {
   };
 
   return (
-    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-clip bg-background">
+    <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => navigate("/")}
@@ -105,6 +107,17 @@ const Sermons = () => {
           <ArrowLeft size={20} />
         </button>
         <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">KHOTBAH</h1>
+        {canWide ? (
+          <button
+            type="button"
+            onClick={toggle}
+            className="shrink-0 w-9 h-9 flex items-center justify-center text-muted-foreground active:text-foreground"
+            title={wide ? "원래 크기로" : "넓게 보기"}
+            aria-label={wide ? "원래 크기로" : "넓게 보기"}
+          >
+            {wide ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+          </button>
+        ) : null}
       </header>
 
       <div className="px-4 py-4">
