@@ -235,12 +235,10 @@ const Percakapan = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-base font-semibold leading-tight">회화집 폴더</h1>
-          <p className="mt-0.5 truncate font-word text-[11.5px] text-muted-foreground">
-            Percakapan
-          </p>
-        </div>
+        {/* 제목·폰트·바 스타일은 단어장 폴더(Wordbooks) 첫 화면과 같게 맞춥니다 */}
+        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">
+          PERCAKAPAN
+        </h1>
         <div className="relative shrink-0">
           <button
             type="button"
