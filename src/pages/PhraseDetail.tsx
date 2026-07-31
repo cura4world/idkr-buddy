@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Volume2, Loader2, RotateCcw, Plus, Check, X } from "lucide-react";
+import { ArrowLeft, Volume2, Loader2, RotateCcw, Plus, Check, X, Bookmark } from "lucide-react";
 import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import { getPhraseDetail, PhraseDetail as PhraseDetailData } from "@/lib/phrase";
+import { Phrase, PhraseKind, isPhraseSaved, toggleSavedPhrase } from "@/lib/peribahasa";
 import { quickLookupWord } from "@/lib/story";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
@@ -64,6 +65,42 @@ const PhraseDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // 마음에 든 문장 저장 (단어장 플래시카드의 리본과 같은 방식)
+  const [saved, setSaved] = useState(() => isPhraseSaved(sentence));
+
+  const toggleSave = () => {
+    if (!sentence) return;
+    const p: Phrase = {
+      id: sentence,
+      ko: sentenceKo,
+      kind: (kind || "peribahasa") as PhraseKind,
+    };
+    if (refLabel) p.ref = refLabel;
+    if (isAyat) {
+      p.bookId = refBookId;
+      p.chapter = refChapter;
+      p.verse = refVerse;
+    }
+    const now = toggleSavedPhrase(p);
+    setSaved(now);
+    toast(now ? "저장했습니다" : "저장을 해제했습니다");
+  };
+
+  const saveRibbon = (
+    <button
+      type="button"
+      onClick={toggleSave}
+      className={
+        "shrink-0 w-8 h-8 flex items-center justify-center transition-colors " +
+        (saved ? "text-yellow-500" : "text-muted-foreground/50")
+      }
+      title={saved ? "저장 해제" : "이 문장 저장하기"}
+      aria-label={saved ? "저장 해제" : "이 문장 저장하기"}
+    >
+      <Bookmark size={18} fill={saved ? "currentColor" : "none"} />
+    </button>
+  );
 
   // 표제 문장의 단어 탭 → 미니 팝업 (성경·이야기와 같은 방식)
   const [popupWord, setPopupWord] = useState<string | null>(null);
@@ -246,11 +283,21 @@ const PhraseDetail = () => {
               <Volume2 size={18} />
             </button>
           </div>
+          {/* 저장 리본은 카드의 마지막 줄 오른쪽 끝에 붙입니다 */}
           {item.ko ? (
-            <p className="mt-2.5 text-[13.5px] leading-[1.65] text-muted-foreground">{item.ko}</p>
+            <div className="mt-2.5 flex items-end gap-2">
+              <p className="flex-1 text-[13.5px] leading-[1.65] text-muted-foreground">{item.ko}</p>
+              {refLabel ? null : saveRibbon}
+            </div>
           ) : null}
           {refLabel ? (
-            <p className="mt-3 font-word text-[13.5px] text-muted-foreground">{refLabel}</p>
+            <div className="mt-3 flex items-end gap-2">
+              <p className="flex-1 font-word text-[13.5px] text-muted-foreground">{refLabel}</p>
+              {saveRibbon}
+            </div>
+          ) : null}
+          {!item.ko && !refLabel ? (
+            <div className="mt-2 flex justify-end">{saveRibbon}</div>
           ) : null}
         </div>
 

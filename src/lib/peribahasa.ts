@@ -239,6 +239,77 @@ function remember(p: Phrase): Phrase {
   return p;
 }
 
+/* ── 마음에 든 문장 저장 ── */
+//
+// 단어장 플래시카드의 리본과 같은 방식입니다. 문장만 담아 두고 해설은
+// 이미 IndexedDB 캐시에 있으므로, 저장한 문장을 다시 열면 바로 나옵니다.
+
+const SAVED_KEY = "phrase-saved";
+
+export interface SavedPhrase extends Phrase {
+  savedAt: number;
+}
+
+export function loadSavedList(): SavedPhrase[] {
+  try {
+    const raw = localStorage.getItem(SAVED_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(arr)) return [];
+    return arr.filter(
+      (p: unknown) =>
+        p && typeof (p as SavedPhrase).id === "string" && (p as SavedPhrase).id.trim() !== ""
+    ) as SavedPhrase[];
+  } catch (e) {
+    return [];
+  }
+}
+
+function writeSavedList(list: SavedPhrase[]): void {
+  try {
+    localStorage.setItem(SAVED_KEY, JSON.stringify(list));
+  } catch (e) { /* 무시 */ }
+}
+
+export function countSaved(): number {
+  return loadSavedList().length;
+}
+
+export function isPhraseSaved(id: string): boolean {
+  return loadSavedList().some((p) => p.id === id);
+}
+
+/** 저장/해제를 뒤집고, 뒤집은 뒤 상태를 돌려줍니다 */
+export function toggleSavedPhrase(p: Phrase): boolean {
+  const list = loadSavedList();
+  const i = list.findIndex((x) => x.id === p.id);
+  if (i >= 0) {
+    list.splice(i, 1);
+    writeSavedList(list);
+    return false;
+  }
+  // 최근에 저장한 것이 위로 오게 합니다
+  list.unshift({ ...p, savedAt: Date.now() });
+  writeSavedList(list);
+  return true;
+}
+
+export function removeSavedPhrase(id: string): void {
+  writeSavedList(loadSavedList().filter((p) => p.id !== id));
+}
+
+/** 문장 하나를 상세 화면 주소로 바꿉니다 (메인 화면과 저장 목록이 함께 씁니다) */
+export function phraseToQuery(p: Phrase): string {
+  const q = new URLSearchParams();
+  q.set("s", p.id);
+  if (p.ko) q.set("ko", p.ko);
+  q.set("k", p.kind);
+  if (p.ref) q.set("ref", p.ref);
+  if (p.bookId) q.set("b", p.bookId);
+  if (typeof p.chapter === "number") q.set("c", String(p.chapter));
+  if (typeof p.verse === "number") q.set("v", String(p.verse));
+  return q.toString();
+}
+
 /* ── 다음 문장 미리 받아두기 ── */
 //
 // 앱을 보고 있는 동안 다음에 보여줄 문장을 Gemini로 미리 만들어 폰에 넣어 둡니다.

@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import PhraseDetail from "./pages/PhraseDetail";
+import SavedPhrases from "./pages/SavedPhrases";
 import Dictionary from "./pages/Dictionary";
 import Story from "./pages/Story";
 import News from "./pages/News";
@@ -39,6 +40,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/phrase" element={<PhraseDetail />} />
+          <Route path="/phrase/saved" element={<SavedPhrases />} />
           <Route path="/dictionary" element={<Dictionary />} />
           <Route path="/story" element={<Story />} />
           <Route path="/news" element={<News />} />
