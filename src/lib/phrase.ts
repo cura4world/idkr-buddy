@@ -122,20 +122,47 @@ function buildPrompt(sentence: string, ko: string): string {
     "- 설명은 모두 한국어로, 존댓말로 씁니다.",
     "- 예문은 실제 인도네시아 사람이 일상에서 쓰는 자연스러운 문장으로 3개 만듭니다.",
     "- 예문은 쉬운 단어를 쓰고, 각 예문이 어떤 상황인지 한국어로 짧게 덧붙입니다.",
-    "- 단어 풀이는 문장에서 핵심이 되는 것만 3~5개 고릅니다.",
-    "- arti 항목은 쉬운 인도네시아어로 된 뜻풀이입니다.",
     "",
     "아래 JSON 형식으로만 답하세요.",
     '{',
     '  "meaning": "이 표현이 실제로 뜻하는 바와 언제 쓰는지 2~3문장 (한국어)",',
-    '  "words": [{"word": "단어", "arti": "쉬운 인니어 뜻풀이", "ko": "한국어 뜻"}],',
     '  "examples": [{"id": "인니어 예문", "ko": "한국어 해석", "situasi": "어떤 상황인지 한국어로 짧게"}],',
     '  "note": "함께 알아두면 좋은 점 1~2문장 (한국어)"',
     '}',
   ].join("\n");
 }
 
-async function callGeminiJSON(prompt: string): Promise<Record<string, unknown>> {
+/* 새 문장을 고르는 것부터 해설까지 한 번에 받습니다 (미리 받아두기용). */
+function buildCreatePrompt(guide: string, recent: string[]): string {
+  return [
+    "당신은 한국인에게 인도네시아어를 가르치는 선생님입니다.",
+    "조건에 맞는 인도네시아어 문장을 하나 새로 고르고, 한국인 학습자를 위한 해설까지 함께 만드세요.",
+    "",
+    guide,
+    "",
+    "규칙:",
+    "- 설명은 모두 한국어로, 존댓말로 씁니다.",
+    "- 교재마다 나오는 뻔한 표현보다, 실제로 자주 쓰이는데 한국인에게는 덜 알려진 것을 우선합니다.",
+    "- 예문은 실제 인도네시아 사람이 일상에서 쓰는 자연스러운 문장으로 3개 만듭니다.",
+    "- 예문은 쉬운 단어를 쓰고, 각 예문이 어떤 상황인지 한국어로 짧게 덧붙입니다.",
+    "- 아래 문장은 최근에 이미 다뤘으니 반드시 피하고, 겹치지 않는 새 문장을 고르세요.",
+    "  최근 문장: " + (recent.length > 0 ? recent.join(" / ") : "없음"),
+    "",
+    "아래 JSON 형식으로만 답하세요.",
+    '{',
+    '  "id": "인도네시아어 문장",',
+    '  "ko": "이 문장의 한국어 뜻 한 줄",',
+    '  "meaning": "이 표현이 실제로 뜻하는 바와 언제 쓰는지 2~3문장 (한국어)",',
+    '  "examples": [{"id": "인니어 예문", "ko": "한국어 해석", "situasi": "어떤 상황인지 한국어로 짧게"}],',
+    '  "note": "함께 알아두면 좋은 점 1~2문장 (한국어)"',
+    '}',
+  ].join("\n");
+}
+
+async function callGeminiJSON(
+  prompt: string,
+  temperature = 0.7
+): Promise<Record<string, unknown>> {
   const apiKey = getGeminiApiKey();
   if (!apiKey) throw new Error("NO_API_KEY");
 
@@ -150,7 +177,7 @@ async function callGeminiJSON(prompt: string): Promise<Record<string, unknown>> 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
+      generationConfig: { temperature, responseMimeType: "application/json" },
     }),
   });
 
@@ -170,6 +197,50 @@ function asString(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+function parseExamples(v: unknown): PhraseExample[] {
+  return Array.isArray(v)
+    ? (v as Record<string, unknown>[])
+        .map((e) => ({ id: asString(e.id), ko: asString(e.ko), situasi: asString(e.situasi) }))
+        .filter((e) => e.id !== "")
+    : [];
+}
+
+/** 문장 뽑기 쪽에서 쓰는 범용 JSON 호출 (성경 구절 고르기 등) */
+export async function askPhraseJSON(prompt: string): Promise<Record<string, unknown>> {
+  return callGeminiJSON(prompt, 1.0);
+}
+
+export interface GeneratedPhrase {
+  id: string;   // 인도네시아어 문장
+  ko: string;   // 한국어 뜻
+}
+
+/**
+ * 새 문장과 해설을 한 번의 호출로 만들고, 해설은 캐시에 넣어 둡니다.
+ * 나중에 그 문장의 상세 화면을 열면 캐시에서 바로 나옵니다.
+ */
+export async function generateNewPhrase(
+  guide: string,
+  recent: string[]
+): Promise<GeneratedPhrase> {
+  const raw = await callGeminiJSON(buildCreatePrompt(guide, recent), 1.0);
+  const id = asString(raw.id);
+  if (id === "") throw new Error("EMPTY_RESPONSE");
+  const ko = asString(raw.ko);
+
+  await savePhrase({
+    sentence: id,
+    ko,
+    meaning: asString(raw.meaning),
+    words: [],
+    examples: parseExamples(raw.examples),
+    note: asString(raw.note),
+    createdAt: Date.now(),
+  });
+
+  return { id, ko };
+}
+
 /**
  * 캐시에 있으면 즉시 돌려주고, 없으면 생성한 뒤 저장합니다.
  * force가 true면 캐시를 무시하고 새로 만듭니다.
@@ -186,24 +257,12 @@ export async function getPhraseDetail(
 
   const raw = await callGeminiJSON(buildPrompt(sentence, ko));
 
-  const words: PhraseWord[] = Array.isArray(raw.words)
-    ? (raw.words as Record<string, unknown>[])
-        .map((w) => ({ word: asString(w.word), arti: asString(w.arti), ko: asString(w.ko) }))
-        .filter((w) => w.word !== "")
-    : [];
-
-  const examples: PhraseExample[] = Array.isArray(raw.examples)
-    ? (raw.examples as Record<string, unknown>[])
-        .map((e) => ({ id: asString(e.id), ko: asString(e.ko), situasi: asString(e.situasi) }))
-        .filter((e) => e.id !== "")
-    : [];
-
   const detail: PhraseDetail = {
     sentence,
     ko,
     meaning: asString(raw.meaning),
-    words,
-    examples,
+    words: [],
+    examples: parseExamples(raw.examples),
     note: asString(raw.note),
     createdAt: Date.now(),
   };

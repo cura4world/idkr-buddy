@@ -6,8 +6,10 @@
 // 앱이 이미 쓰고 있는 성경 API에서 그때그때 불러옵니다.
 // 내 단어장은 저장된 단어와 예문에서 가져옵니다.
 
-import { fetchChapter } from "@/lib/bible";
+import { fetchChapter, getBook, BIBLE_BOOKS } from "@/lib/bible";
 import { getWordsByCategory, getCategories } from "@/lib/store";
+import { hasGeminiApiKey } from "@/lib/gemini";
+import { askPhraseJSON, generateNewPhrase, getPhraseDetail } from "@/lib/phrase";
 
 export type PhraseKind =
   | "peribahasa"
@@ -169,20 +171,36 @@ export function saveKinds(kinds: PhraseKind[]): void {
   } catch (e) { /* 무시 */ }
 }
 
-/* ── 이번 실행 동안만 문장 기억 ── */
+/* ── 지금 보여주고 있는 문장 기억 ── */
 //
-// 앱을 껐다 켜면(= 페이지가 새로 뜨면) 새 문장이 나와야 하므로 폰에 저장하지 않고
-// 모듈 변수에만 담아 둡니다. 모듈 변수는 실행할 때마다 비어 있으므로 앱을 다시 켜면
-// 자동으로 새로 뽑히고, 실행 중에 다른 화면에 갔다 돌아왔을 때는 그대로 남아 있습니다.
+// 새 문장이 나오는 조건은 두 가지입니다.
+//   1) 앱이 완전히 새로 뜰 때 (모듈 변수가 비어 있음)
+//   2) 마지막으로 문장을 띄운 날짜가 지났을 때
 //
-// 예전에는 날짜 도장을 찍어 localStorage(phrase-today)에 두고 하루 종일 같은 문장을
-// 보여줬는데, 앱을 다시 켜도 바뀌지 않아 이 방식으로 바꿨습니다.
+// 2번이 중요합니다. 안드로이드가 앱을 메모리에 며칠씩 붙들고 있으면 모듈 변수가
+// 살아남아 1번 조건이 영영 안 맞습니다. 그래서 프로세스가 죽었는지가 아니라
+// "언제 띄웠는지"로 판단합니다. 화면으로 돌아올 때마다 phraseIsStale()을 확인하면
+// 며칠 상주해 있던 앱도 날짜가 바뀐 순간 새 문장으로 넘어갑니다.
 
 let sessionPhrase: Phrase | null = null;
+let sessionDay = "";
 
-// 바로 직전에 보여준 문장 (앱을 다시 켰을 때 같은 게 또 나오지 않도록)
+// 바로 직전에 보여준 문장 (내장 문장으로 채울 때 같은 게 또 나오지 않도록)
 const LAST_ID_KEY = "phrase-last-id";
 const OLD_TODAY_KEY = "phrase-today";
+
+// 하루의 경계 (그 지역 시간 기준 자정)
+function todayKey(): string {
+  const d = new Date();
+  return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+}
+
+// 다음 자정까지 남은 밀리초 — 앱을 켜둔 채 날짜가 바뀌는 경우를 위해 씁니다
+export function msUntilNextDay(): number {
+  const d = new Date();
+  const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 5);
+  return Math.max(1000, next.getTime() - d.getTime());
+}
 
 function getLastPhraseId(): string {
   try {
@@ -193,15 +211,78 @@ function getLastPhraseId(): string {
 }
 
 export function loadSavedPhrase(): Phrase | null {
+  if (!sessionPhrase) return null;
+  if (sessionDay !== todayKey()) return null;
   return sessionPhrase;
 }
 
-export function rememberPhrase(p: Phrase): void {
+/** 새 문장으로 갈아탈 때가 되었는지 (앱을 새로 켰거나 날짜가 지났거나) */
+export function phraseIsStale(): boolean {
+  return sessionPhrase === null || sessionDay !== todayKey();
+}
+
+function remember(p: Phrase): Phrase {
   sessionPhrase = p;
+  sessionDay = todayKey();
+  pushRecent(p.kind === "alkitab" && p.ref ? p.ref : p.id);
   try {
     localStorage.setItem(LAST_ID_KEY, p.id);
     // 더 이상 쓰지 않는 예전 키를 치웁니다
     localStorage.removeItem(OLD_TODAY_KEY);
+  } catch (e) { /* 무시 */ }
+  return p;
+}
+
+/* ── 다음 문장 미리 받아두기 ── */
+//
+// 앱을 보고 있는 동안 다음에 보여줄 문장을 Gemini로 미리 만들어 폰에 넣어 둡니다.
+// 해설(뒷페이지)도 같이 만들어 IndexedDB 캐시에 넣으므로, 다음에 앱을 열면
+// 문장이 기다림 없이 바로 뜨고 눌렀을 때 뒷페이지도 즉시 나옵니다.
+
+const NEXT_KEY = "phrase-next";
+const RECENT_KEY = "phrase-recent";
+const RECENT_MAX = 30;
+
+function loadNext(): Phrase | null {
+  try {
+    const raw = localStorage.getItem(NEXT_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (p && typeof p.id === "string" && p.id.trim() !== "" && typeof p.kind === "string") {
+      return p as Phrase;
+    }
+  } catch (e) { /* 못 읽으면 없는 셈 칩니다 */ }
+  return null;
+}
+
+function saveNext(p: Phrase | null): void {
+  try {
+    if (p) localStorage.setItem(NEXT_KEY, JSON.stringify(p));
+    else localStorage.removeItem(NEXT_KEY);
+  } catch (e) { /* 무시 */ }
+}
+
+/** 종류 설정을 바꿨을 때처럼, 미리 받아둔 문장을 버려야 할 때 */
+export function clearNextPhrase(): void {
+  saveNext(null);
+}
+
+function loadRecent(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter((v: unknown) => typeof v === "string") : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function pushRecent(text: string): void {
+  if (!text) return;
+  try {
+    const list = loadRecent().filter((v) => v !== text);
+    list.unshift(text);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, RECENT_MAX)));
   } catch (e) { /* 무시 */ }
 }
 
@@ -288,14 +369,151 @@ async function pickOnce(kinds: PhraseKind[]): Promise<Phrase> {
 }
 
 /**
- * 문장 하나를 뽑되, 바로 직전에 보여준 것과 같으면 몇 번 다시 뽑습니다.
- * (고른 종류에 문장이 하나뿐이면 어쩔 수 없이 같은 것이 나옵니다)
+ * 내장 목록에서 문장 하나 — 미리 받아둔 것이 없을 때 쓰는 예비 수단입니다.
+ * 바로 직전에 보여준 것과 같으면 몇 번 다시 뽑습니다.
  */
-export async function pickPhrase(kinds: PhraseKind[]): Promise<Phrase> {
+async function pickFallback(kinds: PhraseKind[]): Promise<Phrase> {
   const last = getLastPhraseId();
   let p = await pickOnce(kinds);
   for (let i = 0; i < 3 && last !== "" && p.id === last; i += 1) {
     p = await pickOnce(kinds);
   }
   return p;
+}
+
+/**
+ * 화면에 올릴 문장 하나를 가져옵니다.
+ * 미리 받아둔 것이 있으면 기다림 없이 그것을, 없으면 내장 목록에서 채웁니다.
+ */
+export async function takePhrase(kinds: PhraseKind[]): Promise<Phrase> {
+  const active = kinds.length > 0 ? kinds : DEFAULT_KINDS;
+  const queued = loadNext();
+  saveNext(null);
+  if (queued && active.indexOf(queued.kind) >= 0) return remember(queued);
+  return remember(await pickFallback(active));
+}
+
+/* ── Gemini로 새 문장 만들기 ── */
+
+// 종류마다 어떤 문장을 만들어야 하는지 알려줍니다.
+// 성경(alkitab)과 내 단어장(kosakataku)은 지어내면 안 되므로 여기에 넣지 않습니다.
+const KIND_GUIDE: Partial<Record<PhraseKind, string>> = {
+  peribahasa:
+    "종류: 인도네시아 생활 속담(peribahasa) 한 줄. 인도네시아 사람이 실제로 알고 쓰는 속담이어야 합니다.",
+  ungkapan:
+    "종류: 인도네시아어 관용구(ungkapan) 한 줄. 단어 뜻만 알아서는 짐작하기 어려운 표현이어야 합니다.",
+  percakapan:
+    "종류: 일상 회화(percakapan) 문장 한 줄. 가게·이웃·직장 등 실제 상황에서 바로 쓰는 말이어야 합니다.",
+  gereja:
+    "종류: 인도네시아 교회에서 쓰는 표현(istilah gereja) 한 줄. 예배·기도·교제 자리에서 실제로 듣는 말이어야 합니다.",
+};
+
+/** Gemini에게 성경 구절 "참조"만 고르게 합니다 (본문은 성경 API에서 가져옵니다) */
+async function suggestAyatRef(recent: string[]): Promise<AyatRef | null> {
+  const prompt = [
+    "인도네시아어를 배우는 한국인 크리스천에게 오늘 힘이 될 성경 구절 하나를 고르세요.",
+    "누구나 아는 유명한 구절만 고르지 말고, 덜 알려졌지만 마음에 닿는 구절까지 폭넓게 골라 주세요.",
+    "아래 구절은 최근에 이미 다뤘으니 피하세요: " + (recent.length > 0 ? recent.join(" / ") : "없음"),
+    "",
+    "book 값은 반드시 아래 목록에 있는 것 중 하나여야 합니다:",
+    BIBLE_BOOKS.map((b) => b.id).join(", "),
+    "",
+    "아래 JSON 형식으로만 답하세요.",
+    '{"book": "목록에 있는 값", "chapter": 숫자, "verse": 숫자}',
+  ].join("\n");
+
+  const raw = await askPhraseJSON(prompt);
+  const bookId = typeof raw.book === "string" ? raw.book.trim().toLowerCase() : "";
+  const chapter = Number(raw.chapter);
+  const verse = Number(raw.verse);
+  const book = getBook(bookId);
+  // 없는 책이나 범위를 벗어난 장이면 버립니다 (지어낸 참조 걸러내기)
+  if (!book) return null;
+  if (!(chapter >= 1) || chapter > book.chapters) return null;
+  if (!(verse >= 1)) return null;
+  return { bookId, chapter, verse, label: book.idName + " " + chapter + ":" + verse };
+}
+
+/** 성경 구절 하나 — 참조는 Gemini가 고르고 본문은 성경 API에서 확인합니다 */
+async function createAyat(recent: string[]): Promise<Phrase | null> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    let ref: AyatRef | null = null;
+    try {
+      ref = await suggestAyatRef(recent);
+    } catch (e) {
+      ref = null;
+    }
+    // Gemini가 실패하면 내장 참조 목록으로 대신합니다
+    const use: AyatRef = ref || pickOne(AYAT_REFS);
+
+    try {
+      const verses = await fetchChapter(use.bookId, use.chapter);
+      const found = verses.find((v) => v.verse === use.verse);
+      // 실제로 없는 절이면 다시 고릅니다
+      if (!found || !found.text) continue;
+      const text = found.text.trim();
+      await getPhraseDetail(text, "");
+      return {
+        kind: "alkitab",
+        id: text,
+        ko: "",
+        ref: use.label,
+        bookId: use.bookId,
+        chapter: use.chapter,
+        verse: use.verse,
+      };
+    } catch (e) { /* 다음 시도로 */ }
+  }
+  return null;
+}
+
+async function createPhrase(kind: PhraseKind, recent: string[]): Promise<Phrase | null> {
+  if (kind === "alkitab") return createAyat(recent);
+
+  if (kind === "kosakataku") {
+    const p = pickFromWordbook();
+    if (!p) return null;
+    await getPhraseDetail(p.id, p.ko);
+    return p;
+  }
+
+  const guide = KIND_GUIDE[kind];
+  if (!guide) return null;
+  const g = await generateNewPhrase(guide, recent);
+  return { kind, id: g.id, ko: g.ko };
+}
+
+/**
+ * 다음에 보여줄 문장을 미리 만들어 둡니다 (해설까지 함께).
+ * 앱을 보고 있는 동안 조용히 돌리므로 실패해도 화면에는 영향이 없습니다.
+ */
+let prefetching = false;
+
+export async function prefetchNextPhrase(kinds: PhraseKind[]): Promise<void> {
+  if (!hasGeminiApiKey()) return;
+  if (prefetching) return; // 이미 만들고 있으면 중복 호출하지 않습니다
+  if (loadNext()) return;  // 이미 준비되어 있으면 그대로 둡니다
+
+  const active = kinds.length > 0 ? kinds : DEFAULT_KINDS;
+  const recent = loadRecent();
+  prefetching = true;
+
+  try {
+    // 고른 종류 중 하나로 만들어 보고, 안 되면 다른 종류로 넘어갑니다
+    const pool = active.slice();
+    while (pool.length > 0) {
+      const i = Math.floor(Math.random() * pool.length);
+      const kind = pool[i];
+      pool.splice(i, 1);
+      try {
+        const p = await createPhrase(kind, recent);
+        if (p) {
+          saveNext(p);
+          return;
+        }
+      } catch (e) { /* 다음 종류로 */ }
+    }
+  } finally {
+    prefetching = false;
+  }
 }

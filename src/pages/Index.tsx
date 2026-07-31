@@ -9,8 +9,11 @@ import {
   loadKinds,
   saveKinds,
   loadSavedPhrase,
-  rememberPhrase,
-  pickPhrase,
+  phraseIsStale,
+  msUntilNextDay,
+  takePhrase,
+  prefetchNextPhrase,
+  clearNextPhrase,
 } from "@/lib/peribahasa";
 import SettingsDialog from "@/components/SettingsDialog";
 import { hasSermonConfig } from "@/lib/sermon";
@@ -161,36 +164,60 @@ const Index = () => {
   const now = new Date();
   const dateLabel = HARI[now.getDay()] + ", " + now.getDate() + " " + BULAN[now.getMonth()];
 
-  // 오늘의 문장: 저장된 것이 있으면 그대로, 없으면 새로 뽑습니다.
+  // 오늘의 문장
+  // 미리 받아둔 문장을 즉시 올리고, 곧바로 그다음 문장을 백그라운드에서 만들어 둡니다.
+  const phraseBusy = useRef(false);
+  const kindsRef = useRef(kinds);
+  kindsRef.current = kinds;
+
   const refreshPhrase = useCallback((next: PhraseKind[]) => {
-    let alive = true;
+    if (phraseBusy.current) return;
+    phraseBusy.current = true;
     setPhraseLoading(true);
-    pickPhrase(next)
-      .then((p) => {
-        if (!alive) return;
-        setPhrase(p);
-        rememberPhrase(p);
-      })
+    takePhrase(next)
+      .then((p) => setPhrase(p))
       .catch(() => {})
-      .finally(() => { if (alive) setPhraseLoading(false); });
-    return () => { alive = false; };
+      .finally(() => {
+        phraseBusy.current = false;
+        setPhraseLoading(false);
+        // 다음에 볼 문장을 지금 만들어 둡니다 (실패해도 화면에는 영향 없음)
+        prefetchNextPhrase(next).catch(() => {});
+      });
   }, []);
 
   useEffect(() => {
-    if (phrase) return;
-    let alive = true;
-    setPhraseLoading(true);
-    pickPhrase(kinds)
-      .then((p) => {
-        if (!alive) return;
-        setPhrase(p);
-        rememberPhrase(p);
-      })
-      .catch(() => {})
-      .finally(() => { if (alive) setPhraseLoading(false); });
-    return () => { alive = false; };
+    if (phrase) {
+      // 이번 실행에서 이미 띄운 문장이 있으면 그대로 두고, 다음 문장만 채워 둡니다
+      prefetchNextPhrase(kinds).catch(() => {});
+      return;
+    }
+    refreshPhrase(kinds);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 앱이 화면으로 돌아올 때마다 날짜가 지났는지 봅니다.
+  // 안드로이드가 앱을 메모리에 며칠 붙들고 있어도 다음날이면 새 문장으로 넘어갑니다.
+  useEffect(() => {
+    const check = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!phraseIsStale()) return;
+      refreshPhrase(kindsRef.current);
+    };
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("pageshow", check);
+    return () => {
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("pageshow", check);
+    };
+  }, [refreshPhrase]);
+
+  // 앱을 켜 둔 채로 자정을 넘기는 경우 (복귀 이벤트가 안 뜨므로 타이머로 챙깁니다)
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      if (phraseIsStale()) refreshPhrase(kindsRef.current);
+    }, msUntilNextDay());
+    return () => window.clearTimeout(t);
+  }, [phrase, refreshPhrase]);
 
   // 옵션 시트: 폰의 뒤로가기로도 닫히도록 히스토리를 한 칸 쌓습니다.
   const openKindSheet = () => {
@@ -298,6 +325,8 @@ const Index = () => {
       if (on && prev.length <= 1) return prev; // 최소 하나는 남깁니다
       const next = on ? prev.filter((k) => k !== key) : prev.concat([key]);
       saveKinds(next);
+      // 미리 받아둔 문장은 예전 설정으로 만든 것이라 버립니다
+      clearNextPhrase();
       refreshPhrase(next);
       return next;
     });
