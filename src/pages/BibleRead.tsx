@@ -72,7 +72,71 @@ const BibleRead = () => {
   const [koError, setKoError] = useState(false);
   const [flipped, setFlipped] = useState(false);
 
-  const { swipeHandlers, shouldIgnoreTap } = useSwipeFlip(() => setFlipped((f) => !f));
+  // ---------- 뒤집어도 같은 절이 화면 같은 자리에 오도록 ----------
+  //
+  // 장이 길면 뜻을 보려고 한국어로 넘겼을 때 위치가 어긋나 다시 찾아야 했습니다.
+  // 뒤집기 직전에 "지금 화면 맨 위에 걸린 절"과 그 절이 화면에서 몇 px에 있었는지를
+  // 적어 두었다가, 반대쪽에서 같은 절을 같은 높이에 놓습니다.
+  // 앞뒤 모두 절 번호를 그리므로 절 번호를 열쇠로 쓸 수 있습니다.
+
+  const HEADER_H = 61; // sticky 헤더 높이 (py-3 24 + 버튼 36 + 테두리 1)
+
+  const verseRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
+  const pendingAnchor = useRef<{ verse: number; offset: number } | null>(null);
+
+  // 화면 맨 위(헤더 바로 아래)에 걸려 있는 절을 찾습니다
+  const anchorOf = (side: "id" | "ko") => {
+    const line = HEADER_H + 8;
+    let best: { verse: number; offset: number } | null = null;
+    let firstTop: { verse: number; offset: number } | null = null;
+    Object.keys(verseRefs.current).forEach((k) => {
+      if (!k.startsWith(side + "-")) return;
+      const el = verseRefs.current[k];
+      if (!el) return;
+      const n = Number(k.slice(side.length + 1));
+      if (!n) return;
+      const top = el.getBoundingClientRect().top;
+      // 기준선을 지난 절 중 가장 아래에 있는 것 = 지금 맨 위에 보이는 절
+      if (top <= line && (!best || top > best.offset)) best = { verse: n, offset: top };
+      // 아직 아무 절도 기준선을 안 지났을 때를 대비해 첫 절도 들고 있습니다
+      if (!firstTop || n < firstTop.verse) firstTop = { verse: n, offset: top };
+    });
+    return best || firstTop;
+  };
+
+  // 반대쪽에서 같은 절을 찾습니다. 번역마다 절 나눔이 조금 다를 수 있어
+  // 같은 번호가 없으면 그 위의 가장 가까운 절로 갑니다.
+  const findVerseEl = (side: "id" | "ko", verse: number) => {
+    const exact = verseRefs.current[side + "-" + verse];
+    if (exact) return exact;
+    let bestN = 0;
+    Object.keys(verseRefs.current).forEach((k) => {
+      if (!k.startsWith(side + "-")) return;
+      if (!verseRefs.current[k]) return;
+      const n = Number(k.slice(side.length + 1));
+      if (n && n <= verse && n > bestN) bestN = n;
+    });
+    return bestN ? verseRefs.current[side + "-" + bestN] : null;
+  };
+
+  const handleFlip = () => {
+    pendingAnchor.current = anchorOf(flipped ? "ko" : "id");
+    setFlipped((f) => !f);
+  };
+
+  const { swipeHandlers, shouldIgnoreTap } = useSwipeFlip(handleFlip);
+
+  // 뒤집힌 뒤(또는 한국어 본문이 늦게 도착한 뒤) 적어둔 자리로 맞춥니다
+  useEffect(() => {
+    const a = pendingAnchor.current;
+    if (!a) return;
+    const el = findVerseEl(flipped ? "ko" : "id", a.verse);
+    if (!el) return; // 아직 안 그려졌으면 다음 렌더에서 다시 시도합니다
+    pendingAnchor.current = null;
+    const top = window.scrollY + el.getBoundingClientRect().top - a.offset;
+    window.scrollTo({ top: Math.max(0, top) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flipped, verses, versesKo]);
 
   const loadToken = useRef(0);
   const scrollTopRef = useRef<HTMLDivElement | null>(null);
@@ -124,6 +188,9 @@ const BibleRead = () => {
     setVerses(null);
     setVersesKo(null);
     setFlipped(false);
+    // 장을 옮기면 맨 위부터 읽으므로 이전 장의 절 위치는 버립니다
+    verseRefs.current = {};
+    pendingAnchor.current = null;
     ttsPlayer.stop();
     bibleAudioPlayer.stop();
     try {
@@ -274,14 +341,22 @@ const BibleRead = () => {
     ));
 
   const renderTbVerse = (v: BibleVerse) => (
-    <p key={v.verse} className="mb-2 text-base leading-relaxed font-word text-gray-900">
+    <p
+      key={v.verse}
+      ref={(el) => { verseRefs.current["id-" + v.verse] = el; }}
+      className="mb-2 text-base leading-relaxed font-word text-gray-900"
+    >
       <span className="text-sky-500/70 text-xs align-super mr-1 select-none">{v.verse}</span>
       {renderTokens(v.text, "b" + v.verse + "-")}
     </p>
   );
 
   const renderKoVerse = (v: BibleVerse) => (
-    <p key={"k" + v.verse} className="mb-2 text-sm leading-relaxed text-gray-800 font-gothic">
+    <p
+      key={"k" + v.verse}
+      ref={(el) => { verseRefs.current["ko-" + v.verse] = el; }}
+      className="mb-2 text-sm leading-relaxed text-gray-800 font-gothic"
+    >
       <span className="text-sky-500/70 text-xs align-super mr-1 select-none">{v.verse}</span>
       {v.text}
     </p>
