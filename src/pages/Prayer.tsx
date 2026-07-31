@@ -730,7 +730,7 @@ const Prayer = () => {
                   {/* 뒷면: 기도에 관한 말씀·명언 (주기도문 제외) */}
                   {!isLords && (
                     <div className="rounded-lg bg-emerald-500/5 border border-emerald-200/60 px-3 py-2.5 mt-4">
-                      <p className="text-xs leading-relaxed text-gray-800 font-gothic">{quote.text}</p>
+                      <p className="text-xs leading-relaxed text-gray-800 font-body">{quote.text}</p>
                       <p className="text-[11px] text-gray-500 font-gothic mt-1">— {quote.source}</p>
                     </div>
                   )}
