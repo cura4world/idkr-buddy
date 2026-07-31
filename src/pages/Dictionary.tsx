@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Mic, ScrollText, Newspaper, Map as MapIcon, Lightbulb, Library } from "lucide-react";
+import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Mic } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
@@ -162,38 +162,9 @@ function chunkedSentence(r: IdSentenceResult): string {
 
 const Dictionary = () => {
   const navigate = useNavigate();
-  // 이야기 카드의 "사전에서 보기"로 진입했는지 (돌아가기 플로팅 버튼 표시)
-  const [fromStory] = useState(() => {
-    try { return new URLSearchParams(window.location.search).get("from") === "story"; } catch (e) { return false; }
-  });
-  // 묵상 카드의 "사전에서 보기"로 진입했는지 (묵상으로 돌아가기 버튼 표시)
-  const [fromDevotion] = useState(() => {
-    try { return new URLSearchParams(window.location.search).get("from") === "devotion"; } catch (e) { return false; }
-  });
-  // 성경 읽기의 "사전에서 보기"로 진입했는지 (성경으로 돌아가기 버튼 표시)
-  const [fromBible] = useState(() => {
-    try { return new URLSearchParams(window.location.search).get("from") === "bible"; } catch (e) { return false; }
-  });
-  // 뉴스 기사의 "사전에서 보기"로 진입했는지 (뉴스로 돌아가기 버튼 표시)
-  const [fromNews] = useState(() => {
-    try { return new URLSearchParams(window.location.search).get("from") === "news"; } catch (e) { return false; }
-  });
-  // 지도 핀의 "사전에서 보기"로 진입했는지 (지도로 돌아가기 버튼 표시)
-  const [fromMap] = useState(() => {
-    try { return new URLSearchParams(window.location.search).get("from") === "map"; } catch (e) { return false; }
-  });
-  // 정보(팁)의 "사전에서 보기"로 진입했는지 (정보로 돌아가기 버튼 표시)
-  const [fromTips] = useState(() => {
-    try { return new URLSearchParams(window.location.search).get("from") === "tips"; } catch (e) { return false; }
-  });
-  // 단어장의 단어카드 사전 아이콘으로 진입했는지 (단어장으로 돌아가기 버튼 표시)
-  // 값은 돌아갈 단어장 id. 진입이 아니면 null.
-  const [fromWordbook] = useState<string | null>(() => {
-    try {
-      const p = new URLSearchParams(window.location.search);
-      return p.get("from") === "wordbook" ? (p.get("cat") || "") : null;
-    } catch (e) { return null; }
-  });
+  // 다른 화면의 "사전에서 보기"로 들어왔을 때 "성경으로" 같은 돌아가기 플로팅 버튼을
+  // 띄웠었는데, 폰의 뒤로가기로 그대로 돌아가지므로 없앴습니다.
+  // (주소의 from= 값은 어디서 들어왔는지 남겨두기 위해 그대로 둡니다)
   const [query, setQuery] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory());
   const [loading, setLoading] = useState(false);
@@ -596,88 +567,16 @@ const Dictionary = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 이야기로 돌아가기 플로팅 버튼 */}
-      {fromStory && (
-        <button
-          onClick={() => navigate("/story")}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
-        >
-          <ScrollText size={16} /> 이야기로
-        </button>
-      )}
-
-      {/* 성경으로 돌아가기 플로팅 버튼 */}
-      {fromBible && (
-        <button
-          onClick={() => navigate("/bible")}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
-        >
-          <ScrollText size={16} /> 성경으로
-        </button>
-      )}
-
-      {/* 묵상으로 돌아가기 플로팅 버튼 */}
-      {fromDevotion && (
-        <button
-          onClick={() => navigate("/devotion")}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
-        >
-          <ScrollText size={16} /> 묵상으로
-        </button>
-      )}
-
-      {/* 뉴스로 돌아가기 플로팅 버튼 */}
-      {fromNews && (
-        <button
-          onClick={() => navigate("/news")}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
-        >
-          <Newspaper size={16} /> 뉴스로
-        </button>
-      )}
-
-      {/* 지도로 돌아가기 플로팅 버튼 */}
-      {fromMap && (
-        <button
-          onClick={() => navigate("/map")}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
-        >
-          <MapIcon size={16} /> 지도로
-        </button>
-      )}
-
-      {/* 단어장으로 돌아가기 플로팅 버튼 */}
-      {fromWordbook !== null && (
-        <button
-          onClick={() => navigate(fromWordbook ? `/category/${fromWordbook}` : "/wordbooks")}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
-        >
-          <Library size={16} /> 단어장으로
-        </button>
-      )}
-
-      {/* 검색했던 한국어 단어로 돌아가기 플로팅 버튼 (인니어 표제어를 눌러 들어온 경우) */}
+      {/* 검색했던 한국어 단어로 돌아가기 플로팅 버튼 (인니어 표제어를 눌러 들어온 경우)
+          이건 같은 화면 안에서 이전 검색 결과를 다시 띄우는 것이라
+          폰의 뒤로가기로는 돌아갈 수 없어 남겨 둡니다. */}
       {koBackTerm && !isHome && (
         <button
           onClick={() => handleSearch(koBackTerm)}
-          className={`fixed right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg ${
-            fromStory || fromBible || fromDevotion || fromNews || fromMap || fromTips || fromWordbook !== null
-              ? "bottom-20"
-              : "bottom-5"
-          }`}
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
           title={`"${koBackTerm}" 검색 결과로 돌아가기`}
         >
           <ArrowLeft size={16} /> {withRo(koBackTerm)}
-        </button>
-      )}
-
-      {/* 정보로 돌아가기 플로팅 버튼 */}
-      {fromTips && (
-        <button
-          onClick={() => navigate("/insight/tips")}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
-        >
-          <Lightbulb size={16} /> 정보로
         </button>
       )}
 
