@@ -253,9 +253,6 @@ const PhraseDetail = () => {
             <p className="mt-3 font-word text-[13.5px] text-muted-foreground">{refLabel}</p>
           ) : null}
         </div>
-        <p className="mt-2 text-center text-[11.5px] font-gothic text-muted-foreground">
-          단어를 탭하면 뜻이 나옵니다
-        </p>
 
         {loading ? (
           <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-10 text-center">
