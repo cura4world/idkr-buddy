@@ -223,7 +223,7 @@ const PhraseDetail = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="flex-1 font-gothic text-base font-semibold uppercase tracking-[0.08em] truncate">Bahasa Hari Ini</h1>
+        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">Bahasa Hari Ini</h1>
       </header>
 
       <div className="px-4 pt-5">

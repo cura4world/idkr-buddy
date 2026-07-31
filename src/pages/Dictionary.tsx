@@ -577,7 +577,7 @@ const Dictionary = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="flex-1 text-lg font-semibold truncate">인도네시아어 사전</h1>
+        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">KAMUS BAHASA INDONESIA</h1>
       </header>
 
       {/* 최근 검색 항목 삭제 확인 */}

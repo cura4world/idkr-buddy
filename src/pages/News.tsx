@@ -492,7 +492,7 @@ const News = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="flex-1 min-w-0 truncate font-word text-[17px] font-semibold tracking-[0.06em]">BERITA HARI INI</h1>
+        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">BERITA HARI INI</h1>
       </header>
 
       <div className="px-4 py-4">

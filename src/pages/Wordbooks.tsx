@@ -196,7 +196,7 @@ const Wordbooks = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="flex-1 min-w-0 truncate font-word text-[17px] font-semibold tracking-[0.06em]">
+        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">
           KOSAKATA
         </h1>
       </header>
