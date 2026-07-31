@@ -371,7 +371,7 @@ const BibleRead = () => {
 
   // ---------- 화면 ----------
   return (
-    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-hidden bg-background">
+    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-clip bg-background">
       <div ref={scrollTopRef} />
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button

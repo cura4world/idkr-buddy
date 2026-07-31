@@ -538,7 +538,7 @@ const Dictionary = () => {
   };
 
   return (
-    <div className={`w-full max-w-lg mx-auto overflow-x-hidden bg-background flex flex-col ${isHome ? "h-[100dvh]" : "min-h-screen"}`}>
+    <div className={`w-full max-w-lg mx-auto overflow-x-clip bg-background flex flex-col ${isHome ? "h-[100dvh]" : "min-h-screen"}`}>
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
