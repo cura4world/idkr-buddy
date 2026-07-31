@@ -489,10 +489,10 @@ export default function CategoryDetail() {
       <div className="px-4 pb-6">
         {/* 표준 헤더 높이 61px(py-3 24 + 버튼 36 + 테두리 1) 바로 아래에 붙여둡니다. */}
         <div className="sticky top-[61px] z-20 bg-background -mx-4 px-4 py-2.5 flex justify-end gap-4">
-          <button onClick={() => setCsvOpen(true)} className="text-sm text-foreground hover:underline underline-offset-4 font-gothic">
+          <button onClick={() => setCsvOpen(true)} className="text-xs text-foreground hover:underline underline-offset-4 font-gothic">
             CSV 가져오기
           </button>
-          <button onClick={() => setAddOpen(true)} className="text-sm text-foreground hover:underline underline-offset-4 font-gothic">
+          <button onClick={() => setAddOpen(true)} className="text-xs text-foreground hover:underline underline-offset-4 font-gothic">
             + 단어 추가
           </button>
         </div>
