@@ -35,6 +35,7 @@ import {
   Compass,
   ChevronRight,
   BookMarked,
+  MessagesSquare,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -640,6 +641,12 @@ const Index = () => {
               sub="Kosakata"
               meta={folderCount > 0 ? folderCount + "권" : undefined}
               onClick={() => navigate("/wordbooks")}
+            />
+            <Row
+              icon={MessagesSquare}
+              title="회화집 폴더"
+              sub="Percakapan"
+              onClick={() => navigate("/percakapan")}
               last
             />
           </div>
