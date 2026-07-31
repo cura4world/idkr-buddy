@@ -16,6 +16,7 @@ import { clearCachedResults, countCachedResults } from "@/lib/dictStore";
 import { getFontStep, getStepCount, stepFont } from "@/lib/fontScale";
 import { getTtsVoice, setTtsVoice, TTS_VOICES, TtsVoiceId, clearTtsCache } from "@/lib/tts";
 import { getSermonBase, setSermonBase, getSermonKey, setSermonKey } from "@/lib/sermon";
+import { getPercakapanBase, setPercakapanBase, getPercakapanKey, setPercakapanKey, hasPercakapanConfig, pushBackup } from "@/lib/percakapan";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -34,6 +35,11 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   // lib 의 setSermonBase / setSermonKey 와 이름이 겹치지 않도록 setter 에 _ 를 붙입니다.
   const [sermonBase, setSermonBaseState] = useState("");
   const [sermonKey, setSermonKeyState] = useState("");
+  const [percakapanBase, setPercakapanBaseState] = useState("");
+  const [percakapanKey, setPercakapanKeyState] = useState("");
+  // 회화집 백업: 서버에 백업이 있는데 이 기기가 비었을 때 한 번 더 확인받습니다
+  const [pcConfirmErase, setPcConfirmErase] = useState(0);
+  const [pcBusy, setPcBusy] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -44,6 +50,9 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
       setVoice(getTtsVoice());
       setSermonBaseState(getSermonBase());
       setSermonKeyState(getSermonKey());
+      setPercakapanBaseState(getPercakapanBase());
+      setPercakapanKeyState(getPercakapanKey());
+      setPcConfirmErase(0);
     }
   }, [open]);
 
@@ -56,6 +65,8 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     setClaudeApiKey(claudeKey);
     setSermonBase(sermonBase);
     setSermonKey(sermonKey);
+    setPercakapanBase(percakapanBase);
+    setPercakapanKey(percakapanKey);
     toast("API 키 설정이 저장되었습니다");
     onOpenChange(false);
   };
@@ -81,6 +92,32 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const handleClearTts = async () => {
     await clearTtsCache();
     toast("저장된 읽기 음성을 비웠습니다");
+  };
+
+  // 회화집 백업 올리기.
+  // 서버에 백업이 있는데 이 기기에는 회화집이 없으면 서버가 409로 막습니다.
+  // 그때는 개수를 보여주고 한 번 더 누르면 빈 상태로 덮어씁니다.
+  const handlePushPercakapan = async (force?: boolean) => {
+    if (pcBusy) return;
+    setPcBusy(true);
+    try {
+      const r = await pushBackup(force);
+      setPcConfirmErase(0);
+      toast.success("회화집 " + r.scenes + "개를 백업했습니다");
+    } catch (e: any) {
+      const code = (e && e.message) || "";
+      if (code === "WOULD_ERASE") {
+        setPcConfirmErase(Number(e.existing) || 0);
+      } else if (code === "UNAUTHORIZED") {
+        toast.error("비밀키가 맞지 않습니다");
+      } else if (code === "NO_CONFIG") {
+        toast.error("회화집 서버 주소와 비밀키를 넣어 주세요");
+      } else {
+        toast.error("백업하지 못했습니다");
+      }
+    } finally {
+      setPcBusy(false);
+    }
   };
 
   // 개인 단어장 폴더 적용: 저장 후 새로고침해 즉시 동기화
@@ -224,6 +261,28 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             </p>
           </div>
           <div>
+            <Label className="font-body text-sm text-gray-900">회화집 서버</Label>
+            <Input
+              type="text"
+              autoComplete="off"
+              value={percakapanBase}
+              onChange={(e) => setPercakapanBaseState(e.target.value)}
+              placeholder="https://kata-percakapan.○○○.workers.dev"
+              className="mt-1"
+            />
+            <Input
+              type="password"
+              autoComplete="off"
+              value={percakapanKey}
+              onChange={(e) => setPercakapanKeyState(e.target.value)}
+              placeholder="비밀키"
+              className="mt-2"
+            />
+            <p className="mt-2 text-xs text-muted-foreground font-gothic">
+              개인 회화집을 백업하고, 앱을 다시 설치했을 때 되돌리는 데 씁니다. 주소와 비밀키는 이 기기에만 저장됩니다.
+            </p>
+          </div>
+          <div>
             <Label className="font-body text-sm text-gray-900">Gemini API 키</Label>
             <Input
               type="password"
@@ -299,6 +358,26 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               <Trash2 className="w-4 h-4 mr-1.5" />
               저장된 읽기 음성 비우기
             </Button>
+            {hasPercakapanConfig() ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
+                  disabled={pcBusy}
+                  onClick={() => handlePushPercakapan(pcConfirmErase > 0)}
+                >
+                  <Upload className="w-4 h-4 mr-1.5" />
+                  회화집 서버에 백업
+                </Button>
+                {pcConfirmErase > 0 ? (
+                  <p className="mt-1.5 text-xs leading-relaxed text-red-500 font-gothic">
+                    서버에 {pcConfirmErase}개가 있는데 지금 기기에는 없습니다. 빈 상태로 덮어쓸까요?
+                    한 번 더 누르면 덮어씁니다.
+                  </p>
+                ) : null}
+              </>
+            ) : null}
           </div>
           <div className="border-t border-gray-200 pt-3">
             <Button type="button" className="w-full" onClick={() => onOpenChange(false)}>
