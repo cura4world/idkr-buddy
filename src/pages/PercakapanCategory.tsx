@@ -177,7 +177,7 @@ const PercakapanCategory = () => {
                 }
               >
                 <div className="flex-1 min-w-0">
-                  <p className="flex items-center gap-1.5 text-[15px] leading-tight text-foreground">
+                  <p className="flex items-center gap-1.5 text-[14px] leading-tight text-foreground">
                     <span className="min-w-0 truncate">{s.title}</span>
                     {s.custom ? (
                       <span className="shrink-0 h-[5px] w-[5px] rounded-full bg-muted-foreground/45" />
