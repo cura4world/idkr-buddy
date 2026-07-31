@@ -161,6 +161,63 @@ function stripTbMarks(text: string): string {
     .trim();
 }
 
+// TB 본문에서 절 하나만 따로 보여줄 때 걸리적거리는 것들을 걷어냅니다.
+//
+// 1) 표제(superscription) — 시편 1절 앞에 붙는 "Mazmur Daud." 같은 안내문입니다.
+//    본문이 아니라 그 편이 어떤 노래인지 알려주는 머리말이라, 절 하나만 볼 때는
+//    문장이 엉뚱하게 시작합니다. 시편 116편과 하박국 3장에 있습니다.
+//    시편 93:1 "TUHAN adalah Raja..."처럼 진짜 본문으로 시작하는 절을 깎지 않도록
+//    표제에만 쓰이는 머리단어로 시작할 때만 걷어냅니다.
+// 2) (3-2) 같은 히브리어 절번호 표시 — 인쇄본 대조용이라 읽을 때는 군더더기입니다.
+//
+// 장 전체를 읽는 화면에서는 표제도 성경 지면 그대로 보여주므로 여기서만 씁니다.
+
+const VERSE_INTRO_HEADS = [
+  "Untuk pemimpin biduan",
+  "Menurut lagu",
+  "Menurut nada",
+  "Mazmur",
+  "Nyanyian",
+  "Doa",
+  "Dari Daud",
+  "Dari Salomo",
+  "Dari Asaf",
+  "Miktam",
+  "Puji-pujian",
+  "Ratapan",
+];
+
+const HEBREW_VERSE_MARK = new RegExp("\\(\\d+-\\d+\\)", "g");
+
+function startsWithIntroHead(text: string): boolean {
+  return VERSE_INTRO_HEADS.some((h) => text.startsWith(h));
+}
+
+export function stripVerseIntro(text: string, verse: number): string {
+  let t = text.trim();
+  // 표제는 1절에만 붙습니다. 여러 겹으로 붙은 편도 있어 반복해서 걷어냅니다.
+  if (verse === 1) {
+    for (let i = 0; i < 6; i += 1) {
+      if (!startsWithIntroHead(t)) break;
+      const m = t.match(new RegExp("^[\\s\\S]{1,250}?[.]\\s+([\\s\\S]+)$"));
+      if (!m) break;
+      t = m[1].trim();
+    }
+  }
+  return t.replace(HEBREW_VERSE_MARK, " ").replace(new RegExp("\\s{2,}", "g"), " ").trim();
+}
+
+/**
+ * 절 하나를 문장처럼 보여줘도 되는지 봅니다.
+ * 표제만 있고 본문이 없는 절(하박국 3:1)이나, 원본이 잘려 있는 절(시편 8:1, 68:1)을 걸러냅니다.
+ */
+export function isUsableVerseText(text: string): boolean {
+  const t = text.trim();
+  if (t.length < 20) return false;
+  if (startsWithIntroHead(t)) return false;
+  return true;
+}
+
 // bolls.life 응답의 text는 HTML 문자열(예: <i>...</i>)일 수 있어 태그를 제거합니다.
 function stripHtml(html: string): string {
   return html.replace(new RegExp("<[^>]*>", "g"), "").trim();

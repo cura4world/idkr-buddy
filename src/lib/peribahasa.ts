@@ -6,7 +6,13 @@
 // 앱이 이미 쓰고 있는 성경 API에서 그때그때 불러옵니다.
 // 내 단어장은 저장된 단어와 예문에서 가져옵니다.
 
-import { fetchChapter, getBook, BIBLE_BOOKS } from "@/lib/bible";
+import {
+  fetchChapter,
+  getBook,
+  BIBLE_BOOKS,
+  stripVerseIntro,
+  isUsableVerseText,
+} from "@/lib/bible";
 import { getWordsByCategory, getCategories } from "@/lib/store";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { askPhraseJSON, generateNewPhrase, getPhraseDetail } from "@/lib/phrase";
@@ -325,9 +331,12 @@ async function pickFromAlkitab(): Promise<Phrase | null> {
     const verses = await fetchChapter(ref.bookId, ref.chapter);
     const found = verses.find((v) => v.verse === ref.verse);
     if (!found || !found.text) return null;
+    // 시편 1절의 표제("Mazmur Daud." 등)와 절번호 표시를 걷어냅니다
+    const text = stripVerseIntro(found.text, found.verse);
+    if (!isUsableVerseText(text)) return null;
     return {
       kind: "alkitab",
-      id: found.text.trim(),
+      id: text,
       ko: "",
       ref: ref.label,
       bookId: ref.bookId,
@@ -451,7 +460,10 @@ async function createAyat(recent: string[]): Promise<Phrase | null> {
       const found = verses.find((v) => v.verse === use.verse);
       // 실제로 없는 절이면 다시 고릅니다
       if (!found || !found.text) continue;
-      const text = found.text.trim();
+      // 시편 1절의 표제("Mazmur Daud." 등)와 절번호 표시를 걷어냅니다
+      const text = stripVerseIntro(found.text, found.verse);
+      // 표제만 있거나 원본이 잘려 있는 절이면 다른 구절로 다시 고릅니다
+      if (!isUsableVerseText(text)) continue;
       await getPhraseDetail(text, "");
       return {
         kind: "alkitab",
