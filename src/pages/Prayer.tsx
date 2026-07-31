@@ -1045,7 +1045,7 @@ const Prayer = () => {
                 >
                   <Icon size={20} strokeWidth={1.6} className="text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[15px] leading-tight text-foreground truncate">{r.title}</p>
+                    <p className="text-[14px] leading-tight text-foreground truncate">{r.title}</p>
                     <p className="mt-0.5 font-gothic text-[11.5px] text-muted-foreground truncate">
                       {r.situationLabel}
                       {r.name ? " · " + r.name : ""} · {fmtDate(r.createdAt)}
