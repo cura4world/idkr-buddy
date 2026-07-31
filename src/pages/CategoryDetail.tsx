@@ -462,7 +462,8 @@ export default function CategoryDetail() {
   }
 
   const draggingWord = draggingIndex !== null ? words[draggingIndex] : null;
-  // "내 단어장"만 인니어 대문자 표제(Lora), 사용자가 만든 폴더 이름은 한글이라 본문 폰트를 씁니다.
+  // "내 단어장"은 다른 진입 화면과 같은 인니어 대문자 표제,
+  // 사용자가 만든 폴더 이름은 한글이라 본문 폰트를 씁니다.
   const isMine = category.id === "my-wordbook";
 
   return (
@@ -476,8 +477,10 @@ export default function CategoryDetail() {
           <ArrowLeft size={20} />
         </button>
         <h1 className={
-          "flex-1 min-w-0 truncate text-[17px] font-semibold " +
-          (isMine ? "font-word tracking-[0.06em]" : "font-body tracking-tight")
+          "flex-1 min-w-0 truncate font-semibold " +
+          (isMine
+            ? "font-gothic text-base uppercase tracking-[0.08em]"
+            : "font-body text-[17px] tracking-tight")
         }>
           {isMine ? "KOSAKATAKU" : category.name}
         </h1>
