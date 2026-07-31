@@ -21,6 +21,9 @@ import InsightChristian from "./pages/InsightChristian";
 import InsightEthnic from "./pages/InsightEthnic";
 import InsightHistory from "./pages/InsightHistory";
 import InsightTips from "./pages/InsightTips";
+import Percakapan from "./pages/Percakapan";
+import PercakapanCategory from "./pages/PercakapanCategory";
+import PercakapanRead from "./pages/PercakapanRead";
 import Wordbooks from "./pages/Wordbooks";
 import CategoryDetail from "./pages/CategoryDetail";
 import StudyMode from "./pages/StudyMode";
@@ -57,6 +60,9 @@ const App = () => (
           <Route path="/insight/ethnic" element={<InsightEthnic />} />
           <Route path="/insight/history" element={<InsightHistory />} />
           <Route path="/insight/tips" element={<InsightTips />} />
+          <Route path="/percakapan" element={<Percakapan />} />
+          <Route path="/percakapan/c/:id" element={<PercakapanCategory />} />
+          <Route path="/percakapan/:id" element={<PercakapanRead />} />
           <Route path="/wordbooks" element={<Wordbooks />} />
           <Route path="/category/:id" element={<CategoryDetail />} />
           <Route path="/study/:id" element={<StudyMode />} />
