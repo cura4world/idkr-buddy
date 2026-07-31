@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Sunrise, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import { ArrowLeft, Sunrise, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp, RotateCcw, Maximize2, Minimize2 } from "lucide-react";
+import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
 import { getBookByKo, fetchQtTbVerses, BibleVerse } from "@/lib/bible";
 import { fetchTodayQt, QtToday, QtVerse } from "@/lib/qtToday";
@@ -53,6 +54,7 @@ const tbRangeLabel = (rec: DevotionRecord) =>
 
 const Devotion = () => {
   const navigate = useNavigate();
+  const { widthClass, canWide, wide, toggle } = useWideMode();
 
   const [todayQt, setTodayQt] = useState<QtToday | null>(null);
   const [qtLoading, setQtLoading] = useState(true);
@@ -414,7 +416,7 @@ const Devotion = () => {
     const c = current.content;
 
     return (
-      <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-clip bg-background">
+      <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
         <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
           <button
             onClick={closeSub}
@@ -426,6 +428,17 @@ const Devotion = () => {
           <h1 className="flex-1 min-w-0 text-base font-semibold leading-snug line-clamp-2 break-words">
             {qtDateLabel(current.date, flipped)}
           </h1>
+          {canWide ? (
+            <button
+              type="button"
+              onClick={toggle}
+              className="shrink-0 w-9 h-9 flex items-center justify-center text-muted-foreground active:text-foreground"
+              title={wide ? "원래 크기로" : "넓게 보기"}
+              aria-label={wide ? "원래 크기로" : "넓게 보기"}
+            >
+              {wide ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            </button>
+          ) : null}
         </header>
 
         <div className="px-4 py-4">
@@ -574,7 +587,7 @@ const Devotion = () => {
           <div className="fixed inset-0 z-50" onClick={() => setPopupWord(null)}>
             <div className="absolute inset-0 bg-black/40" />
             <div
-              className="absolute bottom-0 left-0 right-0 max-w-lg mx-auto bg-card rounded-t-2xl px-5 pt-5 pb-7"
+              className={"absolute bottom-0 left-0 right-0 " + widthClass + " mx-auto bg-card rounded-t-2xl px-5 pt-5 pb-7"}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -639,7 +652,7 @@ const Devotion = () => {
 
   // ---------- 홈 뷰 ----------
   return (
-    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-clip bg-background">
+    <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => navigate("/")}
@@ -649,6 +662,17 @@ const Devotion = () => {
           <ArrowLeft size={20} />
         </button>
         <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">SAAT TEDUH</h1>
+        {canWide ? (
+          <button
+            type="button"
+            onClick={toggle}
+            className="shrink-0 w-9 h-9 flex items-center justify-center text-muted-foreground active:text-foreground"
+            title={wide ? "원래 크기로" : "넓게 보기"}
+            aria-label={wide ? "원래 크기로" : "넓게 보기"}
+          >
+            {wide ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+          </button>
+        ) : null}
       </header>
 
       <div className="px-4 py-4">
