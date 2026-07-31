@@ -4,9 +4,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, ChevronRight, MoreHorizontal, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { goBackOr } from "@/lib/nav";
 import {
   listCategories,
@@ -63,7 +62,6 @@ const Percakapan = () => {
   const location = useLocation();
 
   const [cats, setCats] = useState<CatRow[]>([]);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   // 만들기 시트
   const [makeOpen, setMakeOpen] = useState(false);
@@ -214,9 +212,8 @@ const Percakapan = () => {
     setRestoreOpen(false);
   };
 
-  // 헤더 ⋯ 메뉴에서 언제든 다시 불러올 수 있게 합니다.
-  const handleRestoreFromMenu = () => {
-    setMenuOpen(false);
+  // 목록 위 "백업 불러오기"로 언제든 다시 불러올 수 있게 합니다.
+  const handleRestoreClick = () => {
     if (!hasPercakapanConfig()) {
       toast("설정에서 회화집 서버 주소와 비밀키를 넣어 주세요");
       return;
@@ -239,36 +236,28 @@ const Percakapan = () => {
         <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">
           PERCAKAPAN
         </h1>
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((v) => !v)}
-            className="w-9 h-9 -mr-1 flex items-center justify-center text-muted-foreground active:bg-muted rounded-full"
-            title="더보기"
-            aria-label="더보기"
-          >
-            <MoreHorizontal size={20} />
-          </button>
-          {menuOpen ? (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full z-50 mt-1 w-40 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
-                <button
-                  type="button"
-                  onClick={handleRestoreFromMenu}
-                  className="w-full px-4 py-3 text-left text-[13.5px] font-gothic text-foreground active:bg-muted/60"
-                >
-                  백업 불러오기
-                </button>
-              </div>
-            </>
-          ) : null}
-        </div>
       </header>
 
-      <div className="px-4 py-4">
+      <div className="px-4">
+        {/* 단어장 폴더(Wordbooks)의 "공용 단어장 복구 / + 단어장 추가" 줄과 같은 모양입니다 */}
+        <div className="flex justify-end gap-4 pt-3">
+          <button
+            onClick={handleRestoreClick}
+            className="group inline-flex items-center gap-1 text-xs text-foreground font-gothic"
+          >
+            <RotateCcw size={13} className="shrink-0" />
+            <span className="group-hover:underline underline-offset-4">백업 불러오기</span>
+          </button>
+          <button
+            onClick={openMake}
+            className="text-xs text-foreground hover:underline underline-offset-4 font-gothic"
+          >
+            + 회화집 추가
+          </button>
+        </div>
+
         {cats.length > 0 ? (
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="mt-3.5 overflow-hidden rounded-2xl border border-border bg-card">
             {cats.map((c, i) => (
               <Row
                 key={c.id}
@@ -282,15 +271,18 @@ const Percakapan = () => {
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
+          <div className="mt-3.5 rounded-2xl border border-border bg-card px-4 py-10 text-center">
             <p className="text-[15px] text-foreground">회화집이 없습니다</p>
             <p className="mt-1 font-word text-[12px] text-muted-foreground">Belum ada percakapan</p>
+            <button
+              type="button"
+              onClick={openMake}
+              className="mt-4 h-10 px-4 rounded-full bg-primary text-[13px] font-gothic font-medium text-white active:opacity-90"
+            >
+              첫 회화집 만들기
+            </button>
           </div>
         )}
-
-        <Button type="button" variant="outline" className="mt-3 w-full" onClick={openMake}>
-          회화집 만들기
-        </Button>
       </div>
 
       {/* 만들기 시트 — 단어 정보 팝업과 같은 방식의 플로팅 카드 */}
