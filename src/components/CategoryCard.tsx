@@ -13,6 +13,7 @@ interface CategoryCardProps {
   index?: number;
   isDragging?: boolean;
   isDropTarget?: boolean;
+  first?: boolean;
   last?: boolean;
   floating?: boolean;
   onTouchStart?: (e: React.TouchEvent) => void;
@@ -31,6 +32,7 @@ export default function CategoryCard({
   index,
   isDragging,
   isDropTarget,
+  first,
   last,
   floating,
   onTouchStart,
@@ -52,9 +54,12 @@ export default function CategoryCard({
     onChanged?.();
   };
 
+  // 묶음의 첫/마지막 칸은 감싼 상자의 둥근 모서리에 맞춰 같이 둥글게 합니다.
+  // (톱니 메뉴가 잘리면 안 되어 상자에 overflow-hidden 을 줄 수 없습니다)
   const rootCls =
     "relative select-none bg-card px-4 py-3 transition-colors " +
-    (last ? "" : "border-b border-border ") +
+    (first ? "rounded-t-2xl " : "") +
+    (last ? "rounded-b-2xl " : "border-b border-border ") +
     (floating ? "rounded-2xl border border-border shadow-[0_10px_24px_-8px_rgba(8,32,38,0.35)] " : "") +
     (isDragging ? "opacity-20 " : "") +
     (isDropTarget ? "bg-muted " : "");

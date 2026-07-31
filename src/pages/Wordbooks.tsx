@@ -9,6 +9,27 @@ import { toast } from "sonner";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 
+/* 단어장을 품사별로 묶어 메인 화면처럼 구역을 나눠 보여줍니다.
+   묶는 기준은 단어장 이름입니다. (scripts/csv-to-seed.js 의 정렬 기준과 같은 어휘) */
+const GROUPS: { label: string; match: string[] }[] = [
+  { label: "설교", match: ["설교", "kotbah", "khotbah", "sermon"] },
+  { label: "명사", match: ["명사", "noun", "kata benda"] },
+  { label: "형용사", match: ["형용사", "adjective", "kata sifat"] },
+  { label: "부사", match: ["부사", "adverb", "kata keterangan"] },
+  { label: "동사", match: ["동사", "verb", "kata kerja"] },
+  { label: "기독교", match: ["기독교", "성경", "alkitab", "ibadah", "worship", "doa", "prayer"] },
+];
+const OTHER_LABEL = "그 외";
+
+// 어느 묶음에 들어가는지 — 못 찾으면 "그 외"
+function groupLabelOf(name: string): string {
+  const lower = (name || "").toLowerCase();
+  for (const g of GROUPS) {
+    if (g.match.some((m) => lower.includes(m))) return g.label;
+  }
+  return OTHER_LABEL;
+}
+
 const Wordbooks = () => {
   const navigate = useNavigate();
   const [, setTick] = useState(0);
@@ -19,6 +40,21 @@ const Wordbooks = () => {
   // useEffect 안 핸들러가 항상 최신 목록을 보도록 ref에도 보관 (stale closure 방지)
   const categoriesRef = useRef(categories);
   categoriesRef.current = categories;
+
+  // 화면에 보일 묶음들. 순서를 뒤섞지 않으므로 각 칸의 전체 목록 기준 번호를
+  // 그대로 들고 다닙니다. 끌어서 옮기기가 이 번호로 동작합니다.
+  const grouped = (() => {
+    const bucket = new Map<string, { cat: Category; index: number }[]>();
+    categories.forEach((cat, index) => {
+      const label = groupLabelOf(cat.name);
+      if (!bucket.has(label)) bucket.set(label, []);
+      bucket.get(label)!.push({ cat, index });
+    });
+    const ordered = GROUPS.map((g) => g.label).concat([OTHER_LABEL]);
+    return ordered
+      .filter((label) => bucket.has(label))
+      .map((label) => ({ label, items: bucket.get(label)! }));
+  })();
   const [addWordOpen, setAddWordOpen] = useState(false);
   const [addWordCat, setAddWordCat] = useState<string | undefined>();
   const [addCatOpen, setAddCatOpen] = useState(false);
@@ -69,8 +105,14 @@ const Wordbooks = () => {
       // 필터된 목록이라 인덱스가 전체 배열과 다르므로 ID 기준으로 이동
       const movedCat = categoriesRef.current[from];
       const targetCat = categoriesRef.current[to];
-      if (movedCat && targetCat) reorderCategoryById(movedCat.id, targetCat.id);
-      setTick((t) => t + 1);
+      // 묶음은 이름으로 정해지므로 다른 묶음에 떨어뜨려도 옮겨가지 않습니다.
+      // 그대로 두면 눈에 안 보이는 순서만 바뀌어 혼란스러워서 무시합니다.
+      const sameGroup =
+        movedCat && targetCat && groupLabelOf(movedCat.name) === groupLabelOf(targetCat.name);
+      if (sameGroup) {
+        reorderCategoryById(movedCat.id, targetCat.id);
+        setTick((t) => t + 1);
+      }
     }
     setDraggingIdx(null);
     setDragOverIdx(null);
@@ -217,12 +259,11 @@ const Wordbooks = () => {
           </button>
         </div>
 
-        <section className="mt-3.5">
-          <p className="mb-2.5 px-1 text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            단어장 {categories.length}권
-          </p>
-
-          {categories.length === 0 ? (
+        {categories.length === 0 ? (
+          <section className="mt-3.5">
+            <p className="mb-2.5 px-1 text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+              단어장 0권
+            </p>
             <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
               <p className="text-[15px] text-foreground">단어장이 없습니다</p>
               <p className="mt-1 font-word text-[12px] text-muted-foreground">Belum ada kosakata</p>
@@ -234,39 +275,47 @@ const Wordbooks = () => {
                 첫 단어장 만들기
               </button>
             </div>
-          ) : (
-            // 톱니 드롭다운이 잘리지 않도록 overflow-hidden 은 두지 않습니다.
-            <div className="rounded-2xl border border-border bg-card">
-              {categories.map((cat, idx) => (
-                <CategoryCard
-                  key={cat.id}
-                  category={cat}
-                  onAddWord={handleAddWord}
-                  onChanged={refresh}
-                  index={idx}
-                  last={idx === categories.length - 1}
-                  cardRef={(el) => { cardRefs.current[idx] = el; }}
-                  isDragging={draggingIndex === idx}
-                  isDropTarget={dragOverIndex === idx && draggingIndex !== idx}
-                  onTouchStart={makeTouchStart(idx, cat)}
-                  onTouchEnd={makeTouchEnd()}
-                  onMouseDown={makeMouseDown(idx, cat)}
-                  onCancelDrag={cancelLongPress}
-                  onMoveTop={() => {
-                    if (idx === 0) return;
-                    moveCategoryToEdgeWithin(cat.id, categories.map((c) => c.id), true);
-                    refresh();
-                  }}
-                  onMoveBottom={() => {
-                    if (idx === categories.length - 1) return;
-                    moveCategoryToEdgeWithin(cat.id, categories.map((c) => c.id), false);
-                    refresh();
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+          </section>
+        ) : (
+          grouped.map((group, gi) => (
+            <section key={group.label} className={gi === 0 ? "mt-3.5" : "mt-6"}>
+              <p className="mb-2.5 px-1 text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                {group.label} {group.items.length}권
+              </p>
+              {/* 톱니 드롭다운이 잘리지 않도록 overflow-hidden 은 두지 않습니다. */}
+              <div className="rounded-2xl border border-border bg-card">
+                {group.items.map(({ cat, index: idx }, i) => (
+                  <CategoryCard
+                    key={cat.id}
+                    category={cat}
+                    onAddWord={handleAddWord}
+                    onChanged={refresh}
+                    index={idx}
+                    first={i === 0}
+                    last={i === group.items.length - 1}
+                    cardRef={(el) => { cardRefs.current[idx] = el; }}
+                    isDragging={draggingIndex === idx}
+                    isDropTarget={dragOverIndex === idx && draggingIndex !== idx}
+                    onTouchStart={makeTouchStart(idx, cat)}
+                    onTouchEnd={makeTouchEnd()}
+                    onMouseDown={makeMouseDown(idx, cat)}
+                    onCancelDrag={cancelLongPress}
+                    onMoveTop={() => {
+                      if (i === 0) return;
+                      moveCategoryToEdgeWithin(cat.id, group.items.map((x) => x.cat.id), true);
+                      refresh();
+                    }}
+                    onMoveBottom={() => {
+                      if (i === group.items.length - 1) return;
+                      moveCategoryToEdgeWithin(cat.id, group.items.map((x) => x.cat.id), false);
+                      refresh();
+                    }}
+                  />
+                ))}
+              </div>
+            </section>
+          ))
+        )}
       </div>
 
       {floatCat && floatPos && (
