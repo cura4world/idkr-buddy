@@ -15,7 +15,10 @@ import {
   List,
   Loader2,
   RotateCcw,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
+import { useWideMode } from "@/lib/wideMode";
 import { goBackOr } from "@/lib/nav";
 import {
   SermonBlock,
@@ -108,6 +111,7 @@ const styleFor = (kind: string): KindStyle => KIND_STYLE[kind] || KIND_STYLE.bod
 
 const SermonRead = () => {
   const navigate = useNavigate();
+  const { widthClass, canWide, wide, toggle } = useWideMode();
   const location = useLocation();
   const params = useParams();
   const id = params.id || "";
@@ -259,7 +263,7 @@ const SermonRead = () => {
   };
 
   return (
-    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-clip bg-background">
+    <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => goBackOr(navigate, location.key, "/sermon")}
@@ -274,6 +278,17 @@ const SermonRead = () => {
         <h1 className="min-w-0 flex-1 text-lg font-semibold leading-none truncate">
           {rec ? rec.title || "설교문" : "설교문"}
         </h1>
+        {canWide ? (
+          <button
+            type="button"
+            onClick={toggle}
+            className="shrink-0 w-9 h-9 flex items-center justify-center text-muted-foreground active:text-foreground"
+            title={wide ? "원래 크기로" : "넓게 보기"}
+            aria-label={wide ? "원래 크기로" : "넓게 보기"}
+          >
+            {wide ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+          </button>
+        ) : null}
       </header>
 
       <div className="px-4 py-4 pb-24">
@@ -326,9 +341,9 @@ const SermonRead = () => {
         )}
       </div>
 
-      {/* 빠른 이동 — max-w-lg 기준으로 붙여 넓은 화면에서도 본문 오른쪽에 옵니다 */}
+      {/* 빠른 이동 — 본문과 같은 폭에 붙여 넓은 화면에서도 본문 오른쪽에 옵니다 */}
       {!loading && !error && rec ? (
-        <div className="fixed inset-x-0 bottom-6 z-40 mx-auto max-w-lg pointer-events-none">
+        <div className={"fixed inset-x-0 bottom-6 z-40 mx-auto " + widthClass + " pointer-events-none"}>
           <div className="flex flex-col items-end gap-2 pr-4">
             <button
               type="button"
@@ -366,7 +381,7 @@ const SermonRead = () => {
       {tocOpen ? (
         <>
           <div className="fixed inset-0 z-40 bg-black/40" onClick={closeToc} />
-          <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg max-h-[70dvh] overflow-y-auto rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
+          <div className={"fixed inset-x-0 bottom-0 z-50 mx-auto " + widthClass + " max-h-[70dvh] overflow-y-auto rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5"}>
             <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border" />
             <h2 className="px-4 text-base font-semibold text-foreground">목차</h2>
             <div className="mt-3 border-t border-border">
