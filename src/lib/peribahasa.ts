@@ -270,10 +270,6 @@ function writeSavedList(list: SavedPhrase[]): void {
   } catch (e) { /* 무시 */ }
 }
 
-export function countSaved(): number {
-  return loadSavedList().length;
-}
-
 export function isPhraseSaved(id: string): boolean {
   return loadSavedList().some((p) => p.id === id);
 }

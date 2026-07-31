@@ -14,7 +14,6 @@ import {
   takePhrase,
   prefetchNextPhrase,
   clearNextPhrase,
-  countSaved,
   phraseToQuery,
 } from "@/lib/peribahasa";
 import SettingsDialog from "@/components/SettingsDialog";
@@ -314,10 +313,6 @@ const Index = () => {
     navigate("/phrase?" + phraseToQuery(phrase));
   };
 
-  // 저장한 문장 개수 — 하나라도 있을 때만 카드에 모아보기 버튼을 띄웁니다.
-  // 상세 화면에 갔다 돌아오면 이 화면이 다시 뜨므로 그때 새로 셉니다.
-  const [savedCount] = useState(() => countSaved());
-
   const toggleKind = (key: PhraseKind) => {
     setKinds((prev) => {
       const on = prev.indexOf(key) >= 0;
@@ -561,17 +556,15 @@ const Index = () => {
               <p className="flex-1 min-w-0 truncate text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 Bahasa Hari Ini
               </p>
-              {savedCount > 0 ? (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); navigate("/phrase/saved"); }}
-                  className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-yellow-500 active:bg-muted"
-                  title="저장한 문장 모아보기"
-                  aria-label="저장한 문장 모아보기"
-                >
-                  <Bookmark size={15} fill="currentColor" />
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); navigate("/phrase/saved"); }}
+                className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
+                title="저장한 문장 모아보기"
+                aria-label="저장한 문장 모아보기"
+              >
+                <Bookmark size={15} fill="none" />
+              </button>
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); openKindSheet(); }}
