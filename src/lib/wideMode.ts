@@ -7,7 +7,11 @@
 import { useCallback, useEffect, useState } from "react";
 
 const KEY = "app-wide-mode";
-const MIN_PX = 768; // 이 폭 이상일 때만 "넓게 보기"가 의미가 있습니다
+// 이 폭 이상일 때만 "넓게 보기"가 의미가 있습니다.
+// 기본 폭이 max-w-lg(512px)이므로 600 이상이면 양옆이 눈에 띄게 빕니다.
+// 폴더블을 펼쳤을 때의 CSS 폭은 삼성 '화면 크게/작게' 설정에 따라 크게 달라져서
+// (같은 폴드라도 대략 650~840px) 768로 잡으면 버튼이 아예 안 나올 수 있습니다.
+const MIN_PX = 600;
 
 function mediaQuery(): string {
   return "(min-width: " + MIN_PX + "px)";
