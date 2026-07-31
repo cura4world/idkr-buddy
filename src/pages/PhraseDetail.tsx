@@ -1,11 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Volume2, Loader2, RotateCcw, BookOpen } from "lucide-react";
+import { ArrowLeft, Volume2, Loader2, RotateCcw, Plus, Check, X } from "lucide-react";
+import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import { getPhraseDetail, PhraseDetail as PhraseDetailData } from "@/lib/phrase";
+import { quickLookupWord } from "@/lib/story";
+import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
+import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { fetchChapterKo, getBook } from "@/lib/bible";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import SettingsDialog from "@/components/SettingsDialog";
+
+const MY_WORDBOOK_ID = "my-wordbook";
 
 /* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 */
 const speak = (text: string, lang: "id" | "ko") => {
@@ -23,25 +29,6 @@ const speak = (text: string, lang: "id" | "ko") => {
     u.rate = 0.95;
     window.speechSynthesis?.speak?.(u);
   } catch (e) { /* 지원하지 않는 기기는 조용히 넘어갑니다 */ }
-};
-
-/* 인니어 단어는 사전형이 소문자입니다. 고유명사와 약어만 대문자를 살립니다. */
-const PROPER_NOUNS = new Set([
-  "allah", "tuhan", "yesus", "kristus", "roh", "kudus", "alkitab", "injil", "kristen",
-  "indonesia", "jakarta", "bali", "jawa",
-  "minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu",
-  "januari", "februari", "maret", "april", "mei", "juni",
-  "juli", "agustus", "september", "oktober", "november", "desember",
-]);
-
-const lowerFirstWord = (word: string): string => {
-  const t = word.trim();
-  if (t === "") return word;
-  // 약어(TB, PGI 등)는 그대로 둡니다.
-  if (t.length > 1 && t === t.toUpperCase()) return t;
-  const head = t.split(new RegExp("[\\s-]"))[0].toLowerCase();
-  if (PROPER_NOUNS.has(head)) return t;
-  return t.charAt(0).toLowerCase() + t.slice(1);
 };
 
 const Label = ({ children }: { children: React.ReactNode }) => (
@@ -77,6 +64,17 @@ const PhraseDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // 표제 문장의 단어 탭 → 미니 팝업 (성경·이야기와 같은 방식)
+  const [popupWord, setPopupWord] = useState<string | null>(null);
+  const [popupLoading, setPopupLoading] = useState(false);
+  const [popupMeaning, setPopupMeaning] = useState("");
+  const [popupInfo, setPopupInfo] = useState("");
+  const [popupSentenceKo, setPopupSentenceKo] = useState(""); // 단어장 저장용 (표시 안 함)
+  const [popupSaved, setPopupSaved] = useState(false);
+  const popupReqId = useRef(0);
+  // 이 화면에서 눌러본 단어는 다시 누르면 즉시 표시
+  const wordCache = useRef(new Map<string, { meaning: string; info: string; sentenceKo: string }>());
 
   const load = useCallback(async (force = false, koHint?: string) => {
     setLoading(true);
@@ -129,6 +127,92 @@ const PhraseDetail = () => {
     };
   }, []);
 
+  // 조회 순서: 화면 캐시 → 폰 저장소(IndexedDB) → Gemini API
+  const openWordPopup = async (rawToken: string) => {
+    const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
+    if (!word) return;
+    const key = word.toLowerCase();
+    const reqId = ++popupReqId.current;
+    setPopupWord(word);
+    setPopupSaved(hasWordInCategory(MY_WORDBOOK_ID, word));
+
+    const cached = wordCache.current.get(key);
+    if (cached) {
+      setPopupMeaning(cached.meaning);
+      setPopupInfo(cached.info);
+      setPopupSentenceKo(cached.sentenceKo);
+      setPopupLoading(false);
+      return;
+    }
+
+    setPopupMeaning("");
+    setPopupInfo("");
+    setPopupSentenceKo("");
+    setPopupLoading(true);
+
+    const stored = await getLookupWord(word);
+    if (stored && popupReqId.current === reqId) {
+      const rec = { meaning: stored.meaning, info: stored.info, sentenceKo: "" };
+      wordCache.current.set(key, rec);
+      setPopupMeaning(rec.meaning);
+      setPopupInfo(rec.info);
+      setPopupLoading(false);
+      return;
+    }
+
+    quickLookupWord(word, item.id)
+      .then((r) => {
+        wordCache.current.set(key, r);
+        saveLookupWord(word, r.meaning, r.info); // 폰에 영구 저장
+        if (popupReqId.current !== reqId) return;
+        setPopupMeaning(r.meaning);
+        setPopupInfo(r.info);
+        setPopupSentenceKo(r.sentenceKo);
+      })
+      .catch(() => {
+        if (popupReqId.current === reqId) setPopupMeaning("뜻을 불러오지 못했어요. 다시 탭해주세요");
+      })
+      .finally(() => {
+        if (popupReqId.current === reqId) setPopupLoading(false);
+      });
+  };
+
+  const copyPopupWord = async () => {
+    if (!popupWord) return;
+    try {
+      await navigator.clipboard.writeText(popupWord);
+      toast("복사되었습니다");
+    } catch (e) {
+      toast("복사에 실패했어요");
+    }
+  };
+
+  const savePopupWord = () => {
+    if (!popupWord || popupSaved || popupLoading || !popupMeaning) return;
+    const { added } = addWordIfAbsent({
+      word: popupWord,
+      meaning: popupMeaning,
+      example: item.id,
+      exampleMeaning: popupSentenceKo || item.ko,
+      categoryId: MY_WORDBOOK_ID,
+    });
+    setPopupSaved(true);
+    toast(added ? "내 단어장에 저장되었습니다" : "이미 내 단어장에 있는 단어입니다");
+  };
+
+  // 표제 문장을 단어 단위로 쪼개 탭 가능하게 렌더링
+  const renderTokens = (text: string) =>
+    text.split(" ").map((tok, ti) => (
+      <span key={"t" + ti}>
+        <span
+          onClick={(e) => { e.stopPropagation(); openWordPopup(tok); }}
+          className="cursor-pointer rounded active:bg-primary/20"
+        >
+          {tok}
+        </span>{" "}
+      </span>
+    ));
+
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto pb-10">
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
@@ -152,7 +236,7 @@ const PhraseDetail = () => {
                 (isAyat ? "text-[17px] leading-[1.65]" : "text-[19px] leading-[1.5]")
               }
             >
-              {item.id}
+              {renderTokens(item.id)}
             </p>
             <button
               onClick={() => speak(item.id, "id")}
@@ -169,6 +253,9 @@ const PhraseDetail = () => {
             <p className="mt-3 font-word text-[13.5px] text-muted-foreground">{refLabel}</p>
           ) : null}
         </div>
+        <p className="mt-2 text-center text-[11.5px] font-gothic text-muted-foreground">
+          단어를 탭하면 뜻이 나옵니다
+        </p>
 
         {loading ? (
           <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-10 text-center">
@@ -214,48 +301,6 @@ const PhraseDetail = () => {
                 <Label>어떤 뜻인가요</Label>
                 <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
                   <p className="font-gothic text-[13px] leading-[1.45] text-foreground/85">{data.meaning}</p>
-                </div>
-              </section>
-            ) : null}
-
-            {data.words.length > 0 ? (
-              <section className="mt-5">
-                <Label>단어</Label>
-                <div className="overflow-hidden rounded-2xl border border-border bg-card">
-                  {data.words.map((w, i) => (
-                    <div
-                      key={w.word + i}
-                      className={
-                        "px-4 py-3.5 " + (i === data.words.length - 1 ? "" : "border-b border-border")
-                      }
-                    >
-                      <div className="flex items-center gap-2">
-                        <p className="font-word text-[16px] font-semibold text-foreground">{lowerFirstWord(w.word)}</p>
-                        <button
-                          onClick={() => speak(w.word, "id")}
-                          className="shrink-0 text-muted-foreground active:text-primary"
-                          title="발음 듣기"
-                        >
-                          <Volume2 size={15} />
-                        </button>
-                        <button
-                          onClick={() =>
-                            navigate("/dictionary?q=" + encodeURIComponent(w.word) + "&from=phrase")
-                          }
-                          className="ml-auto shrink-0 text-muted-foreground active:text-primary"
-                          title="사전에서 보기"
-                        >
-                          <BookOpen size={15} />
-                        </button>
-                      </div>
-                      <p className="mt-1 text-[13.5px] leading-snug text-foreground/85">{w.ko}</p>
-                      {w.arti ? (
-                        <p className="mt-1 font-word text-[12.5px] leading-snug text-muted-foreground">
-                          {w.arti}
-                        </p>
-                      ) : null}
-                    </div>
-                  ))}
                 </div>
               </section>
             ) : null}
@@ -306,6 +351,71 @@ const PhraseDetail = () => {
           </>
         ) : null}
       </div>
+
+      {/* 단어 미니 팝업 */}
+      {popupWord && (
+        <div className="fixed inset-0 z-50" onClick={() => setPopupWord(null)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="absolute bottom-0 left-0 right-0 max-w-lg mx-auto bg-card rounded-t-2xl px-5 pt-5 pb-7"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-lg font-bold text-foreground break-words min-w-0 font-word">{popupWord}</p>
+              <button
+                onClick={() => speak(popupWord, "id")}
+                className="shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center"
+                title="발음 듣기"
+              >
+                <Volume2 size={15} />
+              </button>
+              <span className="flex-1" />
+              <button
+                onClick={() => setPopupWord(null)}
+                className="shrink-0 w-8 h-8 rounded-full bg-black/5 text-muted-foreground flex items-center justify-center"
+                title="닫기"
+              >
+                <X size={15} />
+              </button>
+            </div>
+            {popupLoading ? (
+              <div className="flex items-center gap-2 text-muted-foreground mt-2 text-sm">
+                <Loader2 size={15} className="animate-spin" /> 뜻을 찾고 있어요...
+              </div>
+            ) : (
+              <>
+                <p className="text-sm font-bold text-foreground mt-1.5 break-words font-gothic">{popupMeaning}</p>
+                {popupInfo && (
+                  <p className="text-xs text-muted-foreground mt-1 break-words font-gothic">{popupInfo}</p>
+                )}
+              </>
+            )}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={savePopupWord}
+                disabled={popupSaved || popupLoading || !popupMeaning}
+                className={`flex-1 min-w-0 flex items-center justify-center gap-1 rounded-full py-2 text-xs font-medium ${
+                  popupSaved ? "bg-black/5 text-muted-foreground" : "bg-primary text-white disabled:opacity-50"
+                }`}
+              >
+                {popupSaved ? <><Check size={13} /> 저장됨</> : <><Plus size={13} /> 내 단어장에 담기</>}
+              </button>
+              <button
+                onClick={copyPopupWord}
+                className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-foreground/80"
+              >
+                복사
+              </button>
+              <button
+                onClick={() => navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=phrase")}
+                className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-foreground/80"
+              >
+                사전에서 보기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
