@@ -4,7 +4,7 @@ import { getCategories, reorderCategoryById, moveCategoryToEdgeWithin, restoreSh
 import CategoryCard from "@/components/CategoryCard";
 import AddWordDialog from "@/components/AddWordDialog";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 const MY_WORDBOOK_ID = "my-wordbook";
@@ -247,13 +247,14 @@ const Wordbooks = () => {
         <div className="flex justify-end gap-4 pt-3">
           <button
             onClick={handleRestore}
-            className="text-sm text-foreground hover:underline underline-offset-4 font-gothic"
+            className="group inline-flex items-center gap-1 text-xs text-foreground font-gothic"
           >
-            공용 복구
+            <RotateCcw size={13} className="shrink-0" />
+            <span className="group-hover:underline underline-offset-4">공용 단어장 복구</span>
           </button>
           <button
             onClick={() => setAddCatOpen(true)}
-            className="text-sm text-foreground hover:underline underline-offset-4 font-gothic"
+            className="text-xs text-foreground hover:underline underline-offset-4 font-gothic"
           >
             + 단어장 추가
           </button>
