@@ -8,7 +8,10 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, ChevronDown,
   Loader2, RotateCcw, Volume2, X, Check, Plus,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
+import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
 import { BIBLE_BOOKS, getBook, fetchChapter, fetchChapterKo, BibleVerse } from "@/lib/bible";
 import { quickLookupWord } from "@/lib/story";
@@ -62,6 +65,7 @@ const speak = (text: string, lang: "id" | "ko") => {
 
 const BibleRead = () => {
   const navigate = useNavigate();
+  const { widthClass, canWide, wide, toggle } = useWideMode();
 
   // ---------- 위치 / 본문 ----------
   const [pos, setPos] = useState<BiblePos>(loadLastPos);
@@ -371,7 +375,7 @@ const BibleRead = () => {
 
   // ---------- 화면 ----------
   return (
-    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-clip bg-background">
+    <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       <div ref={scrollTopRef} />
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
@@ -382,6 +386,17 @@ const BibleRead = () => {
           <ArrowLeft size={20} />
         </button>
         <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">ALKITAB</h1>
+        {canWide ? (
+          <button
+            type="button"
+            onClick={toggle}
+            className="shrink-0 w-9 h-9 flex items-center justify-center text-muted-foreground active:text-foreground"
+            title={wide ? "원래 크기로" : "넓게 보기"}
+            aria-label={wide ? "원래 크기로" : "넓게 보기"}
+          >
+            {wide ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+          </button>
+        ) : null}
       </header>
 
       <div className="px-4 py-4">
@@ -499,7 +514,7 @@ const BibleRead = () => {
         <div className="fixed inset-0 z-50" onClick={closeSub}>
           <div className="absolute inset-0 bg-black/40" />
           <div
-            className="absolute bottom-0 left-0 right-0 max-w-lg mx-auto bg-card rounded-t-2xl px-5 pt-5 pb-7"
+            className={"absolute bottom-0 left-0 right-0 " + widthClass + " mx-auto bg-card rounded-t-2xl px-5 pt-5 pb-7"}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 min-w-0">
