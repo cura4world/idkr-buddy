@@ -587,7 +587,7 @@ const Prayer = () => {
 
   const renderKorean = (text: string) =>
     text.split(new RegExp("\\n{2,}")).filter((p) => p.trim()).map((para, i) => (
-      <p key={i} className="mb-3 text-sm leading-relaxed text-gray-800 font-body">{para}</p>
+      <p key={i} className="mb-3 text-sm leading-relaxed text-gray-800 font-gothic">{para}</p>
     ));
 
   const chip = (selected: boolean) =>
