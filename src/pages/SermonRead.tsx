@@ -343,7 +343,10 @@ const SermonRead = () => {
   const [inkTick, setInkTick] = useState(0);
   const [inkH, setInkH] = useState(0);
   const [barHidden, setBarHidden] = useState(false);
-  const [isFs, setIsFs] = useState(false);
+  // 몰입(전체화면) 모드. 실제 전체화면이 먹히지 않는 WebView(APK)에서도 헤더를 접어 화면을 넓혀줍니다.
+  const [immersive, setImmersive] = useState(false);
+  // 지우개 메뉴는 도구막대(가로 스크롤 + transform) 밖에서 fixed 로 띄웁니다. 그 위치.
+  const [menuPos, setMenuPos] = useState<{ left: number; top: number } | null>(null);
 
   // 그리는 중에는 리렌더로 획이 끊기므로, 엔진은 아래 ref 만 읽습니다.
   const toolRef = useRef<InkToolState>(inkTool);
@@ -358,6 +361,7 @@ const SermonRead = () => {
   // 그리기 엔진이 도구막대를 숨길 때 쓰는 통로. 엔진 effect 의 의존성을 늘리지 않으려고 ref 로 둡니다.
   const hideBarRef = useRef<(() => void) | null>(null);
   const barPullRef = useRef<number | null>(null);
+  const eraseAnchorRef = useRef<HTMLDivElement | null>(null);
 
   // ---------- 본문 불러오기 (폰 저장분 우선, 없으면 서버) ----------
   useEffect(() => {
@@ -727,6 +731,7 @@ const SermonRead = () => {
     setEraser(false);
     setEraseMenu(false);
     setBarHidden(false);
+    setImmersive(false);
     setInkMode(true);
     pushSub();
     try {
@@ -753,6 +758,7 @@ const SermonRead = () => {
     if (!wasInkRef.current) return;
     wasInkRef.current = false;
     setBarHidden(false); // 다음에 들어올 때 도구막대가 보이도록
+    setImmersive(false); // 헤더 복구
     try {
       if (document.fullscreenElement && (document as any).exitFullscreen) {
         (document as any).exitFullscreen().catch(() => {});
@@ -832,29 +838,44 @@ const SermonRead = () => {
     barPullRef.current = null;
   };
 
-  // ---------- 필기: 전체화면 토글 ----------
-  // WebView(APK)에는 requestFullscreen 이 없을 수 있어, 있을 때만 버튼을 띄웁니다.
-  const fsSupported =
-    typeof document !== "undefined" &&
-    typeof (document.documentElement as any).requestFullscreen === "function";
-
+  // ---------- 필기: 전체화면(몰입) 토글 ----------
+  // APK 의 WebView 는 requestFullscreen 이 있어도 상태바·내비바를 실제로 감추지 않습니다.
+  // 그래서 시스템 전체화면은 "되면 좋고"로 시도하고, 화면을 넓히는 일은 앱 헤더를 접어서 직접 합니다.
   useEffect(() => {
-    const onFs = () => setIsFs(!!document.fullscreenElement);
-    onFs();
+    const onFs = () => {
+      // 시스템에서 전체화면이 풀리면(뒤로가기·Esc) 몰입 모드도 같이 풉니다.
+      if (!document.fullscreenElement) setImmersive(false);
+    };
     document.addEventListener("fullscreenchange", onFs);
     return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
 
   const toggleFullscreen = () => {
+    const next = !immersive;
+    setImmersive(next);
     try {
-      if (document.fullscreenElement) {
-        const d = document as any;
-        if (d.exitFullscreen) d.exitFullscreen().catch(() => {});
-      } else {
+      if (next) {
         const el = document.documentElement as any;
         if (el.requestFullscreen) el.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+      } else if (document.fullscreenElement) {
+        const d = document as any;
+        if (d.exitFullscreen) d.exitFullscreen().catch(() => {});
       }
     } catch (e) {}
+  };
+
+  // 지우개 메뉴 열기 — 도구막대 밖에 fixed 로 띄우므로 여는 순간 버튼 위치를 재둡니다.
+  const toggleEraseMenu = () => {
+    if (eraseMenu) {
+      setEraseMenu(false);
+      return;
+    }
+    const el = eraseAnchorRef.current;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      setMenuPos({ left: r.left, top: r.bottom + 4 });
+    }
+    setEraseMenu(true);
   };
 
   const warnFontLocked = () => {
@@ -1153,7 +1174,12 @@ const SermonRead = () => {
 
   return (
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
-      <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
+      <header
+        className={
+          "sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 items-center gap-3 " +
+          (inkMode && immersive ? "hidden" : "flex")
+        }
+      >
         <button
           onClick={() => goBackOr(navigate, location.key, "/sermon")}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
@@ -1185,13 +1211,16 @@ const SermonRead = () => {
       {inkMode ? (
         <div
           className={
-            "sticky top-[60px] z-20 bg-background border-b border-border px-3 py-1.5 transition-transform duration-200 ease-out " +
+            "sticky z-20 bg-background border-b border-border px-3 py-1.5 transition-transform duration-200 ease-out " +
+            (immersive ? "top-0 " : "top-[60px] ") +
             (barHidden ? "-translate-y-[calc(100%+4px)] pointer-events-none" : "translate-y-0")
           }
         >
-          {/* 1줄: 도구 │ 굵기 │ 되돌리기·전체화면·완료 */}
+          {/* 1줄: 도구 │ 굵기 │ 되돌리기·전체화면·완료
+              px-1/py-1 은 선택 표시(ring)가 가로 스크롤 영역에 잘리지 않게 두는 여백입니다.
+              같은 크기의 음수 마진으로 상쇄해 실제 자리 차지는 그대로입니다. */}
           <div
-            className="flex flex-nowrap items-center gap-1 overflow-x-auto"
+            className="flex flex-nowrap items-center gap-1 overflow-x-auto px-1 -mx-1 py-1 -my-1"
             style={{ scrollbarWidth: "none" }}
           >
             {/* 손잡이 — 수동으로 접기 */}
@@ -1227,6 +1256,7 @@ const SermonRead = () => {
 
             {/* 지우개 ▾ — 왼쪽은 토글, 오른쪽 화살표는 메뉴 */}
             <div
+              ref={eraseAnchorRef}
               className={
                 "relative flex items-center rounded-full border border-border bg-card shrink-0 " +
                 (eraser ? "ring-2 ring-foreground" : "")
@@ -1247,34 +1277,12 @@ const SermonRead = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setEraseMenu((v) => !v)}
+                onClick={toggleEraseMenu}
                 className="h-8 pr-2 pl-0.5 flex items-center text-foreground/70"
                 aria-label="지우개 메뉴"
               >
                 <ChevronDown size={14} />
               </button>
-              {eraseMenu ? (
-                <div className="absolute left-0 top-full mt-1 z-50 min-w-[9rem] rounded-xl border border-border bg-card shadow-lg overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEraser(true);
-                      setEraseMenu(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-[0.6875rem] font-gothic text-foreground active:bg-muted"
-                  >
-                    <Eraser size={14} /> 획 지우개
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearAllInk}
-                    disabled={!hasInk}
-                    className="w-full flex items-center gap-2 border-t border-border px-3 py-2.5 text-[0.6875rem] font-gothic text-red-600 active:bg-muted disabled:opacity-40"
-                  >
-                    <Trash2 size={14} /> 전체 지우기
-                  </button>
-                </div>
-              ) : null}
             </div>
 
             <span className="mx-0.5 h-5 w-px bg-border shrink-0" />
@@ -1314,16 +1322,14 @@ const SermonRead = () => {
             >
               <Undo2 size={15} />
             </button>
-            {fsSupported ? (
-              <button
-                type="button"
-                onClick={toggleFullscreen}
-                className="w-8 h-8 rounded-full border border-border bg-card flex items-center justify-center text-foreground/70 active:bg-muted shrink-0"
-                aria-label={isFs ? "전체화면 끄기" : "전체화면"}
-              >
-                {isFs ? <Minimize size={15} /> : <Maximize size={15} />}
-              </button>
-            ) : null}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="w-8 h-8 rounded-full border border-border bg-card flex items-center justify-center text-foreground/70 active:bg-muted shrink-0"
+              aria-label={immersive ? "전체화면 끄기" : "전체화면"}
+            >
+              {immersive ? <Minimize size={15} /> : <Maximize size={15} />}
+            </button>
             <button
               type="button"
               onClick={exitInkMode}
@@ -1333,9 +1339,13 @@ const SermonRead = () => {
             </button>
           </div>
 
-          {/* 2줄: 색 — 한 줄 고정. justify-between 으로 폭 전체에 퍼뜨려 오른쪽 빈 공간을 없앱니다. */}
+          {/* 2줄: 색 — 한 줄 고정.
+              펜(14색)은 justify-between 으로 폭 전체에 퍼뜨리고, 형광펜(6색)은 왼쪽으로 모읍니다. */}
           <div
-            className="mt-1.5 flex flex-nowrap items-center justify-between gap-1 overflow-x-auto"
+            className={
+              "mt-1.5 flex flex-nowrap items-center overflow-x-auto px-1 -mx-1 py-1 -my-1 " +
+              (inkTool.tool === "pen" ? "justify-between gap-1" : "justify-start gap-2")
+            }
             style={{ scrollbarWidth: "none" }}
           >
             {(inkTool.tool === "pen" ? PEN_COLORS : HL_COLORS).map((c) => (
@@ -1357,10 +1367,35 @@ const SermonRead = () => {
         </div>
       ) : null}
 
-      {/* 지우개 메뉴 바깥 탭 — 도구막대에 transform 이 걸려 있어 그 안의 fixed 는 화면 전체를 덮지 못합니다.
-          그래서 백드롭만 밖으로 빼고, 도구막대(z-20)보다 아래인 z-10 에 둡니다. */}
-      {inkMode && eraseMenu ? (
-        <div className="fixed inset-0 z-10" onClick={() => setEraseMenu(false)} />
+      {/* 지우개 메뉴 — 도구막대 1줄은 가로 스크롤(overflow-x-auto)이라 그 안의 드롭다운은 세로로 잘려
+          보이지 않습니다. 그래서 도구막대 밖에서 fixed 로, 버튼 위치를 재어 띄웁니다. */}
+      {inkMode && eraseMenu && menuPos ? (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setEraseMenu(false)} />
+          <div
+            className="fixed z-50 min-w-[9rem] rounded-xl border border-border bg-card shadow-lg overflow-hidden"
+            style={{ left: String(menuPos.left) + "px", top: String(menuPos.top) + "px" }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setEraser(true);
+                setEraseMenu(false);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-[0.6875rem] font-gothic text-foreground active:bg-muted"
+            >
+              <Eraser size={14} /> 획 지우개
+            </button>
+            <button
+              type="button"
+              onClick={clearAllInk}
+              disabled={!hasInk}
+              className="w-full flex items-center gap-2 border-t border-border px-3 py-2.5 text-[0.6875rem] font-gothic text-red-600 active:bg-muted disabled:opacity-40"
+            >
+              <Trash2 size={14} /> 전체 지우기
+            </button>
+          </div>
+        </>
       ) : null}
 
       {/* 접힌 도구막대 되살리기 — 화면 맨 위에서 아래로 끌기 + 안전장치 알약 */}
@@ -1377,7 +1412,10 @@ const SermonRead = () => {
           <button
             type="button"
             onClick={() => setBarHidden(false)}
-            className="fixed top-[64px] left-1/2 -translate-x-1/2 z-30 h-6 px-3 rounded-full bg-card/90 border border-border shadow-sm flex items-center gap-1 text-[0.625rem] font-gothic text-foreground/60"
+            className={
+              "fixed left-1/2 -translate-x-1/2 z-30 h-6 px-3 rounded-full bg-card/90 border border-border shadow-sm flex items-center gap-1 text-[0.625rem] font-gothic text-foreground/60 " +
+              (immersive ? "top-1" : "top-[64px]")
+            }
           >
             <ChevronDown size={12} /> 도구
           </button>
