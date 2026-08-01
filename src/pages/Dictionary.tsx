@@ -903,7 +903,7 @@ const Dictionary = () => {
                 <div key={i} className={i === 0 ? "mt-3" : "mt-3 pt-3 border-t border-gray-200"}>
                   <span className="inline-block text-[0.6875rem] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 mb-1.5">{row.label}</span>
                   <div className="flex items-start gap-2 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 break-words min-w-0 flex-1">{row.v.id}</p>
+                    <p className="text-base font-semibold text-gray-900 break-words min-w-0 flex-1">{row.v.id}</p>
                     <button
                       onClick={() => speak(row.v.id, "id")}
                       className="shrink-0 text-primary/70 hover:text-primary mt-0.5"
