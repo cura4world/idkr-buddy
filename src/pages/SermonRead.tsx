@@ -1,6 +1,7 @@
 // src/pages/SermonRead.tsx
 // 설교문 읽기 (/sermon/:id).
-// 가독성이 목적인 화면이라 위아래 스크롤만 됩니다 — 좌우 스와이프 플립도, 단어 팝업도 없습니다.
+// 가독성이 목적인 화면이라 위아래 스크롤만 됩니다 — 좌우 스와이프 플립은 없습니다.
+// 인도네시아어 단어를 탭하면 성경 읽기와 같은 뜻 팝업이 아래에서 올라옵니다.
 // 인도네시아어와 한국어를 뒤집지 않고 한 화면에 위아래로 같이 보여줍니다.
 
 import { useEffect, useRef, useState } from "react";
@@ -17,9 +18,16 @@ import {
   RotateCcw,
   Maximize2,
   Minimize2,
+  Volume2,
+  X,
+  Check,
 } from "lucide-react";
 import { useWideMode } from "@/lib/wideMode";
 import { goBackOr } from "@/lib/nav";
+import { toast } from "sonner";
+import { quickLookupWord } from "@/lib/story";
+import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
+import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import {
   SermonBlock,
   SermonRecord,
@@ -28,6 +36,22 @@ import {
   saveSermon,
   formatSermonDate,
 } from "@/lib/sermon";
+
+const MY_WORDBOOK_ID = "my-wordbook";
+
+const speak = (text: string, lang: "id" | "ko") => {
+  if ((window as any).AndroidTTS) {
+    try { (window as any).AndroidTTS.speak(text, lang === "ko" ? "ko-KR" : "id-ID"); } catch (e) {}
+    return;
+  }
+  try {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang === "ko" ? "ko-KR" : "id-ID";
+    utterance.rate = 0.9;
+    (speechSynthesis as any)?.cancel?.();
+    setTimeout(() => { try { (speechSynthesis as any)?.speak?.(utterance); } catch (e) {} }, 150);
+  } catch (e) {}
+};
 
 // ---------- 글자 크기 (이 화면 전용) ----------
 // 앱 전체 배율(fontScale.ts)과는 별개입니다.
@@ -124,9 +148,20 @@ const SermonRead = () => {
   const [fontStep, setFontStep] = useState(loadFontStep);
 
   const [tocOpen, setTocOpen] = useState(false);
-  const tocOpenRef = useRef(false);
-  const tocPushedRef = useRef(false);
+  const subOpenRef = useRef(false);
+  const subPushedRef = useRef(false);
   const pendingScroll = useRef<number | null>(null);
+
+  // 단어 탭 팝업 (성경 읽기와 동일한 3단 캐시)
+  const [popupWord, setPopupWord] = useState<string | null>(null);
+  const [popupSentence, setPopupSentence] = useState("");
+  const [popupLoading, setPopupLoading] = useState(false);
+  const [popupMeaning, setPopupMeaning] = useState("");
+  const [popupInfo, setPopupInfo] = useState("");
+  const [popupSentenceKo, setPopupSentenceKo] = useState("");
+  const [popupSaved, setPopupSaved] = useState(false);
+  const popupReqId = useRef(0);
+  const wordCache = useRef(new Map<string, { meaning: string; info: string; sentenceKo: string }>());
 
   // ---------- 본문 불러오기 (폰 저장분 우선, 없으면 서버) ----------
   useEffect(() => {
@@ -166,22 +201,27 @@ const SermonRead = () => {
     };
   }, [id, reloadTick]);
 
-  // ---------- 목차 시트: 폰 뒤로가기로도 닫히게 (성경 읽기와 같은 방식) ----------
-  const openToc = () => {
-    setTocOpen(true);
-    tocOpenRef.current = true;
+  // ---------- 목차 시트 / 단어 팝업: 폰 뒤로가기로도 닫히게 (성경 읽기와 같은 방식) ----------
+  const pushSub = () => {
+    if (subOpenRef.current) return;
+    subOpenRef.current = true;
     try {
-      window.history.pushState({ sermonToc: true }, "");
-      tocPushedRef.current = true;
+      window.history.pushState({ sermonSub: true }, "");
+      subPushedRef.current = true;
     } catch (e) {
-      tocPushedRef.current = false;
+      subPushedRef.current = false;
     }
   };
 
-  const closeToc = () => {
-    if (tocPushedRef.current) {
-      tocPushedRef.current = false;
-      tocOpenRef.current = false;
+  const resetSub = () => {
+    setTocOpen(false);
+    setPopupWord(null);
+  };
+
+  const closeSub = () => {
+    if (subPushedRef.current) {
+      subPushedRef.current = false;
+      subOpenRef.current = false;
       try {
         window.history.back();
         return;
@@ -189,16 +229,23 @@ const SermonRead = () => {
         // 아래에서 직접 닫습니다
       }
     }
-    tocOpenRef.current = false;
-    setTocOpen(false);
+    subOpenRef.current = false;
+    resetSub();
   };
+
+  const openToc = () => {
+    setTocOpen(true);
+    pushSub();
+  };
+
+  const closeToc = () => closeSub();
 
   useEffect(() => {
     const onPop = () => {
-      if (tocOpenRef.current) {
-        tocOpenRef.current = false;
-        tocPushedRef.current = false;
-        setTocOpen(false);
+      if (subOpenRef.current) {
+        subOpenRef.current = false;
+        subPushedRef.current = false;
+        resetSub();
       }
     };
     window.addEventListener("popstate", onPop);
@@ -223,6 +270,97 @@ const SermonRead = () => {
     pendingScroll.current = idx;
     closeToc();
   };
+
+  const openWordPopup = async (rawToken: string, sentence: string) => {
+    const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
+    if (!word) return;
+    const key = word.toLowerCase();
+    const reqId = ++popupReqId.current;
+    setPopupWord(word);
+    setPopupSentence(sentence);
+    setPopupSaved(hasWordInCategory(MY_WORDBOOK_ID, word));
+    pushSub();
+
+    const cached = wordCache.current.get(key);
+    if (cached) {
+      setPopupMeaning(cached.meaning);
+      setPopupInfo(cached.info);
+      setPopupSentenceKo(cached.sentenceKo);
+      setPopupLoading(false);
+      return;
+    }
+
+    setPopupMeaning("");
+    setPopupInfo("");
+    setPopupSentenceKo("");
+    setPopupLoading(true);
+
+    const stored = await getLookupWord(word);
+    if (stored && popupReqId.current === reqId) {
+      const rec2 = { meaning: stored.meaning, info: stored.info, sentenceKo: "" };
+      wordCache.current.set(key, rec2);
+      setPopupMeaning(rec2.meaning);
+      setPopupInfo(rec2.info);
+      setPopupLoading(false);
+      return;
+    }
+
+    quickLookupWord(word, sentence)
+      .then((r) => {
+        wordCache.current.set(key, r);
+        saveLookupWord(word, r.meaning, r.info);
+        if (popupReqId.current !== reqId) return;
+        setPopupMeaning(r.meaning);
+        setPopupInfo(r.info);
+        setPopupSentenceKo(r.sentenceKo);
+      })
+      .catch(() => {
+        if (popupReqId.current === reqId) setPopupMeaning("뜻을 불러오지 못했어요. 다시 탭해주세요");
+      })
+      .finally(() => {
+        if (popupReqId.current === reqId) setPopupLoading(false);
+      });
+  };
+
+  const copyPopupWord = async () => {
+    if (!popupWord) return;
+    try {
+      await navigator.clipboard.writeText(popupWord);
+      toast("복사되었습니다");
+    } catch (e) {
+      toast("복사에 실패했어요");
+    }
+  };
+
+  const openInDictionary = () => {
+    if (!popupWord) return;
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=sermon");
+  };
+
+  const savePopupWord = () => {
+    if (!popupWord || popupSaved || popupLoading || !popupMeaning) return;
+    const { added } = addWordIfAbsent({
+      word: popupWord,
+      meaning: popupMeaning,
+      example: popupSentence,
+      exampleMeaning: popupSentenceKo,
+      categoryId: MY_WORDBOOK_ID,
+    });
+    setPopupSaved(true);
+    toast(added ? "내 단어장에 저장되었습니다" : "이미 내 단어장에 있는 단어입니다");
+  };
+
+  const renderTokens = (text: string, keyPrefix: string) =>
+    text.split(" ").map((tok, ti) => (
+      <span key={keyPrefix + ti}>
+        <span
+          onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
+          className="cursor-pointer rounded active:bg-indigo-500/20"
+        >
+          {tok}
+        </span>{" "}
+      </span>
+    ));
 
   const changeFont = (delta: number) => {
     setFontStep((prev) => {
@@ -250,7 +388,7 @@ const SermonRead = () => {
       >
         {b.id ? (
           <p className={st.idClass} style={{ fontSize: st.idSize }}>
-            {b.id}
+            {renderTokens(b.id, "w" + i + "-")}
           </p>
         ) : null}
         {b.ko ? (
@@ -420,6 +558,70 @@ const SermonRead = () => {
           </div>
         </>
       ) : null}
+
+      {popupWord && (
+        <div className="fixed inset-0 z-50" onClick={closeSub}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className={"absolute bottom-0 left-0 right-0 " + widthClass + " mx-auto bg-card rounded-t-2xl px-5 pt-5 pb-7"}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">{popupWord}</p>
+              <button
+                onClick={() => speak(popupWord, "id")}
+                className="shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center"
+                title="발음 듣기"
+              >
+                <Volume2 size={15} />
+              </button>
+              <span className="flex-1" />
+              <button
+                onClick={closeSub}
+                className="shrink-0 w-8 h-8 rounded-full bg-black/5 text-gray-500 flex items-center justify-center"
+                title="닫기"
+              >
+                <X size={15} />
+              </button>
+            </div>
+            {popupLoading ? (
+              <div className="flex items-center gap-2 text-gray-400 mt-2 text-sm">
+                <Loader2 size={15} className="animate-spin" /> 뜻을 찾고 있어요...
+              </div>
+            ) : (
+              <>
+                <p className="text-sm font-bold text-gray-900 mt-1.5 break-words font-gothic">{popupMeaning}</p>
+                {popupInfo && (
+                  <p className="text-xs text-gray-500 mt-1 break-words font-gothic">{popupInfo}</p>
+                )}
+              </>
+            )}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={savePopupWord}
+                disabled={popupSaved || popupLoading || !popupMeaning}
+                className={`flex-1 min-w-0 flex items-center justify-center gap-1 rounded-full py-2 text-xs font-medium ${
+                  popupSaved ? "bg-gray-100 text-gray-400" : "bg-primary text-white disabled:opacity-50"
+                }`}
+              >
+                {popupSaved ? <><Check size={13} /> 저장됨</> : <><Plus size={13} /> 내 단어장에 담기</>}
+              </button>
+              <button
+                onClick={copyPopupWord}
+                className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-gray-700"
+              >
+                복사
+              </button>
+              <button
+                onClick={openInDictionary}
+                className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-gray-700"
+              >
+                사전에서 보기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
