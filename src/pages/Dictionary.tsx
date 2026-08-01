@@ -897,13 +897,13 @@ const Dictionary = () => {
         {/* (4) 한국어 문장 결과 → 인니어 (문어체/구어체) */}
         {!loading && koSentence && (
           <div className="bg-card border border-border/60 rounded-xl px-5 py-5 content-bump">
-            <h2 className="text-sm font-medium text-gray-500 break-words">{koSentence.query}</h2>
+            <h2 className="text-xs font-medium text-gray-500 break-words">{koSentence.query}</h2>
             {[{ label: "구어체", v: koSentence.casual }, { label: "문어체", v: koSentence.formal }].map((row, i) => (
               row.v.id ? (
                 <div key={i} className={i === 0 ? "mt-3" : "mt-3 pt-3 border-t border-gray-200"}>
-                  <span className="inline-block text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 mb-1.5">{row.label}</span>
+                  <span className="inline-block text-[0.6875rem] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 mb-1.5">{row.label}</span>
                   <div className="flex items-start gap-2 min-w-0">
-                    <p className="text-base font-semibold text-gray-900 break-words min-w-0 flex-1">{row.v.id}</p>
+                    <p className="text-sm font-semibold text-gray-900 break-words min-w-0 flex-1">{row.v.id}</p>
                     <button
                       onClick={() => speak(row.v.id, "id")}
                       className="shrink-0 text-primary/70 hover:text-primary mt-0.5"
@@ -919,11 +919,11 @@ const Dictionary = () => {
             {koSentence.hardWords.length > 0 && (
               <>
                 <Divider />
-                <ul className="space-y-1.5 text-sm text-gray-800 font-gothic">
+                <ul className="space-y-1.5 text-xs text-gray-800 font-gothic">
                   {koSentence.hardWords.map((h, i) => (
                     <li key={i} className="flex gap-2 min-w-0">
                       <span className="text-gray-400">•</span>
-                      <span className="min-w-0 break-words"><span className="font-semibold text-gray-900">{h.word}</span> <span className="text-xs">{h.meaning}</span></span>
+                      <span className="min-w-0 break-words"><span className="font-semibold text-gray-900">{h.word}</span> <span className="text-[0.6875rem]">{h.meaning}</span></span>
                     </li>
                   ))}
                 </ul>
