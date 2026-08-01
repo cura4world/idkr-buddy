@@ -347,7 +347,7 @@ const Story = () => {
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="flex-1 min-w-0 truncate font-word text-[17px] font-semibold tracking-[0.06em]">CERITA INDONESIA</h1>
+          <h1 className="flex-1 min-w-0 truncate font-word text-[1.0625rem] font-semibold tracking-[0.06em]">CERITA INDONESIA</h1>
           {canWide ? (
             <button
               type="button"
@@ -584,9 +584,9 @@ const Story = () => {
                     <p className="text-sm font-semibold text-gray-900 break-words font-word">{s.title}</p>
                     <p className="text-xs text-gray-500 break-words mt-0.5 font-gothic">{s.titleKo}</p>
                     <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                      <span className="text-[11px] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">{s.category}</span>
-                      <span className="text-[11px] font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">난이도 {s.difficulty}</span>
-                      <span className="text-[11px] text-gray-400 ml-auto">{fmtDate(s.createdAt)}</span>
+                      <span className="text-[0.6875rem] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">{s.category}</span>
+                      <span className="text-[0.6875rem] font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">난이도 {s.difficulty}</span>
+                      <span className="text-[0.6875rem] text-gray-400 ml-auto">{fmtDate(s.createdAt)}</span>
                     </div>
                   </button>
                 </li>

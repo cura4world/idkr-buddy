@@ -235,7 +235,7 @@ const PercakapanRead = () => {
             <h1 className="truncate text-base font-semibold leading-tight">
               {scene ? scene.title : "회화집"}
             </h1>
-            <p className="mt-0.5 truncate font-word text-[11.5px] text-muted-foreground">
+            <p className="mt-0.5 truncate font-word text-[0.71875rem] text-muted-foreground">
               {scene ? scene.titleId : ""}
             </p>
           </div>
@@ -243,7 +243,7 @@ const PercakapanRead = () => {
             <button
               type="button"
               onClick={() => percakapanAudioPlayer.playAll(scene)}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-2 text-[12.5px] font-gothic text-foreground/80 active:bg-muted"
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-2 text-[0.78125rem] font-gothic text-foreground/80 active:bg-muted"
             >
               {mineAll && snap.state === "loading" ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -268,7 +268,7 @@ const PercakapanRead = () => {
           ) : null}
         </div>
         {rolesLine ? (
-          <p className="mt-1.5 pl-[2.25rem] truncate font-gothic text-[11.5px] text-muted-foreground">
+          <p className="mt-1.5 pl-[2.25rem] truncate font-gothic text-[0.71875rem] text-muted-foreground">
             {rolesLine}
           </p>
         ) : null}
@@ -294,17 +294,17 @@ const PercakapanRead = () => {
                 >
                   <span
                     className={
-                      "mt-0.5 shrink-0 h-5 w-5 rounded-full flex items-center justify-center text-[10.5px] font-gothic font-semibold " +
+                      "mt-0.5 shrink-0 h-5 w-5 rounded-full flex items-center justify-center text-[0.65625rem] font-gothic font-semibold " +
                       badgeClass(l.s)
                     }
                   >
                     {l.s}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-word text-[15.5px] leading-snug text-foreground">
+                    <p className="font-word text-[0.96875rem] leading-snug text-foreground">
                       {renderTokens(l.id, i + "-")}
                     </p>
-                    <p className="mt-0.5 font-gothic text-[12.5px] leading-snug text-muted-foreground">
+                    <p className="mt-0.5 font-gothic text-[0.78125rem] leading-snug text-muted-foreground">
                       {l.ko}
                     </p>
                   </div>

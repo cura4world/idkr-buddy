@@ -159,7 +159,7 @@ const InsightTips = () => {
                 {t.indo && (
                   <div className="mt-2.5 flex items-center gap-2 bg-emerald-500/[0.07] rounded-xl px-3 py-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-word text-[15px] text-emerald-900 leading-snug">{t.indo}</p>
+                      <p className="font-word text-[0.9375rem] text-emerald-900 leading-snug">{t.indo}</p>
                       {t.indoKo && (
                         <p className="text-xs font-gothic text-gray-500 mt-0.5">{t.indoKo}</p>
                       )}
@@ -190,7 +190,7 @@ const InsightTips = () => {
       </div>
 
       {tips.length > 0 && (
-        <p className="mt-5 text-[11px] font-gothic text-muted-foreground text-center flex items-center justify-center gap-1">
+        <p className="mt-5 text-[0.6875rem] font-gothic text-muted-foreground text-center flex items-center justify-center gap-1">
           <Trash2 size={11} /> 카드를 길게 누르면 삭제할 수 있어요
         </p>
       )}

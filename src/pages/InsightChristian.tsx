@@ -17,7 +17,7 @@ const Fold = ({ title, badge, defaultOpen, children }: { title: string; badge?: 
       >
         <span className="flex-1 text-sm font-semibold text-gray-900">{title}</span>
         {badge && (
-          <span className="text-[11px] font-gothic font-semibold text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-full shrink-0">
+          <span className="text-[0.6875rem] font-gothic font-semibold text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-full shrink-0">
             {badge}
           </span>
         )}
@@ -163,9 +163,9 @@ const DenomList = ({ items }: { items: Denom[] }) => (
     {items.map((d) => (
       <div key={d.a} className="bg-gray-50 rounded-xl px-3 py-2.5">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-[13.5px] font-bold text-gray-900">{d.a}</span>
+          <span className="text-[0.84375rem] font-bold text-gray-900">{d.a}</span>
           <span className="text-xs font-gothic text-gray-500">{d.n}</span>
-          <span className="ml-auto text-[11px] font-gothic font-semibold text-rose-600 shrink-0">{d.m}</span>
+          <span className="ml-auto text-[0.6875rem] font-gothic font-semibold text-rose-600 shrink-0">{d.m}</span>
         </div>
         <p className="mt-1 text-xs font-gothic text-gray-600 leading-relaxed">{d.f}</p>
       </div>
@@ -200,15 +200,15 @@ const InsightChristian = () => {
         <div className="grid grid-cols-3 gap-2 text-center mb-3">
           <div className="bg-rose-500/5 rounded-xl py-2.5">
             <p className="text-lg font-bold text-rose-600">10.5%</p>
-            <p className="text-[11px] font-gothic text-gray-500">전체 기독교</p>
+            <p className="text-[0.6875rem] font-gothic text-gray-500">전체 기독교</p>
           </div>
           <div className="bg-rose-500/5 rounded-xl py-2.5">
             <p className="text-lg font-bold text-rose-600">7.4%</p>
-            <p className="text-[11px] font-gothic text-gray-500">개신교</p>
+            <p className="text-[0.6875rem] font-gothic text-gray-500">개신교</p>
           </div>
           <div className="bg-rose-500/5 rounded-xl py-2.5">
             <p className="text-lg font-bold text-rose-600">3.1%</p>
-            <p className="text-[11px] font-gothic text-gray-500">가톨릭</p>
+            <p className="text-[0.6875rem] font-gothic text-gray-500">가톨릭</p>
           </div>
         </div>
         <p className="text-sm font-gothic text-gray-700 leading-relaxed">
@@ -220,17 +220,17 @@ const InsightChristian = () => {
 
       <Fold title="왜 동부·내륙이 기독교가 되었나 — 3가지 패턴">
         <ol className="space-y-2.5">
-          <li className="text-[13px] font-gothic text-gray-700 leading-relaxed">
+          <li className="text-[0.8125rem] font-gothic text-gray-700 leading-relaxed">
             <span className="font-semibold text-gray-900">1. 이슬람이 늦게 닿은 곳.</span>{" "}
             이슬람은 무역로를 따라 서쪽 해안에서 동쪽으로 퍼졌습니다. 파푸아·내륙 칼리만탄처럼
             고립된 지역에는 이슬람보다 기독교 선교가 먼저 들어갔습니다.
           </li>
-          <li className="text-[13px] font-gothic text-gray-700 leading-relaxed">
+          <li className="text-[0.8125rem] font-gothic text-gray-700 leading-relaxed">
             <span className="font-semibold text-gray-900">2. 네덜란드 식민 구조.</span>{" "}
             VOC는 이슬람이 강한 자바·서수마트라에서는 선교를 거의 막고, 동부 군도에서는
             적극적으로 기독교화를 추진했습니다.
           </li>
-          <li className="text-[13px] font-gothic text-gray-700 leading-relaxed">
+          <li className="text-[0.8125rem] font-gothic text-gray-700 leading-relaxed">
             <span className="font-semibold text-gray-900">3. 19세기 유럽 선교사들의 집중 투입.</span>{" "}
             VOC 해산(1799) 후 독일·네덜란드 선교사들이 언어 연구·성경 번역·학교·병원을 병행하며
             기독교가 종족 문화의 뿌리로 자리 잡게 했습니다.
@@ -239,10 +239,10 @@ const InsightChristian = () => {
       </Fold>
 
       <Fold title="교파별 지역 분담">
-        <p className="text-[13px] font-gothic text-gray-600 leading-relaxed mb-2.5">
+        <p className="text-[0.8125rem] font-gothic text-gray-600 leading-relaxed mb-2.5">
           네덜란드는 개신교-가톨릭 갈등을 피하려 지역별로 교파를 나눴고, 그 구조가 지금도 남아 있습니다.
         </p>
-        <div className="space-y-1.5 text-[13px] font-gothic">
+        <div className="space-y-1.5 text-[0.8125rem] font-gothic">
           {[
             ["수마트라 바탁족", "개신교 (루터교 HKBP)"],
             ["칼리만탄 다약족", "개신교"],
@@ -266,7 +266,7 @@ const InsightChristian = () => {
         {REGIONS.map((r) => (
           <Fold key={r.t} title={r.t} badge={r.b}>
             {r.d.map((p, i) => (
-              <p key={i} className="text-[13px] font-gothic text-gray-700 leading-relaxed mb-2 last:mb-0">
+              <p key={i} className="text-[0.8125rem] font-gothic text-gray-700 leading-relaxed mb-2 last:mb-0">
                 {p}
               </p>
             ))}
@@ -277,7 +277,7 @@ const InsightChristian = () => {
       {/* 에큐메니컬 구조 */}
       <div className="mb-5">
       <Fold title="교회 연합 구조">
-        <div className="space-y-2 text-[13px] font-gothic">
+        <div className="space-y-2 text-[0.8125rem] font-gothic">
           {[
             ["PGI", "인도네시아 교회협의회 — 개혁·루터교 중심 104개 교단 (2024)"],
             ["KWI", "가톨릭 주교회의 — 38개 교구 전체"],
@@ -315,7 +315,7 @@ const InsightChristian = () => {
           <DenomList items={D_NATIONAL} />
         </Fold>
         <Fold title="오순절·은사주의 — 성장의 중심" badge="5개+">
-          <p className="text-[13px] font-gothic text-gray-600 leading-relaxed mb-2.5">
+          <p className="text-[0.8125rem] font-gothic text-gray-600 leading-relaxed mb-2.5">
             인도네시아 기독교의 &lsquo;보이는 성장&rsquo;은 주로 이 계열에서 일어납니다. 도시 동원력과
             메가처치 문화를 발전시켰습니다.
           </p>
@@ -327,7 +327,7 @@ const InsightChristian = () => {
       <h2 className="text-sm font-semibold text-foreground/80 px-1 mb-2">더 알아보기</h2>
       <div className="space-y-2">
         <Fold title="말레이시아와 비교하면">
-          <div className="space-y-1.5 text-[13px] font-gothic">
+          <div className="space-y-1.5 text-[0.8125rem] font-gothic">
             {[
               ["기독교 비율", "말레이시아 9.1% · 인도네시아 10.5%"],
               ["집중 지역", "말: 동말레이시아(사바·사라왁) · 인: 동인도네시아"],
@@ -346,7 +346,7 @@ const InsightChristian = () => {
           </div>
         </Fold>
         <Fold title="사역·협력 참고">
-          <ul className="space-y-2 text-[13px] font-gothic text-gray-700 leading-relaxed list-disc pl-4">
+          <ul className="space-y-2 text-[0.8125rem] font-gothic text-gray-700 leading-relaxed list-disc pl-4">
             <li>HKBP·GMIM·토라자 교회·GKI-TP 같은 종족 교단은 대학·병원·학교를 보유해 협력의 실제 거점이 됩니다.</li>
             <li>무슬림 다수 환경의 소수 교회(서자바 GKP, 발리 GKPB 등)는 민감성과 지역 교단의 자립을 최우선으로 고려해야 합니다.</li>
             <li>도시·디아스포라 사역(한국 체류 인도네시아인 포함)에서는 GBI 등 오순절 계열의 네트워크가 가장 동원력이 높습니다.</li>
@@ -354,7 +354,7 @@ const InsightChristian = () => {
         </Fold>
       </div>
 
-      <p className="mt-4 text-[11px] font-gothic text-muted-foreground px-1 leading-relaxed">
+      <p className="mt-4 text-[0.6875rem] font-gothic text-muted-foreground px-1 leading-relaxed">
         ※ 교인 수는 각 교단 자체 보고·WCC·LWF 자료 기반 추정치입니다 (2020~2025).
       </p>
     </div>

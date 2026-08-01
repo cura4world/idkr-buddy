@@ -43,7 +43,7 @@ const MENU_ID_NAMES: Record<string, string> = {
 };
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="mb-2.5 px-1 text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+  <p className="mb-2.5 px-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
     {children}
   </p>
 );
@@ -71,8 +71,8 @@ const PrayerRow = ({
   >
     <Icon size={20} strokeWidth={1.6} className="text-muted-foreground shrink-0" />
     <div className="flex-1 min-w-0">
-      <p className="text-[15px] leading-tight text-foreground truncate">{title}</p>
-      <p className="mt-0.5 font-word text-[11.5px] text-muted-foreground truncate">{sub}</p>
+      <p className="text-[0.9375rem] leading-tight text-foreground truncate">{title}</p>
+      <p className="mt-0.5 font-word text-[0.71875rem] text-muted-foreground truncate">{sub}</p>
     </div>
     <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
   </button>
@@ -706,7 +706,7 @@ const Prayer = () => {
                     <button
                       onClick={regenerate}
                       disabled={generating}
-                      className="flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[11px] font-medium font-gothic bg-emerald-500/10 text-emerald-700 disabled:opacity-50"
+                      className="flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[0.6875rem] font-medium font-gothic bg-emerald-500/10 text-emerald-700 disabled:opacity-50"
                     >
                       {generating ? (
                         <><Loader2 size={12} className="animate-spin" /> 만드는 중...</>
@@ -744,7 +744,7 @@ const Prayer = () => {
                   {!isLords && (
                     <div className="rounded-lg bg-emerald-500/5 border border-emerald-200/60 px-3 py-2.5 mt-4">
                       <p className="text-xs leading-relaxed text-gray-800 font-body">{quote.text}</p>
-                      <p className="text-[11px] text-gray-500 font-gothic mt-1">— {quote.source}</p>
+                      <p className="text-[0.6875rem] text-gray-500 font-gothic mt-1">— {quote.source}</p>
                     </div>
                   )}
                 </>
@@ -1058,7 +1058,7 @@ const Prayer = () => {
         <SectionLabel>저장된 기도문 · Doa Tersimpan</SectionLabel>
         {records.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card px-5 py-9 text-center">
-            <p className="font-gothic text-[13.5px] leading-relaxed text-muted-foreground">
+            <p className="font-gothic text-[0.84375rem] leading-relaxed text-muted-foreground">
               아직 만든 기도문이 없어요.
               <br />
               위에서 상황을 골라 첫 기도문을 만들어보세요.
@@ -1080,8 +1080,8 @@ const Prayer = () => {
                 >
                   <Icon size={20} strokeWidth={1.6} className="text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[14px] leading-tight text-foreground truncate">{r.title}</p>
-                    <p className="mt-0.5 font-gothic text-[11.5px] text-muted-foreground truncate">
+                    <p className="text-[0.875rem] leading-tight text-foreground truncate">{r.title}</p>
+                    <p className="mt-0.5 font-gothic text-[0.71875rem] text-muted-foreground truncate">
                       {r.situationLabel}
                       {r.name ? " · " + r.name : ""} · {fmtDate(r.createdAt)}
                     </p>

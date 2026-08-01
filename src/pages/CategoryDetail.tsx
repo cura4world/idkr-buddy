@@ -480,7 +480,7 @@ export default function CategoryDetail() {
           "flex-1 min-w-0 truncate font-semibold " +
           (isMine
             ? "font-gothic text-base uppercase tracking-[0.08em]"
-            : "font-body text-[17px] tracking-tight")
+            : "font-body text-[1.0625rem] tracking-tight")
         }>
           {isMine ? "KOSAKATAKU" : category.name}
         </h1>

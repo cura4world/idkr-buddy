@@ -117,7 +117,7 @@ const ReligionMap = () => (
       ].map((l) => (
         <div key={l.t} className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: l.c }} />
-          <span className="text-[11px] font-gothic text-gray-600">{l.t}</span>
+          <span className="text-[0.6875rem] font-gothic text-gray-600">{l.t}</span>
         </div>
       ))}
     </div>
@@ -222,14 +222,14 @@ const InsightReligion = () => {
           {RELIGIONS.map((r) => (
             <div key={r.name} className="px-4 py-3.5">
               <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-[15px] font-semibold text-gray-900">{r.name}</span>
+                <span className="text-[0.9375rem] font-semibold text-gray-900">{r.name}</span>
                 <span className="text-xs font-gothic font-semibold text-gray-500">{r.pct}</span>
                 <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden ml-1">
                   <div className={`h-full rounded-full ${r.color}`} style={{ width: r.bar + "%" }} />
                 </div>
               </div>
               {r.desc.map((d, i) => (
-                <p key={i} className="text-[13px] font-gothic text-gray-600 leading-relaxed mt-1">
+                <p key={i} className="text-[0.8125rem] font-gothic text-gray-600 leading-relaxed mt-1">
                   {d}
                 </p>
               ))}
@@ -240,12 +240,12 @@ const InsightReligion = () => {
 
       <Fold title="지도로 보는 인도네시아 종교" defaultOpen>
         <ReligionMap />
-        <p className="text-[13px] font-gothic text-gray-600 leading-relaxed mt-3">
+        <p className="text-[0.8125rem] font-gothic text-gray-600 leading-relaxed mt-3">
           지역별로 우세한 종교를 한눈에 볼 수 있습니다. 서부(수마트라·자바)는 이슬람이
           압도적이고, 발리는 힌두교, 동쪽 끝 파푸아와 누사틍가라·말루쿠는 기독교가 다수입니다.
           술라웨시·칼리만탄은 이슬람과 기독교가 섞여 있습니다.
         </p>
-        <p className="text-[11px] font-gothic text-gray-400 leading-relaxed mt-2">
+        <p className="text-[0.6875rem] font-gothic text-gray-400 leading-relaxed mt-2">
           ※ 개념도입니다. 실제 지리와 정확히 일치하지 않으며, 한 지역 안에도 여러 종교가 함께 삽니다.
         </p>
       </Fold>
@@ -269,7 +269,7 @@ const InsightReligion = () => {
       </Fold>
       </div>
 
-      <p className="mt-4 text-[11px] font-gothic text-muted-foreground px-1">
+      <p className="mt-4 text-[0.6875rem] font-gothic text-muted-foreground px-1">
         ※ 비율은 2023~2024년 인도네시아 종교부 통계 기준입니다.
       </p>
     </div>

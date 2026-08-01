@@ -360,7 +360,7 @@ const News = () => {
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="flex-1 min-w-0 truncate font-word text-[17px] font-semibold tracking-[0.06em]">
+          <h1 className="flex-1 min-w-0 truncate font-word text-[1.0625rem] font-semibold tracking-[0.06em]">
             BERITA HARI INI
           </h1>
           {canWide ? (
@@ -522,7 +522,7 @@ const News = () => {
       <div className="px-4 py-4">
         {/* 마스트헤드 */}
         <div className="bg-card border border-border/60 rounded-xl px-4 pt-5 pb-4 text-center">
-          <p className="text-[10px] font-gothic uppercase tracking-[0.3em] text-gray-400">
+          <p className="text-[0.625rem] font-gothic uppercase tracking-[0.3em] text-gray-400">
             Kata kata &middot; Edisi Belajar
           </p>
           <h2 className="font-word text-2xl font-bold tracking-wide text-gray-900 mt-1">
@@ -569,7 +569,7 @@ const News = () => {
               onClick={() => openArticle(selected, 0)}
               className="w-full text-left min-w-0"
             >
-              <span className={`inline-block text-[11px] font-medium rounded-full px-2 py-0.5 ${catStyle(headline.category)}`}>
+              <span className={`inline-block text-[0.6875rem] font-medium rounded-full px-2 py-0.5 ${catStyle(headline.category)}`}>
                 {headline.category}
               </span>
               <h3 className="mt-1.5 text-xl font-bold leading-snug text-gray-900 break-words font-word">
@@ -593,11 +593,11 @@ const News = () => {
                       className="w-full text-left py-3 min-w-0"
                     >
                       <div className="flex items-start gap-2 min-w-0">
-                        <span className={`shrink-0 mt-0.5 text-[11px] font-medium rounded-full px-2 py-0.5 ${catStyle(a.category)}`}>
+                        <span className={`shrink-0 mt-0.5 text-[0.6875rem] font-medium rounded-full px-2 py-0.5 ${catStyle(a.category)}`}>
                           {a.category}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[15px] font-semibold leading-snug text-gray-900 break-words font-word">
+                          <p className="text-[0.9375rem] font-semibold leading-snug text-gray-900 break-words font-word">
                             {a.title}
                           </p>
                           <p className="mt-0.5 text-xs text-gray-500 break-words font-gothic">{a.titleKo}</p>

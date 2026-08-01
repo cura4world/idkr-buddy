@@ -206,7 +206,7 @@ const InsightEthnic = () => {
         </div>
       </header>
 
-      <p className="mb-4 text-[13px] font-gothic text-muted-foreground leading-relaxed px-1">
+      <p className="mb-4 text-[0.8125rem] font-gothic text-muted-foreground leading-relaxed px-1">
         인도네시아에는 300개가 넘는 종족과 700개 이상의 언어가 있습니다. 그럼에도
         &ldquo;다양성 속의 통일(Bhinneka Tunggal Ika)&rdquo;이라는 표어 아래 하나의 나라를 이룹니다.
       </p>
@@ -226,7 +226,7 @@ const InsightEthnic = () => {
             {ETHNICS.map((e) => (
               <div key={e.name} className="px-4 py-3.5">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[15px] font-semibold text-gray-900">{e.name}</span>
+                  <span className="text-[0.9375rem] font-semibold text-gray-900">{e.name}</span>
                   <span className="text-xs font-word italic text-gray-400">{e.id}</span>
                   <span className="text-xs font-gothic font-semibold text-gray-500 ml-auto">{e.pct}</span>
                 </div>
@@ -235,11 +235,11 @@ const InsightEthnic = () => {
                     <div className={`h-full rounded-full ${e.color}`} style={{ width: e.bar + "%" }} />
                   </div>
                 </div>
-                <p className="text-[11px] font-gothic font-semibold text-teal-700 mb-1">
+                <p className="text-[0.6875rem] font-gothic font-semibold text-teal-700 mb-1">
                   📍 {e.region}
                 </p>
                 {e.desc.map((d, i) => (
-                  <p key={i} className="text-[13px] font-gothic text-gray-600 leading-relaxed mt-1">
+                  <p key={i} className="text-[0.8125rem] font-gothic text-gray-600 leading-relaxed mt-1">
                     {d}
                   </p>
                 ))}
@@ -258,7 +258,7 @@ const InsightEthnic = () => {
         </Fold>
       </div>
 
-      <p className="mt-4 text-[11px] font-gothic text-muted-foreground px-1">
+      <p className="mt-4 text-[0.6875rem] font-gothic text-muted-foreground px-1">
         ※ 비율은 2010년 인도네시아 통계청(BPS) 인구센서스 기준이며, 종족 통계에서 가장 널리
         인용되는 수치입니다.
       </p>

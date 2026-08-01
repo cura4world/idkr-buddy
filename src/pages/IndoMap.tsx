@@ -489,7 +489,7 @@ const IndoMap = () => {
             }
           >
             <span className="w-3 h-3 rounded-full bg-[#f97316] border border-white/80 shrink-0" />
-            <span className="text-[11px] font-gothic text-white/85">도시</span>
+            <span className="text-[0.6875rem] font-gothic text-white/85">도시</span>
           </button>
           <button
             onClick={toggleSpots}
@@ -499,7 +499,7 @@ const IndoMap = () => {
             }
           >
             <span className="w-3 h-3 rounded-full bg-[#fbbf24] border border-white/80 shrink-0" />
-            <span className="text-[11px] font-gothic text-white/85">관광지</span>
+            <span className="text-[0.6875rem] font-gothic text-white/85">관광지</span>
           </button>
         </div>
         <div className="absolute right-3.5 bottom-4 flex flex-col gap-2">
@@ -566,7 +566,7 @@ const IndoMap = () => {
               {/* 이름 */}
               <div className="flex items-center gap-2.5 flex-wrap pr-8">
                 <h2 className="text-xl font-bold text-gray-900">{selected.ko}</h2>
-                <span className="font-word italic text-[15px] text-gray-500">{selected.id}</span>
+                <span className="font-word italic text-[0.9375rem] text-gray-500">{selected.id}</span>
                 <button
                   onClick={() => speak(selected.id, "id")}
                   className="w-8 h-8 rounded-full bg-teal-600/10 text-teal-700 flex items-center justify-center active:bg-teal-600/20"
@@ -576,7 +576,7 @@ const IndoMap = () => {
                 </button>
                 <span
                   className={
-                    "text-[11px] font-gothic font-semibold px-2.5 py-1 rounded-full " +
+                    "text-[0.6875rem] font-gothic font-semibold px-2.5 py-1 rounded-full " +
                     (selected.type === "spot"
                       ? "bg-amber-500/15 text-amber-700"
                       : "bg-orange-500/15 text-orange-700")

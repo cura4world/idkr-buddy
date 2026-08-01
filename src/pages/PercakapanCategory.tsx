@@ -144,12 +144,12 @@ const PercakapanCategory = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <span className="shrink-0 text-[18px] leading-none">{cat ? cat.emoji : "💬"}</span>
+        <span className="shrink-0 text-[1.125rem] leading-none">{cat ? cat.emoji : "💬"}</span>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-semibold leading-tight">
             {cat ? cat.title : "회화집"}
           </h1>
-          <p className="mt-0.5 truncate font-word text-[11.5px] text-muted-foreground">
+          <p className="mt-0.5 truncate font-word text-[0.71875rem] text-muted-foreground">
             {cat ? cat.titleId : "Percakapan"}
           </p>
         </div>
@@ -177,17 +177,17 @@ const PercakapanCategory = () => {
                 }
               >
                 <div className="flex-1 min-w-0">
-                  <p className="flex items-center gap-1.5 text-[14px] leading-tight text-foreground">
+                  <p className="flex items-center gap-1.5 text-[0.875rem] leading-tight text-foreground">
                     <span className="min-w-0 truncate">{s.title}</span>
                     {s.custom ? (
                       <span className="shrink-0 h-[5px] w-[5px] rounded-full bg-muted-foreground/45" />
                     ) : null}
                   </p>
-                  <p className="mt-0.5 font-word text-[11.5px] text-muted-foreground truncate">
+                  <p className="mt-0.5 font-word text-[0.71875rem] text-muted-foreground truncate">
                     {s.titleId}
                   </p>
                 </div>
-                <span className="shrink-0 pl-2.5 font-word text-[12.5px] text-muted-foreground">
+                <span className="shrink-0 pl-2.5 font-word text-[0.78125rem] text-muted-foreground">
                   {s.lines.length}문장
                 </span>
                 <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
@@ -196,8 +196,8 @@ const PercakapanCategory = () => {
           </div>
         ) : (
           <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
-            <p className="text-[15px] text-foreground">아직 회화집이 없습니다</p>
-            <p className="mt-1 font-word text-[12px] text-muted-foreground">Belum ada percakapan</p>
+            <p className="text-[0.9375rem] text-foreground">아직 회화집이 없습니다</p>
+            <p className="mt-1 font-word text-[0.75rem] text-muted-foreground">Belum ada percakapan</p>
           </div>
         )}
       </div>
@@ -213,7 +213,7 @@ const PercakapanCategory = () => {
             className="fixed z-50 left-1/2 -translate-x-1/2 top-[26%] w-[min(88vw,20rem)] rounded-2xl bg-card border border-border/60 shadow-2xl shadow-black/40 overflow-hidden"
           >
             <div className="flex items-start justify-between gap-2 px-4 pt-3.5">
-              <span className="min-w-0 flex-1 truncate font-body text-[15px] font-semibold text-card-foreground">
+              <span className="min-w-0 flex-1 truncate font-body text-[0.9375rem] font-semibold text-card-foreground">
                 {menuScene.title}
               </span>
               <button
@@ -231,14 +231,14 @@ const PercakapanCategory = () => {
                 <input
                   value={renameText}
                   onChange={(e) => setRenameText(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-[14px] text-card-foreground outline-none focus:border-primary"
+                  className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-[0.875rem] text-card-foreground outline-none focus:border-primary"
                   autoFocus
                 />
                 <div className="mt-3 flex gap-2">
                   <button
                     type="button"
                     onClick={() => setRenaming(false)}
-                    className="flex-1 h-10 rounded-[11px] border border-border text-[13.5px] font-gothic text-foreground/80 active:bg-muted"
+                    className="flex-1 h-10 rounded-[11px] border border-border text-[0.84375rem] font-gothic text-foreground/80 active:bg-muted"
                   >
                     취소
                   </button>
@@ -246,7 +246,7 @@ const PercakapanCategory = () => {
                     type="button"
                     onClick={handleRenameSave}
                     disabled={renameText.trim() === ""}
-                    className="flex-1 h-10 rounded-[11px] bg-primary text-[13.5px] font-medium text-white disabled:opacity-50"
+                    className="flex-1 h-10 rounded-[11px] bg-primary text-[0.84375rem] font-medium text-white disabled:opacity-50"
                   >
                     저장
                   </button>
@@ -257,14 +257,14 @@ const PercakapanCategory = () => {
                 <button
                   type="button"
                   onClick={() => setRenaming(true)}
-                  className="w-full border-b border-border px-4 py-3.5 text-left text-[14px] font-gothic text-foreground active:bg-muted/60"
+                  className="w-full border-b border-border px-4 py-3.5 text-left text-[0.875rem] font-gothic text-foreground active:bg-muted/60"
                 >
                   이름 수정
                 </button>
                 <button
                   type="button"
                   onClick={handleDeleteClick}
-                  className="w-full px-4 py-3.5 text-left text-[14px] font-gothic text-red-500/90 active:bg-muted/60"
+                  className="w-full px-4 py-3.5 text-left text-[0.875rem] font-gothic text-red-500/90 active:bg-muted/60"
                 >
                   {confirmDelete ? "정말 삭제" : "삭제"}
                 </button>

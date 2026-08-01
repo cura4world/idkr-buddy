@@ -617,7 +617,7 @@ const Dictionary = () => {
           <button
             onClick={() => handleSearch()}
             disabled={loading}
-            className="shrink-0 w-11 h-11 rounded-full bg-primary/10 text-primary text-[12px] font-gothic font-medium flex items-center justify-center disabled:opacity-50"
+            className="shrink-0 w-11 h-11 rounded-full bg-primary/10 text-primary text-[0.75rem] font-gothic font-medium flex items-center justify-center disabled:opacity-50"
           >
             {loading ? <Loader2 size={18} className="animate-spin" /> : "검색"}
           </button>
@@ -638,7 +638,7 @@ const Dictionary = () => {
                 }
               >
                 <Search size={14} className="shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate text-[14px] text-foreground/80">{term}</span>
+                <span className="min-w-0 flex-1 truncate text-[0.875rem] text-foreground/80">{term}</span>
               </button>
             ))}
           </div>
@@ -948,7 +948,7 @@ const Dictionary = () => {
             </div>
             <p className="text-sm font-medium text-gray-900 break-words">{result.meaning}</p>
             {result.meaningDetail && (
-              <p className="text-[11px] text-gray-500 mt-1 break-words font-gothic leading-relaxed">{result.meaningDetail}</p>
+              <p className="text-[0.6875rem] text-gray-500 mt-1 break-words font-gothic leading-relaxed">{result.meaningDetail}</p>
             )}
 
             {/* 예문 */}

@@ -43,13 +43,13 @@ const Row = ({ emoji, title, sub, meta, onClick, last }: RowProps) => (
       (last ? "" : "border-b border-border")
     }
   >
-    <span className="shrink-0 w-5 text-center text-[17px] leading-none">{emoji}</span>
+    <span className="shrink-0 w-5 text-center text-[1.0625rem] leading-none">{emoji}</span>
     <div className="flex-1 min-w-0">
-      <p className="text-[15px] leading-tight text-foreground truncate">{title}</p>
-      <p className="mt-0.5 font-word text-[11.5px] text-muted-foreground truncate">{sub}</p>
+      <p className="text-[0.9375rem] leading-tight text-foreground truncate">{title}</p>
+      <p className="mt-0.5 font-word text-[0.71875rem] text-muted-foreground truncate">{sub}</p>
     </div>
     {meta ? (
-      <span className="shrink-0 max-w-[46%] truncate pl-2.5 font-word text-[12.5px] text-muted-foreground">
+      <span className="shrink-0 max-w-[46%] truncate pl-2.5 font-word text-[0.78125rem] text-muted-foreground">
         {meta}
       </span>
     ) : null}
@@ -272,12 +272,12 @@ const Percakapan = () => {
           </div>
         ) : (
           <div className="mt-3.5 rounded-2xl border border-border bg-card px-4 py-10 text-center">
-            <p className="text-[15px] text-foreground">회화집이 없습니다</p>
-            <p className="mt-1 font-word text-[12px] text-muted-foreground">Belum ada percakapan</p>
+            <p className="text-[0.9375rem] text-foreground">회화집이 없습니다</p>
+            <p className="mt-1 font-word text-[0.75rem] text-muted-foreground">Belum ada percakapan</p>
             <button
               type="button"
               onClick={openMake}
-              className="mt-4 h-10 px-4 rounded-full bg-primary text-[13px] font-gothic font-medium text-white active:opacity-90"
+              className="mt-4 h-10 px-4 rounded-full bg-primary text-[0.8125rem] font-gothic font-medium text-white active:opacity-90"
             >
               첫 회화집 만들기
             </button>
@@ -325,27 +325,27 @@ const Percakapan = () => {
               <div className="h-px bg-border/50 mt-3 mb-4" />
 
               <label className="block">
-                <span className="block text-[12px] font-gothic font-semibold text-muted-foreground">
+                <span className="block text-[0.75rem] font-gothic font-semibold text-muted-foreground">
                   회화집 이름
                 </span>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="예: 병원 예약 바꾸기"
-                  className="mt-1.5 w-full rounded-lg border border-border bg-transparent px-3 py-2 text-[14px] text-card-foreground outline-none focus:border-primary"
+                  className="mt-1.5 w-full rounded-lg border border-border bg-transparent px-3 py-2 text-[0.875rem] text-card-foreground outline-none focus:border-primary"
                   autoCapitalize="none"
                   autoCorrect="off"
                 />
               </label>
 
               <label className="mt-4 block">
-                <span className="block text-[12px] font-gothic font-semibold text-muted-foreground">
+                <span className="block text-[0.75rem] font-gothic font-semibold text-muted-foreground">
                   카테고리
                 </span>
                 <select
                   value={catId}
                   onChange={(e) => setCatId(e.target.value)}
-                  className="mt-1.5 w-full rounded-lg border border-border bg-transparent px-3 py-2 text-[14px] text-card-foreground outline-none focus:border-primary"
+                  className="mt-1.5 w-full rounded-lg border border-border bg-transparent px-3 py-2 text-[0.875rem] text-card-foreground outline-none focus:border-primary"
                 >
                   {cats.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -362,13 +362,13 @@ const Percakapan = () => {
                     value={newCatKo}
                     onChange={(e) => setNewCatKo(e.target.value)}
                     placeholder="새 카테고리 이름 (한국어)"
-                    className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-[14px] text-card-foreground outline-none focus:border-primary"
+                    className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-[0.875rem] text-card-foreground outline-none focus:border-primary"
                   />
                   <input
                     value={newCatId}
                     onChange={(e) => setNewCatId(e.target.value)}
                     placeholder="새 카테고리 이름 (인도네시아어)"
-                    className="w-full rounded-lg border border-border bg-transparent px-3 py-2 font-word text-[14px] text-card-foreground outline-none focus:border-primary"
+                    className="w-full rounded-lg border border-border bg-transparent px-3 py-2 font-word text-[0.875rem] text-card-foreground outline-none focus:border-primary"
                     autoCapitalize="none"
                     autoCorrect="off"
                   />
@@ -376,19 +376,19 @@ const Percakapan = () => {
               ) : null}
 
               <label className="mt-4 block">
-                <span className="block text-[12px] font-gothic font-semibold text-muted-foreground">
+                <span className="block text-[0.75rem] font-gothic font-semibold text-muted-foreground">
                   어떤 상황인가요?
                 </span>
                 <input
                   value={situation}
                   onChange={(e) => setSituation(e.target.value)}
                   placeholder="예: 예약 날짜를 바꾸려고 전화함"
-                  className="mt-1.5 w-full rounded-lg border border-border bg-transparent px-3 py-2 text-[14px] text-card-foreground outline-none focus:border-primary"
+                  className="mt-1.5 w-full rounded-lg border border-border bg-transparent px-3 py-2 text-[0.875rem] text-card-foreground outline-none focus:border-primary"
                 />
               </label>
 
               <div className="mt-4">
-                <span className="block text-[12px] font-gothic font-semibold text-muted-foreground">
+                <span className="block text-[0.75rem] font-gothic font-semibold text-muted-foreground">
                   난이도
                 </span>
                 <div className="mt-1.5 flex gap-2">
@@ -398,7 +398,7 @@ const Percakapan = () => {
                       type="button"
                       onClick={() => setLevel(lv)}
                       className={
-                        "flex-1 rounded-lg border py-2 text-[13px] font-gothic " +
+                        "flex-1 rounded-lg border py-2 text-[0.8125rem] font-gothic " +
                         (level === lv
                           ? "border-primary bg-primary text-white"
                           : "border-border bg-transparent text-foreground/80")
@@ -414,11 +414,11 @@ const Percakapan = () => {
                 type="button"
                 onClick={handleCreate}
                 disabled={creating}
-                className="mt-6 h-12 w-full rounded-[13px] bg-primary text-[15px] font-medium text-white disabled:opacity-60"
+                className="mt-6 h-12 w-full rounded-[13px] bg-primary text-[0.9375rem] font-medium text-white disabled:opacity-60"
               >
                 {creating ? "생성 중..." : "만들기"}
               </button>
-              <p className="mt-2 text-center text-[11.5px] font-gothic text-muted-foreground">
+              <p className="mt-2 text-center text-[0.71875rem] font-gothic text-muted-foreground">
                 만드는 데 20초쯤 걸립니다
               </p>
             </div>
@@ -436,14 +436,14 @@ const Percakapan = () => {
             aria-label="백업 불러오기"
             className="fixed z-50 left-1/2 -translate-x-1/2 top-[22%] w-[min(92vw,22rem)] rounded-2xl bg-card border border-border/60 shadow-2xl shadow-black/40 px-5 py-5"
           >
-            <p className="text-[15px] leading-relaxed text-card-foreground">
+            <p className="text-[0.9375rem] leading-relaxed text-card-foreground">
               개인 회화집 {restoreCount}개를 찾았어요. 불러올까요?
             </p>
             <div className="mt-5 flex gap-2">
               <button
                 type="button"
                 onClick={handleLater}
-                className="flex-1 h-11 rounded-[13px] border border-border text-[14px] font-gothic text-foreground/80 active:bg-muted"
+                className="flex-1 h-11 rounded-[13px] border border-border text-[0.875rem] font-gothic text-foreground/80 active:bg-muted"
               >
                 나중에
               </button>
@@ -451,7 +451,7 @@ const Percakapan = () => {
                 type="button"
                 onClick={handleRestore}
                 disabled={restoring}
-                className="flex-1 h-11 rounded-[13px] bg-primary text-[14px] font-medium text-white disabled:opacity-60"
+                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-medium text-white disabled:opacity-60"
               >
                 {restoring ? "불러오는 중..." : "불러오기"}
               </button>

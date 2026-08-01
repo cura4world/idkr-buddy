@@ -123,14 +123,14 @@ const Sermons = () => {
       <div className="px-4 py-4">
         {/* 불러오기 — 버튼은 오른쪽에, 마지막 시각은 왼쪽에 */}
         <div className="flex items-center gap-3">
-          <p className="min-w-0 flex-1 truncate text-[12px] font-gothic text-muted-foreground">
+          <p className="min-w-0 flex-1 truncate text-[0.75rem] font-gothic text-muted-foreground">
             {lastSyncLabel(lastSync)}
           </p>
           <button
             type="button"
             onClick={handleSync}
             disabled={syncing}
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-[12px] font-gothic text-foreground/80 active:bg-muted disabled:opacity-50"
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-[0.75rem] font-gothic text-foreground/80 active:bg-muted disabled:opacity-50"
           >
             <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
             불러오기
@@ -150,10 +150,10 @@ const Sermons = () => {
                   (i === items.length - 1 ? "" : "border-b border-border")
                 }
               >
-                <span className="shrink-0 w-[62px] font-gothic text-[12px] tabular-nums text-muted-foreground">
+                <span className="shrink-0 w-[62px] font-gothic text-[0.75rem] tabular-nums text-muted-foreground">
                   {formatSermonDateShort(s.date)}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[14px] text-foreground">
+                <span className="min-w-0 flex-1 truncate text-[0.875rem] text-foreground">
                   {s.title || "제목 없음"}
                 </span>
                 <ChevronRight size={16} className="shrink-0 text-muted-foreground" />
@@ -162,13 +162,13 @@ const Sermons = () => {
           </div>
         ) : !configured ? (
           <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-8">
-            <p className="text-center text-[13px] leading-relaxed font-gothic text-muted-foreground">
+            <p className="text-center text-[0.8125rem] leading-relaxed font-gothic text-muted-foreground">
               설정에서 설교문 서버 주소와 비밀키를 넣어 주세요.
             </p>
           </div>
         ) : (
           <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-8">
-            <p className="text-center text-[13px] leading-relaxed font-gothic text-muted-foreground">
+            <p className="text-center text-[0.8125rem] leading-relaxed font-gothic text-muted-foreground">
               아직 올라온 설교문이 없습니다.
               <br />
               PC에서 워드 파일을 올린 뒤 불러오기를 눌러 주세요.

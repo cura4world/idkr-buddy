@@ -33,7 +33,7 @@ const speak = (text: string, lang: "id" | "ko") => {
 };
 
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <p className="mb-2 text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+  <p className="mb-2 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
     {children}
   </p>
 );
@@ -280,16 +280,16 @@ const PhraseDetail = () => {
           <p
             className={
               "mt-0.5 font-word font-medium text-foreground " +
-              (isAyat ? "text-[17px] leading-[1.65]" : "text-[19px] leading-[1.5]")
+              (isAyat ? "text-[1.0625rem] leading-[1.65]" : "text-[1.1875rem] leading-[1.5]")
             }
           >
             {renderTokens(item.id)}
           </p>
           {item.ko ? (
-            <p className="mt-2.5 text-[13.5px] leading-[1.65] text-muted-foreground">{item.ko}</p>
+            <p className="mt-2.5 text-[0.84375rem] leading-[1.65] text-muted-foreground">{item.ko}</p>
           ) : null}
           {refLabel ? (
-            <p className="mt-3 font-word text-[13.5px] text-muted-foreground">{refLabel}</p>
+            <p className="mt-3 font-word text-[0.84375rem] text-muted-foreground">{refLabel}</p>
           ) : null}
         </div>
 
@@ -325,8 +325,8 @@ const PhraseDetail = () => {
                 <section className="mt-5">
                   <Label>어떤 뜻인가요</Label>
                   <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-                    <p className="font-gothic text-[13.5px] leading-[1.45] text-foreground/85">{koVerse}</p>
-                    <p className="mt-2.5 text-[11.5px] font-gothic text-muted-foreground">
+                    <p className="font-gothic text-[0.84375rem] leading-[1.45] text-foreground/85">{koVerse}</p>
+                    <p className="mt-2.5 text-[0.71875rem] font-gothic text-muted-foreground">
                       {koRefLabel ? koRefLabel + " · 새번역" : "새번역"}
                     </p>
                   </div>
@@ -336,7 +336,7 @@ const PhraseDetail = () => {
               <section className="mt-5">
                 <Label>어떤 뜻인가요</Label>
                 <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-                  <p className="font-gothic text-[13px] leading-[1.45] text-foreground/85">{data.meaning}</p>
+                  <p className="font-gothic text-[0.8125rem] leading-[1.45] text-foreground/85">{data.meaning}</p>
                 </div>
               </section>
             ) : null}
@@ -353,12 +353,12 @@ const PhraseDetail = () => {
                       }
                     >
                       {ex.situasi ? (
-                        <p className="mb-2 text-[11.5px] font-gothic font-semibold text-muted-foreground">
+                        <p className="mb-2 text-[0.71875rem] font-gothic font-semibold text-muted-foreground">
                           {ex.situasi}
                         </p>
                       ) : null}
                       <div className="flex items-start gap-2">
-                        <p className="flex-1 font-word text-[15px] leading-[1.6] text-foreground">
+                        <p className="flex-1 font-word text-[0.9375rem] leading-[1.6] text-foreground">
                           {ex.id}
                         </p>
                         <button
@@ -369,7 +369,7 @@ const PhraseDetail = () => {
                           <Volume2 size={15} />
                         </button>
                       </div>
-                      <p className="mt-1.5 text-[13px] leading-[1.6] text-muted-foreground">{ex.ko}</p>
+                      <p className="mt-1.5 text-[0.8125rem] leading-[1.6] text-muted-foreground">{ex.ko}</p>
                     </div>
                   ))}
                 </div>
@@ -380,7 +380,7 @@ const PhraseDetail = () => {
               <section className="mt-5">
                 <Label>알아두기</Label>
                 <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-                  <p className="font-gothic text-[13px] leading-[1.45] text-foreground/85">{data.note}</p>
+                  <p className="font-gothic text-[0.8125rem] leading-[1.45] text-foreground/85">{data.note}</p>
                 </div>
               </section>
             ) : null}

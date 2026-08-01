@@ -82,12 +82,12 @@ export default function CategoryCard({
           onClick={() => navigate(`/category/${category.id}`)}
           className="flex flex-1 min-w-0 items-center gap-3 text-left"
         >
-          <span className="w-9 h-9 shrink-0 rounded-full border border-border flex items-center justify-center text-[17px]">
+          <span className="w-9 h-9 shrink-0 rounded-full border border-border flex items-center justify-center text-[1.0625rem]">
             {category.emoji}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] leading-tight text-foreground truncate">{category.name}</span>
-            <span className="mt-0.5 block font-word text-[11.5px] text-muted-foreground truncate">
+            <span className="block text-[0.9375rem] leading-tight text-foreground truncate">{category.name}</span>
+            <span className="mt-0.5 block font-word text-[0.71875rem] text-muted-foreground truncate">
               Kosakata · {words.length}단어
             </span>
           </span>
@@ -97,14 +97,14 @@ export default function CategoryCard({
           <button
             type="button"
             onClick={() => navigate(`/study/${category.id}`)}
-            className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[11px] font-gothic font-medium text-foreground/80 active:bg-muted"
+            className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[0.6875rem] font-gothic font-medium text-foreground/80 active:bg-muted"
           >
             카드
           </button>
           <button
             type="button"
             onClick={() => navigate(`/quiz/${category.id}`)}
-            className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[11px] font-gothic font-medium text-foreground/80 active:bg-muted"
+            className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[0.6875rem] font-gothic font-medium text-foreground/80 active:bg-muted"
           >
             퀴즈
           </button>

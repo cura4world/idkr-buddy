@@ -74,7 +74,7 @@ const saveFontStep = (n: number) => {
 };
 
 // ---------- 블록 종류별 모양 ----------
-// 글자 크기는 전부 em 으로 줍니다. Tailwind 임의값(text-[17px])을 쓰면 배율이 먹지 않습니다.
+// 글자 크기는 전부 em 으로 줍니다. Tailwind 임의값(text-[1.0625rem])을 쓰면 배율이 먹지 않습니다.
 const ID_BASE = "font-word text-foreground leading-[1.75] break-words";
 const KO_BASE = "font-gothic text-muted-foreground leading-[1.7] break-words mt-1.5";
 
@@ -528,7 +528,7 @@ const SermonRead = () => {
                 onClick={() => goSection(-1)}
                 className="w-full border-b border-border px-4 py-3.5 text-left active:bg-muted/60"
               >
-                <span className="block text-[14px] leading-tight text-foreground">처음으로</span>
+                <span className="block text-[0.875rem] leading-tight text-foreground">처음으로</span>
               </button>
               {headings.map(({ b, i }) => (
                 <button
@@ -538,10 +538,10 @@ const SermonRead = () => {
                   className="w-full border-b border-border px-4 py-3.5 text-left active:bg-muted/60"
                 >
                   {b.ko ? (
-                    <span className="block text-[14px] leading-tight text-foreground">{b.ko}</span>
+                    <span className="block text-[0.875rem] leading-tight text-foreground">{b.ko}</span>
                   ) : null}
                   {b.id ? (
-                    <span className="mt-0.5 block font-word text-[11.5px] text-muted-foreground">
+                    <span className="mt-0.5 block font-word text-[0.71875rem] text-muted-foreground">
                       {b.id}
                     </span>
                   ) : null}
@@ -551,7 +551,7 @@ const SermonRead = () => {
             <button
               type="button"
               onClick={closeToc}
-              className="mx-4 mt-4 h-12 w-[calc(100%-2rem)] rounded-[13px] bg-primary text-[15px] font-medium text-white"
+              className="mx-4 mt-4 h-12 w-[calc(100%-2rem)] rounded-[13px] bg-primary text-[0.9375rem] font-medium text-white"
             >
               닫기
             </button>

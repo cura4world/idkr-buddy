@@ -48,7 +48,7 @@ const SavedPhrases = () => {
       <div className="px-4 pt-5">
         {list.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card px-5 py-10 text-center">
-            <p className="font-gothic text-[13.5px] leading-relaxed text-muted-foreground">
+            <p className="font-gothic text-[0.84375rem] leading-relaxed text-muted-foreground">
               저장한 문장이 없어요.
               <br />
               마음에 드는 문장에서 리본을 눌러보세요.
@@ -69,13 +69,13 @@ const SavedPhrases = () => {
                   onClick={() => navigate("/phrase?" + phraseToQuery(p))}
                   className="flex-1 min-w-0 text-left active:opacity-60 transition-opacity"
                 >
-                  <p className="font-word text-[15px] leading-[1.5] text-foreground">{p.id}</p>
+                  <p className="font-word text-[0.9375rem] leading-[1.5] text-foreground">{p.id}</p>
                   {p.ko ? (
-                    <p className="mt-1 text-[12.5px] leading-[1.5] text-muted-foreground line-clamp-2">
+                    <p className="mt-1 text-[0.78125rem] leading-[1.5] text-muted-foreground line-clamp-2">
                       {p.ko}
                     </p>
                   ) : null}
-                  <p className="mt-1 font-gothic text-[11px] text-muted-foreground/80">
+                  <p className="mt-1 font-gothic text-[0.6875rem] text-muted-foreground/80">
                     {p.ref ? p.ref + " · " : ""}
                     {fmtDate(p.savedAt)}
                   </p>

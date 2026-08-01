@@ -698,7 +698,7 @@ const Devotion = () => {
           >
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-xs font-medium text-rose-600 font-gothic">오늘의 묵상</p>
-              <span className="text-[11px] font-medium text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
+              <span className="text-[0.6875rem] font-medium text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
                 {tbRangeLabel(todayRec)}
               </span>
             </div>
@@ -742,10 +742,10 @@ const Devotion = () => {
                       <p className="text-sm font-semibold text-gray-900 break-words font-word">{r.content.title}</p>
                       <p className="text-xs text-gray-500 break-words mt-0.5 font-gothic">{r.content.titleKo}</p>
                       <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                        <span className="text-[11px] font-medium text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
+                        <span className="text-[0.6875rem] font-medium text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
                           {r.rangeText}
                         </span>
-                        <span className="text-[11px] text-gray-400 ml-auto">{fmtQtDate(r.date)}</span>
+                        <span className="text-[0.6875rem] text-gray-400 ml-auto">{fmtQtDate(r.date)}</span>
                       </div>
                     </button>
                   </li>

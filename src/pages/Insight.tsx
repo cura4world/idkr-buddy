@@ -35,15 +35,15 @@ const Row = ({ icon: Icon, title, sub, onClick, last }: RowProps) => (
   >
     <Icon size={20} strokeWidth={1.6} className="text-muted-foreground shrink-0" />
     <div className="flex-1 min-w-0">
-      <p className="text-[15px] leading-tight text-foreground truncate">{title}</p>
-      <p className="mt-0.5 font-word text-[11.5px] text-muted-foreground truncate">{sub}</p>
+      <p className="text-[0.9375rem] leading-tight text-foreground truncate">{title}</p>
+      <p className="mt-0.5 font-word text-[0.71875rem] text-muted-foreground truncate">{sub}</p>
     </div>
     <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
   </button>
 );
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="mb-2.5 px-1 text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+  <p className="mb-2.5 px-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
     {children}
   </p>
 );

@@ -99,11 +99,11 @@ const Row = ({ icon: Icon, title, sub, meta, onClick, last }: RowProps) => (
   >
     <Icon size={20} className="text-muted-foreground shrink-0" />
     <div className="flex-1 min-w-0">
-      <p className="text-[15px] leading-tight text-foreground truncate">{title}</p>
-      <p className="mt-0.5 font-word text-[11.5px] text-muted-foreground truncate">{sub}</p>
+      <p className="text-[0.9375rem] leading-tight text-foreground truncate">{title}</p>
+      <p className="mt-0.5 font-word text-[0.71875rem] text-muted-foreground truncate">{sub}</p>
     </div>
     {meta ? (
-      <span className="shrink-0 max-w-[46%] truncate pl-2.5 font-word text-[12.5px] text-muted-foreground">
+      <span className="shrink-0 max-w-[46%] truncate pl-2.5 font-word text-[0.78125rem] text-muted-foreground">
         {meta}
       </span>
     ) : null}
@@ -112,7 +112,7 @@ const Row = ({ icon: Icon, title, sub, meta, onClick, last }: RowProps) => (
 );
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="mb-2.5 px-1 text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+  <p className="mb-2.5 px-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
     {children}
   </p>
 );
@@ -448,10 +448,10 @@ const Index = () => {
 
         <div className="relative flex items-start justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-white/60">
+            <p className="text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-white/60">
               {dateLabel}
             </p>
-            <h1 className="mt-1.5 font-word text-[27px] font-semibold leading-none tracking-tight text-white">
+            <h1 className="mt-1.5 font-word text-[1.6875rem] font-semibold leading-none tracking-tight text-white">
               Kata kata<span className="text-accent">.</span>
             </h1>
           </div>
@@ -498,7 +498,7 @@ const Index = () => {
           <button
             type="button"
             onClick={() => goSearch()}
-            className="shrink-0 w-[46px] h-[46px] rounded-full bg-white/15 border border-white/30 text-white text-[12px] font-gothic font-medium active:bg-white/30"
+            className="shrink-0 w-[46px] h-[46px] rounded-full bg-white/15 border border-white/30 text-white text-[0.75rem] font-gothic font-medium active:bg-white/30"
           >
             검색
           </button>
@@ -519,7 +519,7 @@ const Index = () => {
                   }
                 >
                   <Search size={14} className="shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate text-[14px] text-foreground/80">{term}</span>
+                  <span className="min-w-0 flex-1 truncate text-[0.875rem] text-foreground/80">{term}</span>
                 </button>
               ))}
             </div>
@@ -538,7 +538,7 @@ const Index = () => {
             className="rounded-2xl border border-border bg-card px-4 py-4 active:bg-muted/40 transition-colors"
           >
             <div className="flex items-center gap-1">
-              <p className="flex-1 min-w-0 truncate text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+              <p className="flex-1 min-w-0 truncate text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 Bahasa Hari Ini
               </p>
               <button
@@ -581,17 +581,17 @@ const Index = () => {
                   className={
                     "mt-2.5 font-word font-medium text-foreground " +
                     (phrase.kind === "alkitab"
-                      ? "text-[17px] leading-[1.6]"
-                      : "text-[19px] leading-[1.5]")
+                      ? "text-[1.0625rem] leading-[1.6]"
+                      : "text-[1.1875rem] leading-[1.5]")
                   }
                 >
                   {phrase.id}
                 </p>
                 {phrase.ko ? (
-                  <p className="mt-1.5 text-[13px] leading-[1.6] text-muted-foreground">{phrase.ko}</p>
+                  <p className="mt-1.5 text-[0.8125rem] leading-[1.6] text-muted-foreground">{phrase.ko}</p>
                 ) : null}
                 {phrase.ref ? (
-                  <p className="mt-2 font-word text-[12.5px] text-muted-foreground">{phrase.ref}</p>
+                  <p className="mt-2 font-word text-[0.78125rem] text-muted-foreground">{phrase.ref}</p>
                 ) : null}
               </>
             ) : null}
@@ -611,8 +611,8 @@ const Index = () => {
                 >
                   <Star size={20} strokeWidth={1.6} className="shrink-0 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[15px] leading-tight text-foreground truncate">내 단어장</p>
-                    <p className="mt-0.5 font-word text-[11.5px] text-muted-foreground truncate">
+                    <p className="text-[0.9375rem] leading-tight text-foreground truncate">내 단어장</p>
+                    <p className="mt-0.5 font-word text-[0.71875rem] text-muted-foreground truncate">
                       Kosakataku · {myWordCount}단어
                     </p>
                   </div>
@@ -621,14 +621,14 @@ const Index = () => {
                   <button
                     type="button"
                     onClick={() => navigate("/study/" + MY_WORDBOOK_ID)}
-                    className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[11px] font-gothic font-medium text-foreground/80 active:bg-muted"
+                    className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[0.6875rem] font-gothic font-medium text-foreground/80 active:bg-muted"
                   >
                     카드
                   </button>
                   <button
                     type="button"
                     onClick={() => navigate("/quiz/" + MY_WORDBOOK_ID)}
-                    className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[11px] font-gothic font-medium text-foreground/80 active:bg-muted"
+                    className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-[0.6875rem] font-gothic font-medium text-foreground/80 active:bg-muted"
                   >
                     퀴즈
                   </button>
@@ -691,7 +691,7 @@ const Index = () => {
           <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
             <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border" />
             <h2 className="px-4 text-base font-semibold text-foreground">어떤 문장을 보시겠어요?</h2>
-            <p className="px-4 pb-3.5 pt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
+            <p className="px-4 pb-3.5 pt-1.5 text-[0.78125rem] leading-relaxed text-muted-foreground">
               여러 개를 고르면 그중 하나가 무작위로 나옵니다.
             </p>
             <div className="border-t border-border">
@@ -713,8 +713,8 @@ const Index = () => {
                       <Check size={13} strokeWidth={3} />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-[14px] leading-tight text-foreground">{info.ko}</span>
-                      <span className="mt-0.5 block font-word text-[11.5px] text-muted-foreground">
+                      <span className="block text-[0.875rem] leading-tight text-foreground">{info.ko}</span>
+                      <span className="mt-0.5 block font-word text-[0.71875rem] text-muted-foreground">
                         {info.id}
                       </span>
                     </span>
@@ -725,7 +725,7 @@ const Index = () => {
             <button
               type="button"
               onClick={closeKindSheet}
-              className="mx-4 mt-4 h-12 w-[calc(100%-2rem)] rounded-[13px] bg-primary text-[15px] font-medium text-white"
+              className="mx-4 mt-4 h-12 w-[calc(100%-2rem)] rounded-[13px] bg-primary text-[0.9375rem] font-medium text-white"
             >
               완료
             </button>

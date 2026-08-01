@@ -138,7 +138,7 @@ const PancasilaSection = ({ defaultOpen }: { defaultOpen?: boolean }) => {
       </button>
       {open && (
         <div className="border-t border-sky-300/40">
-          <p className="px-4 pt-3 pb-1 text-[13px] font-gothic text-gray-600 leading-relaxed">
+          <p className="px-4 pt-3 pb-1 text-[0.8125rem] font-gothic text-gray-600 leading-relaxed">
             산스크리트어로 &lsquo;판차(pañca, 다섯)&rsquo; + &lsquo;실라(śīla, 원칙)&rsquo;.
             초대 대통령 수카르노가 1945년 제시한 다섯 가지 건국 원칙으로, 헌법 전문에 담겨
             있습니다. 이슬람 국가와 세속 국가 사이의 &lsquo;타협&rsquo;으로 탄생했습니다.
@@ -152,7 +152,7 @@ const PancasilaSection = ({ defaultOpen }: { defaultOpen?: boolean }) => {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 leading-snug">{s.ko}</p>
                   <p className="mt-0.5 text-xs font-word italic text-sky-700 leading-snug break-words">{s.id}</p>
-                  <p className="mt-1 text-[13px] font-gothic text-gray-600 leading-relaxed">{s.desc}</p>
+                  <p className="mt-1 text-[0.8125rem] font-gothic text-gray-600 leading-relaxed">{s.desc}</p>
                 </div>
               </div>
             ))}
@@ -184,7 +184,7 @@ const InsightOverview = () => {
         </div>
       </header>
 
-      <p className="mb-4 text-[13px] font-gothic text-muted-foreground leading-relaxed px-1">
+      <p className="mb-4 text-[0.8125rem] font-gothic text-muted-foreground leading-relaxed px-1">
         적도에 걸친 세계 최대의 섬나라. 인구 세계 4위, 동남아시아 최대 경제국이자
         세계에서 무슬림이 가장 많이 사는 나라입니다.
       </p>
@@ -197,7 +197,7 @@ const InsightOverview = () => {
         <PancasilaSection />
       </div>
 
-      <p className="mt-4 text-[11px] font-gothic text-muted-foreground px-1">
+      <p className="mt-4 text-[0.6875rem] font-gothic text-muted-foreground px-1">
         ※ 수치는 2025~2026년 IMF·세계은행·인도네시아 통계청 자료 기준입니다.
       </p>
     </div>

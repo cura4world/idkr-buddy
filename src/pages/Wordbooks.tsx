@@ -262,16 +262,16 @@ const Wordbooks = () => {
 
         {categories.length === 0 ? (
           <section className="mt-3.5">
-            <p className="mb-2.5 px-1 text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            <p className="mb-2.5 px-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
               단어장 0권
             </p>
             <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
-              <p className="text-[15px] text-foreground">단어장이 없습니다</p>
-              <p className="mt-1 font-word text-[12px] text-muted-foreground">Belum ada kosakata</p>
+              <p className="text-[0.9375rem] text-foreground">단어장이 없습니다</p>
+              <p className="mt-1 font-word text-[0.75rem] text-muted-foreground">Belum ada kosakata</p>
               <button
                 type="button"
                 onClick={() => setAddCatOpen(true)}
-                className="mt-4 h-10 px-4 rounded-full bg-primary text-[13px] font-gothic font-medium text-white active:opacity-90"
+                className="mt-4 h-10 px-4 rounded-full bg-primary text-[0.8125rem] font-gothic font-medium text-white active:opacity-90"
               >
                 첫 단어장 만들기
               </button>
@@ -280,7 +280,7 @@ const Wordbooks = () => {
         ) : (
           grouped.map((group, gi) => (
             <section key={group.label} className={gi === 0 ? "mt-3.5" : "mt-6"}>
-              <p className="mb-2.5 px-1 text-[11px] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+              <p className="mb-2.5 px-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 {group.label} {group.items.length}권
               </p>
               {/* 톱니 드롭다운이 잘리지 않도록 overflow-hidden 은 두지 않습니다. */}

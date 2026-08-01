@@ -442,7 +442,7 @@ const BibleRead = () => {
               ) : !flipped ? (
                 <div>
                   {(verses || []).map(renderTbVerse)}
-                  <p className="mt-5 text-[10px] text-gray-400 font-gothic text-right leading-relaxed">
+                  <p className="mt-5 text-[0.625rem] text-gray-400 font-gothic text-right leading-relaxed">
                     Alkitab Terjemahan Baru (TB)
                     <br />
                     Lembaga Alkitab Indonesia
@@ -451,7 +451,7 @@ const BibleRead = () => {
               ) : versesKo ? (
                 <div>
                   {versesKo.map(renderKoVerse)}
-                  <p className="mt-5 text-[10px] text-gray-400 font-gothic text-right">
+                  <p className="mt-5 text-[0.625rem] text-gray-400 font-gothic text-right">
                     성경전서 새번역 · 대한성서공회
                   </p>
                 </div>
