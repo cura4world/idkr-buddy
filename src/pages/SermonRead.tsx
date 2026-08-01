@@ -32,7 +32,7 @@ import {
 // ---------- 글자 크기 (이 화면 전용) ----------
 // 앱 전체 배율(fontScale.ts)과는 별개입니다.
 const FONT_KEY = "sermon-font-step";
-const SCALE = [0.85, 0.92, 1.0, 1.08, 1.16, 1.26, 1.36];
+const SCALE = [0.85, 0.92, 1.0, 1.08, 1.16, 1.26, 1.36, 1.48, 1.60];
 const BASE_PX = 17;
 
 const loadFontStep = (): number => {
