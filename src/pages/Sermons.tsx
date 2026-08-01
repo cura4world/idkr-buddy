@@ -121,20 +121,20 @@ const Sermons = () => {
       </header>
 
       <div className="px-4 py-4">
-        {/* 불러오기 */}
+        {/* 불러오기 — 버튼은 오른쪽에, 마지막 시각은 왼쪽에 */}
         <div className="flex items-center gap-3">
+          <p className="min-w-0 flex-1 truncate text-[12px] font-gothic text-muted-foreground">
+            {lastSyncLabel(lastSync)}
+          </p>
           <button
             type="button"
             onClick={handleSync}
             disabled={syncing}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-[13px] font-gothic text-foreground/80 active:bg-muted disabled:opacity-50"
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-[12px] font-gothic text-foreground/80 active:bg-muted disabled:opacity-50"
           >
-            <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
+            <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
             불러오기
           </button>
-          <p className="min-w-0 flex-1 truncate text-[12px] font-gothic text-muted-foreground">
-            {lastSyncLabel(lastSync)}
-          </p>
         </div>
 
         {/* 목록 */}
@@ -153,7 +153,7 @@ const Sermons = () => {
                 <span className="shrink-0 w-[62px] font-gothic text-[12px] tabular-nums text-muted-foreground">
                   {formatSermonDateShort(s.date)}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[15px] text-foreground">
+                <span className="min-w-0 flex-1 truncate text-[14px] text-foreground">
                   {s.title || "제목 없음"}
                 </span>
                 <ChevronRight size={16} className="shrink-0 text-muted-foreground" />
