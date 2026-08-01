@@ -75,10 +75,14 @@ const saveFontStep = (n: number) => {
 
 // ---------- 블록 종류별 모양 ----------
 // 글자 크기는 전부 em 으로 줍니다. Tailwind 임의값(text-[1.0625rem])을 쓰면 배율이 먹지 않습니다.
-const ID_BASE = "font-word text-foreground leading-[1.75] break-words";
+// ID_BASE 에는 글자색을 넣지 않습니다. 여기에 text-foreground 를 두면
+// 뒤에 붙이는 text-cyan-600 같은 색과 같은 특이도로 충돌하고,
+// Tailwind 출력 순서상 커스텀 색(foreground)이 뒤에 나와 항상 이깁니다.
+const ID_BASE = "font-word leading-[1.75] break-words";
 const KO_BASE = "font-gothic text-muted-foreground leading-[1.7] break-words mt-1.5";
-// 성경 인용(ref/verse) 공통 색 — 모든 성경 줄에 같은 값을 씁니다.
-const BIBLE_COLOR = "text-blue-800";
+// 성경 인용(ref/verse) 공통 색 — 뉴스 '과학기술' 배지와 같은 cyan-600 입니다.
+const BIBLE_COLOR = "text-cyan-600";
+const BIBLE_BORDER = "border-cyan-600";
 
 interface KindStyle {
   wrap: string;
@@ -91,7 +95,7 @@ interface KindStyle {
 const KIND_STYLE: Record<string, KindStyle> = {
   title: {
     wrap: "mb-6",
-    idClass: ID_BASE + " font-semibold",
+    idClass: ID_BASE + " font-semibold text-foreground",
     idSize: "1.25em",
     koClass: KO_BASE + " font-semibold text-foreground",
     koSize: "0.87em",
@@ -113,7 +117,7 @@ const KIND_STYLE: Record<string, KindStyle> = {
     koSize: "0.71em",
   },
   verse: {
-    wrap: "mb-5 border-l-2 border-indigo-300 pl-3",
+    wrap: "mb-5 border-l-2 " + BIBLE_BORDER + " pl-3",
     idClass: ID_BASE + " " + BIBLE_COLOR,
     idSize: "0.95em",
     koClass: KO_BASE,
@@ -128,7 +132,7 @@ const KIND_STYLE: Record<string, KindStyle> = {
   },
   body: {
     wrap: "mb-5",
-    idClass: ID_BASE,
+    idClass: ID_BASE + " text-foreground",
     idSize: "1em",
     koClass: KO_BASE,
     koSize: "0.64em",
