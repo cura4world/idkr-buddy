@@ -26,6 +26,8 @@ import {
   Eraser,
   Undo2,
   Trash2,
+  Maximize,
+  Minimize,
 } from "lucide-react";
 import { useWideMode } from "@/lib/wideMode";
 import { goBackOr } from "@/lib/nav";
@@ -162,6 +164,11 @@ const PEN_COLORS = ["#3F3F3F","#8A8A8A","#E0705A","#C0392B","#E39A3C","#C9A227",
 const PEN_W = [1.2, 1.45, 1.7, 1.9, 2.8];        // 기본 index 3
 const HL_COLORS = ["#FFE94A","#A8E05F","#FFA94D","#FF8FB1","#7FD3F7","#C79BE8"];
 const HL_W = [9, 13, 17, 25];                     // 기본 index 2
+
+// 도구막대 굵기 버튼 안에 그릴 선의 두께(px). 실제 획 굵기(PEN_W/HL_W)와는 별개입니다.
+// 실제 값을 그대로 쓰면 다섯 칸이 2~3px 로 붙어 단계가 눈에 안 보입니다.
+const PEN_W_VIEW = [2, 3, 4, 5.5, 8];
+const HL_W_VIEW = [4, 6, 9, 13];
 
 const HL_ALPHA = 0.45;
 const TOOL_KEY = "sermon-ink-tool";
@@ -335,6 +342,8 @@ const SermonRead = () => {
   const [eraseMenu, setEraseMenu] = useState(false);
   const [inkTick, setInkTick] = useState(0);
   const [inkH, setInkH] = useState(0);
+  const [barHidden, setBarHidden] = useState(false);
+  const [isFs, setIsFs] = useState(false);
 
   // 그리는 중에는 리렌더로 획이 끊기므로, 엔진은 아래 ref 만 읽습니다.
   const toolRef = useRef<InkToolState>(inkTool);
@@ -346,6 +355,9 @@ const SermonRead = () => {
   const saveTimerRef = useRef<number | null>(null);
   const saveNowRef = useRef<() => void>(() => {});
   const wasInkRef = useRef(false);
+  // 그리기 엔진이 도구막대를 숨길 때 쓰는 통로. 엔진 effect 의 의존성을 늘리지 않으려고 ref 로 둡니다.
+  const hideBarRef = useRef<(() => void) | null>(null);
+  const barPullRef = useRef<number | null>(null);
 
   // ---------- 본문 불러오기 (폰 저장분 우선, 없으면 서버) ----------
   useEffect(() => {
@@ -714,6 +726,7 @@ const SermonRead = () => {
   const enterInkMode = () => {
     setEraser(false);
     setEraseMenu(false);
+    setBarHidden(false);
     setInkMode(true);
     pushSub();
     try {
@@ -727,6 +740,7 @@ const SermonRead = () => {
   const exitInkMode = () => {
     setInkMode(false);
     setEraseMenu(false);
+    setBarHidden(false);
     closeSub();
   };
 
@@ -738,6 +752,7 @@ const SermonRead = () => {
     }
     if (!wasInkRef.current) return;
     wasInkRef.current = false;
+    setBarHidden(false); // 다음에 들어올 때 도구막대가 보이도록
     try {
       if (document.fullscreenElement && (document as any).exitFullscreen) {
         (document as any).exitFullscreen().catch(() => {});
@@ -788,6 +803,58 @@ const SermonRead = () => {
     setHasInk(false); // → 글자 크기 −/+ 즉시 다시 활성화
     deleteInk(id);
     toast("필기를 모두 지웠습니다");
+  };
+
+  // ---------- 필기: 도구막대 자동 숨김 ----------
+  // 엔진(onDown)은 이 ref 만 호출합니다 — 상태를 직접 참조하지 않습니다.
+  useEffect(() => {
+    hideBarRef.current = () => setBarHidden(true);
+    return () => {
+      hideBarRef.current = null;
+    };
+  }, []);
+
+  // 화면 맨 위 가장자리에서 아래로 24px 이상 끌면 도구막대가 다시 나옵니다 (펜·손가락 모두).
+  const onBarPullDown = (e: React.PointerEvent) => {
+    barPullRef.current = e.clientY;
+  };
+
+  const onBarPullMove = (e: React.PointerEvent) => {
+    const y0 = barPullRef.current;
+    if (y0 === null) return;
+    if (e.clientY - y0 >= 24) {
+      barPullRef.current = null;
+      setBarHidden(false);
+    }
+  };
+
+  const onBarPullUp = () => {
+    barPullRef.current = null;
+  };
+
+  // ---------- 필기: 전체화면 토글 ----------
+  // WebView(APK)에는 requestFullscreen 이 없을 수 있어, 있을 때만 버튼을 띄웁니다.
+  const fsSupported =
+    typeof document !== "undefined" &&
+    typeof (document.documentElement as any).requestFullscreen === "function";
+
+  useEffect(() => {
+    const onFs = () => setIsFs(!!document.fullscreenElement);
+    onFs();
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+
+  const toggleFullscreen = () => {
+    try {
+      if (document.fullscreenElement) {
+        const d = document as any;
+        if (d.exitFullscreen) d.exitFullscreen().catch(() => {});
+      } else {
+        const el = document.documentElement as any;
+        if (el.requestFullscreen) el.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+      }
+    } catch (e) {}
   };
 
   const warnFontLocked = () => {
@@ -926,6 +993,7 @@ const SermonRead = () => {
       // ④ 손가락은 스크롤 전용
       if (e.pointerType !== "pen") return;
       markPen();
+      if (hideBarRef.current) hideBarRef.current(); // 펜이 닿으면 도구막대를 접습니다 (ref 경유 — 의존성 그대로)
       e.preventDefault();
       activeId = e.pointerId;
       try {
@@ -1115,28 +1183,46 @@ const SermonRead = () => {
       {/* 필기 도구막대 — 헤더(높이 61px) 바로 아래에 붙어 따라옵니다.
           sticky 는 흐름상의 위치에서만 동작하므로 헤더 바로 다음에 두어야 합니다. */}
       {inkMode ? (
-        <div className="sticky top-[60px] z-20 bg-background border-b border-border px-3 py-2">
-          {/* 1줄: 도구 */}
-          <div className="flex items-center gap-1.5">
+        <div
+          className={
+            "sticky top-[60px] z-20 bg-background border-b border-border px-3 py-1.5 transition-transform duration-200 ease-out " +
+            (barHidden ? "-translate-y-[calc(100%+4px)] pointer-events-none" : "translate-y-0")
+          }
+        >
+          {/* 1줄: 도구 │ 굵기 │ 되돌리기·전체화면·완료 */}
+          <div
+            className="flex flex-nowrap items-center gap-1 overflow-x-auto"
+            style={{ scrollbarWidth: "none" }}
+          >
+            {/* 손잡이 — 수동으로 접기 */}
+            <button
+              type="button"
+              onClick={() => setBarHidden(true)}
+              className="w-5 h-8 flex items-center justify-center text-foreground/40 shrink-0"
+              aria-label="도구막대 숨기기"
+            >
+              <ChevronUp size={14} />
+            </button>
+
             <button
               type="button"
               onClick={() => selectTool("pen")}
               className={
-                "h-9 px-3 rounded-full border border-border bg-card flex items-center gap-1.5 text-xs font-gothic shrink-0 " +
+                "h-8 px-2.5 rounded-full border border-border bg-card flex items-center gap-1 text-[0.6875rem] font-gothic shrink-0 " +
                 (!eraser && inkTool.tool === "pen" ? "ring-2 ring-foreground text-foreground" : "text-foreground/70")
               }
             >
-              <PenLine size={15} /> 펜
+              <PenLine size={14} /> 펜
             </button>
             <button
               type="button"
               onClick={() => selectTool("hl")}
               className={
-                "h-9 px-3 rounded-full border border-border bg-card flex items-center gap-1.5 text-xs font-gothic shrink-0 " +
+                "h-8 px-2.5 rounded-full border border-border bg-card flex items-center gap-1 text-[0.6875rem] font-gothic shrink-0 " +
                 (!eraser && inkTool.tool === "hl" ? "ring-2 ring-foreground text-foreground" : "text-foreground/70")
               }
             >
-              <Highlighter size={15} /> 형광펜
+              <Highlighter size={14} /> 형광펜
             </button>
 
             {/* 지우개 ▾ — 왼쪽은 토글, 오른쪽 화살표는 메뉴 */}
@@ -1153,74 +1239,54 @@ const SermonRead = () => {
                   setEraseMenu(false);
                 }}
                 className={
-                  "h-9 pl-3 pr-1.5 flex items-center gap-1.5 text-xs font-gothic " +
+                  "h-8 pl-2.5 pr-1 flex items-center gap-1 text-[0.6875rem] font-gothic " +
                   (eraser ? "text-foreground" : "text-foreground/70")
                 }
               >
-                <Eraser size={15} /> 지우개
+                <Eraser size={14} /> 지우개
               </button>
               <button
                 type="button"
                 onClick={() => setEraseMenu((v) => !v)}
-                className="h-9 pr-2.5 pl-0.5 flex items-center text-foreground/70"
+                className="h-8 pr-2 pl-0.5 flex items-center text-foreground/70"
                 aria-label="지우개 메뉴"
               >
                 <ChevronDown size={14} />
               </button>
               {eraseMenu ? (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setEraseMenu(false)} />
-                  <div className="absolute left-0 top-full mt-1 z-50 min-w-[9rem] rounded-xl border border-border bg-card shadow-lg overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEraser(true);
-                        setEraseMenu(false);
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-gothic text-foreground active:bg-muted"
-                    >
-                      <Eraser size={15} /> 획 지우개
-                    </button>
-                    <button
-                      type="button"
-                      onClick={clearAllInk}
-                      disabled={!hasInk}
-                      className="w-full flex items-center gap-2 border-t border-border px-3 py-2.5 text-xs font-gothic text-red-600 active:bg-muted disabled:opacity-40"
-                    >
-                      <Trash2 size={15} /> 전체 지우기
-                    </button>
-                  </div>
-                </>
+                <div className="absolute left-0 top-full mt-1 z-50 min-w-[9rem] rounded-xl border border-border bg-card shadow-lg overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEraser(true);
+                      setEraseMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-[0.6875rem] font-gothic text-foreground active:bg-muted"
+                  >
+                    <Eraser size={14} /> 획 지우개
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearAllInk}
+                    disabled={!hasInk}
+                    className="w-full flex items-center gap-2 border-t border-border px-3 py-2.5 text-[0.6875rem] font-gothic text-red-600 active:bg-muted disabled:opacity-40"
+                  >
+                    <Trash2 size={14} /> 전체 지우기
+                  </button>
+                </div>
               ) : null}
             </div>
 
-            <button
-              type="button"
-              onClick={undoInk}
-              className="w-9 h-9 rounded-full border border-border bg-card flex items-center justify-center text-foreground/70 active:bg-muted shrink-0"
-              aria-label="되돌리기"
-            >
-              <Undo2 size={16} />
-            </button>
-            <span className="ml-auto" />
-            <button
-              type="button"
-              onClick={exitInkMode}
-              className="h-9 px-4 rounded-full bg-primary text-white text-xs font-medium shrink-0"
-            >
-              완료
-            </button>
-          </div>
+            <span className="mx-0.5 h-5 w-px bg-border shrink-0" />
 
-          {/* 2줄: 굵기 */}
-          <div className="mt-2 flex items-center gap-1.5">
-            {(inkTool.tool === "pen" ? PEN_W : HL_W).map((w, i) => (
+            {/* 굵기 — 표시선은 PEN_W_VIEW/HL_W_VIEW (실제 획 굵기와 별개) */}
+            {(inkTool.tool === "pen" ? PEN_W_VIEW : HL_W_VIEW).map((w, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => selectWidth(i)}
                 className={
-                  "h-8 w-10 rounded-lg border border-border bg-card flex items-center justify-center shrink-0 " +
+                  "h-7 w-8 rounded-md border border-border bg-card flex items-center justify-center shrink-0 " +
                   ((inkTool.tool === "pen" ? inkTool.penW : inkTool.hlW) === i ? "ring-2 ring-foreground" : "")
                 }
                 aria-label={"굵기 " + String(i + 1)}
@@ -1228,19 +1294,48 @@ const SermonRead = () => {
                 <span
                   style={{
                     display: "block",
-                    width: "1.25rem",
-                    height: String(Math.max(2, Math.min(14, w))) + "px",
+                    width: "1rem",
+                    height: String(w) + "px",
                     borderRadius: "9999px",
                     background: inkTool.tool === "pen" ? inkTool.penColor : inkTool.hlColor,
                   }}
                 />
               </button>
             ))}
+
+            <span className="mx-0.5 h-5 w-px bg-border shrink-0" />
+            <span className="ml-auto shrink-0" />
+
+            <button
+              type="button"
+              onClick={undoInk}
+              className="w-8 h-8 rounded-full border border-border bg-card flex items-center justify-center text-foreground/70 active:bg-muted shrink-0"
+              aria-label="되돌리기"
+            >
+              <Undo2 size={15} />
+            </button>
+            {fsSupported ? (
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className="w-8 h-8 rounded-full border border-border bg-card flex items-center justify-center text-foreground/70 active:bg-muted shrink-0"
+                aria-label={isFs ? "전체화면 끄기" : "전체화면"}
+              >
+                {isFs ? <Minimize size={15} /> : <Maximize size={15} />}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={exitInkMode}
+              className="h-8 px-3.5 rounded-full bg-primary text-white text-[0.6875rem] font-medium shrink-0"
+            >
+              완료
+            </button>
           </div>
 
-          {/* 3줄: 색 — 한 줄 고정. 좁으면 가로 스크롤, 넓으면 늘어나 빈 공간을 남기지 않습니다. */}
+          {/* 2줄: 색 — 한 줄 고정. justify-between 으로 폭 전체에 퍼뜨려 오른쪽 빈 공간을 없앱니다. */}
           <div
-            className="mt-2 flex flex-nowrap gap-1.5 overflow-x-auto"
+            className="mt-1.5 flex flex-nowrap items-center justify-between gap-1 overflow-x-auto"
             style={{ scrollbarWidth: "none" }}
           >
             {(inkTool.tool === "pen" ? PEN_COLORS : HL_COLORS).map((c) => (
@@ -1249,9 +1344,9 @@ const SermonRead = () => {
                 type="button"
                 onClick={() => selectColor(c)}
                 className={
-                  "h-7 flex-1 min-w-[1.75rem] rounded-md border border-black/10 " +
+                  "w-6 h-6 rounded-full border border-black/10 shrink-0 " +
                   ((inkTool.tool === "pen" ? inkTool.penColor : inkTool.hlColor) === c && !eraser
-                    ? "ring-2 ring-foreground"
+                    ? "ring-2 ring-foreground ring-offset-1 ring-offset-background"
                     : "")
                 }
                 style={{ background: c }}
@@ -1260,6 +1355,33 @@ const SermonRead = () => {
             ))}
           </div>
         </div>
+      ) : null}
+
+      {/* 지우개 메뉴 바깥 탭 — 도구막대에 transform 이 걸려 있어 그 안의 fixed 는 화면 전체를 덮지 못합니다.
+          그래서 백드롭만 밖으로 빼고, 도구막대(z-20)보다 아래인 z-10 에 둡니다. */}
+      {inkMode && eraseMenu ? (
+        <div className="fixed inset-0 z-10" onClick={() => setEraseMenu(false)} />
+      ) : null}
+
+      {/* 접힌 도구막대 되살리기 — 화면 맨 위에서 아래로 끌기 + 안전장치 알약 */}
+      {inkMode && barHidden ? (
+        <>
+          <div
+            className="fixed inset-x-0 top-0 z-40 h-7"
+            style={{ touchAction: "none" }}
+            onPointerDown={onBarPullDown}
+            onPointerMove={onBarPullMove}
+            onPointerUp={onBarPullUp}
+            onPointerCancel={onBarPullUp}
+          />
+          <button
+            type="button"
+            onClick={() => setBarHidden(false)}
+            className="fixed top-[64px] left-1/2 -translate-x-1/2 z-30 h-6 px-3 rounded-full bg-card/90 border border-border shadow-sm flex items-center gap-1 text-[0.625rem] font-gothic text-foreground/60"
+          >
+            <ChevronDown size={12} /> 도구
+          </button>
+        </>
       ) : null}
 
       <div className="px-4 py-4 pb-24">
