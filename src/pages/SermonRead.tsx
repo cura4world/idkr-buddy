@@ -77,6 +77,8 @@ const saveFontStep = (n: number) => {
 // 글자 크기는 전부 em 으로 줍니다. Tailwind 임의값(text-[1.0625rem])을 쓰면 배율이 먹지 않습니다.
 const ID_BASE = "font-word text-foreground leading-[1.75] break-words";
 const KO_BASE = "font-gothic text-muted-foreground leading-[1.7] break-words mt-1.5";
+// 성경 인용(ref/verse) 공통 색 — 모든 성경 줄에 같은 값을 씁니다.
+const BIBLE_COLOR = "text-blue-800";
 
 interface KindStyle {
   wrap: string;
@@ -95,10 +97,12 @@ const KIND_STYLE: Record<string, KindStyle> = {
     koSize: "0.87em",
   },
   ref: {
+    // 성경 계열(ref/verse)은 이탤릭 대신 진한 파랑으로 구분합니다.
+    // Lora 이탤릭의 k 가 R 처럼 보여 가독성이 떨어지기 때문입니다.
     wrap: "mb-6 -mt-4",
-    idClass: ID_BASE + " italic text-muted-foreground",
+    idClass: ID_BASE + " " + BIBLE_COLOR,
     idSize: "0.9em",
-    koClass: KO_BASE + " italic",
+    koClass: KO_BASE,
     koSize: "0.68em",
   },
   heading: {
@@ -110,9 +114,9 @@ const KIND_STYLE: Record<string, KindStyle> = {
   },
   verse: {
     wrap: "mb-5 border-l-2 border-indigo-300 pl-3",
-    idClass: ID_BASE + " italic",
+    idClass: ID_BASE + " " + BIBLE_COLOR,
     idSize: "0.95em",
-    koClass: KO_BASE + " italic",
+    koClass: KO_BASE,
     koSize: "0.64em",
   },
   hymn: {
