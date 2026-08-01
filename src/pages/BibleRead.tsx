@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, ChevronDown,
-  Loader2, RotateCcw, Volume2, X, Check, Plus,
+  Loader2, RotateCcw, Volume2, X, Check, Plus, Minus,
   Maximize2,
   Minimize2,
 } from "lucide-react";
@@ -26,6 +26,26 @@ import { useSwipeFlip } from "@/lib/useSwipeFlip";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 const LAST_POS_KEY = "bible-last-pos";
+
+// ---------- 글자 크기 (이 화면 전용) ----------
+// 설교문 읽기와 같은 방식입니다. 다만 배율을 rem 으로 주므로
+// 앱 전체 배율(fontScale.ts)에 이 배율이 곱해집니다. 본문 글자는 전부 em 입니다.
+const FONT_KEY = "bible-font-step";
+const SCALE = [0.85, 0.92, 1.0, 1.08, 1.16, 1.26, 1.36, 1.48, 1.60];
+
+const loadFontStep = (): number => {
+  try {
+    const n = parseInt(localStorage.getItem(FONT_KEY) || "2", 10);
+    if (isFinite(n) && n >= 0 && n < SCALE.length) return n;
+  } catch (e) {}
+  return 2;
+};
+
+const saveFontStep = (n: number) => {
+  try {
+    localStorage.setItem(FONT_KEY, String(n));
+  } catch (e) {}
+};
 
 interface BiblePos {
   bookId: string;
@@ -75,6 +95,19 @@ const BibleRead = () => {
   const [error, setError] = useState(false);
   const [koError, setKoError] = useState(false);
   const [flipped, setFlipped] = useState(false);
+
+  // ---------- 본문 글자 크기 ----------
+  const [fontStep, setFontStep] = useState(loadFontStep);
+
+  const changeFont = (delta: number) => {
+    setFontStep((prev) => {
+      const next = Math.max(0, Math.min(SCALE.length - 1, prev + delta));
+      saveFontStep(next);
+      return next;
+    });
+  };
+
+  const bodyFontSize = SCALE[fontStep] + "rem";
 
   // ---------- 뒤집어도 같은 절이 화면 같은 자리에 오도록 ----------
   //
@@ -348,9 +381,9 @@ const BibleRead = () => {
     <p
       key={v.verse}
       ref={(el) => { verseRefs.current["id-" + v.verse] = el; }}
-      className="mb-2 text-base leading-relaxed font-word text-gray-900"
+      className="mb-2 text-[1em] leading-relaxed font-word text-gray-900"
     >
-      <span className="text-sky-500/70 text-xs align-super mr-1 select-none">{v.verse}</span>
+      <span className="text-sky-500/70 text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
       {renderTokens(v.text, "b" + v.verse + "-")}
     </p>
   );
@@ -359,9 +392,9 @@ const BibleRead = () => {
     <p
       key={"k" + v.verse}
       ref={(el) => { verseRefs.current["ko-" + v.verse] = el; }}
-      className="mb-2 text-sm leading-relaxed text-gray-800 font-gothic"
+      className="mb-2 text-[0.875em] leading-relaxed text-gray-800 font-gothic"
     >
-      <span className="text-sky-500/70 text-xs align-super mr-1 select-none">{v.verse}</span>
+      <span className="text-sky-500/70 text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
       {v.text}
     </p>
   );
@@ -411,7 +444,30 @@ const BibleRead = () => {
                   <ChevronDown size={13} className="shrink-0" />
                 </button>
                 {!flipped && !loading && !error && verses && verses.length > 0 && (
-                  <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <span
+                    className="ml-auto shrink-0 flex items-center gap-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => changeFont(-1)}
+                      disabled={fontStep <= 0}
+                      className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-foreground/80 active:bg-muted disabled:opacity-30"
+                      aria-label="글자 작게"
+                      title="글자 작게"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => changeFont(1)}
+                      disabled={fontStep >= SCALE.length - 1}
+                      className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-foreground/80 active:bg-muted disabled:opacity-30"
+                      aria-label="글자 크게"
+                      title="글자 크게"
+                    >
+                      <Plus size={14} />
+                    </button>
                     <BibleAudioButton
                       bookId={pos.bookId}
                       chapter={pos.chapter}
@@ -440,7 +496,7 @@ const BibleRead = () => {
                   </button>
                 </div>
               ) : !flipped ? (
-                <div>
+                <div style={{ fontSize: bodyFontSize }}>
                   {(verses || []).map(renderTbVerse)}
                   <p className="mt-5 text-[0.625rem] text-gray-400 font-gothic text-right leading-relaxed">
                     Alkitab Terjemahan Baru (TB)
@@ -449,7 +505,7 @@ const BibleRead = () => {
                   </p>
                 </div>
               ) : versesKo ? (
-                <div>
+                <div style={{ fontSize: bodyFontSize }}>
                   {versesKo.map(renderKoVerse)}
                   <p className="mt-5 text-[0.625rem] text-gray-400 font-gothic text-right">
                     성경전서 새번역 · 대한성서공회
