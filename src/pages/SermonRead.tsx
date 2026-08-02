@@ -13,7 +13,6 @@ import {
   Plus,
   ChevronUp,
   ChevronDown,
-  List,
   Loader2,
   RotateCcw,
   Maximize2,
@@ -313,10 +312,8 @@ const SermonRead = () => {
 
   const [fontStep, setFontStep] = useState(loadFontStep);
 
-  const [tocOpen, setTocOpen] = useState(false);
   const subOpenRef = useRef(false);
   const subPushedRef = useRef(false);
-  const pendingScroll = useRef<number | null>(null);
 
   // 단어 탭 팝업 (성경 읽기와 동일한 3단 캐시)
   const [popupWord, setPopupWord] = useState<string | null>(null);
@@ -414,7 +411,6 @@ const SermonRead = () => {
   };
 
   const resetSub = () => {
-    setTocOpen(false);
     setPopupWord(null);
     setInkMode(false); // 폰 뒤로가기 → 필기 모드만 종료
   };
@@ -422,9 +418,17 @@ const SermonRead = () => {
   const closeSub = () => {
     if (subPushedRef.current) {
       subPushedRef.current = false;
-      subOpenRef.current = false;
+      // subOpenRef 는 여기서 내리지 않습니다.
+      // popstate 핸들러가 subOpenRef 를 보고 resetSub() 를 실행하기 때문입니다.
       try {
         window.history.back();
+        // popstate 가 오지 않는 드문 경우를 대비한 안전장치
+        window.setTimeout(() => {
+          if (subOpenRef.current) {
+            subOpenRef.current = false;
+            resetSub();
+          }
+        }, 300);
         return;
       } catch (e) {
         // 아래에서 직접 닫습니다
@@ -433,13 +437,6 @@ const SermonRead = () => {
     subOpenRef.current = false;
     resetSub();
   };
-
-  const openToc = () => {
-    setTocOpen(true);
-    pushSub();
-  };
-
-  const closeToc = () => closeSub();
 
   useEffect(() => {
     const onPop = () => {
@@ -452,25 +449,6 @@ const SermonRead = () => {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
-
-  // 시트가 닫힌 뒤에 이동합니다 (닫기와 스크롤을 한 핸들러에서 같이 하지 않습니다)
-  useEffect(() => {
-    if (tocOpen) return;
-    const idx = pendingScroll.current;
-    if (idx === null) return;
-    pendingScroll.current = null;
-    if (idx < 0) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
-    const el = document.getElementById("sec-" + idx);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [tocOpen]);
-
-  const goSection = (idx: number) => {
-    pendingScroll.current = idx;
-    closeToc();
-  };
 
   const openWordPopup = async (rawToken: string, sentence: string) => {
     const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
@@ -1143,9 +1121,6 @@ const SermonRead = () => {
   }, [inkMode]);
 
   const blocks: SermonBlock[] = (rec && rec.blocks) || [];
-  const headings = blocks
-    .map((b, i) => ({ b, i }))
-    .filter((x) => x.b && x.b.kind === "heading");
 
   const fontPx = Math.round(BASE_PX * SCALE[fontStep]) + "px";
 
@@ -1558,80 +1533,8 @@ const SermonRead = () => {
             >
               <PenLine size={18} />
             </button>
-            <button
-              type="button"
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="pointer-events-auto w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground/70 active:bg-muted"
-              aria-label="맨 위로"
-            >
-              <ChevronUp size={18} />
-            </button>
-            {headings.length > 0 ? (
-              <button
-                type="button"
-                onClick={openToc}
-                className="pointer-events-auto w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground/70 active:bg-muted"
-                aria-label="목차"
-              >
-                <List size={18} />
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() =>
-                window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })
-              }
-              className="pointer-events-auto w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground/70 active:bg-muted"
-              aria-label="맨 아래로"
-            >
-              <ChevronDown size={18} />
-            </button>
           </div>
         </div>
-      ) : null}
-
-      {/* 목차 시트 */}
-      {tocOpen ? (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/40" onClick={closeToc} />
-          <div className={"fixed inset-x-0 bottom-0 z-50 mx-auto " + widthClass + " max-h-[70dvh] overflow-y-auto rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5"}>
-            <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border" />
-            <h2 className="px-4 text-base font-semibold text-foreground">목차</h2>
-            <div className="mt-3 border-t border-border">
-              <button
-                type="button"
-                onClick={() => goSection(-1)}
-                className="w-full border-b border-border px-4 py-3.5 text-left active:bg-muted/60"
-              >
-                <span className="block text-[0.875rem] leading-tight text-foreground">처음으로</span>
-              </button>
-              {headings.map(({ b, i }) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => goSection(i)}
-                  className="w-full border-b border-border px-4 py-3.5 text-left active:bg-muted/60"
-                >
-                  {b.ko ? (
-                    <span className="block text-[0.875rem] leading-tight text-foreground">{b.ko}</span>
-                  ) : null}
-                  {b.id ? (
-                    <span className="mt-0.5 block font-word text-[0.71875rem] text-muted-foreground">
-                      {b.id}
-                    </span>
-                  ) : null}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={closeToc}
-              className="mx-4 mt-4 h-12 w-[calc(100%-2rem)] rounded-[13px] bg-primary text-[0.9375rem] font-medium text-white"
-            >
-              닫기
-            </button>
-          </div>
-        </>
       ) : null}
 
       {popupWord && (
