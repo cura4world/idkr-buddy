@@ -1064,14 +1064,16 @@ const SermonRead = () => {
       for (let i = 0; i < e.touches.length; i++) {
         const t = e.touches[i] as any;
         if ((t.radiusX || 0) > 22 || (t.radiusY || 0) > 22) {
-          e.preventDefault(); // 접촉면이 크면 손바닥
-          return;
-        }
-        if (t.clientY > window.innerHeight * 0.66) {
-          e.preventDefault(); // 아래쪽 1/3 = 손바닥 구역
+          e.preventDefault(); // 접촉면이 크면 손바닥 — 펜 유무와 무관하게 항상
           return;
         }
         if (penNear) {
+          // 아래 두 규칙은 "펜을 쥐고 쓰는 자세"에서만 의미가 있습니다.
+          // 펜이 없을 때까지 걸면 손가락 스크롤이 대부분 막힙니다.
+          if (t.clientY > window.innerHeight * 0.66) {
+            e.preventDefault(); // 아래쪽 1/3 = 글씨 쓸 때 손바닥이 얹히는 구역
+            return;
+          }
           const dx = t.clientX - lastPenX;
           const dy = t.clientY - lastPenY;
           if (dx * dx + dy * dy < 6400) {
@@ -1388,7 +1390,7 @@ const SermonRead = () => {
           <span className="inline-flex items-center min-w-0 font-gothic text-indigo-600 bg-indigo-500/10 rounded-full px-3 py-1 text-sm">
             <span className="truncate">{formatSermonDate(id)}</span>
           </span>
-          <span className="ml-auto shrink-0 flex items-center gap-2">
+          <span className="ml-auto mr-14 shrink-0 flex items-center gap-2">
             {/* 필기가 있으면 잠급니다 — 글자 크기를 바꾸면 본문이 재배치되어 필기가 어긋나기 때문입니다.
                 disabled 버튼은 클릭 이벤트를 아예 만들지 않아, 잠금 안내는 감싼 span 이 받습니다. */}
             <span onClick={warnFontLocked} className="inline-flex">
