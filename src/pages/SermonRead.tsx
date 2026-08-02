@@ -357,7 +357,6 @@ const SermonRead = () => {
   const wasInkRef = useRef(false);
   // 그리기 엔진이 도구막대를 숨길 때 쓰는 통로. 엔진 effect 의 의존성을 늘리지 않으려고 ref 로 둡니다.
   const hideBarRef = useRef<(() => void) | null>(null);
-  const barPullRef = useRef<number | null>(null);
   const eraseAnchorRef = useRef<HTMLDivElement | null>(null);
 
   // ---------- 본문 불러오기 (폰 저장분 우선, 없으면 서버) ----------
@@ -798,24 +797,6 @@ const SermonRead = () => {
     };
   }, []);
 
-  // 화면 맨 위 가장자리에서 아래로 24px 이상 끌면 도구막대가 다시 나옵니다 (펜·손가락 모두).
-  const onBarPullDown = (e: React.PointerEvent) => {
-    barPullRef.current = e.clientY;
-  };
-
-  const onBarPullMove = (e: React.PointerEvent) => {
-    const y0 = barPullRef.current;
-    if (y0 === null) return;
-    if (e.clientY - y0 >= 24) {
-      barPullRef.current = null;
-      setBarHidden(false);
-    }
-  };
-
-  const onBarPullUp = () => {
-    barPullRef.current = null;
-  };
-
   // ---------- 필기: 전체화면(몰입) 토글 ----------
   // APK 의 WebView 는 requestFullscreen 이 있어도 상태바·내비바를 실제로 감추지 않습니다.
   // 그래서 시스템 전체화면은 "되면 좋고"로 시도하고, 화면을 넓히는 일은 앱 헤더를 접어서 직접 합니다.
@@ -882,6 +863,8 @@ const SermonRead = () => {
     let erasing = false;
     let penNear = false;
     let penTimer: number | null = null;
+    let lastPenX = -9999;
+    let lastPenY = -9999;
 
     let group: SVGGElement | null = null;
     let chunk: SVGPathElement | null = null;
@@ -1071,8 +1054,10 @@ const SermonRead = () => {
     };
 
     // ② 펜 접촉·손바닥이 스크롤을 만들지 못하게 막습니다.
+    //    단, 펜을 손에 든 채(호버 중)라도 펜촉에서 멀리 떨어진 손가락 터치는
+    //    스크롤로 허용합니다 — 안 그러면 펜을 쥐고 있는 동안 스크롤이 전부 막힙니다.
     const onTouchStart = (e: TouchEvent) => {
-      if (penNear || drawing || erasing) {
+      if (drawing || erasing) {
         e.preventDefault();
         return;
       }
@@ -1086,6 +1071,14 @@ const SermonRead = () => {
           e.preventDefault(); // 아래쪽 1/3 = 손바닥 구역
           return;
         }
+        if (penNear) {
+          const dx = t.clientX - lastPenX;
+          const dy = t.clientY - lastPenY;
+          if (dx * dx + dy * dy < 6400) {
+            e.preventDefault(); // 펜촉 80px 반경 안 = 펜 자신의 접촉으로 간주
+            return;
+          }
+        }
       }
     };
 
@@ -1095,7 +1088,11 @@ const SermonRead = () => {
     };
 
     const onDocPointerMove = (e: PointerEvent) => {
-      if (e.pointerType === "pen") markPen();
+      if (e.pointerType === "pen") {
+        markPen();
+        lastPenX = e.clientX;
+        lastPenY = e.clientY;
+      }
     };
 
     surface.addEventListener("pointerdown", onDown, { passive: false });
@@ -1186,9 +1183,9 @@ const SermonRead = () => {
       {inkMode ? (
         <div
           className={
-            "sticky z-20 bg-background border-b border-border px-3 py-1.5 transition-transform duration-200 ease-out " +
+            "sticky relative z-20 bg-background border-b border-border px-3 py-1.5 transition-transform duration-200 ease-out " +
             (immersive ? "top-0 " : "top-[60px] ") +
-            (barHidden ? "-translate-y-[calc(100%+4px)] pointer-events-none" : "translate-y-0")
+            (barHidden ? "-translate-y-full pointer-events-none" : "translate-y-0")
           }
         >
           {/* 1줄: 도구 │ 굵기 │ 되돌리기·전체화면·완료
@@ -1339,6 +1336,18 @@ const SermonRead = () => {
               />
             ))}
           </div>
+
+          {/* 리본(탭) — 접어도 화면에 남아 다시 펴는 손잡이가 됩니다.
+              컨테이너 아래(top-full)에 매달려 있어, 컨테이너가 자기 높이만큼 올라가 숨으면
+              이 리본만 헤더 아래로 삐죽 나와 보입니다. */}
+          <button
+            type="button"
+            onClick={() => setBarHidden((v) => !v)}
+            className="pointer-events-auto absolute right-3 top-full flex h-6 w-10 items-center justify-center rounded-b-lg border border-t-0 border-border bg-card shadow-sm text-foreground/60 active:bg-muted"
+            aria-label={barHidden ? "도구막대 펴기" : "도구막대 접기"}
+          >
+            {barHidden ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+          </button>
         </div>
       ) : null}
 
@@ -1370,30 +1379,6 @@ const SermonRead = () => {
               <Trash2 size={14} /> 전체 지우기
             </button>
           </div>
-        </>
-      ) : null}
-
-      {/* 접힌 도구막대 되살리기 — 화면 맨 위에서 아래로 끌기 + 안전장치 알약 */}
-      {inkMode && barHidden ? (
-        <>
-          <div
-            className="fixed inset-x-0 top-0 z-40 h-7"
-            style={{ touchAction: "none" }}
-            onPointerDown={onBarPullDown}
-            onPointerMove={onBarPullMove}
-            onPointerUp={onBarPullUp}
-            onPointerCancel={onBarPullUp}
-          />
-          <button
-            type="button"
-            onClick={() => setBarHidden(false)}
-            className={
-              "fixed left-1/2 -translate-x-1/2 z-30 h-6 px-3 rounded-full bg-card/90 border border-border shadow-sm flex items-center gap-1 text-[0.625rem] font-gothic text-foreground/60 " +
-              (immersive ? "top-1" : "top-[64px]")
-            }
-          >
-            <ChevronDown size={12} /> 도구
-          </button>
         </>
       ) : null}
 
