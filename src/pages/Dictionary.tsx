@@ -199,6 +199,10 @@ const Dictionary = () => {
     if (code === "INVALID_API_KEY") return "API 키가 올바르지 않습니다. 설정에서 다시 확인해주세요.";
     if (code === "RATE_LIMIT") return "요청이 많습니다. 잠시 후 다시 시도해주세요.";
     if (code === "EMPTY_WORD") return "단어를 입력해주세요.";
+    if (code === "TIMEOUT") return "응답이 늦어 검색을 중단했습니다. 다시 시도해주세요.";
+    if (code === "NETWORK") return "네트워크 연결을 확인해주세요.";
+    if (code === "SERVER_ERROR") return "Gemini 서버 오류입니다. 잠시 후 다시 시도해주세요.";
+    if (code === "BAD_REQUEST") return "요청 처리에 실패했습니다. 잠시 후 다시 시도해주세요.";
     return "검색에 실패했습니다. 잠시 후 다시 시도해주세요.";
   };
 
