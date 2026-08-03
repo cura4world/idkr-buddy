@@ -686,7 +686,7 @@ const Devotion = () => {
                   >
                     {popupSaved ? <Check size={13} className="shrink-0" /> : <Plus size={13} className="shrink-0" />}
                     <span className="truncate">
-                      {popupSaved ? "저장됨" : saveTargetId ? `${saveTargetName}에 담기` : "단어장을 먼저 만들어 주세요"}
+                      {popupSaved ? "저장됨" : saveTargetId ? saveTargetName : "단어장을 먼저 만들어 주세요"}
                     </span>
                   </button>
                   {/* 담긴 뒤에도 다른 단어장에는 담을 수 있어야 하므로 ⌄ 는 잠그지 않습니다 */}

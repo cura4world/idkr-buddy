@@ -1115,7 +1115,7 @@ const Dictionary = () => {
                     {saved
                       ? "저장됨"
                       : saveTargetId
-                        ? `${saveTargetName}에 보내기`
+                        ? saveTargetName
                         : "단어장을 먼저 만들어 주세요"}
                   </span>
                 </button>
