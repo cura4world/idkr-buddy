@@ -176,8 +176,39 @@ sortMyWordbookNewestFirstOnce();
 export function addCategory(name: string, emoji: string): Category {
   const categories = getCategories();
   const cat: Category = { id: crypto.randomUUID(), name, emoji };
-  categories.push(cat);
+  // 새 단어장은 '내 단어장' 바로 다음에 넣습니다 — 내 단어장 화면에서 최신이 위로 오도록.
+  // (addWord 가 내 단어장 단어를 다루는 방식과 같습니다. 표시 순서 = 저장 순서)
+  const myIdx = categories.findIndex((c) => c.id === MY_WORDBOOK_ID);
+  categories.splice(myIdx < 0 ? 0 : myIdx + 1, 0, cat);
   saveCategories(categories);
+  return cat;
+}
+
+// 보관 단어장의 다음 기본 이름 — '내 단어장 01', '내 단어장 02' …
+export function nextArchiveName(): string {
+  const re = new RegExp("^내 단어장 (\\d+)$");
+  let max = 0;
+  for (const c of getCategories()) {
+    const m = (c.name || "").match(re);
+    if (m) {
+      const n = Number(m[1]);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+  }
+  return "내 단어장 " + String(max + 1).padStart(2, "0");
+}
+
+// 내 단어장에 쌓인 단어를 새 단어장 한 권으로 묶어 보관하고 내 단어장을 비웁니다.
+// 단어의 배열 순서를 그대로 옮기므로 보관된 단어장 안에서도 최신이 위입니다.
+export function archiveMyWordbook(name: string): Category | null {
+  const words = getWords();
+  const hasMine = words.some((w) => w.categoryId === MY_WORDBOOK_ID);
+  if (!hasMine) return null;
+  const cat = addCategory(name, "📒");
+  const next = words.map((w) =>
+    w.categoryId === MY_WORDBOOK_ID ? { ...w, categoryId: cat.id } : w
+  );
+  saveWords(next);
   return cat;
 }
 
