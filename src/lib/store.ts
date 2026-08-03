@@ -293,6 +293,38 @@ export function addWordIfAbsent(word: Omit<Word, "id" | "createdAt">): { added: 
   return { added: true };
 }
 
+// 고른 단어들을 다른 단어장으로 옮깁니다.
+// 대상 단어장의 맨 앞에 넣어 최신이 위로 오게 하고, 고른 단어들끼리의 순서는 유지합니다.
+// 대상에 같은 단어가 이미 있으면 옮기지 않고 건너뜁니다(중복 방지).
+export function moveWordsToCategory(
+  ids: string[],
+  targetCategoryId: string
+): { moved: number; skipped: number } {
+  const words = getWords();
+  const idSet = new Set(ids);
+  // 이번에 옮기는 것끼리도 겹치지 않도록 표제어를 채워 가며 확인합니다.
+  const taken = new Set<string>();
+  const moving: Word[] = [];
+  let skipped = 0;
+  for (const w of words) {
+    if (!idSet.has(w.id)) continue;
+    if (w.categoryId === targetCategoryId) { skipped++; continue; }
+    const key = w.word.trim().toLowerCase();
+    if (hasWordInCategory(targetCategoryId, w.word) || taken.has(key)) { skipped++; continue; }
+    taken.add(key);
+    moving.push(w);
+  }
+  if (moving.length === 0) return { moved: 0, skipped };
+  const movingIds = new Set(moving.map((w) => w.id));
+  const rest = words.filter((w) => !movingIds.has(w.id));
+  const moved = moving.map((w) => ({ ...w, categoryId: targetCategoryId }));
+  // 대상 단어장 구간의 맨 앞에 끼워 넣습니다 (대상이 비어 있으면 배열 끝).
+  const firstIdx = rest.findIndex((w) => w.categoryId === targetCategoryId);
+  rest.splice(firstIdx < 0 ? rest.length : firstIdx, 0, ...moved);
+  saveWords(rest);
+  return { moved: moved.length, skipped };
+}
+
 export function deleteWord(id: string) {
   const words = getWords().filter((w) => w.id !== id);
   saveWords(words);
