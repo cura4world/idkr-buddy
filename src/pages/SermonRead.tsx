@@ -13,6 +13,7 @@ import {
   Plus,
   ChevronUp,
   ChevronDown,
+  List,
   Loader2,
   RotateCcw,
   Maximize2,
@@ -328,6 +329,14 @@ const SermonRead = () => {
   const [popupSaved, setPopupSaved] = useState(false);
   const popupReqId = useRef(0);
   const wordCache = useRef(new Map<string, { meaning: string; info: string; sentenceKo: string }>());
+  // 팝업이 열려 있는지 (popstate 핸들러는 첫 렌더의 함수를 붙들고 있어 state 를 못 읽습니다)
+  const popupOpenRef = useRef(false);
+  popupOpenRef.current = !!popupWord;
+  // 팝업을 닫은 시각 — 바로 아래 있던 빠른 이동 버튼이 잘못 눌리는 것을 막는 데 씁니다
+  const popupClosedAtRef = useRef(0);
+
+  // 목차 시트 (팝업과 같은 pushSub/closeSub 구조를 씁니다)
+  const [tocOpen, setTocOpen] = useState(false);
 
   // ---------- 필기(S펜) ----------
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -462,7 +471,10 @@ const SermonRead = () => {
   };
 
   const resetSub = () => {
+    // 팝업이 닫히는 순간을 적어 둡니다 (그 자리에 빠른 이동 버튼이 다시 나타나므로)
+    if (popupOpenRef.current) popupClosedAtRef.current = Date.now();
     setPopupWord(null);
+    setTocOpen(false);
     setInkMode(false); // 폰 뒤로가기 → 필기 모드만 종료
   };
 
@@ -1188,6 +1200,63 @@ const SermonRead = () => {
 
   const fontPx = Math.round(BASE_PX * SCALE[fontStep]) + "px";
 
+  // ---------- 빠른 이동 (위 / 목차 / 아래) ----------
+  // 소제목(heading)에는 renderBlock 이 id="sec-{i}" 를 붙여 둡니다. 찬양 제목도 heading 이라 함께 잡힙니다.
+  const tocItems = blocks
+    .map((b, i) => ({ b: b, i: i }))
+    .filter((x) => x.b && x.b.kind === "heading");
+
+  const headingEls = (): HTMLElement[] => {
+    const wrap = wrapRef.current;
+    if (!wrap) return [];
+    return Array.prototype.slice.call(wrap.querySelectorAll("[id^='sec-']")) as HTMLElement[];
+  };
+
+  // heading 에 scroll-mt-16(64px) 이 있어 scrollIntoView 만으로 sticky 헤더에 가리지 않습니다.
+  // 그래서 "지금 위치"의 기준선도 그 언저리로 둡니다.
+  const ANCHOR_TOP = 64;
+
+  const goNextSection = () => {
+    const els = headingEls();
+    const next = els.find((el) => el.getBoundingClientRect().top > ANCHOR_TOP + 8);
+    if (next) next.scrollIntoView({ behavior: "smooth", block: "start" });
+    else window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+  };
+
+  const goPrevSection = () => {
+    const els = headingEls();
+    let prev: HTMLElement | null = null;
+    for (const el of els) {
+      if (el.getBoundingClientRect().top < ANCHOR_TOP - 8) prev = el;
+      else break;
+    }
+    if (prev) prev.scrollIntoView({ behavior: "smooth", block: "start" });
+    else window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const openToc = () => {
+    if (tocItems.length === 0) {
+      toast("소제목이 없는 설교문입니다");
+      return;
+    }
+    setTocOpen(true);
+    pushSub(); // 폰 뒤로가기로 닫히도록 (단어 팝업과 같은 구조)
+  };
+
+  const goToSection = (i: number) => {
+    const el = document.getElementById("sec-" + i);
+    closeSub();
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // 단어 팝업을 닫은 직후 300ms 는 빠른 이동 버튼을 받지 않습니다.
+  // 팝업의 닫기(✕) 바로 아래가 이 버튼 자리라, 닫자마자 화면이 튀는 일이 있었습니다.
+  // (closeSub 의 안전 타이머와 같은 300ms)
+  const quickTap = (fn: () => void) => () => {
+    if (Date.now() - popupClosedAtRef.current < 300) return;
+    fn();
+  };
+
   const renderBlock = (b: SermonBlock, i: number) => {
     if (!b) return null;
     // 찬양 중의 빈 줄 — 절·후렴을 구분하는 여백입니다 (업로드 도구가 빈 블록으로 보냅니다).
@@ -1577,13 +1646,39 @@ const SermonRead = () => {
         )}
       </div>
 
-      {/* 빠른 이동 — 본문과 같은 폭에 붙여 넓은 화면에서도 본문 오른쪽에 옵니다 */}
-      {!loading && !error && rec && !inkMode ? (
+      {/* 빠른 이동 — 본문과 같은 폭에 붙여 넓은 화면에서도 본문 오른쪽에 옵니다.
+          단어 팝업·목차 시트가 떠 있는 동안에는 아예 렌더하지 않습니다 (실수 탭 방지). */}
+      {!loading && !error && rec && !inkMode && !popupWord && !tocOpen ? (
         <div className={"fixed inset-x-0 bottom-6 z-40 mx-auto " + widthClass + " pointer-events-none"}>
           <div className="flex flex-col items-end gap-2 pr-4">
             <button
               type="button"
-              onClick={enterInkMode}
+              onClick={quickTap(goPrevSection)}
+              className="pointer-events-auto w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground/70 active:bg-muted"
+              aria-label="이전 소제목"
+            >
+              <ChevronUp size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={quickTap(openToc)}
+              className="pointer-events-auto w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground/70 active:bg-muted"
+              aria-label="목차"
+            >
+              <List size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={quickTap(goNextSection)}
+              className="pointer-events-auto w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground/70 active:bg-muted"
+              aria-label="다음 소제목"
+            >
+              <ChevronDown size={18} />
+            </button>
+            {/* 펜은 맨 아래 — 팝업 닫기(✕) 아래에 위화살표가 오지 않게 */}
+            <button
+              type="button"
+              onClick={quickTap(enterInkMode)}
               className="pointer-events-auto w-11 h-11 rounded-full bg-card border border-border shadow-md flex items-center justify-center text-foreground/70 active:bg-muted"
               aria-label="필기"
             >
@@ -1591,6 +1686,34 @@ const SermonRead = () => {
             </button>
           </div>
         </div>
+      ) : null}
+
+      {/* 목차 시트 */}
+      {tocOpen ? (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40" onClick={closeSub} />
+          <div className={"fixed inset-x-0 bottom-0 z-50 mx-auto " + widthClass + " rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5"}>
+            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
+            <h2 className="px-4 pb-3 text-sm font-semibold text-foreground">목차</h2>
+            <div className="max-h-[55vh] overflow-y-auto border-t border-border">
+              {tocItems.map((x) => (
+                <button
+                  key={x.i}
+                  type="button"
+                  onClick={() => goToSection(x.i)}
+                  className="flex w-full flex-col items-start gap-0.5 border-b border-border px-4 py-2.5 text-left active:bg-muted/60"
+                >
+                  <span className="w-full truncate font-word text-[0.8125rem] text-foreground">
+                    {x.b.id || "(제목 없음)"}
+                  </span>
+                  {x.b.ko ? (
+                    <span className="w-full truncate text-[0.6875rem] text-muted-foreground">{x.b.ko}</span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
       ) : null}
 
       {popupWord && (
