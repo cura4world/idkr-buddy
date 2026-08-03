@@ -68,24 +68,51 @@ export async function fillWordWithGemini(word: string): Promise<WordFillResult> 
     ":generateContent?key=" +
     encodeURIComponent(apiKey);
 
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.4,
-        responseMimeType: "application/json",
-      },
-    }),
-  });
+  // 응답이 오지 않으면 다이얼로그가 계속 로딩 상태로 남으므로 30초 타임아웃을 겁니다.
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 30000);
+
+  let res: Response;
+  try {
+    res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.4,
+          responseMimeType: "application/json",
+          // 응답이 중간에 잘리면 EMPTY_RESPONSE가 되므로 한도를 넉넉히 잡습니다.
+          maxOutputTokens: 8192,
+        },
+      }),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    if (timedOut) {
+      throw new Error("TIMEOUT");
+    }
+    throw new Error("NETWORK");
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
-    if (res.status === 400 || res.status === 403) {
+    if (res.status === 403) {
       throw new Error("INVALID_API_KEY");
+    }
+    if (res.status === 400) {
+      throw new Error("BAD_REQUEST");
     }
     if (res.status === 429) {
       throw new Error("RATE_LIMIT");
+    }
+    if (res.status >= 500) {
+      throw new Error("SERVER_ERROR");
     }
     throw new Error("REQUEST_FAILED_" + res.status);
   }
