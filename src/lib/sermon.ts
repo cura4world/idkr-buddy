@@ -84,7 +84,8 @@ function setLastSync(ms: number): void {
 
 // ---------- 서버 호출 ----------
 
-async function callServer(path: string): Promise<any> {
+// 요청 공통부 — 주소·비밀키·타임아웃·에러 코드. 응답 해석은 부르는 쪽이 합니다.
+async function request(path: string, method: string): Promise<Response> {
   const base = getSermonBase();
   const key = getSermonKey();
   if (!base || !key) throw new Error("NO_CONFIG");
@@ -99,6 +100,7 @@ async function callServer(path: string): Promise<any> {
   let res: Response;
   try {
     res = await fetch(base + path, {
+      method,
       headers: { "x-kata-key": key },
       signal: controller.signal,
     });
@@ -109,7 +111,11 @@ async function callServer(path: string): Promise<any> {
   }
   if (res.status === 401) throw new Error("UNAUTHORIZED");
   if (!res.ok) throw new Error("FETCH_FAILED");
+  return res;
+}
 
+async function callServer(path: string): Promise<any> {
+  const res = await request(path, "GET");
   try {
     return await res.json();
   } catch (e) {
@@ -134,6 +140,14 @@ export async function fetchSermon(id: string): Promise<SermonRecord> {
     savedAt: Number((data && data.savedAt) || 0),
     blocks: Array.isArray(data && data.blocks) ? (data.blocks as SermonBlock[]) : [],
   };
+}
+
+// 서버(Cloudflare KV)에서 설교문을 지웁니다.
+// 폰 캐시만 지우면 syncSermons 가 "서버에 있는데 폰에 없는 것"으로 보고
+// 다음 불러오기에서 도로 받아오므로, 반드시 서버부터 지워야 합니다.
+// 응답 본문은 보지 않고 성공 여부만 확인합니다.
+export async function deleteSermonOnServer(id: string): Promise<void> {
+  await request("/del?id=" + encodeURIComponent(id), "DELETE");
 }
 
 // ---------- 폰 저장 (IndexedDB) ----------
