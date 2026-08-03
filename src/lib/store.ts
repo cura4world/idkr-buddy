@@ -173,30 +173,6 @@ initSharedCategories();
 ensureMyWordbook();
 sortMyWordbookNewestFirstOnce();
 
-// 공용 단어장 복구 (리프레시 버튼용)
-export function restoreSharedCategories() {
-  const seed = seedData as { version: number; categories: Category[]; words: Word[] };
-  const myFolder = getPrivateFolderName();
-  const seedCats = seed.categories.filter(c => !c.owner || c.owner === myFolder);
-  const seedCatIds = seedCats.map(c => c.id);
-  const seedWords = seed.words.filter(w => seedCatIds.includes(w.categoryId));
-  if (seedCats.length === 0) return false;
-  const existingCats = getCategories();
-  const existingWords = getWords();
-  const missingCats = seedCats.filter(
-    s => !existingCats.find(e => e.id === s.id)
-  );
-  const missingWords = seedWords.filter(
-    s => !existingWords.find(e => e.id === s.id)
-  );
-  if (missingCats.length === 0 && missingWords.length === 0) return false;
-  const existingShared = existingCats.filter(c => c.isShared);
-  const personalCats = existingCats.filter(c => !c.isShared);
-  saveCategories([...existingShared, ...missingCats, ...personalCats]);
-  saveWords([...existingWords, ...missingWords]);
-  return true;
-}
-
 export function addCategory(name: string, emoji: string): Category {
   const categories = getCategories();
   const cat: Category = { id: crypto.randomUUID(), name, emoji };
