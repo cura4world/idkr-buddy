@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Mic } from "lucide-react";
+import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Mic, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
@@ -17,12 +17,30 @@ import {
   InputKind,
 } from "@/lib/dictionary";
 import { hasGeminiApiKey } from "@/lib/gemini";
-import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
+import { addWordIfAbsent, hasWordInCategory, getCategories, getWordsByCategory } from "@/lib/store";
+import AddCategoryDialog from "@/components/AddCategoryDialog";
 import { getStoredImage, saveStoredImage } from "@/lib/imageStore";
 import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const MY_WORDBOOK_ID = "my-wordbook";
+
+// 사전에서 마지막으로 고른 '담을 단어장'을 기억해 둡니다 (다음 검색에도 이어집니다).
+const DICT_SAVE_TARGET_KEY = "dict-save-target";
+
+// 담을 수 있는 곳은 내 단어장과 사용자가 만든 단어장뿐입니다.
+// 공용 단어장은 배포 때마다 시드로 덮어써지므로 대상에서 뺍니다.
+// getCategories 가 '내 단어장'을 항상 맨 앞에 두므로 순서는 그대로 씁니다.
+const loadSaveTargets = () => getCategories().filter((c) => !c.isShared);
+
+// 기억해 둔 대상이 그사이 삭제됐을 수 있으므로, 지금 목록에 있는지 반드시 확인합니다.
+const loadSaveTargetId = (targets: { id: string }[]): string => {
+  let stored = "";
+  try { stored = localStorage.getItem(DICT_SAVE_TARGET_KEY) || ""; } catch (e) {}
+  if (stored && targets.some((c) => c.id === stored)) return stored;
+  if (targets.some((c) => c.id === MY_WORDBOOK_ID)) return MY_WORDBOOK_ID;
+  return targets.length > 0 ? targets[0].id : "";
+};
 
 // TTS: AndroidTTS 우선, 없으면 speechSynthesis 폴백 (프로젝트 공통 패턴)
 const speak = (text: string, lang: "id" | "ko") => {
@@ -187,11 +205,31 @@ const Dictionary = () => {
   const [saved, setSaved] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // ---- 담을 단어장(대상) ----
+  const [saveTargets, setSaveTargets] = useState(loadSaveTargets);
+  const [saveTargetId, setSaveTargetId] = useState(() => loadSaveTargetId(loadSaveTargets()));
+  const [saveCounts, setSaveCounts] = useState<Record<string, number>>({});
+  const [saveSheetOpen, setSaveSheetOpen] = useState(false);
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
+  const sheetOpenRef = useRef(false);
+  const sheetPushedRef = useRef(false);
+  const wantSheetRef = useRef(false);
+  const openSheetRef = useRef<(() => void) | null>(null);
+
+  const saveTarget = saveTargets.find((c) => c.id === saveTargetId) || null;
+  const saveTargetName = saveTarget ? saveTarget.name : "";
+
+  const chooseSaveTarget = (id: string) => {
+    setSaveTargetId(id);
+    try { localStorage.setItem(DICT_SAVE_TARGET_KEY, id); } catch (e) {}
+  };
+
   // 검색창을 누르면 최근 검색어를 플로팅으로 보여줍니다.
   const [showHistory, setShowHistory] = useState(false);
   const histAreaRef = useRef<HTMLDivElement>(null);
   const histOpenRef = useRef(false);
   const histPushedRef = useRef(false);
+  const histBackPendingRef = useRef(false);
   const histHideTimer = useRef<any>(null);
 
   const errorMessage = (code: string): string => {
@@ -265,7 +303,8 @@ const Dictionary = () => {
         if (detected === "id_word") {
           const r = cached as DictResult;
           setResult(r);
-          if (hasWordInCategory(MY_WORDBOOK_ID, r.word)) setSaved(true);
+          // 지금 고른 대상 단어장 기준으로 판정합니다.
+          if (saveTargetId && hasWordInCategory(saveTargetId, r.word)) setSaved(true);
           await showStoredImageFor(r.word);
         } else if (detected === "id_sentence") {
           setIdSentence(cached as IdSentenceResult);
@@ -285,8 +324,8 @@ const Dictionary = () => {
       if (detected === "id_word") {
         const r = await lookupWord(w);
         setResult(r);
-        // 이미 내 단어장에 있는 단어면 "저장됨"으로 표시
-        if (hasWordInCategory(MY_WORDBOOK_ID, r.word)) setSaved(true);
+        // 이미 대상 단어장에 있는 단어면 "저장됨"으로 표시
+        if (saveTargetId && hasWordInCategory(saveTargetId, r.word)) setSaved(true);
         await showStoredImageFor(r.word);
         await saveCachedResult(cacheKey, detected, w, r);
       } else if (detected === "id_sentence") {
@@ -350,8 +389,63 @@ const Dictionary = () => {
     setShowHistory(false);
     if (histPushedRef.current) {
       histPushedRef.current = false;
+      // 되돌린 히스토리가 아직 처리되지 않았음을 표시해 둡니다 (아래 시트 열기가 참고).
+      try { histBackPendingRef.current = true; window.history.back(); }
+      catch (e) { histBackPendingRef.current = false; }
+    }
+  };
+
+  // ---- 담을 단어장 고르는 시트 ----
+  // 폰의 뒤로가기로도 닫히도록 히스토리를 한 칸 쌓습니다 (최근 검색 플로팅과 같은 방식).
+  const openSaveSheet = () => {
+    if (sheetOpenRef.current) return;
+    // 최근 검색 플로팅이 방금 닫히며 되돌린 히스토리가 아직 처리 중이면,
+    // 지금 열어 봐야 곧 도착할 popstate 가 시트를 도로 닫습니다. 그 뒤로 미룹니다.
+    if (histBackPendingRef.current) {
+      wantSheetRef.current = true;
+      return;
+    }
+    const next = loadSaveTargets();
+    const counts: Record<string, number> = {};
+    for (const c of next) counts[c.id] = getWordsByCategory(c.id).length;
+    setSaveTargets(next);
+    setSaveCounts(counts);
+    setSaveSheetOpen(true);
+    // 다른 화면에서 대상 단어장을 지웠을 수 있으므로 다시 확인합니다.
+    if (!next.some((c) => c.id === saveTargetId)) chooseSaveTarget(loadSaveTargetId(next));
+    sheetOpenRef.current = true;
+    try {
+      window.history.pushState({ dictSaveSheet: true }, "");
+      sheetPushedRef.current = true;
+    } catch (e) {
+      sheetPushedRef.current = false;
+    }
+  };
+  openSheetRef.current = openSaveSheet;
+
+  const closeSaveSheet = () => {
+    if (!sheetOpenRef.current) return;
+    sheetOpenRef.current = false;
+    setSaveSheetOpen(false);
+    if (sheetPushedRef.current) {
+      sheetPushedRef.current = false;
       try { window.history.back(); } catch (e) {}
     }
+  };
+
+  // 새 단어장 만들기: 시트를 먼저 닫고 다이얼로그를 엽니다 (히스토리가 겹치지 않도록).
+  const openAddCategory = () => {
+    closeSaveSheet();
+    setAddCategoryOpen(true);
+  };
+
+  // 만들어진 단어장을 바로 대상으로 삼습니다.
+  // addCategory 가 '내 단어장' 바로 뒤에 넣으므로, 내 단어장을 뺀 첫 번째가 방금 만든 것입니다.
+  const handleCategoryAdded = () => {
+    const next = loadSaveTargets();
+    setSaveTargets(next);
+    const fresh = next.filter((c) => c.id !== MY_WORDBOOK_ID)[0];
+    if (fresh) chooseSaveTarget(fresh.id);
   };
 
   // 검색 영역 바깥을 누르면 닫습니다 (카드 등은 blur 가 안 나는 경우가 있음).
@@ -371,10 +465,20 @@ const Dictionary = () => {
   // 폰의 뒤로가기
   useEffect(() => {
     const onPop = () => {
-      if (histOpenRef.current) {
+      histBackPendingRef.current = false;
+      if (sheetOpenRef.current) {
+        sheetOpenRef.current = false;
+        sheetPushedRef.current = false;
+        setSaveSheetOpen(false);
+      } else if (histOpenRef.current) {
         histOpenRef.current = false;
         histPushedRef.current = false;
         setShowHistory(false);
+      }
+      // 플로팅이 닫히길 기다리던 시트가 있으면 이제 엽니다.
+      if (wantSheetRef.current) {
+        wantSheetRef.current = false;
+        openSheetRef.current?.();
       }
     };
     window.addEventListener("popstate", onPop);
@@ -526,19 +630,29 @@ const Dictionary = () => {
     }
   };
 
+  // 대상이 바뀌거나 결과가 바뀌면 그 단어장 기준으로 '저장됨'을 다시 판정합니다.
+  // (내 단어장에 있는 단어라도 설교 단어장에는 없으면 다시 담을 수 있어야 합니다)
+  useEffect(() => {
+    if (!result || !saveTargetId) {
+      setSaved(false);
+      return;
+    }
+    setSaved(hasWordInCategory(saveTargetId, result.word));
+  }, [result, saveTargetId]);
+
   // 4열 정보만 개인 단어장에 저장 (이미지는 저장하지 않음)
   const handleSaveToWordbook = () => {
-    if (!result || saved) return;
+    if (!result || saved || !saveTargetId) return;
     const firstExample = result.examples[0];
     const { added } = addWordIfAbsent({
       word: result.word,
       meaning: result.meaning,
       example: firstExample?.id || "",
       exampleMeaning: firstExample?.ko || "",
-      categoryId: MY_WORDBOOK_ID,
+      categoryId: saveTargetId,
     });
     setSaved(true);
-    toast(added ? "내 단어장에 저장되었습니다" : "이미 내 단어장에 있는 단어입니다");
+    toast(added ? `${saveTargetName}에 담았습니다` : `이미 ${saveTargetName}에 있는 단어입니다`);
   };
 
   return (
@@ -1023,23 +1137,87 @@ const Dictionary = () => {
               <p><span className="font-semibold">난이도</span> <Stars n={result.difficulty} /></p>
             </div>
 
-            {/* 내 단어장에 보내기 */}
+            {/* 고른 단어장에 보내기 (본체=바로 담기 / ⌄=대상 고르기) */}
             <div className="mt-6">
-              <button
-                onClick={handleSaveToWordbook}
-                disabled={saved}
-                className={`w-full flex items-center justify-center gap-2 rounded-full py-3 text-xs font-medium transition-colors ${
-                  saved
+              <div
+                className={`w-full flex items-stretch overflow-hidden rounded-full text-xs font-medium transition-colors ${
+                  saved || !saveTargetId
                     ? "bg-gray-100 text-gray-400"
                     : "bg-primary text-white hover:bg-primary/90"
                 }`}
               >
-                {saved ? <><Check size={14} /> 저장됨</> : <><Plus size={14} /> 내 단어장에 보내기</>}
-              </button>
+                <button
+                  onClick={handleSaveToWordbook}
+                  disabled={saved || !saveTargetId}
+                  className="flex-1 min-w-0 flex items-center justify-center gap-2 py-3"
+                >
+                  {saved ? <Check size={14} className="shrink-0" /> : <Plus size={14} className="shrink-0" />}
+                  <span className="truncate">
+                    {saved
+                      ? "저장됨"
+                      : saveTargetId
+                        ? `${saveTargetName}에 보내기`
+                        : "단어장을 먼저 만들어 주세요"}
+                  </span>
+                </button>
+                {/* 담긴 뒤에도 다른 단어장에는 담을 수 있어야 하므로 ⌄ 는 잠그지 않습니다 */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); openSaveSheet(); }}
+                  title="담을 단어장 고르기"
+                  className={`shrink-0 flex items-center px-4 border-l ${
+                    saved || !saveTargetId ? "border-gray-200" : "border-white/30"
+                  }`}
+                >
+                  <ChevronDown size={14} />
+                </button>
+              </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* 담을 단어장 고르는 시트 */}
+      {saveSheetOpen ? (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40" onClick={closeSaveSheet} />
+          <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
+            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
+            <h2 className="px-4 pb-3 text-sm font-semibold text-foreground">어디에 담을까요?</h2>
+            <div className="max-h-[45vh] overflow-y-auto border-t border-border">
+              {saveTargets.length === 0 ? (
+                <p className="px-4 py-4 text-[0.75rem] leading-relaxed text-muted-foreground">
+                  담을 단어장이 없습니다. 아래에서 새 단어장을 만들어 주세요.
+                </p>
+              ) : (
+                saveTargets.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => { chooseSaveTarget(c.id); closeSaveSheet(); }}
+                    className="flex w-full items-center gap-2.5 border-b border-border px-4 py-2.5 text-left active:bg-muted/60"
+                  >
+                    <span className="shrink-0 text-[0.9375rem]">{c.emoji}</span>
+                    <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-foreground">{c.name}</span>
+                    <span className="shrink-0 text-[0.6875rem] text-muted-foreground">{saveCounts[c.id] ?? 0}</span>
+                    <span className="w-4 shrink-0 text-primary">
+                      {c.id === saveTargetId ? <Check size={14} /> : null}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={openAddCategory}
+              className="flex w-full items-center gap-2 px-4 py-3 text-[0.8125rem] text-primary active:bg-muted/60"
+            >
+              <Plus size={14} /> 새 단어장 만들기
+            </button>
+          </div>
+        </>
+      ) : null}
+
+      <AddCategoryDialog open={addCategoryOpen} onOpenChange={setAddCategoryOpen} onAdded={handleCategoryAdded} />
     </div>
   );
 };
