@@ -89,11 +89,23 @@ async function callServer(path: string): Promise<any> {
   const key = getSermonKey();
   if (!base || !key) throw new Error("NO_CONFIG");
 
+  // 응답이 오지 않으면 화면이 로딩 상태로 멈추므로 15초 타임아웃을 겁니다.
+  // (타임아웃도 기존 화면 처리와 호환되도록 FETCH_FAILED로 통일)
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort();
+  }, 15000);
+
   let res: Response;
   try {
-    res = await fetch(base + path, { headers: { "x-kata-key": key } });
+    res = await fetch(base + path, {
+      headers: { "x-kata-key": key },
+      signal: controller.signal,
+    });
   } catch (e) {
     throw new Error("FETCH_FAILED");
+  } finally {
+    clearTimeout(timer);
   }
   if (res.status === 401) throw new Error("UNAUTHORIZED");
   if (!res.ok) throw new Error("FETCH_FAILED");
