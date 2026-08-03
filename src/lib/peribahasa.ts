@@ -4,7 +4,7 @@
 //
 // 성경 말씀은 본문을 이 파일에 담지 않고 "장·절 참조"만 두었다가
 // 앱이 이미 쓰고 있는 성경 API에서 그때그때 불러옵니다.
-// 내 단어장은 저장된 단어와 예문에서 가져옵니다.
+// 단어장 기반 종류(내 단어장 / 단어장 폴더 / 회화집 폴더)는 저장된 단어에서 가져옵니다.
 
 import {
   fetchChapter,
@@ -13,17 +13,17 @@ import {
   stripVerseIntro,
   isUsableVerseText,
 } from "@/lib/bible";
-import { getWordsByCategory, getCategories } from "@/lib/store";
+import { getWordsByCategory, getCategories, Category, Word } from "@/lib/store";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { askPhraseJSON, generateNewPhrase, getPhraseDetail } from "@/lib/phrase";
 
 export type PhraseKind =
   | "peribahasa"
   | "ungkapan"
-  | "percakapan"
   | "alkitab"
-  | "gereja"
-  | "kosakataku";
+  | "kosakataku"
+  | "kosakata"
+  | "percakapan";
 
 export interface PhraseKindInfo {
   key: PhraseKind;
@@ -31,13 +31,14 @@ export interface PhraseKindInfo {
   id: string;
 }
 
+// 배열 순서가 곧 옵션 시트에 보이는 순서입니다.
 export const PHRASE_KINDS: PhraseKindInfo[] = [
   { key: "peribahasa", ko: "생활 속담", id: "Peribahasa" },
   { key: "ungkapan", ko: "관용구", id: "Ungkapan" },
-  { key: "percakapan", ko: "일상 회화", id: "Percakapan" },
   { key: "alkitab", ko: "성경 말씀", id: "Ayat Alkitab" },
-  { key: "gereja", ko: "교회 표현", id: "Istilah Gereja" },
-  { key: "kosakataku", ko: "내가 공부한 단어", id: "Kosakataku" },
+  { key: "kosakataku", ko: "내 단어장", id: "Kosakataku" },
+  { key: "kosakata", ko: "단어장 폴더", id: "Kosakata" },
+  { key: "percakapan", ko: "회화집 폴더", id: "Percakapan" },
 ];
 
 export interface Phrase {
@@ -92,38 +93,6 @@ const STATIC_PHRASES: Phrase[] = [
   { kind: "ungkapan", id: "Bermuka dua", ko: "두 얼굴을 갖다 → 겉과 속이 다르다" },
   { kind: "ungkapan", id: "Tangan kanan", ko: "오른손 → 가장 믿는 사람" },
   { kind: "ungkapan", id: "Keras kepala", ko: "머리가 단단하다 → 고집이 세다" },
-
-  // 일상 회화
-  { kind: "percakapan", id: "Boleh minta tolong?", ko: "좀 도와주실 수 있어요?" },
-  { kind: "percakapan", id: "Tidak apa-apa.", ko: "괜찮아요." },
-  { kind: "percakapan", id: "Maaf, saya terlambat.", ko: "늦어서 죄송합니다." },
-  { kind: "percakapan", id: "Sampai jumpa lagi.", ko: "또 만나요." },
-  { kind: "percakapan", id: "Terima kasih banyak.", ko: "정말 감사합니다." },
-  { kind: "percakapan", id: "Sama-sama.", ko: "천만에요." },
-  { kind: "percakapan", id: "Permisi, numpang tanya.", ko: "실례합니다, 뭐 좀 여쭐게요." },
-  { kind: "percakapan", id: "Tunggu sebentar, ya.", ko: "잠깐만 기다려 주세요." },
-  { kind: "percakapan", id: "Hati-hati di jalan.", ko: "조심히 가세요." },
-  { kind: "percakapan", id: "Saya kurang paham.", ko: "잘 이해가 안 됩니다." },
-  { kind: "percakapan", id: "Tolong bicara pelan-pelan.", ko: "천천히 말씀해 주세요." },
-  { kind: "percakapan", id: "Tidak usah repot-repot.", ko: "신경 쓰지 마세요." },
-  { kind: "percakapan", id: "Silakan masuk dan duduk.", ko: "들어와서 앉으세요." },
-  { kind: "percakapan", id: "Sudah makan belum?", ko: "식사하셨어요?" },
-  { kind: "percakapan", id: "Kalau ada waktu, mampir ya.", ko: "시간 되면 들르세요." },
-  { kind: "percakapan", id: "Semoga cepat sembuh.", ko: "빨리 나으시길 바랍니다." },
-
-  // 교회 표현
-  { kind: "gereja", id: "Mari kita berdoa bersama.", ko: "함께 기도합시다." },
-  { kind: "gereja", id: "Tuhan memberkati.", ko: "하나님이 축복하시기를." },
-  { kind: "gereja", id: "Selamat hari Minggu.", ko: "주일 잘 보내세요." },
-  { kind: "gereja", id: "Ibadah dimulai pukul sembilan.", ko: "예배는 아홉 시에 시작합니다." },
-  { kind: "gereja", id: "Mari kita menyanyikan pujian.", ko: "함께 찬양합시다." },
-  { kind: "gereja", id: "Kita akan membaca firman Tuhan.", ko: "하나님의 말씀을 읽겠습니다." },
-  { kind: "gereja", id: "Terima kasih atas pelayanan Anda.", ko: "섬겨 주셔서 감사합니다." },
-  { kind: "gereja", id: "Sampai jumpa minggu depan.", ko: "다음 주에 뵙겠습니다." },
-  { kind: "gereja", id: "Silakan berdiri untuk berdoa.", ko: "일어서서 기도하겠습니다." },
-  { kind: "gereja", id: "Mari kita bersekutu setelah ibadah.", ko: "예배 후에 교제합시다." },
-  { kind: "gereja", id: "Doakan saudara kita yang sakit.", ko: "아픈 형제자매를 위해 기도해 주세요." },
-  { kind: "gereja", id: "Kelas Alkitab dimulai sore ini.", ko: "성경 공부는 오늘 오후에 시작합니다." },
 ];
 
 /* 성경은 본문을 담지 않고 참조만 둡니다 (표시할 때 성경 API에서 불러옵니다) */
@@ -367,28 +336,58 @@ function pickOne<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-/** 내 단어장(비어 있으면 전체 단어장)에서 문장 하나 */
-function pickFromWordbook(): Phrase | null {
+// 주어진 단어장들에서 무작위로 하나를 골라 문장으로 만듭니다.
+// useSentence 가 참이면 표제어 자체가 문장인 단어장(회화집)이라 보고 word/meaning 을 그대로 씁니다.
+function pickFromCategories(
+  cats: Category[],
+  kind: PhraseKind,
+  useSentence: boolean
+): Phrase | null {
   try {
-    let words = getWordsByCategory(MY_WORDBOOK_ID);
-    if (words.length === 0) {
-      const all = getCategories();
-      for (let i = 0; i < all.length; i += 1) {
-        const w = getWordsByCategory(all[i].id);
-        if (w.length > 0) words = words.concat(w);
-      }
+    let words: Word[] = [];
+    for (let i = 0; i < cats.length; i += 1) {
+      const w = getWordsByCategory(cats[i].id);
+      if (w.length > 0) words = words.concat(w);
     }
     if (words.length === 0) return null;
     const w = pickOne(words);
+    // 회화집은 표제어가 곧 문장이라 예문을 보지 않습니다.
+    if (useSentence) return { kind, id: w.word, ko: w.meaning };
     const example = typeof w.example === "string" ? w.example.trim() : "";
     const exampleKo = typeof w.exampleMeaning === "string" ? w.exampleMeaning.trim() : "";
     if (example !== "") {
-      return { kind: "kosakataku", id: example, ko: exampleKo || w.meaning, ref: w.word };
+      return { kind, id: example, ko: exampleKo || w.meaning, ref: w.word };
     }
-    return { kind: "kosakataku", id: w.word, ko: w.meaning };
+    return { kind, id: w.word, ko: w.meaning };
   } catch (e) {
     return null;
   }
+}
+
+// 내 단어장에 단어가 없으면 null — 예전처럼 전체 단어장으로 넘어가지 않습니다.
+// 이름이 "내 단어장"인데 공용 단어가 나오면 맞지 않기 때문입니다.
+function pickFromMyWordbook(): Phrase | null {
+  const cats = getCategories().filter((c) => c.id === MY_WORDBOOK_ID);
+  return pickFromCategories(cats, "kosakataku", false);
+}
+
+// 단어장 폴더 = 시드에서 온 공용 단어장 36권.
+function pickFromSharedWordbooks(): Phrase | null {
+  const cats = getCategories().filter((c) => c.isShared);
+  return pickFromCategories(cats, "kosakata", false);
+}
+
+// 이름에 "회화"가 들어간 개인 단어장을 회화집으로 봅니다
+// ("회화집", "일상 회화", "회화 표현" 등). 공백과 대소문자에 흔들리지 않게 다듬어 비교합니다.
+function isPercakapanName(name: string): boolean {
+  const s = (name || "").toLowerCase().replace(new RegExp("\\s+", "g"), "");
+  return s.indexOf("회화") >= 0;
+}
+
+// 해당하는 단어장이 없으면 null — pickOnce 가 조용히 다음 종류로 넘어갑니다.
+function pickFromPercakapan(): Phrase | null {
+  const cats = getCategories().filter((c) => !c.isShared && isPercakapanName(c.name));
+  return pickFromCategories(cats, "percakapan", true);
 }
 
 /** 성경 참조 하나를 골라 본문을 불러옵니다 */
@@ -433,7 +432,17 @@ async function pickOnce(kinds: PhraseKind[]): Promise<Phrase> {
       continue;
     }
     if (kind === "kosakataku") {
-      const p = pickFromWordbook();
+      const p = pickFromMyWordbook();
+      if (p) return p;
+      continue;
+    }
+    if (kind === "kosakata") {
+      const p = pickFromSharedWordbooks();
+      if (p) return p;
+      continue;
+    }
+    if (kind === "percakapan") {
+      const p = pickFromPercakapan();
       if (p) return p;
       continue;
     }
@@ -472,16 +481,13 @@ export async function takePhrase(kinds: PhraseKind[]): Promise<Phrase> {
 /* ── Gemini로 새 문장 만들기 ── */
 
 // 종류마다 어떤 문장을 만들어야 하는지 알려줍니다.
-// 성경(alkitab)과 내 단어장(kosakataku)은 지어내면 안 되므로 여기에 넣지 않습니다.
+// 성경(alkitab)과 단어장에서 뽑는 종류(kosakataku / kosakata / percakapan)는
+// 지어내면 안 되므로 여기에 넣지 않습니다.
 const KIND_GUIDE: Partial<Record<PhraseKind, string>> = {
   peribahasa:
     "종류: 인도네시아 생활 속담(peribahasa) 한 줄. 인도네시아 사람이 실제로 알고 쓰는 속담이어야 합니다.",
   ungkapan:
     "종류: 인도네시아어 관용구(ungkapan) 한 줄. 단어 뜻만 알아서는 짐작하기 어려운 표현이어야 합니다.",
-  percakapan:
-    "종류: 일상 회화(percakapan) 문장 한 줄. 가게·이웃·직장 등 실제 상황에서 바로 쓰는 말이어야 합니다.",
-  gereja:
-    "종류: 인도네시아 교회에서 쓰는 표현(istilah gereja) 한 줄. 예배·기도·교제 자리에서 실제로 듣는 말이어야 합니다.",
 };
 
 /** Gemini에게 성경 구절 "참조"만 고르게 합니다 (본문은 성경 API에서 가져옵니다) */
@@ -549,8 +555,14 @@ async function createAyat(recent: string[]): Promise<Phrase | null> {
 async function createPhrase(kind: PhraseKind, recent: string[]): Promise<Phrase | null> {
   if (kind === "alkitab") return createAyat(recent);
 
-  if (kind === "kosakataku") {
-    const p = pickFromWordbook();
+  // 단어장에서 뽑는 종류는 지어내지 않고 고른 뒤 해설만 미리 만들어 둡니다.
+  if (kind === "kosakataku" || kind === "kosakata" || kind === "percakapan") {
+    const p =
+      kind === "kosakataku"
+        ? pickFromMyWordbook()
+        : kind === "kosakata"
+          ? pickFromSharedWordbooks()
+          : pickFromPercakapan();
     if (!p) return null;
     await getPhraseDetail(p.id, p.ko);
     return p;
