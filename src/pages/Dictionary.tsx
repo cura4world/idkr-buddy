@@ -17,30 +17,12 @@ import {
   InputKind,
 } from "@/lib/dictionary";
 import { hasGeminiApiKey } from "@/lib/gemini";
-import { addWordIfAbsent, hasWordInCategory, getCategories, getWordsByCategory } from "@/lib/store";
-import AddCategoryDialog from "@/components/AddCategoryDialog";
+import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
+import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
+import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import { getStoredImage, saveStoredImage } from "@/lib/imageStore";
 import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
-const MY_WORDBOOK_ID = "my-wordbook";
-
-// 사전에서 마지막으로 고른 '담을 단어장'을 기억해 둡니다 (다음 검색에도 이어집니다).
-const DICT_SAVE_TARGET_KEY = "dict-save-target";
-
-// 담을 수 있는 곳은 내 단어장과 사용자가 만든 단어장뿐입니다.
-// 공용 단어장은 배포 때마다 시드로 덮어써지므로 대상에서 뺍니다.
-// getCategories 가 '내 단어장'을 항상 맨 앞에 두므로 순서는 그대로 씁니다.
-const loadSaveTargets = () => getCategories().filter((c) => !c.isShared);
-
-// 기억해 둔 대상이 그사이 삭제됐을 수 있으므로, 지금 목록에 있는지 반드시 확인합니다.
-const loadSaveTargetId = (targets: { id: string }[]): string => {
-  let stored = "";
-  try { stored = localStorage.getItem(DICT_SAVE_TARGET_KEY) || ""; } catch (e) {}
-  if (stored && targets.some((c) => c.id === stored)) return stored;
-  if (targets.some((c) => c.id === MY_WORDBOOK_ID)) return MY_WORDBOOK_ID;
-  return targets.length > 0 ? targets[0].id : "";
-};
 
 // TTS: AndroidTTS 우선, 없으면 speechSynthesis 폴백 (프로젝트 공통 패턴)
 const speak = (text: string, lang: "id" | "ko") => {
@@ -208,9 +190,7 @@ const Dictionary = () => {
   // ---- 담을 단어장(대상) ----
   const [saveTargets, setSaveTargets] = useState(loadSaveTargets);
   const [saveTargetId, setSaveTargetId] = useState(() => loadSaveTargetId(loadSaveTargets()));
-  const [saveCounts, setSaveCounts] = useState<Record<string, number>>({});
   const [saveSheetOpen, setSaveSheetOpen] = useState(false);
-  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const sheetOpenRef = useRef(false);
   const sheetPushedRef = useRef(false);
   const wantSheetRef = useRef(false);
@@ -221,7 +201,7 @@ const Dictionary = () => {
 
   const chooseSaveTarget = (id: string) => {
     setSaveTargetId(id);
-    try { localStorage.setItem(DICT_SAVE_TARGET_KEY, id); } catch (e) {}
+    saveSaveTargetId(id);
   };
 
   // 검색창을 누르면 최근 검색어를 플로팅으로 보여줍니다.
@@ -405,14 +385,10 @@ const Dictionary = () => {
       wantSheetRef.current = true;
       return;
     }
-    const next = loadSaveTargets();
-    const counts: Record<string, number> = {};
-    for (const c of next) counts[c.id] = getWordsByCategory(c.id).length;
-    setSaveTargets(next);
-    setSaveCounts(counts);
+    // 목록·단어 수 읽기와 "대상이 지워졌는지" 확인은 시트 컴포넌트가 열릴 때 합니다.
+    // 여기서는 버튼 라벨에 쓸 이름만 새로 읽어 둡니다.
+    setSaveTargets(loadSaveTargets());
     setSaveSheetOpen(true);
-    // 다른 화면에서 대상 단어장을 지웠을 수 있으므로 다시 확인합니다.
-    if (!next.some((c) => c.id === saveTargetId)) chooseSaveTarget(loadSaveTargetId(next));
     sheetOpenRef.current = true;
     try {
       window.history.pushState({ dictSaveSheet: true }, "");
@@ -431,21 +407,6 @@ const Dictionary = () => {
       sheetPushedRef.current = false;
       try { window.history.back(); } catch (e) {}
     }
-  };
-
-  // 새 단어장 만들기: 시트를 먼저 닫고 다이얼로그를 엽니다 (히스토리가 겹치지 않도록).
-  const openAddCategory = () => {
-    closeSaveSheet();
-    setAddCategoryOpen(true);
-  };
-
-  // 만들어진 단어장을 바로 대상으로 삼습니다.
-  // addCategory 가 '내 단어장' 바로 뒤에 넣으므로, 내 단어장을 뺀 첫 번째가 방금 만든 것입니다.
-  const handleCategoryAdded = () => {
-    const next = loadSaveTargets();
-    setSaveTargets(next);
-    const fresh = next.filter((c) => c.id !== MY_WORDBOOK_ID)[0];
-    if (fresh) chooseSaveTarget(fresh.id);
   };
 
   // 검색 영역 바깥을 누르면 닫습니다 (카드 등은 blur 가 안 나는 경우가 있음).
@@ -1173,48 +1134,14 @@ const Dictionary = () => {
         )}
       </div>
 
-      {/* 담을 단어장 고르는 시트 */}
-      {saveSheetOpen ? (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/40" onClick={closeSaveSheet} />
-          <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
-            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
-            <h2 className="px-4 pb-3 text-sm font-semibold text-foreground">어디에 담을까요?</h2>
-            <div className="max-h-[45vh] overflow-y-auto border-t border-border">
-              {saveTargets.length === 0 ? (
-                <p className="px-4 py-4 text-[0.75rem] leading-relaxed text-muted-foreground">
-                  담을 단어장이 없습니다. 아래에서 새 단어장을 만들어 주세요.
-                </p>
-              ) : (
-                saveTargets.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => { chooseSaveTarget(c.id); closeSaveSheet(); }}
-                    className="flex w-full items-center gap-2.5 border-b border-border px-4 py-2.5 text-left active:bg-muted/60"
-                  >
-                    <span className="shrink-0 text-[0.9375rem]">{c.emoji}</span>
-                    <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-foreground">{c.name}</span>
-                    <span className="shrink-0 text-[0.6875rem] text-muted-foreground">{saveCounts[c.id] ?? 0}</span>
-                    <span className="w-4 shrink-0 text-primary">
-                      {c.id === saveTargetId ? <Check size={14} /> : null}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={openAddCategory}
-              className="flex w-full items-center gap-2 px-4 py-3 text-[0.8125rem] text-primary active:bg-muted/60"
-            >
-              <Plus size={14} /> 새 단어장 만들기
-            </button>
-          </div>
-        </>
-      ) : null}
-
-      <AddCategoryDialog open={addCategoryOpen} onOpenChange={setAddCategoryOpen} onAdded={handleCategoryAdded} />
+      {/* 담을 단어장 고르는 시트 (사전·단어 팝업 공용) */}
+      <WordbookPickerSheet
+        open={saveSheetOpen}
+        onOpenChange={(o) => { if (!o) closeSaveSheet(); }}
+        targetId={saveTargetId}
+        onPick={chooseSaveTarget}
+        onChanged={() => setSaveTargets(loadSaveTargets())}
+      />
     </div>
   );
 };
