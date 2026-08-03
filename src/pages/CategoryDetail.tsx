@@ -36,6 +36,8 @@ export default function CategoryDetail() {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDragging = useRef(false);
   const isSwipe = useRef(false);
+  // touchmove 리스너는 마운트 시 한 번만 등록되므로 editable 을 ref 로도 들고 있습니다.
+  const editableRef = useRef(true);
   const touchIntent = useRef<"none" | "swipe" | "drag" | "scroll">("none");
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const autoScrollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -102,6 +104,10 @@ export default function CategoryDetail() {
   const categories = getCategories();
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
+  // 공용 단어장(시드에서 온 것)은 읽기 전용 "책"이다.
+  // 고쳐도 다음 배포 때 시드로 되돌아가므로 편집 기능을 아예 노출하지 않는다.
+  const editable = !category?.isShared;
+  editableRef.current = editable;
 
   const setDragging = (index: number | null) => {
     draggingIndexRef.current = index;
@@ -215,12 +221,18 @@ export default function CategoryDetail() {
       if (touchIntent.current === "none") {
         if (adx > 12 || ady > 12) {
           if (adx > ady * 1.5) {
-            touchIntent.current = "swipe";
-            isSwipe.current = true;
-            swipeDir.current = dx >= 0 ? 1 : -1;
-            setSwipeDirState(dx >= 0 ? 1 : -1);
-            cancelLongPress();
-            setSwipingIndex(swipeIndexRef.current);
+            // 읽기 전용 단어장은 왼쪽 스와이프(삭제)를 받지 않습니다. 오른쪽(복사)만 허용.
+            if (dx < 0 && !editableRef.current) {
+              touchIntent.current = "scroll";
+              cancelLongPress();
+            } else {
+              touchIntent.current = "swipe";
+              isSwipe.current = true;
+              swipeDir.current = dx >= 0 ? 1 : -1;
+              setSwipeDirState(dx >= 0 ? 1 : -1);
+              cancelLongPress();
+              setSwipingIndex(swipeIndexRef.current);
+            }
           } else if (ady > adx) {
             touchIntent.current = "scroll";
             cancelLongPress();
@@ -286,6 +298,8 @@ export default function CategoryDetail() {
     swipeXRef.current = 0;
     longPressTimer.current = setTimeout(() => {
       if (isSwipe.current || touchIntent.current === "swipe" || touchIntent.current === "scroll") return;
+      // 읽기 전용 단어장은 순서를 바꿔도 다음 배포 때 시드 순서로 되돌아가므로 드래그를 걸지 않습니다.
+      if (!editable) return;
       // 여기서는 "끌 준비"만 합니다. 화면 변화는 실제로 움직일 때(beginDragVisuals) 시작합니다.
       isDragging.current = true;
       touchIntent.current = "drag";
@@ -321,7 +335,7 @@ export default function CategoryDetail() {
     if (wasSwipe) {
       if (swipeDir.current === 1 && swipeXRef.current >= SWIPE_THRESHOLD) {
         copyToClipboard(word);
-      } else if (swipeDir.current === -1 && swipeXRef.current <= -SWIPE_THRESHOLD) {
+      } else if (editable && swipeDir.current === -1 && swipeXRef.current <= -SWIPE_THRESHOLD) {
         // 밀린 단어가 선택 집합에 있으면 선택 전체, 아니면 이 단어 하나만 삭제 대상
         const targetIds = selectedIds.includes(word.id) ? selectedIds : [word.id];
         setPendingDeleteIds(targetIds);
@@ -365,6 +379,7 @@ export default function CategoryDetail() {
     suppressClick.current = false; // 이전 제스처의 잔여 플래그 정리
     const start = { x: e.clientX, y: e.clientY };
     longPressTimer.current = setTimeout(() => {
+      if (!editable) return;
       // 터치와 동일하게 "끌 준비"만 하고, 화면 변화는 실제로 움직일 때 시작합니다.
       isDragging.current = true;
       armedIndex.current = index;
@@ -425,7 +440,9 @@ export default function CategoryDetail() {
   };
 
   // 단어 선택 토글 (복수 선택). 새로 선택하면 마지막 선택으로 기억 -> 단어 추가 위치
+  // 읽기 전용 단어장에서는 선택이 할 일이 없으므로(삭제·추가 위치 지정용) 아예 막습니다.
   const toggleSelect = (wordId: string) => {
+    if (!editable) return;
     setSelectedIds((prev) => {
       if (prev.includes(wordId)) {
         const next = prev.filter((x) => x !== wordId);
@@ -488,20 +505,24 @@ export default function CategoryDetail() {
 
       <div className="px-4 pb-6">
         {/* 표준 헤더 높이 61px(py-3 24 + 버튼 36 + 테두리 1) 바로 아래에 붙여둡니다. */}
-        <div className="sticky top-[61px] z-20 bg-background -mx-4 px-4 py-2.5 flex justify-end gap-4">
-          <button onClick={() => setCsvOpen(true)} className="group inline-flex items-center gap-1 text-xs text-foreground font-gothic">
-            <Download size={13} className="shrink-0" />
-            <span className="group-hover:underline underline-offset-4">CSV 가져오기</span>
-          </button>
-          <button onClick={() => setAddOpen(true)} className="text-xs text-foreground hover:underline underline-offset-4 font-gothic">
-            + 단어 추가
-          </button>
-        </div>
-      <div className="space-y-2">
+        {editable && (
+          <div className="sticky top-[61px] z-20 bg-background -mx-4 px-4 py-2.5 flex justify-end gap-4">
+            <button onClick={() => setCsvOpen(true)} className="group inline-flex items-center gap-1 text-xs text-foreground font-gothic">
+              <Download size={13} className="shrink-0" />
+              <span className="group-hover:underline underline-offset-4">CSV 가져오기</span>
+            </button>
+            <button onClick={() => setAddOpen(true)} className="text-xs text-foreground hover:underline underline-offset-4 font-gothic">
+              + 단어 추가
+            </button>
+          </div>
+        )}
+      {/* 버튼 줄이 없는 읽기 전용 단어장에서는 그 줄이 주던 여백을 목록이 대신 갖습니다. */}
+      <div className={editable ? "space-y-2" : "space-y-2 pt-2.5"}>
         {words.map((w, index) => {
           const isDraggingThis = draggingIndex === index;
           const isDropTarget = dragOverIndex === index && draggingIndex !== index;
-          const isSelected = selectedIds.includes(w.id);
+          // 읽기 전용 단어장에서는 선택 자체가 막혀 있으므로 선택 배경도 뜨지 않습니다.
+          const isSelected = editable && selectedIds.includes(w.id);
           const isSwiping = swipingIndex === index;
           const isPressed = pressedIndex === index;
           const currentSwipeX = isSwiping ? swipeX : 0;
@@ -515,12 +536,12 @@ export default function CategoryDetail() {
             <div key={w.id} className="relative overflow-hidden rounded-lg">
               {/* 복사/삭제 배경은 실제로 스와이프하는 동안에만 렌더링합니다. */}
               {isSwiping && (
-                swipingLeft ? (
+                swipingLeft ? (editable ? (
                   <div className={`absolute inset-0 flex items-center justify-end px-5 rounded-lg transition-colors duration-100 ${showDeleteConfirm ? "bg-red-600" : "bg-red-500/70"}`}>
                     <span className="text-white text-sm font-body mr-2">{showDeleteConfirm ? (deleteCount > 1 ? deleteCount + "개 삭제!" : "삭제!") : "삭제"}</span>
                     <Trash2 size={18} className="text-white" />
                   </div>
-                ) : (
+                ) : null) : (
                   <div className={`absolute inset-0 flex items-center px-5 rounded-lg transition-colors duration-100 ${showCopyConfirm ? "bg-sky-500" : "bg-sky-400/70"}`}>
                     <Copy size={18} className="text-white" />
                     <span className="text-white text-sm font-body ml-2">{showCopyConfirm ? "복사!" : "복사"}</span>
