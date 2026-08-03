@@ -23,12 +23,19 @@ export interface PhraseExample {
   situasi: string; // 어떤 상황인지 (한국어)
 }
 
+export interface PhraseAnalysisPart {
+  part: string;   // 인니어 구절
+  ko: string;     // 한국어 번역
+  note: string;   // 문법 설명 (한국어)
+}
+
 export interface PhraseDetail {
   sentence: string;
   ko: string;
   meaning: string;      // 뜻풀이
   words: PhraseWord[];
   examples: PhraseExample[];
+  analysis?: PhraseAnalysisPart[]; // alkitab 전용 문장분석
   note: string;         // 알아두기
   createdAt: number;
 }
@@ -109,6 +116,30 @@ async function trimOldest(): Promise<void> {
 }
 
 /* ── Gemini ── */
+
+function buildPromptAyat(sentence: string, ko: string): string {
+  return [
+    "당신은 한국인에게 인도네시아어를 가르치는 선생님입니다.",
+    "아래 인도네시아어 성경 구절을 한국인 학습자가 이해할 수 있도록 분석하세요.",
+    "",
+    "구절: " + sentence,
+    "한국어 참고: " + ko,
+    "",
+    "규칙:",
+    "- 설명은 모두 한국어로, 존댓말로 씁니다.",
+    "- 문장분석: 구절을 의미 단위로 3~6개로 나누어 각 부분의 한국어 번역과 문법적 역할을 설명합니다.",
+    "- 단어 풀이는 핵심 단어 3~5개만 고릅니다.",
+    "- arti 항목은 쉬운 인도네시아어로 된 뜻풀이입니다.",
+    "",
+    "아래 JSON 형식으로만 답하세요.",
+    '{',
+    '  "meaning": "이 구절이 전달하는 핵심 메시지 2~3문장 (한국어)",',
+    '  "words": [{"word": "단어", "arti": "쉬운 인니어 뜻풀이", "ko": "한국어 뜻"}],',
+    '  "analysis": [{"part": "인니어 구절", "ko": "한국어 번역", "note": "문법적 역할과 의미 설명 (한국어)"}],',
+    '  "note": "이 구절에 대해 알아두면 좋은 점 1~2문장 (한국어)"',
+    '}',
+  ].join("\n");
+}
 
 function buildPrompt(sentence: string, ko: string): string {
   return [
@@ -244,25 +275,42 @@ export async function generateNewPhrase(
 /**
  * 캐시에 있으면 즉시 돌려주고, 없으면 생성한 뒤 저장합니다.
  * force가 true면 캐시를 무시하고 새로 만듭니다.
+ * kind가 "alkitab"이면 문장분석 프롬프트를 사용합니다.
  */
 export async function getPhraseDetail(
   sentence: string,
   ko: string,
-  force = false
+  force = false,
+  kind = ""
 ): Promise<PhraseDetail> {
+  const isAyat = kind === "alkitab";
   if (!force) {
     const cached = await getCachedPhrase(sentence);
-    if (cached) return cached;
+    // alkitab 구절인데 analysis 필드가 없는 구캐시는 다시 생성합니다.
+    if (cached && !(isAyat && cached.analysis === undefined)) return cached;
   }
 
-  const raw = await callGeminiJSON(buildPrompt(sentence, ko));
+  const raw = await callGeminiJSON(isAyat ? buildPromptAyat(sentence, ko) : buildPrompt(sentence, ko));
+
+  const words: PhraseWord[] = isAyat && Array.isArray(raw.words)
+    ? (raw.words as Record<string, unknown>[])
+        .map((w) => ({ word: asString(w.word), arti: asString(w.arti), ko: asString(w.ko) }))
+        .filter((w) => w.word !== "")
+    : [];
+
+  const analysis: PhraseAnalysisPart[] = isAyat && Array.isArray(raw.analysis)
+    ? (raw.analysis as Record<string, unknown>[])
+        .map((a) => ({ part: asString(a.part), ko: asString(a.ko), note: asString(a.note) }))
+        .filter((a) => a.part !== "")
+    : [];
 
   const detail: PhraseDetail = {
     sentence,
     ko,
     meaning: asString(raw.meaning),
-    words: [],
+    words,
     examples: parseExamples(raw.examples),
+    ...(isAyat ? { analysis } : {}),
     note: asString(raw.note),
     createdAt: Date.now(),
   };

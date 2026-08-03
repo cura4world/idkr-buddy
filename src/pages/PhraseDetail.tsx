@@ -117,7 +117,7 @@ const PhraseDetail = () => {
     setLoading(true);
     setError("");
     try {
-      const d = await getPhraseDetail(item.id, koHint !== undefined ? koHint : item.ko, force);
+      const d = await getPhraseDetail(item.id, koHint !== undefined ? koHint : item.ko, force, kind);
       setData(d);
     } catch (e: any) {
       const msg = String(e?.message || "");
@@ -127,7 +127,7 @@ const PhraseDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, [item.id, item.ko]);
+  }, [item.id, item.ko, kind]);
 
   useEffect(() => {
     if (!item.id) {
@@ -341,7 +341,38 @@ const PhraseDetail = () => {
               </section>
             ) : null}
 
-            {data.examples.length > 0 ? (
+            {isAyat ? (
+              data.analysis && data.analysis.length > 0 ? (
+                <section className="mt-5">
+                  <Label>문장분석</Label>
+                  <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                    {data.analysis.map((a, i) => (
+                      <div
+                        key={i}
+                        className={
+                          "px-4 py-3.5 " + (i === data.analysis!.length - 1 ? "" : "border-b border-border")
+                        }
+                      >
+                        <div className="flex items-start gap-2">
+                          <p className="flex-1 font-word text-[15px] leading-[1.6] text-foreground">{a.part}</p>
+                          <button
+                            onClick={() => speak(a.part, "id")}
+                            className="mt-0.5 shrink-0 text-muted-foreground active:text-primary"
+                            title="발음 듣기"
+                          >
+                            <Volume2 size={15} />
+                          </button>
+                        </div>
+                        <p className="mt-1 text-[13.5px] leading-snug text-foreground/85">{a.ko}</p>
+                        {a.note ? (
+                          <p className="mt-1 font-gothic text-[12px] leading-snug text-muted-foreground">{a.note}</p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : null
+            ) : data.examples.length > 0 ? (
               <section className="mt-5">
                 <Label>이렇게 씁니다</Label>
                 <div className="overflow-hidden rounded-2xl border border-border bg-card">
