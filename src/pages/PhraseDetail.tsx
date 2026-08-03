@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Volume2, Loader2, RotateCcw, Plus, Check, X, Bookmark } from "lucide-react";
+import { ArrowLeft, Volume2, Loader2, RotateCcw, Plus, Check, X, Bookmark, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import { getPhraseDetail, PhraseDetail as PhraseDetailData } from "@/lib/phrase";
@@ -8,11 +8,11 @@ import { Phrase, PhraseKind, isPhraseSaved, toggleSavedPhrase } from "@/lib/peri
 import { quickLookupWord } from "@/lib/story";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
+import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
+import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import { fetchChapterKo, getBook } from "@/lib/bible";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import SettingsDialog from "@/components/SettingsDialog";
-
-const MY_WORDBOOK_ID = "my-wordbook";
 
 /* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 */
 const speak = (text: string, lang: "id" | "ko") => {
@@ -113,6 +113,66 @@ const PhraseDetail = () => {
   // 이 화면에서 눌러본 단어는 다시 누르면 즉시 표시
   const wordCache = useRef(new Map<string, { meaning: string; info: string; sentenceKo: string }>());
 
+
+  // ---- 담을 단어장 (사전에서 고른 대상을 앱 전체가 함께 씁니다) ----
+  const [saveTargets, setSaveTargets] = useState(loadSaveTargets);
+  const [saveTargetId, setSaveTargetId] = useState(() => loadSaveTargetId(loadSaveTargets()));
+  const [wbPickerOpen, setWbPickerOpen] = useState(false);
+  const wbPickerOpenRef = useRef(false);
+  const wbPickerPushedRef = useRef(false);
+  const saveTargetName = (saveTargets.find((c) => c.id === saveTargetId) || { name: "" }).name;
+
+  const chooseSaveTarget = (id: string) => {
+    setSaveTargetId(id);
+    saveSaveTargetId(id);
+  };
+
+  // 시트는 히스토리를 한 칸 쌓습니다 — 폰 뒤로가기를 누르면 시트만 닫히고 팝업은 남습니다.
+  const openWbPicker = () => {
+    if (wbPickerOpenRef.current) return;
+    setSaveTargets(loadSaveTargets());
+    setWbPickerOpen(true);
+    wbPickerOpenRef.current = true;
+    try {
+      window.history.pushState({ wordbookPicker: true }, "");
+      wbPickerPushedRef.current = true;
+    } catch (e) {
+      wbPickerPushedRef.current = false;
+    }
+  };
+
+  const closeWbPicker = () => {
+    if (!wbPickerOpenRef.current) return;
+    if (wbPickerPushedRef.current) {
+      wbPickerPushedRef.current = false;
+      // wbPickerOpenRef 는 여기서 내리지 않습니다 — popstate 핸들러가 이것을 보고 닫습니다.
+      try { window.history.back(); return; } catch (e) {}
+    }
+    wbPickerOpenRef.current = false;
+    setWbPickerOpen(false);
+  };
+
+  // 시트가 떠 있을 때의 뒤로가기만 가로챕니다. 안 떠 있으면 평소대로 이전 화면으로 갑니다.
+  useEffect(() => {
+    const onPop = () => {
+      if (!wbPickerOpenRef.current) return;
+      wbPickerOpenRef.current = false;
+      wbPickerPushedRef.current = false;
+      setWbPickerOpen(false);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // 대상이 바뀌면 그 단어장 기준으로 담김 여부를 다시 판정합니다.
+  useEffect(() => {
+    if (!popupWord || !saveTargetId) {
+      setPopupSaved(false);
+      return;
+    }
+    setPopupSaved(hasWordInCategory(saveTargetId, popupWord));
+  }, [popupWord, saveTargetId]);
+
   const load = useCallback(async (force = false, koHint?: string) => {
     setLoading(true);
     setError("");
@@ -171,7 +231,7 @@ const PhraseDetail = () => {
     const key = word.toLowerCase();
     const reqId = ++popupReqId.current;
     setPopupWord(word);
-    setPopupSaved(hasWordInCategory(MY_WORDBOOK_ID, word));
+    setPopupSaved(!!saveTargetId && hasWordInCategory(saveTargetId, word));
 
     const cached = wordCache.current.get(key);
     if (cached) {
@@ -225,16 +285,16 @@ const PhraseDetail = () => {
   };
 
   const savePopupWord = () => {
-    if (!popupWord || popupSaved || popupLoading || !popupMeaning) return;
+    if (!popupWord || popupSaved || popupLoading || !popupMeaning || !saveTargetId) return;
     const { added } = addWordIfAbsent({
       word: popupWord,
       meaning: popupMeaning,
       example: item.id,
       exampleMeaning: popupSentenceKo || item.ko,
-      categoryId: MY_WORDBOOK_ID,
+      categoryId: saveTargetId,
     });
     setPopupSaved(true);
-    toast(added ? "내 단어장에 저장되었습니다" : "이미 내 단어장에 있는 단어입니다");
+    toast(added ? `${saveTargetName}에 담았습니다` : `이미 ${saveTargetName}에 있는 단어입니다`);
   };
 
   // 표제 문장을 단어 단위로 쪼개 탭 가능하게 렌더링
@@ -458,15 +518,30 @@ const PhraseDetail = () => {
               </>
             )}
             <div className="flex gap-2 mt-4">
-              <button
-                onClick={savePopupWord}
-                disabled={popupSaved || popupLoading || !popupMeaning}
-                className={`flex-1 min-w-0 flex items-center justify-center gap-1 rounded-full py-2 text-xs font-medium ${
-                  popupSaved ? "bg-black/5 text-muted-foreground" : "bg-primary text-white disabled:opacity-50"
-                }`}
-              >
-                {popupSaved ? <><Check size={13} /> 저장됨</> : <><Plus size={13} /> 내 단어장에 담기</>}
-              </button>
+              <div className="flex-1 min-w-0 flex items-stretch overflow-hidden rounded-full text-xs font-medium">
+                <button
+                  onClick={savePopupWord}
+                  disabled={popupSaved || popupLoading || !popupMeaning || !saveTargetId}
+                  className={`flex-1 min-w-0 flex items-center justify-center gap-1 py-2 ${
+                    popupSaved || !saveTargetId
+                      ? "bg-black/5 text-muted-foreground"
+                      : "bg-primary text-white disabled:opacity-50"
+                  }`}
+                >
+                  {popupSaved ? <Check size={13} className="shrink-0" /> : <Plus size={13} className="shrink-0" />}
+                  <span className="truncate">
+                    {popupSaved ? "저장됨" : saveTargetId ? saveTargetName : "단어장을 먼저 만들어 주세요"}
+                  </span>
+                </button>
+                {/* 담긴 뒤에도 다른 단어장에는 담을 수 있어야 하므로 ⌄ 는 잠그지 않습니다 */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); openWbPicker(); }}
+                  title="담을 단어장 고르기"
+                  className="shrink-0 flex items-center px-2.5 border-l border-white/30 bg-primary text-white"
+                >
+                  <ChevronDown size={13} />
+                </button>
+              </div>
               <button
                 onClick={copyPopupWord}
                 className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-foreground/80"
@@ -483,6 +558,17 @@ const PhraseDetail = () => {
           </div>
         </div>
       )}
+
+      {/* 담을 단어장 고르는 시트 — 팝업(z-50)보다 위에 오도록 한 단계 더 띄웁니다 */}
+      <div className="relative z-[60]">
+        <WordbookPickerSheet
+          open={wbPickerOpen}
+          onOpenChange={(o) => { if (!o) closeWbPicker(); }}
+          targetId={saveTargetId}
+          onPick={chooseSaveTarget}
+          onChanged={() => setSaveTargets(loadSaveTargets())}
+        />
+      </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
