@@ -108,6 +108,54 @@ function getEmoji(name) {
   return fallbackPool[fallbackIndex++ % fallbackPool.length];
 }
 
+// RFC4180 방식 CSV 파서. 따옴표로 감싼 필드 안의 쉼표·줄바꿈을 보존한다.
+// 한국어 번역에 쉼표가 자주 들어가므로 단순 split(',')을 쓰면 열이 밀린다.
+function parseCsv(text) {
+  const clean = text.replace(new RegExp("^\\uFEFF"), "").replace(new RegExp("\\r\\n?", "g"), "\n");
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (clean[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else {
+        field += ch;
+      }
+      continue;
+    }
+    if (ch === '"') { inQuotes = true; continue; }
+    if (ch === ",") { row.push(field); field = ""; continue; }
+    if (ch === "\n") {
+      row.push(field);
+      field = "";
+      if (row.some((c) => c.trim())) rows.push(row);
+      row = [];
+      continue;
+    }
+    field += ch;
+  }
+  row.push(field);
+  if (row.some((c) => c.trim())) rows.push(row);
+  return rows;
+}
+
+// CSV는 4열(인니어,한국어,예문,예문뜻) 고정이다. 따옴표 없이 쉼표를 쓴 행은
+// 5열 이상으로 밀리므로, 4열째부터 끝까지를 쉼표로 다시 이어붙여 예문뜻을 복원한다.
+// 자르기 전 간격을 그대로 살려야 원문이 정확히 돌아온다
+// ("미안해요, 그 책..." 은 쉼표 뒤 공백이 있고 "17,000개" 는 없다).
+// 그래서 trim은 병합 뒤에 한 번만 한다.
+// 해당 행 목록은 scripts/check-wordlist.js가 '쉼표 병합 행'으로 뽑아준다.
+function normalizeRow(cols) {
+  const merged = cols.length <= 4
+    ? cols
+    : [cols[0], cols[1], cols[2], cols.slice(3).join(',')];
+  return merged.map((c) => c.trim());
+}
+
 const categories = [];
 const words = [];
 
@@ -135,10 +183,10 @@ for (const file of files) {
   categories.push({ id: categoryId, name: categoryName, emoji, isShared: true });
 
   const content = fs.readFileSync(path.join(categoriesDir, file), 'utf-8');
-  const lines = content.split('\n').filter(l => l.trim());
+  const rows = parseCsv(content);
 
-  for (const line of lines) {
-    const cols = line.split(',').map(c => c.trim());
+  for (const row of rows) {
+    const cols = normalizeRow(row);
     if (cols.length < 2) continue;
     const [word, meaning, example = '', exampleMeaning = ''] = cols;
     if (!word || !meaning) continue;
@@ -170,9 +218,9 @@ if (fs.existsSync(privateRoot)) {
       categories.push({ id: categoryId, name: categoryName, emoji, isShared: true, owner });
 
       const content = fs.readFileSync(path.join(ownerDir, file), 'utf-8');
-      const lines = content.split('\n').filter(l => l.trim());
-      for (const line of lines) {
-        const cols = line.split(',').map(c => c.trim());
+      const rows = parseCsv(content);
+      for (const row of rows) {
+        const cols = normalizeRow(row);
         if (cols.length < 2) continue;
         const [word, meaning, example = '', exampleMeaning = ''] = cols;
         if (!word || !meaning) continue;
