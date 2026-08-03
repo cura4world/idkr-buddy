@@ -37,6 +37,7 @@ import {
   ChevronRight,
   BookMarked,
   MessagesSquare,
+  Gamepad2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -680,6 +681,14 @@ const Index = () => {
             <Row icon={Newspaper} title="뉴스" sub="Berita" onClick={() => navigate("/news")} />
             <Row icon={ScrollText} title="이야기" sub="Cerita" onClick={() => navigate("/story")} />
             <Row icon={Compass} title="인도네시아 이해" sub="Wawasan" onClick={() => navigate("/insight")} last />
+          </div>
+        </section>
+
+        {/* ── 게임 ── */}
+        <section className="mt-6">
+          <SectionLabel>게임</SectionLabel>
+          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+            <Row icon={Gamepad2} title="게임방" sub="Permainan" onClick={() => navigate("/permainan")} last />
           </div>
         </section>
       </div>
