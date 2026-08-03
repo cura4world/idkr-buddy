@@ -371,10 +371,15 @@ class MedaliEngine {
   }
 
   // 2) 단어 정답/오답 기록 → 확정 판정
-  async recordWordResult(word: string, correct: boolean, source: string): Promise<void> {
+  // 반환: 이번 호출로 확정(confirmed)으로 새로 전환됐으면 becameConfirmed = true
+  async recordWordResult(
+    word: string,
+    correct: boolean,
+    source: string
+  ): Promise<{ becameConfirmed: boolean }> {
     try {
       const key = String(word || "").trim().toLowerCase();
-      if (!key) return;
+      if (!key) return { becameConfirmed: false };
       const now = Date.now();
 
       const rec: WordRecord =
@@ -415,8 +420,11 @@ class MedaliEngine {
         (before !== "confirmed" && before !== "recheck") &&
         (rec.status === "confirmed" || rec.status === "recheck");
       if (countChanged) await this.recomputeBintang();
+      // pending→confirmed, recheck→confirmed 처럼 "이번에" 확정이 된 경우만 true
+      return { becameConfirmed: before !== "confirmed" && rec.status === "confirmed" };
     } catch {
       // 기록 실패해도 게임 진행에는 영향 없음
+      return { becameConfirmed: false };
     }
   }
 
@@ -450,6 +458,25 @@ class MedaliEngine {
     } catch {
       // IndexedDB를 못 쓰는 환경이면 캐시 색 그대로 둔다
     }
+  }
+}
+
+// 게임 출제 풀이 미확정/확정을 가르는 데 씁니다. (kata-medali는 이 파일 밖에서 열지 않습니다)
+export async function listWordRecords(): Promise<WordRecord[]> {
+  try {
+    return await getAll<WordRecord>(STORE_WORDS);
+  } catch {
+    return [];
+  }
+}
+
+// 저장된 게임 판 기록. game을 주면 그 게임만. 최고 기록 표시에 씁니다.
+export async function listRounds(game?: GameRound["game"]): Promise<GameRound[]> {
+  try {
+    const all = await getAll<GameRound>(STORE_ROUNDS);
+    return game ? all.filter((r) => r && r.game === game) : all;
+  } catch {
+    return [];
   }
 }
 
