@@ -143,6 +143,9 @@ const Sermons = () => {
       ? finalX <= -(OPEN_W - CLOSE_BACK)
       : finalX <= -SWIPE_THRESHOLD;
     setOpenId(keepOpen ? s.id : null);
+    // 휴지통이 새로 드러나는 순간에만 무엇이 지워지는지 알립니다.
+    // 이미 열려 있던 항목(startedOpen)은 그때 안내를 봤으므로 다시 띄우지 않습니다.
+    if (keepOpen && !startedOpen) toast("설교문과 필기가 지워집니다");
   };
 
   // 서버 → 폰 캐시 → 필기 순으로 지웁니다.
@@ -169,10 +172,11 @@ const Sermons = () => {
 
     const fresh = await getCachedSermons(); // 4. 목록 새로고침
     if (!aliveRef.current) return;
+    // 목록에서 사라지는 것으로 충분하므로 완료 알림은 띄우지 않습니다
+    // (무엇이 지워지는지는 밀었을 때 이미 알렸습니다).
     setItems(fresh);
     setOpenId(null);
     setDeletingId(null);
-    toast("설교문을 지웠습니다 · 필기도 함께 지워졌습니다");
   };
 
   // 들어오자마자 캐시를 그리고(오프라인에서도 보이도록), 그다음 조용히 서버와 맞춥니다.
@@ -327,7 +331,6 @@ const Sermons = () => {
                     style={{
                       transform: "translateX(" + currentSwipeX + "px)",
                       transition: isSwiping ? "none" : "transform 0.25s ease",
-                      opacity: deletingId === s.id ? 0.5 : 1,
                     }}
                   >
                     <span className="shrink-0 w-[62px] font-gothic text-[0.75rem] tabular-nums text-muted-foreground">
