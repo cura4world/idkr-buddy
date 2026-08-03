@@ -66,10 +66,18 @@ async function callGeminiWithSearch(prompt: string): Promise<string> {
       ":generateContent?key=" +
       encodeURIComponent(apiKey);
 
+    // 응답이 오지 않으면 화면이 영원히 로딩 상태로 멈추므로 타임아웃을 겁니다.
+    // 뉴스는 검색 그라운딩 + 긴 출력이라 짧게 잡으면 정상 생성도 끊겨 120초로 둡니다.
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort();
+    }, 120000);
+
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           tools: [{ google_search: {} }],
@@ -115,6 +123,8 @@ async function callGeminiWithSearch(prompt: string): Promise<string> {
       return text;
     } catch (e: any) {
       lastError = e instanceof Error ? e : new Error("REQUEST_FAILED");
+    } finally {
+      clearTimeout(timer);
     }
   }
   throw lastError;
