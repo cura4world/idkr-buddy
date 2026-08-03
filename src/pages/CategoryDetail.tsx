@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { getCategories, getWordsByCategory, Word, Category, reorderWords, deleteWord, archiveMyWordbook, nextArchiveName } from "@/lib/store";
+import { getCategories, getWordsByCategory, Word, Category, reorderWords, deleteWord, archiveMyWordbook, nextArchiveName, moveWordsToCategory } from "@/lib/store";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
 import AddWordDialog from "@/components/AddWordDialog";
 import EditWordDialog from "@/components/EditWordDialog";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Volume2, BookOpen, Copy, Trash2, Download, X } from "lucide-react";
+import { ArrowLeft, Volume2, BookOpen, Copy, Trash2, Download, X, ChevronDown, ChevronUp } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
@@ -20,6 +20,18 @@ const MY_WORDBOOK_ID = "my-wordbook";
 const NUDGE_KEY = "my-archive-nudge-at";
 const NUDGE_MIN = 100;
 const NUDGE_STEP = 50;
+// 접힘 상태 (localStorage). "1" 일 때만 접힘, 기본은 펴짐.
+const WORDS_COLLAPSED_KEY = "cat-words-collapsed:";
+const ARCHIVED_COLLAPSED_KEY = "my-archived-collapsed";
+const readFlag = (key: string) => {
+  try { return localStorage.getItem(key) === "1"; } catch (e) { return false; }
+};
+const writeFlag = (key: string, on: boolean) => {
+  try {
+    if (on) localStorage.setItem(key, "1");
+    else localStorage.removeItem(key);
+  } catch (e) {}
+};
 
 export default function CategoryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -35,6 +47,9 @@ export default function CategoryDetail() {
   const [nudgeAt, setNudgeAt] = useState<number>(() => {
     try { return Number(localStorage.getItem(NUDGE_KEY) || "") || 0; } catch (e) { return 0; }
   });
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [wordsCollapsed, setWordsCollapsed] = useState(() => readFlag(WORDS_COLLAPSED_KEY + (id || "")));
+  const [archivedCollapsed, setArchivedCollapsed] = useState(() => readFlag(ARCHIVED_COLLAPSED_KEY));
   const [editWord, setEditWord] = useState<Word | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const lastSelectedId = useRef<string | null>(null);
@@ -161,6 +176,59 @@ export default function CategoryDetail() {
     lastSelectedId.current = null;
     refresh();
     toast(name + " 단어장으로 " + count + "개를 보관했습니다");
+  };
+
+  // 옮길 수 있는 곳 — 내 단어장과 보관 단어장들 (공용 단어장과 지금 화면은 뺍니다).
+  const moveTargets: Category[] = editable
+    ? categories.filter((c) => !c.isShared && c.id !== id)
+    : [];
+
+  const clearSelection = () => {
+    setSelectedIds([]);
+    lastSelectedId.current = null;
+  };
+
+  const handleMoveTo = (target: Category) => {
+    const { moved, skipped } = moveWordsToCategory(selectedIds, target.id);
+    setMoveOpen(false);
+    clearSelection();
+    refresh();
+    if (moved === 0) {
+      toast("모두 이미 대상 단어장에 있는 단어입니다");
+    } else if (skipped > 0) {
+      toast(target.name + "(으)로 " + moved + "개를 옮겼습니다 (이미 있는 단어 " + skipped + "개 제외)");
+    } else {
+      toast(target.name + "(으)로 " + moved + "개를 옮겼습니다");
+    }
+  };
+
+  // 접을 때는 진행 중이던 선택·스와이프·드래그 상태를 정리합니다.
+  const toggleWordsCollapsed = () => {
+    const next = !wordsCollapsed;
+    writeFlag(WORDS_COLLAPSED_KEY + (id || ""), next);
+    if (next) {
+      cancelLongPress();
+      stopAutoScroll();
+      clearSelection();
+      setSwipingIndex(null);
+      setSwipeX(0);
+      swipeXRef.current = 0;
+      isSwipe.current = false;
+      touchIntent.current = "none";
+      setDragging(null);
+      setDragOver(null);
+      setFloatPos(null);
+      setPressedIndex(null);
+      isDragging.current = false;
+      armedIndex.current = null;
+    }
+    setWordsCollapsed(next);
+  };
+
+  const toggleArchivedCollapsed = () => {
+    const next = !archivedCollapsed;
+    writeFlag(ARCHIVED_COLLAPSED_KEY, next);
+    setArchivedCollapsed(next);
   };
 
   const setDragging = (index: number | null) => {
@@ -554,7 +622,7 @@ export default function CategoryDetail() {
         </h1>
       </header>
 
-      <div className="px-4 pb-6">
+      <div className={selectedIds.length > 0 ? "px-4 pb-24" : "px-4 pb-6"}>
         {/* 표준 헤더 높이 61px(py-3 24 + 버튼 36 + 테두리 1) 바로 아래에 붙여둡니다. */}
         {editable && (
           <div className="sticky top-[61px] z-20 bg-background -mx-4 px-4 py-2.5 flex flex-wrap justify-end gap-x-3.5 gap-y-1">
@@ -594,8 +662,18 @@ export default function CategoryDetail() {
           </button>
         </div>
       )}
+      {isMine && words.length > 0 && (
+        <button
+          type="button"
+          onClick={toggleWordsCollapsed}
+          className="mb-2.5 w-full flex items-center justify-between px-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+        >
+          <span>단어 {words.length}개</span>
+          {wordsCollapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+        </button>
+      )}
       {/* 버튼 줄이 없는 읽기 전용 단어장에서는 그 줄이 주던 여백을 목록이 대신 갖습니다. */}
-      <div className={editable ? "space-y-2" : "space-y-2 pt-2.5"}>
+      <div className={(isMine && wordsCollapsed) ? "hidden" : (editable ? "space-y-2" : "space-y-2 pt-2.5")}>
         {words.map((w, index) => {
           const isDraggingThis = draggingIndex === index;
           const isDropTarget = dragOverIndex === index && draggingIndex !== index;
@@ -700,21 +778,28 @@ export default function CategoryDetail() {
       )}
       {isMine && archived.length > 0 && (
         <section className="mt-6">
-          <p className="mb-2.5 px-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            보관한 단어장 {archived.length}권
-          </p>
-          <div className="rounded-2xl border border-border bg-card">
-            {archived.map((cat, i) => (
-              <CategoryCard
-                key={cat.id}
-                category={cat}
-                first={i === 0}
-                last={i === archived.length - 1}
-                editable
-                onChanged={refresh}
-              />
-            ))}
-          </div>
+          <button
+            type="button"
+            onClick={toggleArchivedCollapsed}
+            className="mb-2.5 w-full flex items-center justify-between px-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+          >
+            <span>보관한 단어장 {archived.length}권</span>
+            {archivedCollapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+          </button>
+          {!archivedCollapsed && (
+            <div className="rounded-2xl border border-border bg-card">
+              {archived.map((cat, i) => (
+                <CategoryCard
+                  key={cat.id}
+                  category={cat}
+                  first={i === 0}
+                  last={i === archived.length - 1}
+                  editable
+                  onChanged={refresh}
+                />
+              ))}
+            </div>
+          )}
         </section>
       )}
       {draggingWord && floatPos && (
@@ -790,6 +875,66 @@ export default function CategoryDetail() {
             </p>
             <Button type="submit" className="w-full" disabled={!archiveName.trim()}>보관하기</Button>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* 고른 단어가 있을 때만 뜨는 아래 고정 바. 어두운 배경에서도 보이도록 불투명 bg-card 를 씁니다. */}
+      {editable && selectedIds.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40">
+          <div className="mx-auto max-w-lg border-t border-border bg-card px-4 py-3 flex items-center gap-3">
+            <span className="flex-1 min-w-0 text-[0.8125rem] font-body text-foreground">
+              {selectedIds.length}개 선택
+            </span>
+            <button
+              type="button"
+              onClick={() => setMoveOpen(true)}
+              className="shrink-0 h-9 px-4 rounded-full bg-primary text-[0.8125rem] font-gothic font-medium text-white active:opacity-90"
+            >
+              이동
+            </button>
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="shrink-0 h-9 px-3 rounded-full border border-border text-[0.8125rem] font-gothic text-foreground active:bg-muted"
+            >
+              선택 해제
+            </button>
+          </div>
+        </div>
+      )}
+      <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
+        <DialogContent className="max-w-sm mx-auto bg-card">
+          <DialogHeader>
+            <DialogTitle className="font-body text-black">어느 단어장으로 옮길까요?</DialogTitle>
+          </DialogHeader>
+          {moveTargets.length === 0 ? (
+            <p className="font-body text-[0.8125rem] leading-relaxed text-muted-foreground">
+              보관한 단어장이 없습니다. 먼저 단어장을 만들어 주세요.
+            </p>
+          ) : (
+            <div className="max-h-72 overflow-y-auto rounded-xl border border-border">
+              {moveTargets.map((cat, i) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => handleMoveTo(cat)}
+                  className={
+                    "w-full flex items-center gap-3 px-3 py-2.5 text-left active:bg-muted " +
+                    (i === moveTargets.length - 1 ? "" : "border-b border-border")
+                  }
+                >
+                  <span className="w-8 h-8 shrink-0 rounded-full border border-border flex items-center justify-center text-[0.9375rem]">
+                    {cat.emoji}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[0.875rem] text-foreground truncate">{cat.name}</span>
+                    <span className="mt-0.5 block font-word text-[0.6875rem] text-muted-foreground">
+                      {getWordsByCategory(cat.id).length}단어
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       <AlertDialog open={pendingDeleteIds.length > 0} onOpenChange={(o) => { if (!o) setPendingDeleteIds([]); }}>
