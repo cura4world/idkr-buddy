@@ -331,6 +331,8 @@ const SermonRead = () => {
 
   // ---------- 필기(S펜) ----------
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  // 필기 층 높이를 잴 대상 — 흐름 안에 있는 본문만 (필기 svg 는 빼고)
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const strokesRef = useRef<SVGGElement | null>(null);
   const surfaceRef = useRef<HTMLDivElement | null>(null);
@@ -696,16 +698,22 @@ const SermonRead = () => {
     };
   }, []);
 
-  // 필기 층 높이를 본문 래퍼에 맞춥니다 (본문 로드·글자 크기 변경·회전·리사이즈).
+  // 필기 층 높이를 본문 "글" 높이에 맞춥니다 (본문 로드·글자 크기 변경·회전·리사이즈).
+  //
+  // 예전에는 wrapRef.scrollHeight 를 썼는데, wrap 은 높이를 inkH 로 지정한 <svg> 를
+  // 절대배치 자식으로 품고 있어 그 svg 의 박스가 scrollHeight 에 함께 잡혔습니다.
+  // 즉 "내가 방금 정한 높이"를 다시 재는 꼴이라 값이 한 번 커지면 절대 줄지 않고
+  // (글자 크기를 줄여도, 넓게 보기를 꺼도) 본문 아래에 빈 공간이 남아 계속 스크롤됐습니다.
+  // 흐름 안에 있는 본문 div 만 재면 되먹임이 끊깁니다.
   useEffect(() => {
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-    const sync = () => setInkH(wrap.scrollHeight);
+    const content = contentRef.current;
+    if (!content) return;
+    const sync = () => setInkH(content.offsetHeight);
     sync();
     let ro: ResizeObserver | null = null;
     try {
       ro = new ResizeObserver(sync);
-      ro.observe(wrap);
+      ro.observe(content);
     } catch (e) {}
     window.addEventListener("resize", sync);
     return () => {
@@ -1504,7 +1512,7 @@ const SermonRead = () => {
           </div>
         ) : (
           <div ref={wrapRef} className="relative">
-            <div style={{ fontSize: fontPx }}>{blocks.map(renderBlock)}</div>
+            <div ref={contentRef} style={{ fontSize: fontPx }}>{blocks.map(renderBlock)}</div>
             {/* 필기 층 — 포토샵 레이어처럼 본문 위에 얹습니다.
                 읽기 모드에서는 pointer-events:none 이라 단어 탭·스크롤에 영향이 없습니다. */}
             <svg
