@@ -156,6 +156,12 @@ export function detectInputKind(raw: string): InputKind {
 }
 
 // ---- 공통 Gemini JSON 호출 ----
+// 응답이 오지 않으면 "검색 중"에서 영원히 멈추므로 30초 타임아웃을 겁니다.
+const CALL_TIMEOUT_MS = 30000;
+
+// 일시적 오류만 딱 1번 재시도합니다. (429/400/403은 재시도해도 소용없음)
+const RETRIABLE = new Set(["TIMEOUT", "NETWORK", "SERVER_ERROR", "EMPTY_RESPONSE"]);
+
 async function callGeminiJSON(prompt: string, temperature = 0.4): Promise<Record<string, unknown>> {
   const apiKey = getGeminiApiKey();
   if (!apiKey) throw new Error("NO_API_KEY");
@@ -166,34 +172,65 @@ async function callGeminiJSON(prompt: string, temperature = 0.4): Promise<Record
     ":generateContent?key=" +
     encodeURIComponent(apiKey);
 
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature,
-        responseMimeType: "application/json",
-      },
-    }),
-  });
+  const attempt = async (): Promise<Record<string, unknown>> => {
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, CALL_TIMEOUT_MS);
 
-  if (!res.ok) {
-    if (res.status === 400 || res.status === 403) throw new Error("INVALID_API_KEY");
-    if (res.status === 429) throw new Error("RATE_LIMIT");
-    throw new Error("REQUEST_FAILED_" + res.status);
-  }
+    let res: Response;
+    try {
+      res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature,
+            responseMimeType: "application/json",
+            // 응답이 중간에 잘리면 EMPTY_RESPONSE가 되므로 한도를 넉넉히 잡습니다.
+            maxOutputTokens: 8192,
+          },
+        }),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      if (timedOut) throw new Error("TIMEOUT");
+      throw new Error("NETWORK");
+    } finally {
+      clearTimeout(timer);
+    }
 
-  const data = await res.json();
-  const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-  if (!text) throw new Error("EMPTY_RESPONSE");
+    if (!res.ok) {
+      if (res.status === 403) throw new Error("INVALID_API_KEY");
+      if (res.status === 400) throw new Error("BAD_REQUEST");
+      if (res.status === 429) throw new Error("RATE_LIMIT");
+      if (res.status >= 500) throw new Error("SERVER_ERROR");
+      throw new Error("REQUEST_FAILED_" + res.status);
+    }
+
+    const data = await res.json();
+    const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    if (!text) throw new Error("EMPTY_RESPONSE");
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      const match = text.match(new RegExp("\\{[\\s\\S]*\\}"));
+      if (!match) throw new Error("PARSE_FAILED");
+      return JSON.parse(match[0]);
+    }
+  };
 
   try {
-    return JSON.parse(text);
-  } catch {
-    const match = text.match(new RegExp("\\{[\\s\\S]*\\}"));
-    if (!match) throw new Error("PARSE_FAILED");
-    return JSON.parse(match[0]);
+    return await attempt();
+  } catch (e: any) {
+    const code = (e && e.message) || "";
+    if (!RETRIABLE.has(code)) throw e;
+    await new Promise((r) => setTimeout(r, 1000));
+    return await attempt();
   }
 }
 
