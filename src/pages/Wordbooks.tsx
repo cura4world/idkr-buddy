@@ -3,8 +3,6 @@ import { getCategories, Category } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import { ArrowLeft } from "lucide-react";
 
-const MY_WORDBOOK_ID = "my-wordbook";
-
 /* 단어장을 주제별로 묶어 메인 화면처럼 구역을 나눠 보여줍니다.
    이 화면은 완성된 "책"이라 읽기 전용입니다. 단어장 추가·이름 변경·삭제·순서 이동은
    내 단어장(/category/my-wordbook) 쪽에서만 합니다. */
@@ -33,8 +31,9 @@ function groupLabelOf(name: string): string {
 
 const Wordbooks = () => {
   const navigate = useNavigate();
-  // 폴더 안에는 "내 단어장"을 제외한 모든 단어장이 들어갑니다.
-  const categories = getCategories().filter((c) => c.id !== MY_WORDBOOK_ID);
+  // 폴더 화면은 시드에서 온 공용 단어장(읽기 전용 "책")만 보여줍니다.
+  // 사용자가 만들거나 보관한 단어장은 내 단어장 안에서 관리합니다.
+  const categories = getCategories().filter((c) => c.isShared);
 
   // 화면에 보일 묶음들. 시드 순서를 그대로 쓰므로 별도 정렬은 하지 않습니다.
   const grouped = (() => {
