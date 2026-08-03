@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Newspaper, Volume2, Loader2, Plus, Check, X, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, Newspaper, Volume2, Loader2, Plus, Check, X, Maximize2, Minimize2, ChevronDown } from "lucide-react";
 import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
 import { quickLookupWord } from "@/lib/story";
@@ -8,12 +8,13 @@ import { generateDailyNews, todayKey, indoDateLabel, NewsEdition } from "@/lib/n
 import { saveEdition, listEditions } from "@/lib/newsStore";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
+import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
+import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
 
-const MY_WORDBOOK_ID = "my-wordbook";
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
 const speak = (text: string, lang: "id" | "ko" = "id") => {
@@ -118,6 +119,53 @@ const News = () => {
   const popupReqId = useRef(0);
   const wordCache = useRef(new Map<string, { meaning: string; info: string; sentenceKo: string }>());
 
+  // ---- 담을 단어장 (사전에서 고른 대상을 앱 전체가 함께 씁니다) ----
+  const [saveTargets, setSaveTargets] = useState(loadSaveTargets);
+  const [saveTargetId, setSaveTargetId] = useState(() => loadSaveTargetId(loadSaveTargets()));
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerOpenRef = useRef(false);
+  const pickerPushedRef = useRef(false);
+  const saveTargetName = (saveTargets.find((c) => c.id === saveTargetId) || { name: "" }).name;
+
+  const chooseSaveTarget = (id: string) => {
+    setSaveTargetId(id);
+    saveSaveTargetId(id);
+  };
+
+  // 시트는 히스토리를 한 칸 더 쌓습니다 — 뒤로가기를 누르면 시트만 닫히고 팝업은 남습니다.
+  const openPicker = () => {
+    if (pickerOpenRef.current) return;
+    setSaveTargets(loadSaveTargets());
+    setPickerOpen(true);
+    pickerOpenRef.current = true;
+    try {
+      window.history.pushState({ wordbookPicker: true }, "");
+      pickerPushedRef.current = true;
+    } catch (e) {
+      pickerPushedRef.current = false;
+    }
+  };
+
+  const closePicker = () => {
+    if (!pickerOpenRef.current) return;
+    if (pickerPushedRef.current) {
+      pickerPushedRef.current = false;
+      // pickerOpenRef 는 여기서 내리지 않습니다 — popstate 핸들러가 이것을 보고 닫습니다.
+      try { window.history.back(); return; } catch (e) {}
+    }
+    pickerOpenRef.current = false;
+    setPickerOpen(false);
+  };
+
+  // 대상이 바뀌면 그 단어장 기준으로 담김 여부를 다시 판정합니다.
+  useEffect(() => {
+    if (!popupWord || !saveTargetId) {
+      setPopupSaved(false);
+      return;
+    }
+    setPopupSaved(hasWordInCategory(saveTargetId, popupWord));
+  }, [popupWord, saveTargetId]);
+
   // 기사 화면을 열었는지 (히스토리를 한 칸 쌓았는지)
   const articleStateRef = useRef(false);
 
@@ -157,6 +205,13 @@ const News = () => {
   // 폰의 뒤로가기: 기사 화면이면 신문 첫면으로만 이동
   useEffect(() => {
     const onPop = () => {
+      // 시트가 팝업 위에 떠 있으면 시트만 닫습니다 (팝업은 그대로).
+      if (pickerOpenRef.current) {
+        pickerOpenRef.current = false;
+        pickerPushedRef.current = false;
+        setPickerOpen(false);
+        return;
+      }
       if (articleStateRef.current) {
         articleStateRef.current = false;
         resetToFront();
@@ -227,7 +282,7 @@ const News = () => {
     const reqId = ++popupReqId.current;
     setPopupWord(word);
     setPopupSentence(sentence);
-    setPopupSaved(hasWordInCategory(MY_WORDBOOK_ID, word));
+    setPopupSaved(!!saveTargetId && hasWordInCategory(saveTargetId, word));
 
     const cached = wordCache.current.get(key);
     if (cached) {
@@ -294,16 +349,16 @@ const News = () => {
   };
 
   const savePopupWord = () => {
-    if (!popupWord || popupSaved || popupLoading || !popupMeaning) return;
+    if (!popupWord || popupSaved || popupLoading || !popupMeaning || !saveTargetId) return;
     const { added } = addWordIfAbsent({
       word: popupWord,
       meaning: popupMeaning,
       example: popupSentence,
       exampleMeaning: popupSentenceKo,
-      categoryId: MY_WORDBOOK_ID,
+      categoryId: saveTargetId,
     });
     setPopupSaved(true);
-    toast(added ? "내 단어장에 저장되었습니다" : "이미 내 단어장에 있는 단어입니다");
+    toast(added ? `${saveTargetName}에 담았습니다` : `이미 ${saveTargetName}에 있는 단어입니다`);
   };
 
   // 인니어 텍스트를 단어 단위로 쪼개 탭 가능하게 렌더링
@@ -461,15 +516,28 @@ const News = () => {
                 </>
               )}
               <div className="flex gap-2 mt-4">
-                <button
-                  onClick={savePopupWord}
-                  disabled={popupSaved || popupLoading || !popupMeaning}
-                  className={`flex-1 min-w-0 flex items-center justify-center gap-1 rounded-full py-2 text-xs font-medium ${
-                    popupSaved ? "bg-gray-100 text-gray-400" : "bg-primary text-white disabled:opacity-50"
-                  }`}
-                >
-                  {popupSaved ? <><Check size={13} /> 저장됨</> : <><Plus size={13} /> 내 단어장에 담기</>}
-                </button>
+                <div className="flex-1 min-w-0 flex items-stretch overflow-hidden rounded-full text-xs font-medium">
+                  <button
+                    onClick={savePopupWord}
+                    disabled={popupSaved || popupLoading || !popupMeaning || !saveTargetId}
+                    className={`flex-1 min-w-0 flex items-center justify-center gap-1 py-2 ${
+                      popupSaved || !saveTargetId ? "bg-gray-100 text-gray-400" : "bg-primary text-white disabled:opacity-50"
+                    }`}
+                  >
+                    {popupSaved ? <Check size={13} className="shrink-0" /> : <Plus size={13} className="shrink-0" />}
+                    <span className="truncate">
+                      {popupSaved ? "저장됨" : saveTargetId ? `${saveTargetName}에 담기` : "단어장을 먼저 만들어 주세요"}
+                    </span>
+                  </button>
+                  {/* 담긴 뒤에도 다른 단어장에는 담을 수 있어야 하므로 ⌄ 는 잠그지 않습니다 */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); openPicker(); }}
+                    title="담을 단어장 고르기"
+                    className="shrink-0 flex items-center px-2.5 border-l border-white/30 bg-primary text-white"
+                  >
+                    <ChevronDown size={13} />
+                  </button>
+                </div>
                 <button
                   onClick={copyPopupWord}
                   className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-gray-700"
@@ -486,6 +554,17 @@ const News = () => {
             </div>
           </div>
         )}
+
+        {/* 담을 단어장 고르는 시트 — 팝업(z-50)보다 위에 오도록 한 단계 더 띄웁니다 */}
+        <div className="relative z-[60]">
+          <WordbookPickerSheet
+            open={pickerOpen}
+            onOpenChange={(o) => { if (!o) closePicker(); }}
+            targetId={saveTargetId}
+            onPick={chooseSaveTarget}
+            onChanged={() => setSaveTargets(loadSaveTargets())}
+          />
+        </div>
       </div>
     );
   }
