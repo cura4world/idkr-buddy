@@ -4,7 +4,7 @@
 //
 // 성경 말씀은 본문을 이 파일에 담지 않고 "장·절 참조"만 두었다가
 // 앱이 이미 쓰고 있는 성경 API에서 그때그때 불러옵니다.
-// 단어장 기반 종류(내 단어장 / 단어장 폴더 / 회화집 폴더)는 저장된 단어에서 가져옵니다.
+// 내 단어장 / 단어장 폴더는 저장된 단어에서, 회화집 폴더는 회화집(/percakapan)의 대사에서 가져옵니다.
 
 import {
   fetchChapter,
@@ -16,6 +16,9 @@ import {
 import { getWordsByCategory, getCategories, Category, Word } from "@/lib/store";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { askPhraseJSON, generateNewPhrase, getPhraseDetail } from "@/lib/phrase";
+import { BUILTIN_SCENES } from "@/data/percakapan";
+import { getCustomScenes } from "@/lib/percakapan";
+import type { PercakapanScene } from "@/data/percakapan";
 
 export type PhraseKind =
   | "peribahasa"
@@ -337,12 +340,8 @@ function pickOne<T>(arr: T[]): T {
 }
 
 // 주어진 단어장들에서 무작위로 하나를 골라 문장으로 만듭니다.
-// useSentence 가 참이면 표제어 자체가 문장인 단어장(회화집)이라 보고 word/meaning 을 그대로 씁니다.
-function pickFromCategories(
-  cats: Category[],
-  kind: PhraseKind,
-  useSentence: boolean
-): Phrase | null {
+// 예문이 있으면 예문을 문장으로 쓰고 표제어는 출처(ref)로 남깁니다.
+function pickFromCategories(cats: Category[], kind: PhraseKind): Phrase | null {
   try {
     let words: Word[] = [];
     for (let i = 0; i < cats.length; i += 1) {
@@ -351,8 +350,6 @@ function pickFromCategories(
     }
     if (words.length === 0) return null;
     const w = pickOne(words);
-    // 회화집은 표제어가 곧 문장이라 예문을 보지 않습니다.
-    if (useSentence) return { kind, id: w.word, ko: w.meaning };
     const example = typeof w.example === "string" ? w.example.trim() : "";
     const exampleKo = typeof w.exampleMeaning === "string" ? w.exampleMeaning.trim() : "";
     if (example !== "") {
@@ -368,26 +365,51 @@ function pickFromCategories(
 // 이름이 "내 단어장"인데 공용 단어가 나오면 맞지 않기 때문입니다.
 function pickFromMyWordbook(): Phrase | null {
   const cats = getCategories().filter((c) => c.id === MY_WORDBOOK_ID);
-  return pickFromCategories(cats, "kosakataku", false);
+  return pickFromCategories(cats, "kosakataku");
 }
 
 // 단어장 폴더 = 시드에서 온 공용 단어장 36권.
 function pickFromSharedWordbooks(): Phrase | null {
   const cats = getCategories().filter((c) => c.isShared);
-  return pickFromCategories(cats, "kosakata", false);
+  return pickFromCategories(cats, "kosakata");
 }
 
-// 이름에 "회화"가 들어간 개인 단어장을 회화집으로 봅니다
-// ("회화집", "일상 회화", "회화 표현" 등). 공백과 대소문자에 흔들리지 않게 다듬어 비교합니다.
-function isPercakapanName(name: string): boolean {
-  const s = (name || "").toLowerCase().replace(new RegExp("\\s+", "g"), "");
-  return s.indexOf("회화") >= 0;
-}
+// 회화집(/percakapan)의 대사 한 줄을 뽑습니다.
+// 기본 장면에 사용자가 만든 장면을 더해 고르고, 어느 장면의 대사인지 ref 에 남깁니다.
+//
+// 장면을 먼저 고르고 그 안에서 줄을 고르는 2단 추첨입니다.
+// 모든 줄을 한 통에 쏟아 놓고 뽑으면 대사가 많은 장면에만 쏠립니다.
+const PERCAKAPAN_MIN_LEN = 6; // 공백 뺀 길이. "Iya." 같은 맞장구는 학습 가치가 없어 건너뜁니다
 
-// 해당하는 단어장이 없으면 null — pickOnce 가 조용히 다음 종류로 넘어갑니다.
-function pickFromPercakapan(): Phrase | null {
-  const cats = getCategories().filter((c) => !c.isShared && isPercakapanName(c.name));
-  return pickFromCategories(cats, "percakapan", true);
+async function pickFromPercakapan(): Promise<Phrase | null> {
+  try {
+    let scenes: PercakapanScene[] = BUILTIN_SCENES;
+    try {
+      const custom = await getCustomScenes();
+      if (custom && custom.length > 0) scenes = scenes.concat(custom);
+    } catch (e) { /* 사용자 장면을 못 읽으면 기본 장면만 씁니다 */ }
+
+    const usable = scenes.filter((s) => s && Array.isArray(s.lines) && s.lines.length > 0);
+    if (usable.length === 0) return null;
+
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const scene = pickOne(usable);
+      const line = pickOne(scene.lines);
+      if (!line) continue;
+      const id = typeof line.id === "string" ? line.id.trim() : "";
+      const ko = typeof line.ko === "string" ? line.ko.trim() : "";
+      if (id === "" || ko === "") continue;
+      // 너무 짧은 맞장구는 건너뜁니다
+      if (id.replace(new RegExp("\\s+", "g"), "").length < PERCAKAPAN_MIN_LEN) continue;
+      const ref = (scene.title || "").trim() || (scene.titleId || "").trim();
+      const p: Phrase = { kind: "percakapan", id, ko };
+      if (ref !== "") p.ref = ref;
+      return p;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
 }
 
 /** 성경 참조 하나를 골라 본문을 불러옵니다 */
@@ -442,7 +464,7 @@ async function pickOnce(kinds: PhraseKind[]): Promise<Phrase> {
       continue;
     }
     if (kind === "percakapan") {
-      const p = pickFromPercakapan();
+      const p = await pickFromPercakapan();
       if (p) return p;
       continue;
     }
@@ -555,14 +577,16 @@ async function createAyat(recent: string[]): Promise<Phrase | null> {
 async function createPhrase(kind: PhraseKind, recent: string[]): Promise<Phrase | null> {
   if (kind === "alkitab") return createAyat(recent);
 
-  // 단어장에서 뽑는 종류는 지어내지 않고 고른 뒤 해설만 미리 만들어 둡니다.
-  if (kind === "kosakataku" || kind === "kosakata" || kind === "percakapan") {
-    const p =
-      kind === "kosakataku"
-        ? pickFromMyWordbook()
-        : kind === "kosakata"
-          ? pickFromSharedWordbooks()
-          : pickFromPercakapan();
+  // 지어내지 않고 고르기만 하는 종류들 — 해설만 미리 만들어 둡니다.
+  if (kind === "percakapan") {
+    const p = await pickFromPercakapan();
+    if (!p) return null;
+    await getPhraseDetail(p.id, p.ko);
+    return p;
+  }
+
+  if (kind === "kosakataku" || kind === "kosakata") {
+    const p = kind === "kosakataku" ? pickFromMyWordbook() : pickFromSharedWordbooks();
     if (!p) return null;
     await getPhraseDetail(p.id, p.ko);
     return p;
