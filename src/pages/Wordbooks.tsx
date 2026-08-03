@@ -9,23 +9,26 @@ import { toast } from "sonner";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 
-/* 단어장을 품사별로 묶어 메인 화면처럼 구역을 나눠 보여줍니다.
-   묶는 기준은 단어장 이름입니다. (scripts/csv-to-seed.js 의 정렬 기준과 같은 어휘) */
-const GROUPS: { label: string; match: string[] }[] = [
-  { label: "설교", match: ["설교", "kotbah", "khotbah", "sermon"] },
-  { label: "명사", match: ["명사", "noun", "kata benda"] },
-  { label: "형용사", match: ["형용사", "adjective", "kata sifat"] },
-  { label: "부사", match: ["부사", "adverb", "kata keterangan"] },
-  { label: "동사", match: ["동사", "verb", "kata kerja"] },
-  { label: "기독교", match: ["기독교", "성경", "alkitab", "ibadah", "worship", "doa", "prayer"] },
+/* 단어장을 주제별로 묶어 메인 화면처럼 구역을 나눠 보여줍니다. */
+// 공용 단어장은 "01 인칭·지시·의문"처럼 두 자리 번호로 시작한다.
+// 그 번호 범위로 묶어 소제목을 붙인다. 번호가 없는 단어장(개인 단어장 등)은 "그 외".
+const GROUPS: { label: string; from: number; to: number }[] = [
+  { label: "기초", from: 1, to: 4 },
+  { label: "동사·형용사", from: 5, to: 11 },
+  { label: "사람과 일상", from: 12, to: 18 },
+  { label: "사회생활", from: 19, to: 22 },
+  { label: "자연과 세상", from: 23, to: 29 },
+  { label: "성경과 신앙", from: 30, to: 36 },
 ];
 const OTHER_LABEL = "그 외";
 
-// 어느 묶음에 들어가는지 — 못 찾으면 "그 외"
+// 이름 앞의 번호로 묶음을 정한다 — 번호가 없거나 범위 밖이면 "그 외"
 function groupLabelOf(name: string): string {
-  const lower = (name || "").toLowerCase();
+  const m = (name || "").match(new RegExp("^(\\d{1,2})"));
+  if (!m) return OTHER_LABEL;
+  const n = Number(m[1]);
   for (const g of GROUPS) {
-    if (g.match.some((m) => lower.includes(m))) return g.label;
+    if (n >= g.from && n <= g.to) return g.label;
   }
   return OTHER_LABEL;
 }
