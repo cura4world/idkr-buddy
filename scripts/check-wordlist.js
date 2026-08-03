@@ -109,7 +109,7 @@ for (const { label, fullPath } of targets) {
     count++;
     if (!example && !exampleMeaning) noExample++;
     if (!wordFiles.has(word)) wordFiles.set(word, []);
-    wordFiles.get(word).push(label);
+    wordFiles.get(word).push({ label, meaning });
   }
 
   perFileCount.push({ label, count });
@@ -118,23 +118,32 @@ for (const { label, fullPath } of targets) {
 
 const totalWords = perFileCount.reduce((sum, f) => sum + f.count, 0);
 
-// 서로 다른 파일에 같은 표제어가 있는 경우
-const crossFileDups = [...wordFiles.entries()]
-  .filter(([, files]) => new Set(files).size > 1)
-  .sort((a, b) => a[0].localeCompare(b[0]));
-
-// 같은 파일 안에서 표제어가 두 번 이상 나오는 경우
-const sameFileDups = [];
-for (const [word, files] of wordFiles) {
-  const seen = new Set();
-  const twice = new Set();
-  for (const f of files) {
-    if (seen.has(f)) twice.add(f);
-    seen.add(f);
+// 같은 표제어가 여러 번 나올 때, 한국어 뜻으로 두 가지를 갈라낸다.
+//  - 뜻이 같거나 한쪽이 다른 쪽에 포함되면 → 중복(고쳐야 할 오류)
+//  - 뜻이 서로 다르면 → 동음이의어(의도된 것. 각각 맞는 단어장에 둔다)
+function senseClusters(entries) {
+  const clusters = [];
+  for (const e of entries) {
+    const hit = clusters.find((c) =>
+      c.some((x) => x.meaning === e.meaning || x.meaning.includes(e.meaning) || e.meaning.includes(x.meaning)));
+    if (hit) hit.push(e);
+    else clusters.push([e]);
   }
-  for (const f of twice) sameFileDups.push(`${word} → ${f}`);
+  return clusters;
 }
-sameFileDups.sort();
+
+const duplicates = []; // 뜻이 같은 중복 (오류)
+const homonyms = [];   // 뜻이 다른 동음이의어 (정상)
+for (const [word, entries] of [...wordFiles.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+  if (entries.length < 2) continue;
+  const clusters = senseClusters(entries);
+  for (const c of clusters) {
+    if (c.length > 1) duplicates.push(`${word} → ${c.map((x) => x.label).join(', ')} (뜻: ${c[0].meaning})`);
+  }
+  if (clusters.length > 1) {
+    homonyms.push(`${word} → ${clusters.map((c) => `${c[0].meaning}(${c[0].label})`).join(' / ')}`);
+  }
+}
 
 console.log('=== 1. 파일별 단어 수 ===');
 for (const { label, count } of perFileCount) console.log(`  ${label}\t${count}`);
@@ -146,13 +155,15 @@ if (bomFiles.length === 0) console.log('  없음');
 else for (const f of bomFiles) console.log(`  ${f}`);
 
 console.log('');
-console.log(`=== 3. 중복 표제어 — 서로 다른 파일 (${crossFileDups.length}건) ===`);
-if (crossFileDups.length === 0) console.log('  없음');
-else for (const [word, files] of crossFileDups) console.log(`  ${word} → ${[...new Set(files)].join(', ')}`);
-if (sameFileDups.length > 0) {
-  console.log(`  [참고] 같은 파일 안 중복 ${sameFileDups.length}건`);
-  for (const d of sameFileDups) console.log(`    ${d}`);
-}
+console.log(`=== 3. 중복 표제어 — 뜻이 같음 (${duplicates.length}건) ===`);
+if (duplicates.length === 0) console.log('  없음');
+else for (const d of duplicates) console.log(`  ${d}`);
+
+console.log('');
+console.log(`=== 3-1. 동음이의어 — 뜻이 다름 (${homonyms.length}건) ===`);
+console.log('  같은 철자지만 뜻이 달라 일부러 둘 다 남긴 것. 오류가 아니다.');
+if (homonyms.length === 0) console.log('  없음');
+else for (const h of homonyms) console.log(`  동음이의어: ${h}`);
 
 console.log('');
 console.log(`=== 4. 형식 오류 행 (${formatErrors.length}건) ===`);
@@ -179,5 +190,5 @@ else {
 }
 
 console.log('');
-console.log(`총 ${totalWords}단어 / 중복 ${crossFileDups.length}건 / 형식오류 ${formatErrors.length}건`);
+console.log(`총 ${totalWords}단어 / 중복 ${duplicates.length}건 / 동음이의어 ${homonyms.length}건 / 형식오류 ${formatErrors.length}건`);
 process.exit(0);
