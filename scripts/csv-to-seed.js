@@ -20,9 +20,12 @@ const SORT_ORDER = [
 ];
 
 function getSortIndex(name) {
+  // 이름이 두 자리 숫자로 시작하면 그 숫자를 정렬 기준으로 쓴다 ("01 인칭·지시·의문").
+  const m = name.match(new RegExp("^(\\d+)"));
+  if (m) return Number(m[1]);
   const lower = name.toLowerCase();
   for (let i = 0; i < SORT_ORDER.length; i++) {
-    if (lower.includes(SORT_ORDER[i])) return i;
+    if (lower.includes(SORT_ORDER[i])) return i + 1000;
   }
   return 9999;
 }
