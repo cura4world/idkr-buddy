@@ -139,11 +139,13 @@ const KIND_STYLE: Record<string, KindStyle> = {
     koSize: "0.64em",
   },
   hymn: {
-    wrap: "mb-5 text-center",
-    idClass: ID_BASE + " text-rose-600",
+    // 찬양 가사는 본문과 같은 검정, 워드에 적힌 대로 왼쪽 정렬입니다.
+    // (가운데 정렬하면 줄바꿈 위치가 흔들려 절 구분이 흐려집니다.)
+    wrap: "mb-5",
+    idClass: ID_BASE + " text-foreground",
     idSize: "0.95em",
     koClass: KO_BASE,
-    koSize: "0.63em",
+    koSize: "0.64em",
   },
   body: {
     wrap: "mb-5",
@@ -1180,6 +1182,10 @@ const SermonRead = () => {
 
   const renderBlock = (b: SermonBlock, i: number) => {
     if (!b) return null;
+    // 찬양 중의 빈 줄 — 절·후렴을 구분하는 여백입니다 (업로드 도구가 빈 블록으로 보냅니다).
+    if (b.kind === "hymn" && !b.id && !b.ko) {
+      return <div key={i} className="h-4" aria-hidden="true" />;
+    }
     const st = styleFor(b.kind);
     return (
       <div
