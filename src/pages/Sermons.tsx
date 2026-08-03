@@ -14,23 +14,14 @@ import {
   syncSermons,
   deleteSermonOnServer,
   deleteCachedSermon,
-  formatSermonDate,
   formatSermonDateShort,
 } from "@/lib/sermon";
 import { deleteInk } from "@/lib/sermonInk";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
-// 왼쪽으로 이만큼 밀고 손을 떼면 삭제 확인 (단어 카드와 같은 값)
+// 왼쪽으로 이만큼 밀고 손을 떼면 밀린 채로 고정됩니다 (단어 카드와 같은 값)
 const SWIPE_THRESHOLD = 80;
+const OPEN_W = 64;       // 밀린 채로 고정되는 폭 (휴지통 한 칸)
+const CLOSE_BACK = 24;   // 밀린 것을 오른쪽으로 이만큼 되밀면 닫힙니다
 
 // 마지막으로 불러온 시각을 사람이 읽는 말로
 const lastSyncLabel = (ms: number): string => {
@@ -60,8 +51,10 @@ const Sermons = () => {
   // ---- 왼쪽으로 밀어 삭제 (단어 카드 스와이프와 같은 방식) ----
   const [swipingId, setSwipingId] = useState<string | null>(null);
   const [swipeX, setSwipeX] = useState(0);
-  const [pendingDelete, setPendingDelete] = useState<SermonMeta | null>(null);
+  // 밀린 채로 고정된 항목 (한 번에 하나만). 여기 드러난 휴지통을 눌러야 지워집니다.
+  const [openId, setOpenId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const startedOpenRef = useRef(false);
 
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   // 세로 스크롤과 가로 스와이프를 처음 움직임으로 갈라서 서로 방해하지 않게 합니다.
@@ -76,6 +69,19 @@ const Sermons = () => {
     return () => { aliveRef.current = false; };
   }, []);
 
+  // 밀린 항목 바깥을 누르면 닫습니다 (다른 항목을 밀기 시작하는 경우도 여기서 닫힙니다).
+  // 밀린 항목 안쪽은 그 항목의 제스처 처리에 맡깁니다 (되밀어 닫기 / 휴지통 누르기).
+  useEffect(() => {
+    if (!openId) return;
+    const onDown = (e: any) => {
+      const el = e.target as HTMLElement | null;
+      if (el && el.closest && el.closest("[data-swipe-open]")) return;
+      setOpenId(null);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [openId]);
+
   useEffect(() => {
     const onTouchMove = (e: TouchEvent) => {
       if (!touchStartPos.current) return;
@@ -87,8 +93,8 @@ const Sermons = () => {
 
       if (touchIntent.current === "none") {
         if (adx > 12 || ady > 12) {
-          // 왼쪽(삭제)만 받습니다. 오른쪽으로 미는 것은 스크롤로 넘깁니다.
-          if (adx > ady * 1.5 && dx < 0) {
+          // 왼쪽으로 미는 것, 그리고 이미 밀려 있는 항목을 오른쪽으로 되미는 것만 받습니다.
+          if (adx > ady * 1.5 && (dx < 0 || startedOpenRef.current)) {
             touchIntent.current = "swipe";
             setSwipingId(swipeIdRef.current);
           } else {
@@ -100,7 +106,9 @@ const Sermons = () => {
 
       if (touchIntent.current === "swipe") {
         e.preventDefault();
-        const clampedX = Math.min(0, Math.max(dx, -(SWIPE_THRESHOLD + 30)));
+        // 밀려 있던 항목은 그 위치(-OPEN_W)에서 이어서 움직입니다.
+        const base = startedOpenRef.current ? -OPEN_W : 0;
+        const clampedX = Math.min(0, Math.max(base + dx, -(SWIPE_THRESHOLD + 30)));
         swipeXRef.current = clampedX;
         setSwipeX(clampedX);
       }
@@ -115,27 +123,32 @@ const Sermons = () => {
     touchIntent.current = "none";
     touchMoved.current = false;
     swipeIdRef.current = s.id;
-    swipeXRef.current = 0;
+    startedOpenRef.current = openId === s.id;
+    swipeXRef.current = startedOpenRef.current ? -OPEN_W : 0;
   };
 
   const handleTouchEnd = (s: SermonMeta) => {
     const wasSwipe = touchIntent.current === "swipe";
-    const reached = swipeXRef.current <= -SWIPE_THRESHOLD;
+    const finalX = swipeXRef.current;
+    const startedOpen = startedOpenRef.current;
     touchStartPos.current = null;
     touchIntent.current = "none";
     swipeXRef.current = 0;
     setSwipingId(null);
     setSwipeX(0);
-    // 임계값을 넘긴 채로 손을 떼면 확인 다이얼로그
-    if (wasSwipe && reached && deletingId !== s.id) setPendingDelete(s);
+    if (!wasSwipe) return;
+    // 임계값을 넘겨 떼면 밀린 채로 고정되고, 오른쪽으로 되밀면 닫힙니다.
+    // (여기서 지우지 않습니다 — 드러난 휴지통을 한 번 더 눌러야 지워집니다)
+    const keepOpen = startedOpen
+      ? finalX <= -(OPEN_W - CLOSE_BACK)
+      : finalX <= -SWIPE_THRESHOLD;
+    setOpenId(keepOpen ? s.id : null);
   };
 
   // 서버 → 폰 캐시 → 필기 순으로 지웁니다.
   // 서버가 실패하면 뒤 단계를 하지 않습니다 — 폰에서만 지우면 다음 불러오기에서 되살아납니다.
-  const confirmDelete = async () => {
-    const target = pendingDelete;
+  const handleDelete = async (target: SermonMeta) => {
     if (!target || deletingId) return;
-    setPendingDelete(null);
     setDeletingId(target.id);
 
     try {
@@ -157,8 +170,9 @@ const Sermons = () => {
     const fresh = await getCachedSermons(); // 4. 목록 새로고침
     if (!aliveRef.current) return;
     setItems(fresh);
+    setOpenId(null);
     setDeletingId(null);
-    toast("설교문을 지웠습니다");
+    toast("설교문을 지웠습니다 · 필기도 함께 지워졌습니다");
   };
 
   // 들어오자마자 캐시를 그리고(오프라인에서도 보이도록), 그다음 조용히 서버와 맞춥니다.
@@ -263,30 +277,33 @@ const Sermons = () => {
           <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
             {items.map((s, i) => {
               const isSwiping = swipingId === s.id;
-              const currentSwipeX = isSwiping ? swipeX : 0;
-              const showDeleteConfirm = isSwiping && currentSwipeX <= -SWIPE_THRESHOLD;
+              const isOpen = openId === s.id;
+              // 미는 중이면 손가락을 따라가고, 손을 뗀 뒤에는 밀린 자리(-OPEN_W)에 고정됩니다.
+              const currentSwipeX = isSwiping ? swipeX : (isOpen ? -OPEN_W : 0);
               return (
                 <div
                   key={s.id}
+                  data-swipe-open={isOpen ? "1" : undefined}
                   className={
                     "relative overflow-hidden " +
                     (i === items.length - 1 ? "" : "border-b border-border")
                   }
                 >
-                  {/* 삭제 배경은 실제로 미는 동안에만 렌더링합니다 (평소에 비치지 않도록) */}
-                  {isSwiping && (
-                    <div
-                      className={
-                        "absolute inset-0 flex items-center justify-end px-5 transition-colors duration-100 " +
-                        (showDeleteConfirm ? "bg-red-600" : "bg-red-500/70")
-                      }
-                    >
-                      <span className="mr-2 font-gothic text-[0.8125rem] text-white">
-                        {showDeleteConfirm ? "삭제!" : "삭제"}
-                      </span>
-                      <Trash2 size={16} className="text-white" />
+                  {/* 삭제 배경은 미는 중이거나 밀린 상태일 때만 렌더링합니다 (평소에 비치지 않도록) */}
+                  {isSwiping || isOpen ? (
+                    <div className="absolute inset-0 flex items-center justify-end bg-red-500">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleDelete(s); }}
+                        disabled={deletingId === s.id}
+                        className="flex h-full items-center justify-center text-white active:bg-red-600 disabled:opacity-60"
+                        style={{ width: OPEN_W + "px" }}
+                        aria-label="삭제"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
-                  )}
+                  ) : null}
                   <button
                     type="button"
                     onTouchStart={(e) => handleTouchStart(s, e)}
@@ -294,9 +311,13 @@ const Sermons = () => {
                     onClick={() => {
                       // click 은 touchend 뒤에 오므로 touchIntent 는 이미 "none" 입니다.
                       // 손가락이 움직였는지(touchMoved)는 남아 있으므로 그것으로 막습니다.
-                      // 밀어서 확인창을 띄운 직후 설교문이 열려버리는 것을 막는 곳이기도 합니다.
                       if (touchMoved.current) {
                         touchMoved.current = false;
+                        return;
+                      }
+                      // 밀린 상태에서는 설교문이 열리지 않습니다 — 누르면 닫히기만 합니다.
+                      if (isOpen) {
+                        setOpenId(null);
                         return;
                       }
                       if (deletingId === s.id) return;
@@ -338,31 +359,6 @@ const Sermons = () => {
         )}
       </div>
 
-      {/* 삭제 확인 */}
-      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => { if (!o) setPendingDelete(null); }}>
-        <AlertDialogContent className="bg-card">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-body text-gray-900">이 설교문을 지울까요?</AlertDialogTitle>
-            <AlertDialogDescription className="font-body">
-              {pendingDelete ? (
-                <>
-                  <span className="block text-foreground">
-                    {formatSermonDate(pendingDelete.date)} · {pendingDelete.title || "제목 없음"}
-                  </span>
-                  <span className="mt-2 block">
-                    서버에서도 함께 지워지며 되돌릴 수 없습니다.
-                    이 설교문에 해둔 필기도 같이 지워집니다.
-                  </span>
-                </>
-              ) : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-body">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="font-body bg-red-600 hover:bg-red-700 text-white">삭제</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
