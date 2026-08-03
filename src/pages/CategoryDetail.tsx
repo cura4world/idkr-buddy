@@ -1,13 +1,25 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { getCategories, getWordsByCategory, Word, reorderWords, deleteWord } from "@/lib/store";
+import { getCategories, getWordsByCategory, Word, Category, reorderWords, deleteWord, archiveMyWordbook, nextArchiveName } from "@/lib/store";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
 import AddWordDialog from "@/components/AddWordDialog";
 import EditWordDialog from "@/components/EditWordDialog";
 import CSVImportDialog from "@/components/CSVImportDialog";
-import { ArrowLeft, Volume2, BookOpen, Copy, Trash2, Download } from "lucide-react";
+import AddCategoryDialog from "@/components/AddCategoryDialog";
+import CategoryCard from "@/components/CategoryCard";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Volume2, BookOpen, Copy, Trash2, Download, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+
+const MY_WORDBOOK_ID = "my-wordbook";
+// 묶기 권유 배너를 닫은 시점의 단어 수. 이보다 50개 더 모이면 다시 띄웁니다.
+const NUDGE_KEY = "my-archive-nudge-at";
+const NUDGE_MIN = 100;
+const NUDGE_STEP = 50;
 
 export default function CategoryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +29,12 @@ export default function CategoryDetail() {
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const [addOpen, setAddOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
+  const [addCatOpen, setAddCatOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveName, setArchiveName] = useState("");
+  const [nudgeAt, setNudgeAt] = useState<number>(() => {
+    try { return Number(localStorage.getItem(NUDGE_KEY) || "") || 0; } catch (e) { return 0; }
+  });
   const [editWord, setEditWord] = useState<Word | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const lastSelectedId = useRef<string | null>(null);
@@ -108,6 +126,42 @@ export default function CategoryDetail() {
   // 고쳐도 다음 배포 때 시드로 되돌아가므로 편집 기능을 아예 노출하지 않는다.
   const editable = !category?.isShared;
   editableRef.current = editable;
+  // "내 단어장"은 다른 진입 화면과 같은 인니어 대문자 표제,
+  // 사용자가 만든 폴더 이름은 한글이라 본문 폰트를 씁니다.
+  const isMine = category?.id === MY_WORDBOOK_ID;
+  // 내 단어장 안에 보관해 둔 단어장들. addCategory 가 앞에 넣으므로 최신이 위입니다.
+  const archived: Category[] = isMine
+    ? categories.filter((c) => !c.isShared && c.id !== MY_WORDBOOK_ID)
+    : [];
+  // 미분류 단어가 충분히 쌓였을 때만 묶기를 권합니다.
+  const showNudge =
+    isMine && words.length >= NUDGE_MIN && (nudgeAt === 0 || words.length >= nudgeAt + NUDGE_STEP);
+
+  const dismissNudge = () => {
+    try { localStorage.setItem(NUDGE_KEY, String(words.length)); } catch (e) {}
+    setNudgeAt(words.length);
+  };
+
+  const openArchive = () => {
+    setArchiveName(nextArchiveName());
+    setArchiveOpen(true);
+  };
+
+  // 묶어서 보관 — 화면은 그대로 두고 목록만 갱신합니다 (navigate 하지 않습니다).
+  const handleArchive = () => {
+    const name = archiveName.trim();
+    if (!name) return;
+    const count = words.length;
+    const cat = archiveMyWordbook(name);
+    setArchiveOpen(false);
+    if (!cat) return;
+    try { localStorage.removeItem(NUDGE_KEY); } catch (e) {}
+    setNudgeAt(0);
+    setSelectedIds([]);
+    lastSelectedId.current = null;
+    refresh();
+    toast(name + " 단어장으로 " + count + "개를 보관했습니다");
+  };
 
   const setDragging = (index: number | null) => {
     draggingIndexRef.current = index;
@@ -479,9 +533,6 @@ export default function CategoryDetail() {
   }
 
   const draggingWord = draggingIndex !== null ? words[draggingIndex] : null;
-  // "내 단어장"은 다른 진입 화면과 같은 인니어 대문자 표제,
-  // 사용자가 만든 폴더 이름은 한글이라 본문 폰트를 씁니다.
-  const isMine = category.id === "my-wordbook";
 
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto">
@@ -506,7 +557,7 @@ export default function CategoryDetail() {
       <div className="px-4 pb-6">
         {/* 표준 헤더 높이 61px(py-3 24 + 버튼 36 + 테두리 1) 바로 아래에 붙여둡니다. */}
         {editable && (
-          <div className="sticky top-[61px] z-20 bg-background -mx-4 px-4 py-2.5 flex justify-end gap-4">
+          <div className="sticky top-[61px] z-20 bg-background -mx-4 px-4 py-2.5 flex flex-wrap justify-end gap-x-3.5 gap-y-1">
             <button onClick={() => setCsvOpen(true)} className="group inline-flex items-center gap-1 text-xs text-foreground font-gothic">
               <Download size={13} className="shrink-0" />
               <span className="group-hover:underline underline-offset-4">CSV 가져오기</span>
@@ -514,8 +565,35 @@ export default function CategoryDetail() {
             <button onClick={() => setAddOpen(true)} className="text-xs text-foreground hover:underline underline-offset-4 font-gothic">
               + 단어 추가
             </button>
+            {isMine && (
+              <button onClick={() => setAddCatOpen(true)} className="text-xs text-foreground hover:underline underline-offset-4 font-gothic">
+                + 단어장 추가
+              </button>
+            )}
           </div>
         )}
+      {showNudge && (
+        <div className="mb-2.5 flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2.5">
+          <p className="flex-1 min-w-0 text-[0.8125rem] font-body text-foreground">
+            단어가 {words.length}개 모였어요.
+          </p>
+          <button
+            type="button"
+            onClick={openArchive}
+            className="shrink-0 h-8 px-3 rounded-full bg-primary text-[0.75rem] font-gothic font-medium text-white active:opacity-90"
+          >
+            묶어서 보관하기
+          </button>
+          <button
+            type="button"
+            onClick={dismissNudge}
+            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
+            title="닫기"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
       {/* 버튼 줄이 없는 읽기 전용 단어장에서는 그 줄이 주던 여백을 목록이 대신 갖습니다. */}
       <div className={editable ? "space-y-2" : "space-y-2 pt-2.5"}>
         {words.map((w, index) => {
@@ -620,6 +698,25 @@ export default function CategoryDetail() {
           <p>단어가 없습니다.</p>
         </div>
       )}
+      {isMine && archived.length > 0 && (
+        <section className="mt-6">
+          <p className="mb-2.5 px-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            보관한 단어장 {archived.length}권
+          </p>
+          <div className="rounded-2xl border border-border bg-card">
+            {archived.map((cat, i) => (
+              <CategoryCard
+                key={cat.id}
+                category={cat}
+                first={i === 0}
+                last={i === archived.length - 1}
+                editable
+                onChanged={refresh}
+              />
+            ))}
+          </div>
+        </section>
+      )}
       {draggingWord && floatPos && (
         <div
           className="fixed pointer-events-none z-50 flex items-start gap-3 bg-card rounded-lg p-4 border border-sky-400 shadow-lg shadow-sky-400/20"
@@ -669,6 +766,32 @@ export default function CategoryDetail() {
         onUpdated={refresh}
       />
       <CSVImportDialog open={csvOpen} onOpenChange={setCsvOpen} onImported={refresh} categoryId={id} />
+      <AddCategoryDialog open={addCatOpen} onOpenChange={setAddCatOpen} onAdded={refresh} />
+      <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
+        <DialogContent className="max-w-sm mx-auto bg-card">
+          <DialogHeader>
+            <DialogTitle className="font-body text-black">단어장으로 묶기</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleArchive(); }}
+            className="space-y-4"
+          >
+            <div>
+              <Label className="font-body text-sm text-black">단어장 이름</Label>
+              <Input
+                value={archiveName}
+                onChange={(e) => setArchiveName(e.target.value)}
+                className="mt-1"
+                autoFocus
+              />
+            </div>
+            <p className="font-body text-[0.8125rem] leading-relaxed text-muted-foreground">
+              지금 내 단어장의 단어 {words.length}개를 새 단어장으로 옮깁니다. 내 단어장은 비워집니다.
+            </p>
+            <Button type="submit" className="w-full" disabled={!archiveName.trim()}>보관하기</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
       <AlertDialog open={pendingDeleteIds.length > 0} onOpenChange={(o) => { if (!o) setPendingDeleteIds([]); }}>
         <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
