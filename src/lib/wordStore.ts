@@ -99,3 +99,20 @@ export async function clearLookupWords(): Promise<void> {
     // 무시
   }
 }
+
+// 최근에 찾아본 단어부터 limit개. 게임 출제 풀용.
+export async function listLookupWords(limit: number): Promise<LookupRecord[]> {
+  try {
+    const db = await openDB();
+    const all = await new Promise<LookupRecord[]>((resolve) => {
+      const tx = db.transaction(STORE, "readonly");
+      const req = tx.objectStore(STORE).getAll();
+      req.onsuccess = () => resolve((req.result as LookupRecord[]) || []);
+      req.onerror = () => resolve([]);
+    });
+    all.sort((a, b) => b.savedAt - a.savedAt);
+    return all.slice(0, limit);
+  } catch {
+    return [];
+  }
+}
