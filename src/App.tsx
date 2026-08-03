@@ -31,6 +31,8 @@ import QuizMode from "./pages/QuizMode";
 import SavedWords from "./pages/SavedWords";
 import SavedStudyMode from "./pages/SavedStudyMode";
 import SavedQuizMode from "./pages/SavedQuizMode";
+import Permainan from "./pages/Permainan";
+import GameMatch from "./pages/GameMatch";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +72,8 @@ const App = () => (
           <Route path="/saved" element={<SavedWords />} />
           <Route path="/saved/study" element={<SavedStudyMode />} />
           <Route path="/saved/quiz" element={<SavedQuizMode />} />
+          <Route path="/permainan" element={<Permainan />} />
+          <Route path="/permainan/match" element={<GameMatch />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
