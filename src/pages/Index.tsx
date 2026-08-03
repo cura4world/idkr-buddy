@@ -17,6 +17,7 @@ import {
   phraseToQuery,
 } from "@/lib/peribahasa";
 import SettingsDialog from "@/components/SettingsDialog";
+import MedaliBadge from "@/components/MedaliBadge";
 import { hasSermonConfig } from "@/lib/sermon";
 import {
   RotateCcw,
@@ -455,7 +456,8 @@ const Index = () => {
               Kata kata<span className="text-accent">.</span>
             </h1>
           </div>
-          <div className="flex items-center shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <MedaliBadge />
             <button type="button" onClick={() => setSettingsOpen(true)} className={iconBtn} title="설정">
               <Settings size={18} />
             </button>
