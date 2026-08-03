@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Volume2, BookOpen, Copy, Trash2, Download, X, ChevronDown, ChevronUp } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 const MY_WORDBOOK_ID = "my-wordbook";
@@ -53,7 +52,9 @@ export default function CategoryDetail() {
   const [editWord, setEditWord] = useState<Word | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const lastSelectedId = useRef<string | null>(null);
-  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
+  // 왼쪽으로 밀어 둔 단어 (한 번에 하나만). 여기서 휴지통을 누르면 바로 지웁니다 — 확인 팝업 없음.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const startedOpenRef = useRef(false);
   const swipeDir = useRef<1 | -1>(1);
   const [swipeDirState, setSwipeDirState] = useState<1 | -1>(1);
   const [swipingIndex, setSwipingIndex] = useState<number | null>(null);
@@ -93,6 +94,8 @@ export default function CategoryDetail() {
   const infoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const infoOpened = useRef(false);
   const SWIPE_THRESHOLD = 80;
+  const OPEN_W = 64;        // 밀린 채로 고정되는 폭 (휴지통 한 칸)
+  const CLOSE_BACK = 24;    // 밀린 것을 오른쪽으로 이만큼 되밀면 닫힙니다
   const DRAG_MOVE_THRESHOLD = 12;
   const ARM_MS = 500;  // 여기까지 누르면 끌어서 순서 이동 가능
   const INFO_MS = 800; // 움직이지 않고 여기까지 누르면 단어정보가 저절로 열림
@@ -343,8 +346,17 @@ export default function CategoryDetail() {
       if (touchIntent.current === "none") {
         if (adx > 12 || ady > 12) {
           if (adx > ady * 1.5) {
-            // 읽기 전용 단어장은 왼쪽 스와이프(삭제)를 받지 않습니다. 오른쪽(복사)만 허용.
-            if (dx < 0 && !editableRef.current) {
+            // 이미 밀려 있는 단어는 어느 쪽으로 움직여도 '밀기'의 연장입니다
+            // (오른쪽으로 되밀면 닫힘). 복사 스와이프로 넘기지 않습니다.
+            if (editableRef.current && startedOpenRef.current) {
+              touchIntent.current = "swipe";
+              isSwipe.current = true;
+              swipeDir.current = -1;
+              setSwipeDirState(-1);
+              cancelLongPress();
+              setSwipingIndex(swipeIndexRef.current);
+            } else if (dx < 0 && !editableRef.current) {
+              // 읽기 전용 단어장은 왼쪽 스와이프(삭제)를 받지 않습니다. 오른쪽(복사)만 허용.
               touchIntent.current = "scroll";
               cancelLongPress();
             } else {
@@ -367,9 +379,11 @@ export default function CategoryDetail() {
 
       if (touchIntent.current === "swipe") {
         e.preventDefault();
+        // 밀려 있던 단어는 그 위치(-OPEN_W)에서 이어서 움직입니다.
+        const base = startedOpenRef.current ? -OPEN_W : 0;
         const clampedX = swipeDir.current === 1
           ? Math.max(0, Math.min(dx, SWIPE_THRESHOLD + 30))
-          : Math.min(0, Math.max(dx, -(SWIPE_THRESHOLD + 30)));
+          : Math.min(0, Math.max(base + dx, -(SWIPE_THRESHOLD + 30)));
         swipeXRef.current = clampedX;
         setSwipeX(clampedX);
         return;
@@ -392,6 +406,19 @@ export default function CategoryDetail() {
     document.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => document.removeEventListener("touchmove", onTouchMove);
   }, []);
+
+  // 밀린 단어 바깥을 누르면 닫습니다 (다른 단어를 밀기 시작하는 경우도 여기서 닫힙니다).
+  // 밀린 단어 안쪽은 그 카드의 제스처 처리에 맡깁니다 (되밀어 닫기 / 휴지통 누르기).
+  useEffect(() => {
+    if (!openId) return;
+    const onDown = (e: any) => {
+      const el = e.target as HTMLElement | null;
+      if (el && el.closest && el.closest("[data-swipe-open]")) return;
+      setOpenId(null);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [openId]);
 
   // 화면을 떠날 때 남아 있는 타이머 정리 (뒤로가기 직후 콜백이 튀지 않도록)
   useEffect(() => {
@@ -417,7 +444,10 @@ export default function CategoryDetail() {
     suppressClick.current = false; // 이전 제스처의 잔여 플래그 정리
     touchIntent.current = "none";
     swipeIndexRef.current = index;
-    swipeXRef.current = 0;
+    // 이미 밀려 있는 단어에서 시작했으면 그 위치(-OPEN_W)에서 이어서 끕니다.
+    const startWord = words[index];
+    startedOpenRef.current = !!startWord && openId === startWord.id;
+    swipeXRef.current = startedOpenRef.current ? -OPEN_W : 0;
     longPressTimer.current = setTimeout(() => {
       if (isSwipe.current || touchIntent.current === "swipe" || touchIntent.current === "scroll") return;
       // 읽기 전용 단어장은 순서를 바꿔도 다음 배포 때 시드 순서로 되돌아가므로 드래그를 걸지 않습니다.
@@ -457,10 +487,13 @@ export default function CategoryDetail() {
     if (wasSwipe) {
       if (swipeDir.current === 1 && swipeXRef.current >= SWIPE_THRESHOLD) {
         copyToClipboard(word);
-      } else if (editable && swipeDir.current === -1 && swipeXRef.current <= -SWIPE_THRESHOLD) {
-        // 밀린 단어가 선택 집합에 있으면 선택 전체, 아니면 이 단어 하나만 삭제 대상
-        const targetIds = selectedIds.includes(word.id) ? selectedIds : [word.id];
-        setPendingDeleteIds(targetIds);
+      } else if (editable && swipeDir.current === -1) {
+        // 임계값을 넘겨 떼면 밀린 채로 고정되고, 오른쪽으로 되밀면 닫힙니다.
+        // (여기서 지우지 않습니다 — 드러난 휴지통을 한 번 더 눌러야 지워집니다)
+        const keepOpen = startedOpenRef.current
+          ? swipeXRef.current <= -(OPEN_W - CLOSE_BACK)
+          : swipeXRef.current <= -SWIPE_THRESHOLD;
+        setOpenId(keepOpen ? word.id : null);
       }
       setSwipingIndex(null);
       setSwipeX(0);
@@ -468,6 +501,14 @@ export default function CategoryDetail() {
       isSwipe.current = false;
       touchIntent.current = "none";
       cancelLongPress();
+      return;
+    }
+    // 밀린 상태의 단어는 본래 탭(선택)이 발동하지 않습니다 — 누르면 닫히기만 합니다.
+    if (openId === word.id && !wasDragging && !touchMoved.current) {
+      handleEnd();
+      touchIntent.current = "none";
+      suppressClick.current = true; // 뒤따르는 click 의 선택 토글도 무시
+      setOpenId(null);
       return;
     }
     handleEnd();
@@ -558,7 +599,10 @@ export default function CategoryDetail() {
     if (suppressClick.current) { suppressClick.current = false; return; }
     if (isDragging.current) return;
     const w = words[index];
-    if (w) toggleSelect(w.id);
+    if (!w) return;
+    // 밀려 있는 단어를 누르면 선택이 아니라 닫기입니다.
+    if (openId === w.id) { setOpenId(null); return; }
+    toggleSelect(w.id);
   };
 
   // 단어 선택 토글 (복수 선택). 새로 선택하면 마지막 선택으로 기억 -> 단어 추가 위치
@@ -579,15 +623,20 @@ export default function CategoryDetail() {
     });
   };
 
-  // 삭제 확정 실행
-  const confirmDelete = () => {
-    const ids = pendingDeleteIds;
+  // 밀린 단어가 선택 집합에 있으면 선택 전체, 아니면 그 단어 하나가 대상입니다.
+  const deleteTargetIds = (word: Word): string[] =>
+    selectedIds.includes(word.id) ? selectedIds : [word.id];
+
+  // 휴지통을 누르면 바로 지웁니다 (밀기 + 누르기 두 동작이 실수 방지 장치입니다).
+  const deleteNow = (word: Word) => {
+    if (!editable) return;
+    const ids = deleteTargetIds(word);
     ids.forEach((wid) => deleteWord(wid));
     setSelectedIds((prev) => prev.filter((x) => !ids.includes(x)));
     if (lastSelectedId.current && ids.includes(lastSelectedId.current)) {
       lastSelectedId.current = null;
     }
-    setPendingDeleteIds([]);
+    setOpenId(null);
     toast(ids.length > 1 ? ids.length + "개의 단어를 삭제했습니다" : "단어를 삭제했습니다");
     refresh();
   };
@@ -680,30 +729,47 @@ export default function CategoryDetail() {
           // 읽기 전용 단어장에서는 선택 자체가 막혀 있으므로 선택 배경도 뜨지 않습니다.
           const isSelected = editable && selectedIds.includes(w.id);
           const isSwiping = swipingIndex === index;
+          const isOpen = openId === w.id;
           const isPressed = pressedIndex === index;
-          const currentSwipeX = isSwiping ? swipeX : 0;
+          // 미는 중이면 손가락을 따라가고, 손을 뗀 뒤에는 밀린 자리(-OPEN_W)에 고정됩니다.
+          const currentSwipeX = isSwiping ? swipeX : (isOpen ? -OPEN_W : 0);
           const swipingRight = isSwiping && swipeDirState === 1;
           const swipingLeft = isSwiping && swipeDirState === -1;
           const showCopyConfirm = swipingRight && currentSwipeX >= SWIPE_THRESHOLD;
-          const showDeleteConfirm = swipingLeft && currentSwipeX <= -SWIPE_THRESHOLD;
-          // 왼쪽 스와이프 시 몇 개가 지워질지 미리 표시
+          // 왼쪽 배경(휴지통)은 미는 중이거나 밀린 상태일 때만 렌더합니다.
+          const showDeleteBg = editable && (swipingLeft || isOpen);
+          // 선택 집합에 든 단어를 밀면 몇 개가 지워지는지 숫자만 붙입니다.
           const deleteCount = selectedIds.includes(w.id) ? selectedIds.length : 1;
           return (
-            <div key={w.id} className="relative overflow-hidden rounded-lg">
-              {/* 복사/삭제 배경은 실제로 스와이프하는 동안에만 렌더링합니다. */}
-              {isSwiping && (
-                swipingLeft ? (editable ? (
-                  <div className={`absolute inset-0 flex items-center justify-end px-5 rounded-lg transition-colors duration-100 ${showDeleteConfirm ? "bg-red-600" : "bg-red-500/70"}`}>
-                    <span className="text-white text-sm font-body mr-2">{showDeleteConfirm ? (deleteCount > 1 ? deleteCount + "개 삭제!" : "삭제!") : "삭제"}</span>
-                    <Trash2 size={18} className="text-white" />
-                  </div>
-                ) : null) : (
-                  <div className={`absolute inset-0 flex items-center px-5 rounded-lg transition-colors duration-100 ${showCopyConfirm ? "bg-sky-500" : "bg-sky-400/70"}`}>
-                    <Copy size={18} className="text-white" />
-                    <span className="text-white text-sm font-body ml-2">{showCopyConfirm ? "복사!" : "복사"}</span>
-                  </div>
-                )
-              )}
+            <div
+              key={w.id}
+              data-swipe-open={isOpen ? "1" : undefined}
+              className="relative overflow-hidden rounded-lg"
+            >
+              {/* 복사/삭제 배경은 스와이프 중이거나 밀린 상태일 때만 렌더링합니다. */}
+              {showDeleteBg ? (
+                <div className="absolute inset-0 flex items-center justify-end rounded-lg bg-red-500">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); deleteNow(w); }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="flex h-full items-center justify-center gap-1 text-white active:bg-red-600"
+                    style={{ width: OPEN_W + "px" }}
+                    aria-label="삭제"
+                  >
+                    <Trash2 size={18} />
+                    {deleteCount > 1 ? (
+                      <span className="text-[0.6875rem] font-body tabular-nums">{deleteCount}</span>
+                    ) : null}
+                  </button>
+                </div>
+              ) : null}
+              {isSwiping && swipingRight ? (
+                <div className={`absolute inset-0 flex items-center px-5 rounded-lg transition-colors duration-100 ${showCopyConfirm ? "bg-sky-500" : "bg-sky-400/70"}`}>
+                  <Copy size={18} className="text-white" />
+                  <span className="text-white text-sm font-body ml-2">{showCopyConfirm ? "복사!" : "복사"}</span>
+                </div>
+              ) : null}
               {isDropTarget && (
                 <div className="h-0.5 bg-sky-400 rounded-full mx-1 mb-1 shadow-sm shadow-sky-400/50" />
               )}
@@ -937,22 +1003,6 @@ export default function CategoryDetail() {
           )}
         </DialogContent>
       </Dialog>
-      <AlertDialog open={pendingDeleteIds.length > 0} onOpenChange={(o) => { if (!o) setPendingDeleteIds([]); }}>
-        <AlertDialogContent className="bg-card">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-body text-gray-900">
-              {pendingDeleteIds.length > 1 ? pendingDeleteIds.length + "개의 단어를 삭제할까요?" : "이 단어를 삭제할까요?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="font-body">
-              삭제한 단어는 되돌릴 수 없습니다.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-body">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="font-body bg-red-600 hover:bg-red-700 text-white">삭제</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       </div>
     </div>
   );
