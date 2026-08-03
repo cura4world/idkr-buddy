@@ -337,6 +337,8 @@ const SermonRead = () => {
 
   // 목차 시트 (팝업과 같은 pushSub/closeSub 구조를 씁니다)
   const [tocOpen, setTocOpen] = useState(false);
+  // 목차에서 고른 소제목. 시트가 닫힌(뒤로가기가 처리된) 뒤에 그리로 옮깁니다.
+  const pendingSecRef = useRef<number | null>(null);
 
   // ---------- 필기(S펜) ----------
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -476,6 +478,21 @@ const SermonRead = () => {
     setPopupWord(null);
     setTocOpen(false);
     setInkMode(false); // 폰 뒤로가기 → 필기 모드만 종료
+    // 목차에서 고른 소제목이 있으면 여기서 옮깁니다.
+    // 브라우저는 뒤로가기를 처리하면서 그 히스토리 항목에 저장해 둔 스크롤 위치를
+    // 되돌리므로(scrollRestoration 기본값 auto), 시트를 닫자마자 스크롤하면 곧바로
+    // 지워집니다. 다음 프레임까지 미뤄야 복원보다 뒤에 옵니다 (rAF 두 겹이 안전).
+    // 시트를 그냥 닫았거나 단어 팝업·필기 모드를 닫은 경우에는 값이 비어 있어 넘어갑니다.
+    const sec = pendingSecRef.current;
+    if (sec !== null) {
+      pendingSecRef.current = null;
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          const el = document.getElementById("sec-" + sec);
+          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
+    }
   };
 
   const closeSub = () => {
@@ -1239,14 +1256,17 @@ const SermonRead = () => {
       toast("소제목이 없는 설교문입니다");
       return;
     }
+    pendingSecRef.current = null; // 그냥 닫기만 하면 움직이지 않도록 비워 둡니다
     setTocOpen(true);
     pushSub(); // 폰 뒤로가기로 닫히도록 (단어 팝업과 같은 구조)
   };
 
+  // 여기서 바로 스크롤하지 않습니다 — closeSub 안의 history.back() 이
+  // 저장된 스크롤 위치를 되돌려 방금 시작한 이동을 지워버리기 때문입니다.
+  // 대상만 적어 두고, 뒤로가기가 처리된 뒤 resetSub 에서 옮깁니다.
   const goToSection = (i: number) => {
-    const el = document.getElementById("sec-" + i);
+    pendingSecRef.current = i;
     closeSub();
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   // 단어 팝업을 닫은 직후 300ms 는 빠른 이동 버튼을 받지 않습니다.
