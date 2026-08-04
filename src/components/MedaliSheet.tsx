@@ -284,16 +284,18 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
           {tab === "api" ? (
             <div className="pt-5">
               {/* 지금 색 */}
-              <div className="flex items-center gap-3">
-                <Flame size={44} color={STROKE} fill={apiHex} strokeWidth={1.5} className="shrink-0" />
-                <div className="min-w-0">
-                  <p className="font-word text-[1.25rem] leading-tight text-foreground">
-                    {COLOR_NAME[snap.apiColor]}
-                  </p>
-                  <p className="mt-0.5 text-[0.78125rem] text-muted-foreground">
-                    이번 주 {snap.apiWeekPoints}점 · 연속 {snap.streak}일
-                  </p>
-                </div>
+              <div className="flex flex-col items-center text-center">
+                <Flame size={48} color={STROKE} fill={apiHex} strokeWidth={1.5} className="shrink-0" />
+                <p className="mt-2 font-word text-[1.25rem] leading-tight text-foreground">
+                  {COLOR_NAME[snap.apiColor]}
+                </p>
+                <p className="mt-1 text-[0.78125rem] text-muted-foreground">
+                  이번 주 {snap.apiWeekPoints}점 · 연속 {snap.streak}일
+                </p>
+                {/* 명찰의 불꽃 옆 숫자가 무엇인지 여기서 읽힙니다 */}
+                <p className="mt-1.5 max-w-[17rem] font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
+                  이번 주 월요일부터 쌓은 공부 점수예요. 토요일 밤까지 모으고 월요일에 다시 시작해요.
+                </p>
               </div>
 
               {/* 다음 색까지 */}
@@ -399,16 +401,18 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
           ) : (
             <div className="pt-5">
               {/* 지금 단계 */}
-              <div className="flex items-center gap-3">
-                <Star size={44} color={STROKE} fill={bintangHex} strokeWidth={1.5} className="shrink-0" />
-                <div className="min-w-0">
-                  <p className="font-word text-[1.25rem] leading-tight text-foreground">
-                    {COLOR_NAME[snap.bintangColor]} {ROMAN[snap.bintangTier]}
-                  </p>
-                  <p className="mt-0.5 text-[0.78125rem] text-muted-foreground">
-                    확정 단어 {snap.confirmedCount}개
-                  </p>
-                </div>
+              <div className="flex flex-col items-center text-center">
+                <Star size={48} color={STROKE} fill={bintangHex} strokeWidth={1.5} className="shrink-0" />
+                <p className="mt-2 font-word text-[1.25rem] leading-tight text-foreground">
+                  {COLOR_NAME[snap.bintangColor]} {ROMAN[snap.bintangTier]}
+                </p>
+                <p className="mt-1 text-[0.78125rem] text-muted-foreground">
+                  확정 단어 {snap.confirmedCount}개
+                </p>
+                {/* 명찰의 별 옆 숫자가 무엇인지 여기서 읽힙니다 */}
+                <p className="mt-1.5 max-w-[17rem] font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
+                  3일 이상 간격을 두고 두 번 맞힌 단어예요. 리셋 없이 평생 쌓이고, 명찰의 별 옆 숫자와 같아요.
+                </p>
               </div>
 
               {/* 다음 단계까지 */}
