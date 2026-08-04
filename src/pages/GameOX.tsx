@@ -14,7 +14,7 @@ import { medaliEngine, listRounds, dateKey, MEDALI_COLORS } from "@/lib/medali";
 
 const ROUND_SEC = 30;         // 한 판 길이
 const MIN_WORDS = 6;          // 이보다 적으면 게임을 못 엽니다
-const REVEAL_MS = 600;        // 틀렸을 때 진짜 뜻을 보여주는 시간
+const REVEAL_MS = 1200;       // 틀렸을 때 진짜 뜻을 보여주는 시간
 const TICK_MS = 200;          // 남은 시간 갱신 주기
 
 type Phase = "loading" | "empty" | "ready" | "playing" | "done";
@@ -412,14 +412,14 @@ const GameOX = () => {
                 (reveal ? "border-destructive bg-destructive/10" : "border-border bg-card")
               }
             >
-              <p className="font-word text-[1.5rem] leading-tight text-foreground break-words">
+              <p className="font-word text-[1.375rem] leading-tight text-foreground break-words">
                 {question.word}
               </p>
-              <p className="mt-3 font-gothic text-[0.9375rem] leading-snug text-foreground/90 break-words">
+              <p className="mt-3 font-gothic text-[0.875rem] leading-snug text-foreground/90 break-words">
                 {question.shown}
               </p>
               {reveal ? (
-                <p className="mt-3 font-gothic text-[0.875rem] leading-snug text-emerald-500 break-words">
+                <p className="mt-3 font-gothic text-[0.8125rem] leading-snug text-emerald-500 break-words">
                   진짜 뜻: {reveal}
                 </p>
               ) : null}
@@ -429,14 +429,14 @@ const GameOX = () => {
               <button
                 type="button"
                 onClick={() => answer(true)}
-                className="flex-1 py-5 rounded-2xl bg-primary text-[0.9375rem] font-medium text-white active:opacity-90"
+                className="flex-1 py-5 rounded-2xl bg-primary text-[0.875rem] font-medium text-white active:opacity-90"
               >
                 O 맞아요
               </button>
               <button
                 type="button"
                 onClick={() => answer(false)}
-                className="flex-1 py-5 rounded-2xl border border-border bg-card text-[0.9375rem] font-medium text-foreground active:bg-muted/60"
+                className="flex-1 py-5 rounded-2xl border border-border bg-card text-[0.875rem] font-medium text-foreground active:bg-muted/60"
               >
                 X 아니에요
               </button>
