@@ -148,6 +148,7 @@ jobs:
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.RECORD_AUDIO" />
               <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
               <queries>
                   <intent>
                       <action android:name="android.speech.RecognitionService" />
@@ -162,7 +163,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|screenLayout|uiMode">
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|screenLayout|smallestScreenSize|density|layoutDirection|uiMode">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -184,6 +185,12 @@ jobs:
 
           import android.Manifest;
           import android.app.Activity;
+          import android.app.DownloadManager;
+          import android.os.Environment;
+          import android.util.Base64;
+          import android.webkit.DownloadListener;
+          import android.webkit.URLUtil;
+          import android.widget.Toast;
           import android.content.Intent;
           import android.content.pm.PackageManager;
           import android.net.Uri;
@@ -338,8 +345,99 @@ jobs:
                       }
                   });
 
-                  webView.loadUrl("https://cura4world.github.io/idkr-buddy/");
+                  webView.setDownloadListener(new DownloadListener() {
+                      @Override
+                      public void onDownloadStart(String url, String userAgent, String contentDisposition,
+                              String mimeType, long contentLength) {
+                          startDownload(url, contentDisposition, mimeType);
+                      }
+                  });
+
+                  // 시스템이 액티비티를 다시 만든 경우(폴드 펼침·메모리 회수 등)에는 보던 화면을 되살립니다.
+                  // 사용자가 최근 앱에서 직접 밀어 종료하면 안드로이드가 이 상태를 폐기하므로
+                  // 다음 실행은 자연히 첫 화면이 됩니다.
+                  if (savedInstanceState != null) {
+                      webView.restoreState(savedInstanceState);
+                  } else {
+                      webView.loadUrl("https://cura4world.github.io/idkr-buddy/");
+                  }
                   setContentView(webView);
+              }
+
+              @Override
+              protected void onSaveInstanceState(Bundle outState) {
+                  super.onSaveInstanceState(outState);
+                  if (webView != null) {
+                      webView.saveState(outState);
+                  }
+              }
+
+              // 백업 파일 등을 폰의 다운로드 폴더에 저장합니다.
+              // data: URL 은 DownloadManager 가 처리하지 못하므로 직접 파일로 씁니다.
+              private void startDownload(String url, String contentDisposition, String mimeType) {
+                  try {
+                      String name = URLUtil.guessFileName(url, contentDisposition, mimeType);
+                      if (url != null && url.startsWith("data:")) {
+                          saveDataUrl(url, name);
+                          return;
+                      }
+                      DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
+                      req.setMimeType(mimeType);
+                      req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                      req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name);
+                      DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                      dm.enqueue(req);
+                      toast("다운로드 폴더에 저장합니다: " + name);
+                  } catch (Exception e) {
+                      toast("저장하지 못했습니다");
+                  }
+              }
+
+              // blob: URL 은 자바스크립트 쪽에서 data: URL 로 바꿔 내려보내는 것을 전제로 합니다.
+              private void saveDataUrl(String url, String name) {
+                  java.io.FileOutputStream out = null;
+                  try {
+                      int comma = url.indexOf(',');
+                      if (comma < 0) {
+                          toast("저장하지 못했습니다");
+                          return;
+                      }
+                      String meta = url.substring(0, comma);
+                      String payload = url.substring(comma + 1);
+                      byte[] bytes;
+                      if (meta.contains(";base64")) {
+                          bytes = Base64.decode(payload, Base64.DEFAULT);
+                      } else {
+                          bytes = Uri.decode(payload).getBytes("UTF-8");
+                      }
+                      java.io.File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                      if (!dir.exists()) {
+                          dir.mkdirs();
+                      }
+                      java.io.File file = new java.io.File(dir, name);
+                      out = new java.io.FileOutputStream(file);
+                      out.write(bytes);
+                      out.flush();
+                      toast("다운로드 폴더에 저장했습니다: " + name);
+                  } catch (Exception e) {
+                      toast("저장하지 못했습니다");
+                  } finally {
+                      if (out != null) {
+                          try {
+                              out.close();
+                          } catch (Exception ignored) {
+                          }
+                      }
+                  }
+              }
+
+              private void toast(final String message) {
+                  runOnUiThread(new Runnable() {
+                      @Override
+                      public void run() {
+                          Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+                      }
+                  });
               }
 
               @Override
