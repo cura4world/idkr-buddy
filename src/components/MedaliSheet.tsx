@@ -138,7 +138,6 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
   const [words, setWords] = useState<WordRecord[]>([]);
   const [openDay, setOpenDay] = useState<number | null>(null);   // 막대를 탭하면 그날 점수 한 줄
   const [openRow, setOpenRow] = useState<string | null>(null);   // 내역 행 도움말
-  const [tiersOpen, setTiersOpen] = useState(false);             // 별의 단계표 펼침 여부
   const [shown, setShown] = useState(open);        // 렌더를 유지할지 (퇴장 연출 동안 true)
   const [entered, setEntered] = useState(false);   // 올라온 상태인지
 
@@ -498,21 +497,14 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                 )}
               </div>
 
-              {/* 18단계 전체. 기본은 접어 두고, 펼치면 시트 안에서 스크롤됩니다. */}
+              {/* 18단계 전체. 상수는 높은 단계부터라 뒤집어 낮은 단계(Tanah III)가 위로 옵니다.
+                  상수 배열 자체는 건드리지 않습니다 — bintangFor가 "높은 것부터 매칭"에 기대고 있습니다. */}
               <div className="mt-5 border-t border-border pt-3">
-                <button
-                  type="button"
-                  onClick={() => setTiersOpen((v) => !v)}
-                  className="flex w-full items-center justify-between py-1 text-left"
-                >
-                  <span className="font-gothic text-[0.78125rem] text-foreground">별의 단계</span>
-                  <span className="font-gothic text-[0.6875rem] text-muted-foreground">
-                    {tiersOpen ? "접기" : "펼치기"}
-                  </span>
-                </button>
-                {tiersOpen ? (
-                  <div className="mt-1.5 pb-1">
-                    {BINTANG_CUTOFFS.map((c) => {
+                <p className="py-1 font-gothic text-[0.78125rem] text-foreground">별의 단계</p>
+                <div className="mt-1.5 pb-1">
+                  {BINTANG_CUTOFFS.slice()
+                    .reverse()
+                    .map((c) => {
                       const now = snap.bintangColor === c.color && snap.bintangTier === c.tier;
                       return (
                         <div
@@ -540,8 +532,7 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                         </div>
                       );
                     })}
-                  </div>
-                ) : null}
+                </div>
               </div>
 
               {recheckCount > 0 ? (
