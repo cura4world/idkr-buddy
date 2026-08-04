@@ -308,7 +308,11 @@ const GameSusun = () => {
 
         {phase === "ready" ? (
           <div className="mt-6 rounded-2xl border border-border bg-card px-4 py-10 text-center">
-            <p className="text-[0.9375rem] text-foreground">흩어진 단어를 순서대로 탭해 문장을 완성해요</p>
+            <p className="text-[0.9375rem] leading-relaxed text-foreground">
+              흩어진 단어를 순서대로 탭해
+              <br />
+              문장을 완성하세요
+            </p>
             <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
               {poolRef.current.length}문장!
             </p>
@@ -344,7 +348,7 @@ const GameSusun = () => {
                 <span
                   key={t.id}
                   className={
-                    "rounded-full px-2.5 py-1 font-word text-[0.9375rem] bg-primary/15 " +
+                    "rounded-full px-2.5 py-1 font-word text-[1.0625rem] bg-primary/15 " +
                     // 완성된 문장에서 표제어만 색으로 짚어 줍니다
                     (solved && bare(t.text) === bare(current.word) ? "text-primary" : "text-foreground")
                   }
@@ -362,7 +366,7 @@ const GameSusun = () => {
                   type="button"
                   onClick={() => handleTile(t)}
                   className={
-                    "rounded-full border px-3 py-2 font-word text-[0.9375rem] transition-colors " +
+                    "rounded-full border px-3 py-2 font-word text-[1.0625rem] transition-colors " +
                     (shakeId === t.id
                       ? "border-destructive bg-destructive/10 text-foreground"
                       : "border-border bg-card text-foreground active:bg-muted/60")
