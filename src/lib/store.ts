@@ -1,4 +1,5 @@
 import seedData from '@/data/seed.json';
+import { medaliEngine } from "@/lib/medali";
 
 export interface Word {
   id: string;
@@ -290,6 +291,7 @@ export function hasWordInCategory(categoryId: string, word: string): boolean {
 export function addWordIfAbsent(word: Omit<Word, "id" | "createdAt">): { added: boolean } {
   if (hasWordInCategory(word.categoryId, word.word)) return { added: false };
   addWord(word);
+  medaliEngine.addPoints("save", 1).catch(() => {});  // 단어 담기 +1 (조용히)
   return { added: true };
 }
 
