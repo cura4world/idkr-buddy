@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Grid2X2, Zap } from "lucide-react";
+import { ArrowLeft, Blocks, ChevronRight, Grid2X2, Zap } from "lucide-react";
 import { goBackOr } from "@/lib/nav";
 import { listRounds } from "@/lib/medali";
 
@@ -14,6 +14,7 @@ const Permainan = () => {
 
   const [best, setBest] = useState(0); // 짝맞추기 최고(최단) 기록. 0이면 없음
   const [bestOx, setBestOx] = useState(0); // O/X 최고 정답 수. 0이면 없음
+  const [bestSusun, setBestSusun] = useState(0); // 문장 조립 최고(최단) 기록. 0이면 없음
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +45,25 @@ const Permainan = () => {
           if (r && r.score > max) max = r.score;
         }
         setBestOx(max);
+      })
+      .catch(() => {
+        // 기록을 못 읽어도 게임은 열립니다
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    listRounds("susun")
+      .then((rounds) => {
+        if (cancelled) return;
+        let min = 0;
+        for (const r of rounds) {
+          if (r && r.durationSec > 0 && (min === 0 || r.durationSec < min)) min = r.durationSec;
+        }
+        setBestSusun(min);
       })
       .catch(() => {
         // 기록을 못 읽어도 게임은 열립니다
@@ -111,6 +131,29 @@ const Permainan = () => {
           {bestOx > 0 ? (
             <span className="shrink-0 font-word text-[0.78125rem] text-muted-foreground">
               최고 {bestOx}개
+            </span>
+          ) : null}
+          <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate("/permainan/susun")}
+          className="mt-3 w-full flex items-center gap-3.5 rounded-2xl border border-border bg-card px-4 py-4 text-left active:bg-muted/60 transition-colors"
+        >
+          <Blocks size={22} className="shrink-0 text-muted-foreground" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[0.9375rem] leading-tight text-foreground">문장 조립</p>
+            <p className="mt-0.5 font-word text-[0.71875rem] text-muted-foreground truncate">
+              Susun Kalimat
+            </p>
+            <p className="mt-1.5 text-[0.78125rem] text-muted-foreground">
+              단어를 순서대로 놓아 문장을 완성해요
+            </p>
+          </div>
+          {bestSusun > 0 ? (
+            <span className="shrink-0 font-word text-[0.78125rem] text-muted-foreground">
+              최고 {bestSusun}초
             </span>
           ) : null}
           <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
