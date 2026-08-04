@@ -470,6 +470,19 @@ export async function listWordRecords(): Promise<WordRecord[]> {
   }
 }
 
+// 이번 주(월요일~오늘)의 일별 로그. 없는 날은 포함되지 않습니다. 훈장 팝업의 요일 막대용.
+export async function listWeekLogs(): Promise<DailyLog[]> {
+  try {
+    const from = dateKey(mondayOf(new Date()));
+    const all = await getAll<DailyLog>(STORE_DAILY);
+    return all
+      .filter((l) => l && typeof l.date === "string" && l.date >= from)
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  } catch {
+    return [];
+  }
+}
+
 // 저장된 게임 판 기록. game을 주면 그 게임만. 최고 기록 표시에 씁니다.
 export async function listRounds(game?: GameRound["game"]): Promise<GameRound[]> {
   try {
