@@ -6,7 +6,7 @@
 // 히스토리(폰 뒤로가기)는 이 컴포넌트가 다루지 않습니다 (WordbookPickerSheet와 같은 규칙).
 
 import { useEffect, useState } from "react";
-import { Flame, Star } from "lucide-react";
+import { Flame, Star, X } from "lucide-react";
 import {
   medaliEngine,
   listWeekLogs,
@@ -236,7 +236,18 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
           (entered ? "translate-y-0" : "translate-y-full")
         }
       >
-        <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
+        <div className="relative">
+          <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
+          {/* 닫기는 히스토리를 직접 만지지 않고 여는 쪽(Index)에 맡깁니다 — 뒤로가기와 같은 경로 */}
+          <button
+            type="button"
+            onClick={requestClose}
+            className="absolute right-3 -top-0.5 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground active:bg-muted"
+            title="닫기"
+          >
+            <X size={17} />
+          </button>
+        </div>
 
         {/* 탭 — 고르지 않은 쪽 아이콘도 지금 훈장 색으로 칠해 둡니다 */}
         <div className="flex border-b border-border px-4">
