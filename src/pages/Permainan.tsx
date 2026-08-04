@@ -63,6 +63,25 @@ const Permainan = () => {
     setKuisOpen(false);
   };
 
+  // 퀴즈에서 뒤로 나온 경우 — 히스토리에 시트 항목이 남아 있으므로 시트를 다시 펴 줍니다.
+  // (pushState를 새로 하지 않고 이미 쌓여 있는 항목을 그대로 물려받습니다.
+  //  그래야 퀴즈 → 단어장 목록 → 게임방 → 이전 화면으로 한 단계씩 나옵니다.)
+  useEffect(() => {
+    try {
+      const st = (window.history.state || {}) as { kuisPicker?: boolean };
+      if (!st.kuisPicker) return;
+      const list: KuisTarget[] = getCategories()
+        .map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, count: getWordsByCategory(c.id).length }))
+        .filter((c) => c.count >= 2);
+      setKuisList(list);
+      setKuisOpen(true);
+      kuisOpenRef.current = true;
+      kuisPushedRef.current = true;   // 닫을 때 history.back()으로 그 항목을 소비합니다
+    } catch (e) {
+      // 히스토리를 못 읽는 환경이면 그냥 닫힌 채로 둡니다
+    }
+  }, []);
+
   // 시트가 떠 있을 때의 뒤로가기만 가로챕니다 (다른 useEffect들과 겹치지 않는 독립 리스너).
   useEffect(() => {
     const onPop = () => {
