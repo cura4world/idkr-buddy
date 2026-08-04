@@ -3,6 +3,8 @@
 // 텍스트만 저장하므로 용량 부담이 거의 없고, 조회는 필요한 1개만 꺼내 쓰므로 빠릅니다.
 // localStorage(단어장)와 별개 공간이라 기존 데이터에 영향을 주지 않습니다.
 
+import { medaliEngine } from "@/lib/medali";
+
 const DB_NAME = "kata-lookup-words";
 const STORE = "words";
 
@@ -51,7 +53,10 @@ export async function getLookupWord(word: string): Promise<LookupRecord | null> 
 }
 
 // 단어 저장
+// 이 함수는 API로 새 단어를 받아왔을 때만 불리므로(캐시 적중 경로에서는 호출 안 됨)
+// 여기서 한 번만 점수를 올리면 화면마다 고칠 필요가 없습니다.
 export async function saveLookupWord(word: string, meaning: string, info: string): Promise<void> {
+  medaliEngine.addPoints("popup", 1).catch(() => {});  // 새 단어 팝업 +1 (조용히)
   try {
     const db = await openDB();
     await new Promise<void>((resolve) => {
