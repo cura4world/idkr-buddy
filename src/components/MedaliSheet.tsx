@@ -177,6 +177,24 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
     return () => window.clearTimeout(t);
   }, [open]);
 
+  // 시트가 떠 있는 동안 뒤 화면이 함께 밀리지 않게 잠급니다.
+  // (시트 안을 끝까지 굴린 뒤에도 계속 밀면 메인이 따라 움직이던 문제)
+  // touch-action은 건드리지 않습니다 — body에 none을 주면 그 자식인 시트 안쪽 스크롤까지 막힙니다.
+  useEffect(() => {
+    if (!shown) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.overflow;
+    const prevBody = body.style.overflow;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    return () => {
+      // 다른 화면의 스타일을 덮어쓰지 않도록 원래 값으로 되돌립니다
+      html.style.overflow = prevHtml;
+      body.style.overflow = prevBody;
+    };
+  }, [shown]);
+
   if (!shown) return null;
 
   // 내려가는 중에는 닫기를 다시 부르지 않습니다
@@ -281,7 +299,10 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
         </div>
 
         {/* 탭을 바꿔도 시트 높이가 출렁이지 않게 고정합니다 (내용이 넘치면 안에서 스크롤) */}
-        <div className="h-[72dvh] overflow-y-auto px-4">
+        <div
+          className="h-[72dvh] overflow-y-auto overscroll-contain px-4"
+          style={{ touchAction: "pan-y" }}
+        >
           {tab === "api" ? (
             <div className="pt-5">
               {/* 지금 색 */}
