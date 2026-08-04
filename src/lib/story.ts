@@ -2,9 +2,7 @@
 // 인도네시아 이야기 카드: 9개 카테고리 중 랜덤 주제로 학습용 짧은 글을 생성합니다.
 // 기존 Gemini API 키(localStorage "geminiApiKey")를 재사용합니다.
 
-import { getGeminiApiKey } from "@/lib/gemini";
-
-const TEXT_MODEL = "gemini-flash-lite-latest";
+import { callGeminiJSON } from "@/lib/geminiText";
 
 export const STORY_CATEGORIES = [
   "인도네시아 동화",
@@ -48,81 +46,7 @@ const DIFF_INFO: Record<StoryDifficulty, { desc: string; length: string }> = {
 };
 
 // 이야기는 본문이 길어 생성에 시간이 걸리므로 타임아웃을 넉넉히(60초) 잡습니다.
-const CALL_TIMEOUT_MS = 60000;
-
-// 일시적 오류만 딱 1번 재시도합니다. (429/400/403은 재시도해도 소용없음)
-const RETRIABLE = new Set(["TIMEOUT", "NETWORK", "SERVER_ERROR", "EMPTY_RESPONSE"]);
-
-async function callGeminiJSON(prompt: string, temperature = 0.8): Promise<Record<string, unknown>> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
-
-  const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    TEXT_MODEL +
-    ":generateContent?key=" +
-    encodeURIComponent(apiKey);
-
-  const attempt = async (): Promise<Record<string, unknown>> => {
-    const controller = new AbortController();
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, CALL_TIMEOUT_MS);
-
-    let res: Response;
-    try {
-      res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature,
-            responseMimeType: "application/json",
-            // 응답이 중간에 잘리면 EMPTY_RESPONSE가 되므로 한도를 넉넉히 잡습니다.
-            maxOutputTokens: 8192,
-          },
-        }),
-        signal: controller.signal,
-      });
-    } catch (e) {
-      if (timedOut) throw new Error("TIMEOUT");
-      throw new Error("NETWORK");
-    } finally {
-      clearTimeout(timer);
-    }
-
-    if (!res.ok) {
-      if (res.status === 403) throw new Error("INVALID_API_KEY");
-      if (res.status === 400) throw new Error("BAD_REQUEST");
-      if (res.status === 429) throw new Error("RATE_LIMIT");
-      if (res.status >= 500) throw new Error("SERVER_ERROR");
-      throw new Error("REQUEST_FAILED_" + res.status);
-    }
-
-    const data = await res.json();
-    const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    if (!text) throw new Error("EMPTY_RESPONSE");
-    try {
-      return JSON.parse(text);
-    } catch {
-      const match = text.match(new RegExp("\\{[\\s\\S]*\\}"));
-      if (!match) throw new Error("PARSE_FAILED");
-      return JSON.parse(match[0]);
-    }
-  };
-
-  try {
-    return await attempt();
-  } catch (e: any) {
-    const code = (e && e.message) || "";
-    if (!RETRIABLE.has(code)) throw e;
-    await new Promise((r) => setTimeout(r, 1000));
-    return await attempt();
-  }
-}
+const STORY_TIMEOUT_MS = 60000;
 
 // 랜덤 카테고리로 이야기 1개 생성. recentTitles로 최근 주제와 중복 방지.
 export async function generateStory(
@@ -158,7 +82,7 @@ export async function generateStory(
     "- 동화라면 그 이야기가 담고 있는 교훈이나 비슷한 설화 전통을 소개해도 좋습니다.\n" +
     "- 딱딱한 사전식 나열이 아니라, 읽으면 '아하' 하게 되는 친절한 도움말로 쓰세요.\n";
 
-  const parsed = await callGeminiJSON(prompt, 0.9);
+  const parsed = await callGeminiJSON(prompt, { timeoutMs: STORY_TIMEOUT_MS });
 
   return {
     title: (parsed.title || "").toString().trim(),
@@ -193,7 +117,7 @@ export async function quickLookupWord(
     "주의:\n" +
     "- meaning은 문맥에 한정하지 말고, 그 단어가 가진 주요 뜻을 모두 적으세요. 어떤 뜻인지는 읽는 사람이 문맥으로 판단합니다.\n";
 
-  const parsed = await callGeminiJSON(prompt, 0.3);
+  const parsed = await callGeminiJSON(prompt);
   return {
     meaning: (parsed.meaning || "").toString().trim(),
     info: (parsed.info || "").toString().trim(),

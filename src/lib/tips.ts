@@ -2,9 +2,7 @@
 // 인도네시아 정보(팁): 버튼을 누를 때마다 Gemini가 짧은 정보 하나를 생성합니다.
 // 폰에 영구 저장(IndexedDB)되며, 중복을 피하기 위해 최근 제목을 함께 전달합니다.
 
-import { getGeminiApiKey } from "@/lib/gemini";
-
-const TEXT_MODEL = "gemini-flash-lite-latest";
+import { callGeminiJSON } from "@/lib/geminiText";
 
 // 생성 다양성을 위한 힌트 주제군 (프롬프트에 하나를 랜덤으로 곁들여 편향을 줄임)
 const TOPIC_HINTS = [
@@ -31,43 +29,6 @@ export interface TipData {
   body: string; // 정보 본문 (한국어, 2~4문장)
   indo?: string; // 관련 인도네시아어 한 마디 (선택)
   indoKo?: string; // 그 뜻
-}
-
-async function callGeminiJSON(prompt: string, temperature = 1.0): Promise<Record<string, unknown>> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
-
-  const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    TEXT_MODEL +
-    ":generateContent?key=" +
-    encodeURIComponent(apiKey);
-
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature, responseMimeType: "application/json" },
-    }),
-  });
-
-  if (!res.ok) {
-    if (res.status === 400 || res.status === 403) throw new Error("INVALID_API_KEY");
-    if (res.status === 429) throw new Error("RATE_LIMIT");
-    throw new Error("REQUEST_FAILED_" + res.status);
-  }
-
-  const data = await res.json();
-  const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-  if (!text) throw new Error("EMPTY_RESPONSE");
-  try {
-    return JSON.parse(text);
-  } catch {
-    const match = text.match(new RegExp("\\{[\\s\\S]*\\}"));
-    if (!match) throw new Error("PARSE_FAILED");
-    return JSON.parse(match[0]);
-  }
 }
 
 // 팁 1개 생성. recentTitles로 최근 주제와 중복 방지.

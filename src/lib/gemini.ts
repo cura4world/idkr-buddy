@@ -2,10 +2,9 @@
 // Gemini API를 사용해 인도네시아어 단어의 한국어 뜻/예문/예문뜻을 자동 생성합니다.
 // API 키는 localStorage("geminiApiKey")에 저장되며, 없으면 자동 채우기 기능이 비활성화됩니다.
 
-const GEMINI_KEY_STORAGE = "geminiApiKey";
+import { callGeminiJSON } from "@/lib/geminiText";
 
-// 텍스트 생성용 모델 (저렴하고 빠름). 필요시 이 값만 바꾸면 됩니다.
-const GEMINI_MODEL = "gemini-flash-lite-latest";
+const GEMINI_KEY_STORAGE = "geminiApiKey";
 
 export function getGeminiApiKey(): string {
   try {
@@ -62,80 +61,7 @@ export async function fillWordWithGemini(word: string): Promise<WordFillResult> 
     "}\n\n" +
     "주의: 예문은 일상적이고 자연스러운 문장으로, 너무 길지 않게 작성하세요.";
 
-  const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    GEMINI_MODEL +
-    ":generateContent?key=" +
-    encodeURIComponent(apiKey);
-
-  // 응답이 오지 않으면 다이얼로그가 계속 로딩 상태로 남으므로 30초 타임아웃을 겁니다.
-  const controller = new AbortController();
-  let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-  }, 30000);
-
-  let res: Response;
-  try {
-    res = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.4,
-          responseMimeType: "application/json",
-          // 응답이 중간에 잘리면 EMPTY_RESPONSE가 되므로 한도를 넉넉히 잡습니다.
-          maxOutputTokens: 8192,
-        },
-      }),
-      signal: controller.signal,
-    });
-  } catch (e) {
-    if (timedOut) {
-      throw new Error("TIMEOUT");
-    }
-    throw new Error("NETWORK");
-  } finally {
-    clearTimeout(timer);
-  }
-
-  if (!res.ok) {
-    if (res.status === 403) {
-      throw new Error("INVALID_API_KEY");
-    }
-    if (res.status === 400) {
-      throw new Error("BAD_REQUEST");
-    }
-    if (res.status === 429) {
-      throw new Error("RATE_LIMIT");
-    }
-    if (res.status >= 500) {
-      throw new Error("SERVER_ERROR");
-    }
-    throw new Error("REQUEST_FAILED_" + res.status);
-  }
-
-  const data = await res.json();
-  const text: string =
-    data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-
-  if (!text) {
-    throw new Error("EMPTY_RESPONSE");
-  }
-
-  // JSON 파싱 (응답에 코드펜스가 섞여도 안전하게 추출)
-  let parsed: Partial<WordFillResult>;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    const match = text.match(new RegExp("\\{[\\s\\S]*\\}"));
-    if (!match) {
-      throw new Error("PARSE_FAILED");
-    }
-    parsed = JSON.parse(match[0]);
-  }
+  const parsed = (await callGeminiJSON(prompt)) as Partial<WordFillResult>;
 
   return {
     meaning: (parsed.meaning || "").toString().trim(),

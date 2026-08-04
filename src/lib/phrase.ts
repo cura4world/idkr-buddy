@@ -2,9 +2,7 @@
 // "오늘의 인도네시아어" 문장의 상세 해설을 만들고 IndexedDB에 영구 보관합니다.
 // 한 번 만든 문장은 다시 만들지 않으므로 재과금이 0입니다.
 
-import { getGeminiApiKey } from "@/lib/gemini";
-
-const TEXT_MODEL = "gemini-flash-lite-latest";
+import { callGeminiJSON } from "@/lib/geminiText";
 
 const DB_NAME = "kata-phrases";
 const DB_VERSION = 1;
@@ -190,40 +188,6 @@ function buildCreatePrompt(guide: string, recent: string[]): string {
   ].join("\n");
 }
 
-async function callGeminiJSON(
-  prompt: string,
-  temperature = 0.7
-): Promise<Record<string, unknown>> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
-
-  const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    TEXT_MODEL +
-    ":generateContent?key=" +
-    encodeURIComponent(apiKey);
-
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature, responseMimeType: "application/json" },
-    }),
-  });
-
-  if (!res.ok) {
-    if (res.status === 400 || res.status === 403) throw new Error("INVALID_API_KEY");
-    if (res.status === 429) throw new Error("RATE_LIMIT");
-    throw new Error("REQUEST_FAILED_" + res.status);
-  }
-
-  const data = await res.json();
-  const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-  if (!text) throw new Error("EMPTY_RESPONSE");
-  return JSON.parse(text) as Record<string, unknown>;
-}
-
 function asString(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
@@ -238,7 +202,7 @@ function parseExamples(v: unknown): PhraseExample[] {
 
 /** 문장 뽑기 쪽에서 쓰는 범용 JSON 호출 (성경 구절 고르기 등) */
 export async function askPhraseJSON(prompt: string): Promise<Record<string, unknown>> {
-  return callGeminiJSON(prompt, 1.0);
+  return callGeminiJSON(prompt);
 }
 
 export interface GeneratedPhrase {
@@ -254,7 +218,7 @@ export async function generateNewPhrase(
   guide: string,
   recent: string[]
 ): Promise<GeneratedPhrase> {
-  const raw = await callGeminiJSON(buildCreatePrompt(guide, recent), 1.0);
+  const raw = await callGeminiJSON(buildCreatePrompt(guide, recent));
   const id = asString(raw.id);
   if (id === "") throw new Error("EMPTY_RESPONSE");
   const ko = asString(raw.ko);

@@ -2,9 +2,8 @@
 // 인도네시아 지도: 지점(도시/관광지) 설명을 Gemini로 생성하고 IndexedDB에 영구 캐싱합니다.
 // 한 번 본 지점은 재과금 없이 즉시 표시됩니다 (이야기/단어 캐시와 같은 패턴).
 
-import { getGeminiApiKey } from "@/lib/gemini";
+import { callGeminiJSON } from "@/lib/geminiText";
 
-const TEXT_MODEL = "gemini-flash-lite-latest";
 const DB_NAME = "kata-map-places";
 const DB_VERSION = 1;
 const STORE = "places";
@@ -78,42 +77,6 @@ export async function clearMapPlaces(): Promise<void> {
     });
   } catch {
     // 무시
-  }
-}
-
-// ---------- Gemini ----------
-async function callGeminiJSON(prompt: string): Promise<Record<string, unknown>> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
-
-  const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    TEXT_MODEL +
-    ":generateContent?key=" +
-    encodeURIComponent(apiKey);
-
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.5, responseMimeType: "application/json" },
-    }),
-  });
-
-  if (!res.ok) {
-    if (res.status === 400 || res.status === 403) throw new Error("INVALID_API_KEY");
-    if (res.status === 429) throw new Error("RATE_LIMIT");
-    throw new Error("REQUEST_FAILED_" + res.status);
-  }
-
-  const data = await res.json();
-  const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-  if (!text) throw new Error("EMPTY_RESPONSE");
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error("PARSE_FAILED");
   }
 }
 

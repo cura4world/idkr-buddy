@@ -7,6 +7,7 @@
 //   이 기기의 localStorage 에만 보관합니다 (설교문 서버와 같은 방식).
 
 import { getGeminiApiKey } from "@/lib/gemini";
+import { callGeminiText } from "@/lib/geminiText";
 import {
   BUILTIN_CATEGORIES,
   builtinScenesOf,
@@ -29,8 +30,7 @@ const DB_NAME = "kata-percakapan";
 const SCENE_STORE = "scenes";
 const CAT_STORE = "cats";
 
-// 회화집 생성용 모델 (설명·예문 생성과 같은 값)
-const GEN_MODEL = "gemini-flash-lite-latest";
+// 회화집 생성용 호출 타임아웃
 const GEN_TIMEOUT_MS = 30000;
 
 // ---------- 설정 (localStorage, 기기별) ----------
@@ -436,54 +436,19 @@ function buildScenePrompt(opts: {
   );
 }
 
-async function callGenerate(prompt: string, apiKey: string, attempt = 0): Promise<string> {
-  const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    GEN_MODEL +
-    ":generateContent?key=" +
-    encodeURIComponent(apiKey);
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => {
-    try {
-      controller.abort();
-    } catch (e) {}
-  }, GEN_TIMEOUT_MS);
-
-  let res: Response;
+async function callGenerate(prompt: string): Promise<string> {
   try {
-    res = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.9,
-          responseMimeType: "application/json",
-          maxOutputTokens: 8192,
-        },
-      }),
+    return await callGeminiText(prompt, {
+      timeoutMs: GEN_TIMEOUT_MS,
+      maxOutputTokens: 8192,
     });
   } catch (e: any) {
-    clearTimeout(timer);
-    if (e && e.name === "AbortError") throw new Error("TIMEOUT");
-    throw new Error("NETWORK_FAILED");
+    const code = (e && e.message) || "";
+    // Percakapan.tsx 가 쓰는 기존 코드 이름으로 되돌려 줍니다.
+    if (code === "NETWORK") throw new Error("NETWORK_FAILED");
+    if (code === "BAD_REQUEST") throw new Error("INVALID_API_KEY");
+    throw e;
   }
-  clearTimeout(timer);
-
-  if (!res.ok) {
-    // 서버 쪽 일시적 오류는 한 번만 다시 시도합니다
-    if (res.status >= 500 && attempt < 1) return callGenerate(prompt, apiKey, attempt + 1);
-    if (res.status === 400 || res.status === 403) throw new Error("INVALID_API_KEY");
-    if (res.status === 429) throw new Error("RATE_LIMIT");
-    throw new Error("REQUEST_FAILED_" + res.status);
-  }
-
-  const data = await res.json();
-  const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-  if (!text) throw new Error("EMPTY_RESPONSE");
-  return text;
 }
 
 function parseJsonLoose(text: string): any {
@@ -513,8 +478,7 @@ export async function generateScene(opts: {
   if (!name) throw new Error("EMPTY_NAME");
 
   const text = await callGenerate(
-    buildScenePrompt({ name, situation: opts.situation, level: opts.level }),
-    apiKey
+    buildScenePrompt({ name, situation: opts.situation, level: opts.level })
   );
   const parsed = parseJsonLoose(text);
 
