@@ -1,8 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getCategories, getWordsByCategory, Word } from "@/lib/store";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
 import { ArrowLeft, RotateCcw, Shuffle } from "lucide-react";
+import { medaliEngine } from "@/lib/medali";
+import PointFloat from "@/components/PointFloat";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -43,11 +45,52 @@ export default function QuizMode() {
   const currentQ = questions[questionIndex];
   const isFinished = questionIndex >= questions.length;
 
+  // ---------- 퀴즈 점수 + Bintang 판정 ----------
+  // 문항별 정답 여부를 ref 배열로만 모으므로 기존 채점(correctCount) 로직과 섞이지 않습니다.
+  const answersRef = useRef<{ word: string; correct: boolean }[]>([]);
+  const finishedRef = useRef(false);
+  const recordedRef = useRef(false);
+  const [floatVal, setFloatVal] = useState(0);
+  const [floatSeq, setFloatSeq] = useState(0);
+
+  useEffect(() => {
+    if (!isFinished || questions.length === 0 || allWords.length < 2) {
+      finishedRef.current = false;
+      return;
+    }
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+
+    // 다시 하기로 또 끝내도 점수는 오릅니다 (하루 상한 10점 = 2회를 엔진이 자릅니다)
+    medaliEngine
+      .addPoints("quiz", 5)
+      .then((got) => {
+        if (got > 0) {
+          setFloatVal(got);
+          setFloatSeq((n) => n + 1);
+        }
+      })
+      .catch(() => {});
+
+    // 반면 단어 판정은 첫 완주에만 — 방금 본 답을 다시 고르는 건 실력의 근거가 아닙니다.
+    if (recordedRef.current) return;
+    recordedRef.current = true;
+    const seen = new Set<string>();
+    for (const a of answersRef.current) {
+      const key = a.word.trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      medaliEngine.recordWordResult(a.word, a.correct, "wordbook").catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFinished]);
+
   const handleSelect = useCallback(
     (choice: string) => {
       if (selected) return;
       setSelected(choice);
       const isCorrect = choice === currentQ.correctAnswer;
+      answersRef.current.push({ word: currentQ.word.word, correct: isCorrect });
       if (isCorrect) {
         setCorrectCount((c) => c + 1);
       } else {
@@ -63,6 +106,7 @@ export default function QuizMode() {
   );
 
   const restart = () => {
+    answersRef.current = [];
     setQuestionIndex(0);
     setSelected(null);
     setCorrectCount(0);
@@ -72,6 +116,7 @@ export default function QuizMode() {
 
   const handleToggleRandom = () => {
     const next = !isRandom;
+    answersRef.current = [];
     setIsRandom(next);
     setQuestionIndex(0);
     setSelected(null);
@@ -92,6 +137,7 @@ export default function QuizMode() {
   if (isFinished) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 max-w-lg mx-auto">
+        <PointFloat value={floatVal} seq={floatSeq} />
         <div className="text-center">
           <p className="text-4xl mb-4">🍃</p>
           <p className="text-lg font-body font-medium">
