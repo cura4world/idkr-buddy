@@ -416,9 +416,26 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                 })}
               </div>
 
-              <p className="mt-4 text-center font-gothic text-[0.65625rem] leading-relaxed text-muted-foreground">
-                동 30 · 은 100 · 금 180 · 백금 280 · 보석 400점
-              </p>
+              {/* 커트라인 — 상수가 높은 단계부터라 뒤집어 동 → 보석 순으로 봅니다 (Tanah 0점은 제외) */}
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
+                {API_CUTOFFS.filter((c) => c.min > 0)
+                  .slice()
+                  .reverse()
+                  .map((c) => (
+                    <span key={c.color} className="flex items-center gap-1">
+                      <Flame
+                        size={13}
+                        color={STROKE}
+                        fill={MEDALI_COLORS[c.color]}
+                        strokeWidth={1.5}
+                        className="shrink-0"
+                      />
+                      <span className="font-gothic text-[0.65625rem] text-muted-foreground tabular-nums">
+                        {c.min}
+                      </span>
+                    </span>
+                  ))}
+              </div>
               <p className="mt-1.5 pb-1 text-center text-[0.6875rem] leading-relaxed text-muted-foreground">
                 Api는 월요일에 다시 시작해요. 주일은 쉬어요.
               </p>
