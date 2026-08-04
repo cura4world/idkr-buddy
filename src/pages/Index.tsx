@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCategories, getWordsByCategory } from "@/lib/store";
+import { getCategories, getWordsByCategory, takePurgedFailedWords } from "@/lib/store";
 import { getBook } from "@/lib/bible";
 import {
   PHRASE_KINDS,
@@ -353,6 +353,16 @@ const Index = () => {
       return next;
     });
   };
+
+  // 뜻 대신 조회 실패 안내문이 저장돼 있던 단어를 store.ts 가 시작할 때 지웁니다.
+  // 지운 것이 있으면 어떤 단어였는지 한 번만 알려 줍니다 (필요하면 다시 담으면 됩니다).
+  useEffect(() => {
+    const purged = takePurgedFailedWords();
+    if (purged.length === 0) return;
+    const head = purged.slice(0, 3).join(", ");
+    const more = purged.length > 3 ? " 외 " + (purged.length - 3) + "개" : "";
+    toast("뜻이 없던 단어를 정리했습니다: " + head + more);
+  }, []);
 
   // 설교문: 이 기기 설정에 서버 주소와 비밀키가 다 들어 있을 때만 메뉴를 보여줍니다.
   const [sermonOn, setSermonOn] = useState(false);
