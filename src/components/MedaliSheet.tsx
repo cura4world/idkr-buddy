@@ -138,6 +138,7 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
   const [words, setWords] = useState<WordRecord[]>([]);
   const [openDay, setOpenDay] = useState<number | null>(null);   // 막대를 탭하면 그날 점수 한 줄
   const [openRow, setOpenRow] = useState<string | null>(null);   // 내역 행 도움말
+  const [tiersOpen, setTiersOpen] = useState(false);             // 별의 단계표 펼침 여부
   const [shown, setShown] = useState(open);        // 렌더를 유지할지 (퇴장 연출 동안 true)
   const [entered, setEntered] = useState(false);   // 올라온 상태인지
 
@@ -457,6 +458,52 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                     </div>
                   ))
                 )}
+              </div>
+
+              {/* 18단계 전체. 기본은 접어 두고, 펼치면 시트 안에서 스크롤됩니다. */}
+              <div className="mt-5 border-t border-border pt-3">
+                <button
+                  type="button"
+                  onClick={() => setTiersOpen((v) => !v)}
+                  className="flex w-full items-center justify-between py-1 text-left"
+                >
+                  <span className="font-gothic text-[0.78125rem] text-foreground">별의 단계</span>
+                  <span className="font-gothic text-[0.6875rem] text-muted-foreground">
+                    {tiersOpen ? "접기" : "펼치기"}
+                  </span>
+                </button>
+                {tiersOpen ? (
+                  <div className="mt-1.5 pb-1">
+                    {BINTANG_CUTOFFS.map((c) => {
+                      const now = snap.bintangColor === c.color && snap.bintangTier === c.tier;
+                      return (
+                        <div
+                          key={c.color + c.tier}
+                          className={
+                            "flex items-center gap-2.5 rounded-lg px-2 py-1.5 " + (now ? "bg-muted" : "")
+                          }
+                        >
+                          <Star
+                            size={14}
+                            color={STROKE}
+                            fill={MEDALI_COLORS[c.color]}
+                            strokeWidth={1.5}
+                            className="shrink-0"
+                          />
+                          <span className="flex-1 min-w-0 truncate font-word text-[0.8125rem] text-foreground">
+                            {COLOR_NAME[c.color]} {ROMAN[c.tier]}
+                          </span>
+                          <span className="shrink-0 font-gothic text-[0.71875rem] text-muted-foreground tabular-nums">
+                            {c.min}개
+                          </span>
+                          {now ? (
+                            <span className="shrink-0 font-gothic text-[0.65625rem] text-primary">지금</span>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
 
               {recheckCount > 0 ? (
