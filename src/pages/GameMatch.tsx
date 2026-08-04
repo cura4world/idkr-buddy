@@ -224,7 +224,8 @@ const GameMatch = () => {
 
     // 2) 단어별 기록 → 이번에 별이 된 단어 표시
     for (const w of words) {
-      const r = await medaliEngine.recordWordResult(w.word, w.correct, w.source);
+      // 짝맞추기는 남은 카드가 줄면 저절로 맞으므로 증거를 0.5만 인정합니다
+      const r = await medaliEngine.recordWordResult(w.word, w.correct, w.source, 0.5);
       w.becameConfirmed = r.becameConfirmed;
     }
 
