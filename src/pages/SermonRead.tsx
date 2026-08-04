@@ -34,7 +34,7 @@ import { goBackOr } from "@/lib/nav";
 import { toast } from "sonner";
 import { quickLookupWord } from "@/lib/story";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
-import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
+import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import {
@@ -581,7 +581,7 @@ const SermonRead = () => {
         setPopupSentenceKo(r.sentenceKo);
       })
       .catch(() => {
-        if (popupReqId.current === reqId) setPopupMeaning("뜻을 불러오지 못했어요. 다시 탭해주세요");
+        if (popupReqId.current === reqId) setPopupMeaning(LOOKUP_FAIL_TEXT);
       })
       .finally(() => {
         if (popupReqId.current === reqId) setPopupLoading(false);
@@ -604,7 +604,7 @@ const SermonRead = () => {
   };
 
   const savePopupWord = () => {
-    if (!popupWord || popupSaved || popupLoading || !popupMeaning || !saveTargetId) return;
+    if (!popupWord || popupSaved || popupLoading || !popupMeaning || isFailedMeaning(popupMeaning) || !saveTargetId) return;
     const { added } = addWordIfAbsent({
       word: popupWord,
       meaning: popupMeaning,
@@ -1777,7 +1777,7 @@ const SermonRead = () => {
               <div className="flex-1 min-w-0 flex items-stretch overflow-hidden rounded-full text-xs font-medium">
                 <button
                   onClick={savePopupWord}
-                  disabled={popupSaved || popupLoading || !popupMeaning || !saveTargetId}
+                  disabled={popupSaved || popupLoading || !popupMeaning || isFailedMeaning(popupMeaning) || !saveTargetId}
                   className={`flex-1 min-w-0 flex items-center justify-center gap-1 py-2 ${
                     popupSaved || !saveTargetId ? "bg-gray-100 text-gray-400" : "bg-primary text-white disabled:opacity-50"
                   }`}
