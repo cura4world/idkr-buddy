@@ -6,8 +6,14 @@
 
 import { getGeminiApiKey } from "@/lib/gemini";
 
-// 텍스트 모델 (저렴/빠름). 필요시 이 값만 교체.
-const TEXT_MODEL = "gemini-flash-lite-latest";
+// 텍스트 모델 후보 (순서대로 시도, 503 등으로 계속 실패하면 다음 후보로 강등).
+// -latest 별칭은 구글이 새 버전으로 조용히 갈아끼우기 때문에(프리뷰가 물릴 수도 있음)
+// 사전처럼 매일 쓰는 기능에는 "안정판 명시 버전"을 고정합니다.
+const TEXT_MODEL_CANDIDATES = [
+  "gemini-3.1-flash-lite", // 구글이 저비용·고빈도 용도로 권하는 안정 장기 모델
+  "gemini-3.5-flash-lite", // 3.5 계열 안정판 폴백
+  "gemini-2.5-flash-lite", // 구형 폴백 (2026-10 종료 예정)
+];
 
 // 이미지 생성 모델 후보 (순서대로 시도, 실패하면 다음 후보로 폴백).
 // 참고: https://ai.google.dev/gemini-api/docs/image-generation
@@ -156,82 +162,124 @@ export function detectInputKind(raw: string): InputKind {
 }
 
 // ---- 공통 Gemini JSON 호출 ----
-// 응답이 오지 않으면 "검색 중"에서 영원히 멈추므로 30초 타임아웃을 겁니다.
-const CALL_TIMEOUT_MS = 30000;
+// 응답이 오지 않으면 "검색 중"에서 영원히 멈추므로 호출마다 타임아웃을 겁니다.
+const CALL_TIMEOUT_MS = 25000;
 
-// 일시적 오류만 딱 1번 재시도합니다. (429/400/403은 재시도해도 소용없음)
+// 모델을 바꿔가며 재시도해도 전체는 이 시간을 넘기지 않습니다.
+const TOTAL_DEADLINE_MS = 70000;
+
+// 같은 모델을 잠시 뒤에 다시 부르면 성공할 수 있는 오류.
 const RETRIABLE = new Set(["TIMEOUT", "NETWORK", "SERVER_ERROR", "EMPTY_RESPONSE"]);
 
-async function callGeminiJSON(prompt: string, temperature = 0.4): Promise<Record<string, unknown>> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
+// 같은 모델은 가망이 없지만 다른 모델이면 통할 수 있는 오류.
+// (쿼터와 모델 종료는 모델 단위로 걸립니다)
+const SWITCH_MODEL = new Set(["RATE_LIMIT", "MODEL_NOT_FOUND"]);
 
+// 한 모델당 시도 횟수 (첫 시도 + 재시도 2회).
+const MAX_TRIES_PER_MODEL = 3;
+
+// 지수 백오프 + 지터. 503 과부하는 1초로는 회복되지 않습니다.
+function backoffDelay(tryIndex: number): number {
+  const base = tryIndex <= 0 ? 900 : tryIndex === 1 ? 2600 : 6000;
+  return base + Math.floor(Math.random() * 700);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function callGeminiOnce(
+  model: string,
+  apiKey: string,
+  prompt: string,
+): Promise<Record<string, unknown>> {
   const endpoint =
     "https://generativelanguage.googleapis.com/v1beta/models/" +
-    TEXT_MODEL +
+    model +
     ":generateContent?key=" +
     encodeURIComponent(apiKey);
 
-  const attempt = async (): Promise<Record<string, unknown>> => {
-    const controller = new AbortController();
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, CALL_TIMEOUT_MS);
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, CALL_TIMEOUT_MS);
 
-    let res: Response;
-    try {
-      res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature,
-            responseMimeType: "application/json",
-            // 응답이 중간에 잘리면 EMPTY_RESPONSE가 되므로 한도를 넉넉히 잡습니다.
-            maxOutputTokens: 8192,
-          },
-        }),
-        signal: controller.signal,
-      });
-    } catch (e) {
-      if (timedOut) throw new Error("TIMEOUT");
-      throw new Error("NETWORK");
-    } finally {
-      clearTimeout(timer);
-    }
+  let res: Response;
+  try {
+    res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        // Gemini 3.x 부터 temperature / topP / topK 는 폐기 예정이라 보내지 않습니다.
+        generationConfig: {
+          responseMimeType: "application/json",
+          // 응답이 중간에 잘리면 EMPTY_RESPONSE가 되므로 한도를 넉넉히 잡습니다.
+          maxOutputTokens: 16384,
+        },
+      }),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    if (timedOut) throw new Error("TIMEOUT");
+    throw new Error("NETWORK");
+  } finally {
+    clearTimeout(timer);
+  }
 
-    if (!res.ok) {
-      if (res.status === 403) throw new Error("INVALID_API_KEY");
-      if (res.status === 400) throw new Error("BAD_REQUEST");
-      if (res.status === 429) throw new Error("RATE_LIMIT");
-      if (res.status >= 500) throw new Error("SERVER_ERROR");
-      throw new Error("REQUEST_FAILED_" + res.status);
-    }
+  if (!res.ok) {
+    if (res.status === 403) throw new Error("INVALID_API_KEY");
+    if (res.status === 400) throw new Error("BAD_REQUEST");
+    if (res.status === 404) throw new Error("MODEL_NOT_FOUND");
+    if (res.status === 429) throw new Error("RATE_LIMIT");
+    if (res.status >= 500) throw new Error("SERVER_ERROR");
+    throw new Error("REQUEST_FAILED_" + res.status);
+  }
 
-    const data = await res.json();
-    const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    if (!text) throw new Error("EMPTY_RESPONSE");
-
-    try {
-      return JSON.parse(text);
-    } catch {
-      const match = text.match(new RegExp("\\{[\\s\\S]*\\}"));
-      if (!match) throw new Error("PARSE_FAILED");
-      return JSON.parse(match[0]);
-    }
-  };
+  const data = await res.json();
+  const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  if (!text) throw new Error("EMPTY_RESPONSE");
 
   try {
-    return await attempt();
-  } catch (e: any) {
-    const code = (e && e.message) || "";
-    if (!RETRIABLE.has(code)) throw e;
-    await new Promise((r) => setTimeout(r, 1000));
-    return await attempt();
+    return JSON.parse(text);
+  } catch {
+    const match = text.match(new RegExp("\\{[\\s\\S]*\\}"));
+    if (!match) throw new Error("PARSE_FAILED");
+    return JSON.parse(match[0]);
   }
+}
+
+async function callGeminiJSON(prompt: string): Promise<Record<string, unknown>> {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) throw new Error("NO_API_KEY");
+
+  const startedAt = Date.now();
+  let lastError: unknown = new Error("SERVER_ERROR");
+
+  for (const model of TEXT_MODEL_CANDIDATES) {
+    for (let i = 0; i < MAX_TRIES_PER_MODEL; i++) {
+      if (Date.now() - startedAt > TOTAL_DEADLINE_MS) throw lastError;
+
+      try {
+        return await callGeminiOnce(model, apiKey, prompt);
+      } catch (e: any) {
+        lastError = e;
+        const code = (e && e.message) || "";
+
+        // 키 문제·요청 형식 문제 등은 몇 번을 더 불러도 같습니다.
+        if (!RETRIABLE.has(code) && !SWITCH_MODEL.has(code)) throw e;
+
+        // 쿼터·모델 종료면 같은 모델을 더 두드리지 말고 바로 다음 후보로.
+        if (SWITCH_MODEL.has(code)) break;
+
+        if (i < MAX_TRIES_PER_MODEL - 1) await sleep(backoffDelay(i));
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 export async function lookupWord(word: string): Promise<DictResult> {
