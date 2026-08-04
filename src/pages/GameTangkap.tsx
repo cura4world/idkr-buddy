@@ -18,7 +18,7 @@ const FALL_START_MS = 6500;   // 처음 낙하 시간 (뜻 세 개를 읽을 여
 const FALL_STEP_MS = 120;     // 하나 받을 때마다 빨라지는 폭
 const FALL_MIN_MS = 3500;     // 아무리 빨라도 여기까지
 const CATCH_MS = 400;         // 받았을 때 청록으로 켜 두는 시간
-const MISS_MS = 600;          // 놓쳤을 때 정답 뜻을 보여주는 시간
+const MISS_MS = 1100;         // 놓쳤을 때 정답 뜻을 보여주는 시간
 const CHOICES = 3;            // 뜻 버튼 수
 
 type Phase = "loading" | "empty" | "ready" | "playing" | "done";
