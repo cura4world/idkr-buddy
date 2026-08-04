@@ -13,7 +13,7 @@ import { medaliEngine, listRounds, dateKey, MEDALI_COLORS } from "@/lib/medali";
 
 const PAIRS = 6;              // 한 판에 쓰는 단어 수
 const MIN_PAIRS = 4;          // 이보다 적으면 게임을 못 엽니다
-const CLOSE_MS = 700;         // 짝이 아닐 때 다시 닫히기까지
+const CLOSE_MS = 1200;        // 짝이 아닐 때 다시 닫히기까지 (틀린 짝을 읽을 시간)
 const GOOD_MISS = 1;          // 미스가 이 이하면 "맞힌 것"으로 봅니다
 
 type Phase = "loading" | "empty" | "playing" | "done";
@@ -314,8 +314,9 @@ const GameMatch = () => {
           </div>
         ) : null}
 
+        {/* 카드는 2열 × 6행 — 3열보다 칸이 넓어 글자를 키울 수 있고, 낮게 잡아 한 화면에 들어갑니다 */}
         {phase === "playing" ? (
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2.5">
             {cards.map((c) => {
               const face = isFaceUp(c);
               const done = matched.indexOf(c.pair) >= 0;
@@ -325,7 +326,7 @@ const GameMatch = () => {
                   type="button"
                   onClick={() => handleCard(c)}
                   className={
-                    "min-h-[78px] rounded-xl border px-1.5 py-2 flex items-center justify-center text-center transition-colors " +
+                    "min-h-[3.25rem] rounded-xl border px-2.5 py-2.5 flex items-center justify-center text-center transition-colors " +
                     (face
                       ? done
                         ? "bg-primary/15 border-primary"
@@ -336,10 +337,10 @@ const GameMatch = () => {
                   {face ? (
                     <span
                       className={
-                        "break-words leading-snug line-clamp-3 " +
+                        "break-words leading-snug line-clamp-2 " +
                         (c.kind === "id"
-                          ? "font-word text-[0.8125rem] text-foreground"
-                          : "font-gothic text-[0.8125rem] text-foreground")
+                          ? "font-word text-base text-foreground"
+                          : "font-gothic text-[0.9375rem] text-foreground")
                       }
                     >
                       {c.text}
@@ -356,10 +357,10 @@ const GameMatch = () => {
         {phase === "done" && result ? (
           <div className="mt-4">
             <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center">
-              <p className="font-word text-[2rem] leading-none tabular-nums text-foreground">
-                {result.durationSec}초
+              <p className="font-word text-[1.375rem] font-medium leading-snug text-foreground">
+                <span className="tabular-nums text-primary">{result.durationSec}</span>초
               </p>
-              <p className="mt-2 font-gothic text-[0.78125rem] text-muted-foreground">
+              <p className="mt-2 font-gothic text-[0.8125rem] text-muted-foreground">
                 {result.bestBefore === 0 || result.durationSec < result.bestBefore
                   ? "최고 기록!"
                   : "최고 " + result.bestBefore + "초"}
