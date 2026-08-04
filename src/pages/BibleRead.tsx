@@ -25,6 +25,8 @@ import BiblePicker from "@/components/BiblePicker";
 import BibleAudioButton from "@/components/BibleAudioButton";
 import BibleAudioSeekBar from "@/components/BibleAudioSeekBar";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
+import { ReadingTracker } from "@/lib/readingTimer";
+import PointFloat from "@/components/PointFloat";
 
 const LAST_POS_KEY = "bible-last-pos";
 
@@ -96,6 +98,32 @@ const BibleRead = () => {
   const [error, setError] = useState(false);
   const [koError, setKoError] = useState(false);
   const [flipped, setFlipped] = useState(false);
+
+  // ---------- 읽기 점수 (보이지 않는 타이머) ----------
+  // 화면에는 아무 표시도 없고, 한국어 면을 처음 여는 순간에만 "+N"이 한 번 뜽니다.
+  const trackerRef = useRef<ReadingTracker | null>(null);
+  const [floatVal, setFloatVal] = useState(0);
+  const [floatSeq, setFloatSeq] = useState(0);
+
+  useEffect(() => {
+    const t = new ReadingTracker((pt) => {
+      setFloatVal(pt);
+      setFloatSeq((n) => n + 1);
+    });
+    trackerRef.current = t;
+    t.attach();
+    return () => {
+      t.dispose();
+      trackerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const t = trackerRef.current;
+    if (!t) return;
+    t.setSide(!flipped);
+    if (flipped) t.koreanOpened();
+  }, [flipped]);
 
   // ---------- 본문 글자 크기 ----------
   const [fontStep, setFontStep] = useState(loadFontStep);
@@ -233,6 +261,7 @@ const BibleRead = () => {
     setVerses(null);
     setVersesKo(null);
     setFlipped(false);
+    trackerRef.current?.setUnit(p.bookId + ":" + p.chapter);
     // 장을 옮기면 맨 위부터 읽으므로 이전 장의 절 위치는 버립니다
     verseRefs.current = {};
     pendingAnchor.current = null;
@@ -341,6 +370,7 @@ const BibleRead = () => {
 
   const openWordPopup = async (rawToken: string, sentence: string) => {
     if (shouldIgnoreTap()) return;
+    trackerRef.current?.touch();
     const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
     if (!word) return;
     const key = word.toLowerCase();
@@ -465,6 +495,7 @@ const BibleRead = () => {
   return (
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       <div ref={scrollTopRef} />
+      <PointFloat value={floatVal} seq={floatSeq} />
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => navigate("/")}
