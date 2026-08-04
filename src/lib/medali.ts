@@ -72,7 +72,7 @@ export interface WordRecord {
 
 export interface GameRound {
   id: string;                                 // String(Date.now()) + 난수 꼬리
-  game: "match" | "ox";
+  game: "match" | "ox" | "susun";
   date: string;
   durationSec: number;
   score: number;
