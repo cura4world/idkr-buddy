@@ -154,3 +154,101 @@ export async function drawPool(unconfirmed: number, confirmed: number): Promise<
 
   return picked;
 }
+
+// ── 문장 조립(Susun Kalimat)용 예문 ────────────────────────────────
+// 예문이 있는 단어만 씁니다. 찾아본 단어(lookup)는 예문이 없어 제외됩니다.
+
+export interface PoolSentence {
+  word: string;         // 표제어 (Bintang 판정 대상)
+  meaning: string;      // 표제어 뜻
+  sentence: string;     // 인니어 예문
+  sentenceKo: string;   // 예문 해석
+  source: "wordbook" | "seed";
+  status: "pending" | "confirmed" | "recheck";
+}
+
+const MIN_TOKENS = 4;   // 3개 이하는 조립이랄 게 없고
+const MAX_TOKENS = 10;  // 11개 이상은 폰 화면에 안 맞습니다
+
+export function tokenizeSentence(text: string): string[] {
+  return String(text || "")
+    .replace(new RegExp("\\s+", "g"), " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+}
+
+// 조립 게임용 예문 n개. 미확정 표제어 우선(recheck 최우선), 부족하면 확정에서 채웁니다.
+export async function drawSentences(n: number): Promise<PoolSentence[]> {
+  const out: PoolSentence[] = [];
+  const seenWord = new Set<string>();
+  const seenSentence = new Set<string>();
+
+  const push = (
+    word: string,
+    meaning: string,
+    sentence: string,
+    sentenceKo: string,
+    source: PoolSentence["source"]
+  ) => {
+    const key = wordKey(word);
+    const text = String(sentence || "").replace(new RegExp("\\s+", "g"), " ").trim();
+    if (!key || !text) return;
+    const count = tokenizeSentence(text).length;
+    if (count < MIN_TOKENS || count > MAX_TOKENS) return;
+    const sk = text.toLowerCase();
+    if (seenWord.has(key) || seenSentence.has(sk)) return;   // 표제어는 wordbook 우선
+    seenWord.add(key);
+    seenSentence.add(sk);
+    out.push({
+      word: String(word).trim(),
+      meaning: shortMeaning(meaning),
+      sentence: text,
+      sentenceKo: String(sentenceKo || "").replace(new RegExp("\\s+", "g"), " ").trim(),
+      source,
+      status: "pending",
+    });
+  };
+
+  let cats: ReturnType<typeof getCategories> = [];
+  try {
+    cats = getCategories();
+  } catch {
+    cats = [];
+  }
+
+  for (const c of cats.filter((x) => !x.isShared)) {
+    try {
+      for (const w of getWordsByCategory(c.id)) push(w.word, w.meaning, w.example, w.exampleMeaning, "wordbook");
+    } catch {
+      // 한 단어장이 깨져도 나머지는 계속
+    }
+  }
+  for (const c of cats.filter((x) => x.isShared)) {
+    try {
+      for (const w of getWordsByCategory(c.id)) push(w.word, w.meaning, w.example, w.exampleMeaning, "seed");
+    } catch {
+      // 무시
+    }
+  }
+
+  // 확정 여부 붙이기 (기록이 없으면 pending)
+  try {
+    const recs: WordRecord[] = await listWordRecords();
+    const byWord = new Map<string, WordRecord>();
+    for (const r of recs) if (r && r.word) byWord.set(r.word, r);
+    for (const p of out) {
+      const r = byWord.get(wordKey(p.word));
+      if (r && (r.status === "confirmed" || r.status === "recheck")) p.status = r.status;
+    }
+  } catch {
+    // 전부 pending으로 둡니다
+  }
+
+  const order: PoolSentence[] = [
+    ...out.filter((p) => p.status === "recheck"),
+    ...shuffle(out.filter((p) => p.status === "pending")),
+    ...shuffle(out.filter((p) => p.status === "confirmed")),
+  ];
+  return order.slice(0, n);
+}
