@@ -49,8 +49,8 @@ export const BINTANG_CUTOFFS: { color: MedaliColor; tier: 1 | 2 | 3; min: number
   { color: "tanah", tier: 1, min: 30 }, { color: "tanah", tier: 2, min: 12 }, { color: "tanah", tier: 3, min: 0 },
 ];
 
-const CONFIRM_GAP_MS = 3 * 24 * 60 * 60 * 1000; // 확정 판정: 3일 이상 간격 2회 정답
-const CONFIRM_EVIDENCE = 2;    // 확정에 필요한 누적 증거
+export const CONFIRM_GAP_MS = 3 * 24 * 60 * 60 * 1000; // 확정 판정: 3일 이상 간격 2회 정답
+export const CONFIRM_EVIDENCE = 2;    // 확정에 필요한 누적 증거
 const RECOVER_EVIDENCE = 1;    // 재검증 복귀에 필요한 증거
 const RECHECK_AFTER_MS = 60 * 24 * 60 * 60 * 1000;  // 확정 후 60일 지나면 재검증 대상
 
