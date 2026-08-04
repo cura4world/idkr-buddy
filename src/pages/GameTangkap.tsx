@@ -14,10 +14,10 @@ import { medaliEngine, listRounds, dateKey, MEDALI_COLORS } from "@/lib/medali";
 
 const MIN_WORDS = 6;          // 이보다 적으면 게임을 못 엽니다
 const LIVES = 3;
-const FALL_START_MS = 5000;   // 처음 낙하 시간
-const FALL_STEP_MS = 150;     // 하나 받을 때마다 빨라지는 폭
-const FALL_MIN_MS = 2500;     // 아무리 빨라도 여기까지
-const CATCH_MS = 300;         // 받았을 때 보여주는 시간
+const FALL_START_MS = 6500;   // 처음 낙하 시간 (뜻 세 개를 읽을 여유)
+const FALL_STEP_MS = 120;     // 하나 받을 때마다 빨라지는 폭
+const FALL_MIN_MS = 3500;     // 아무리 빨라도 여기까지
+const CATCH_MS = 400;         // 받았을 때 청록으로 켜 두는 시간
 const MISS_MS = 600;          // 놓쳤을 때 정답 뜻을 보여주는 시간
 const CHOICES = 3;            // 뜻 버튼 수
 
@@ -88,6 +88,30 @@ export function makeQuestion(
   }
 
   return { index, word: p.word, truth, choices: shuffle([truth].concat(picked), rand) };
+}
+
+// 뜻 버튼 색. 받았을 때는 누른 버튼이 청록으로 켜지고,
+// 놓쳤을 때는 누른 버튼이 붉게·정답 버튼이 청록으로 함께 켜집니다(바닥에 닿았으면 정답만).
+export function choiceClass(
+  choice: string,
+  truth: string,
+  picked: string | null,
+  caught: boolean,
+  revealing: boolean
+): string {
+  if (caught) {
+    return choice === picked
+      ? "border-primary bg-primary text-white"
+      : "border-border bg-card text-foreground";
+  }
+  if (revealing) {
+    if (picked && choice === picked && choice !== truth) {
+      return "border-destructive bg-destructive/15 text-destructive";
+    }
+    if (choice === truth) return "border-primary bg-primary/15 text-foreground";
+    return "border-border bg-card text-foreground";
+  }
+  return "border-border bg-card text-foreground active:bg-muted/60";
 }
 
 // 위에서 아래로 떨어지는 단어. key를 바꿔 새로 마운트하면 처음부터 다시 떨어집니다.
@@ -170,6 +194,7 @@ const GameTangkap = () => {
   const [score, setScore] = useState(0);
   const [fallMs, setFallMs] = useState(FALL_START_MS);
   const [caught, setCaught] = useState(false);    // 방금 받아냈는가
+  const [picked, setPicked] = useState<string | null>(null); // 방금 누른 뜻 버튼 (바닥이면 null)
   const [reveal, setReveal] = useState<string | null>(null); // 놓쳤을 때 보여줄 진짜 뜻
   const [result, setResult] = useState<RoundResult | null>(null);
   const [gained, setGained] = useState(0);
@@ -206,6 +231,7 @@ const GameTangkap = () => {
     const idx = queueRef.current.shift();
     setQuestion(makeQuestion(pool, typeof idx === "number" ? idx : 0));
     setCaught(false);
+    setPicked(null);
     setReveal(null);
     setSeq((n) => n + 1);
     lockedRef.current = false;
@@ -360,6 +386,7 @@ const GameTangkap = () => {
     const q = question;
     lockedRef.current = true;
     const ok = choice === q.truth;
+    setPicked(choice);
     remember(q, ok);
 
     if (ok) {
@@ -456,8 +483,8 @@ const GameTangkap = () => {
               <span className="font-gothic text-[0.75rem] text-muted-foreground">{score}개</span>
             </div>
 
-            {/* 낙하 영역 */}
-            <div className="relative mt-2 h-[34dvh] overflow-hidden rounded-2xl border border-border bg-card">
+            {/* 낙하 영역 — 길수록 떨어지는 속도가 느리게 느껴집니다 */}
+            <div className="relative mt-2 h-[52dvh] overflow-hidden rounded-2xl border border-border bg-card">
               {caught ? (
                 <span
                   className="absolute left-1/2 top-1/2 font-word text-[1.5rem] leading-none text-primary"
@@ -479,14 +506,17 @@ const GameTangkap = () => {
               )}
             </div>
 
-            {/* 뜻 버튼 */}
+            {/* 뜻 버튼 — 탭한 순간 무엇이 맞고 틀렸는지 색으로 알려 줍니다 */}
             <div className="mt-3 space-y-2">
               {question.choices.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => handleChoice(c)}
-                  className="w-full rounded-2xl border border-border bg-card px-4 py-3.5 text-left font-gothic text-[0.9375rem] text-foreground active:bg-muted/60"
+                  className={
+                    "w-full rounded-2xl border px-4 py-3 text-left font-gothic text-[0.9375rem] transition-colors " +
+                    choiceClass(c, question.truth, picked, caught, !!reveal)
+                  }
                 >
                   {c}
                 </button>
@@ -498,11 +528,11 @@ const GameTangkap = () => {
         {phase === "done" && result ? (
           <div className="mt-4">
             <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center">
-              <p className="relative inline-block font-word text-[2rem] leading-none tabular-nums text-foreground">
-                {result.score}개 받았어요
+              <p className="relative inline-block font-word text-[1.375rem] font-medium leading-snug text-foreground">
+                <span className="tabular-nums text-primary">{result.score}</span>개 받았어요
                 {floatOn ? <FloatPoint text={"+" + gained} /> : null}
               </p>
-              <p className="mt-2 font-gothic text-[0.78125rem] text-muted-foreground">
+              <p className="mt-2 font-gothic text-[0.8125rem] text-muted-foreground">
                 {result.bestBefore === 0 || result.score > result.bestBefore
                   ? "최고 기록!"
                   : "최고 " + result.bestBefore + "개"}
