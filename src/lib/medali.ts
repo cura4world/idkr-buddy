@@ -191,6 +191,8 @@ export interface MedaliCache {
   apiColor: MedaliColor;
   bintangColor: MedaliColor;
   bintangTier: 1 | 2 | 3;
+  apiWeekPoints: number;   // 명찰 캡슐이 첫 페인트에 바로 보여 주는 숫자
+  confirmedCount: number;
   updatedAt: number;
 }
 
@@ -198,8 +200,13 @@ const DEFAULT_CACHE: MedaliCache = {
   apiColor: "tanah",
   bintangColor: "tanah",
   bintangTier: 3,
+  apiWeekPoints: 0,
+  confirmedCount: 0,
   updatedAt: 0,
 };
+
+// 예전 캐시에는 숫자 필드가 없으므로 없으면 0으로 봅니다 (파싱을 실패시키지 않습니다)
+const num = (v: unknown): number => (typeof v === "number" && isFinite(v) && v > 0 ? v : 0);
 
 function isColor(v: unknown): v is MedaliColor {
   return typeof v === "string" && Object.prototype.hasOwnProperty.call(MEDALI_COLORS, v);
@@ -215,6 +222,8 @@ export function loadMedaliCache(): MedaliCache {
       apiColor: isColor(p.apiColor) ? p.apiColor : "tanah",
       bintangColor: isColor(p.bintangColor) ? p.bintangColor : "tanah",
       bintangTier: tier,
+      apiWeekPoints: num(p.apiWeekPoints),
+      confirmedCount: num(p.confirmedCount),
       updatedAt: typeof p.updatedAt === "number" ? p.updatedAt : 0,
     };
   } catch {
@@ -289,7 +298,9 @@ class MedaliEngine {
     if (
       c.apiColor === this.snap.apiColor &&
       c.bintangColor === this.snap.bintangColor &&
-      c.bintangTier === this.snap.bintangTier
+      c.bintangTier === this.snap.bintangTier &&
+      c.apiWeekPoints === this.snap.apiWeekPoints &&
+      c.confirmedCount === this.snap.confirmedCount
     ) {
       return;
     }
@@ -297,6 +308,8 @@ class MedaliEngine {
       apiColor: this.snap.apiColor,
       bintangColor: this.snap.bintangColor,
       bintangTier: this.snap.bintangTier,
+      apiWeekPoints: this.snap.apiWeekPoints,
+      confirmedCount: this.snap.confirmedCount,
       updatedAt: Date.now(),
     });
   }
