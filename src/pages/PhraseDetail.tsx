@@ -13,6 +13,8 @@ import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import { fetchChapterKo, getBook } from "@/lib/bible";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import SettingsDialog from "@/components/SettingsDialog";
+import { medaliEngine } from "@/lib/medali";
+import PointFloat from "@/components/PointFloat";
 
 /* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 */
 const speak = (text: string, lang: "id" | "ko") => {
@@ -173,12 +175,30 @@ const PhraseDetail = () => {
     setPopupSaved(hasWordInCategory(saveTargetId, popupWord));
   }, [popupWord, saveTargetId]);
 
+  // ---------- Bahasa Hari Ini 점수 ----------
+  // 최초 로드 성공에만 +2. "다시 받기"(force)나 같은 문장 재방문은 제외합니다.
+  const [floatVal, setFloatVal] = useState(0);
+  const [floatSeq, setFloatSeq] = useState(0);
+  const paidPhrasesRef = useRef(new Set<string>());
+
   const load = useCallback(async (force = false, koHint?: string) => {
     setLoading(true);
     setError("");
     try {
       const d = await getPhraseDetail(item.id, koHint !== undefined ? koHint : item.ko, force, kind);
       setData(d);
+      if (!force && item.id && !paidPhrasesRef.current.has(item.id)) {
+        paidPhrasesRef.current.add(item.id);
+        medaliEngine
+          .addPoints("phrase", 2)
+          .then((got) => {
+            if (got > 0) {
+              setFloatVal(got);
+              setFloatSeq((n) => n + 1);
+            }
+          })
+          .catch(() => {});
+      }
     } catch (e: any) {
       const msg = String(e?.message || "");
       if (msg === "NO_API_KEY" || msg === "INVALID_API_KEY") setError("API_KEY");
@@ -312,6 +332,7 @@ const PhraseDetail = () => {
 
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto pb-10">
+      <PointFloat value={floatVal} seq={floatSeq} />
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => goBackOr(navigate, location.key, "/")}
