@@ -5,7 +5,7 @@
 
 import { getCategories, getWordsByCategory } from "@/lib/store";
 import { listLookupWords } from "@/lib/wordStore";
-import { listWordRecords, effectiveStatus } from "@/lib/medali";
+import { listWordRecords, effectiveStatus, CONFIRM_EVIDENCE, CONFIRM_GAP_MS } from "@/lib/medali";
 import type { WordRecord } from "@/lib/medali";
 
 export interface PoolWord {
@@ -13,6 +13,7 @@ export interface PoolWord {
   meaning: string;         // 한국어 뜻
   source: "wordbook" | "lookup" | "seed";
   status: "pending" | "confirmed" | "recheck" | "monitoring";  // medali 기록 없으면 "pending"
+  nearConfirm?: boolean;   // 한 번만 더 맞히면 별이 되는 단어 (출제 때 앞줄로)
 }
 
 const LOOKUP_LIMIT = 300;   // 찾아본 단어는 최근 300개까지만 후보로
@@ -102,7 +103,17 @@ export async function collectCandidates(): Promise<PoolWord[]> {
       if (!r) continue;
       // 확정 후 60일이 지난 단어는 저장값이 confirmed라도 재검증 대상으로 봅니다
       const st = effectiveStatus(r, now);
-      if (st === "confirmed" || st === "recheck" || st === "monitoring") p.status = st;
+      if (st === "confirmed" || st === "recheck" || st === "monitoring") {
+        p.status = st;
+      } else if (
+        // 증거도 간격도 이미 충족 — 이번에 한 번만 더 맞히면 별이 되는 단어입니다
+        st === "pending" &&
+        (r.evidence ?? r.corrects ?? 0) >= CONFIRM_EVIDENCE - 1 &&
+        r.firstCorrectAt > 0 &&
+        now - r.firstCorrectAt >= CONFIRM_GAP_MS
+      ) {
+        p.nearConfirm = true;
+      }
     }
   } catch {
     // 기록을 못 읽으면 전부 pending으로 둡니다
@@ -116,20 +127,25 @@ export async function collectCandidates(): Promise<PoolWord[]> {
 export async function drawPool(unconfirmed: number, confirmed: number): Promise<PoolWord[]> {
   const all = await collectCandidates();
 
-  // 미확정 뽑기 순서: monitoring → recheck → 찾아본 단어 → 단어장 → 시드.
+  // 미확정 뽑기 순서: monitoring → recheck → 확정 직전 → 찾아본 단어 → 단어장 → 시드.
   // monitoring은 한 번 더 틀리면 별이 줄어드는 단어라 재검증 중에서도 가장 먼저 냅니다.
+  // 확정 직전(nearConfirm)은 한 번만 더 맞히면 별이 되므로 같은 판 수로 별이 더 빨리 늡니다.
   // 층의 순서는 지키되 층 안에서는 섞습니다 — 안 그러면 판정이 바뀌기 전까지
   // 매판 같은 앞줄만 뽑혀 "또 그 단어"가 됩니다.
   // 찾아본 단어는 최근 60개를 "후보 창"으로 삼고, 그 안에서 무작위로 뽑습니다.
   const monitoringList = all.filter((p) => p.status === "monitoring");
   const recheckList = all.filter((p) => p.status === "recheck");
   const pending = all.filter((p) => p.status === "pending");
+  const nearList = pending.filter((p) => p.nearConfirm);
+  // 확정 직전 단어는 위에서 이미 냈으므로 아래 층에서는 뺍니다 (같은 판에 두 번 나오지 않도록)
+  const restPending = pending.filter((p) => !p.nearConfirm);
   const unconfirmedOrder: PoolWord[] = [
     ...shuffle(monitoringList),
     ...shuffle(recheckList),
-    ...shuffle(pending.filter((p) => p.source === "lookup").slice(0, LOOKUP_WINDOW)),
-    ...shuffle(pending.filter((p) => p.source === "wordbook")),
-    ...shuffle(pending.filter((p) => p.source === "seed")),
+    ...shuffle(nearList),
+    ...shuffle(restPending.filter((p) => p.source === "lookup").slice(0, LOOKUP_WINDOW)),
+    ...shuffle(restPending.filter((p) => p.source === "wordbook")),
+    ...shuffle(restPending.filter((p) => p.source === "seed")),
   ];
   const confirmedOrder = shuffle(all.filter((p) => p.status === "confirmed"));
 
@@ -153,10 +169,18 @@ export async function drawPool(unconfirmed: number, confirmed: number): Promise<
     return got;
   };
 
-  take(unconfirmedOrder, unconfirmed);
-  take(confirmedOrder, confirmed);
+  // 확정 단어는 복습이라 별을 올리지 못합니다. 미확정 후보가 넉넉할 때에 한해
+  // 확정 몫의 절반을 미확정 쪽으로 옮겨 같은 판 수로 별이 더 오르게 합니다.
+  // (후보가 모자라면 shift가 0이 되어 예전과 똑같이 동작합니다)
+  const shift = Math.min(Math.floor(confirmed / 2), Math.max(0, unconfirmedOrder.length - unconfirmed));
+  const wantUnconfirmed = unconfirmed + shift;
+  const wantConfirmed = confirmed - shift;
+
+  take(unconfirmedOrder, wantUnconfirmed);
+  take(confirmedOrder, wantConfirmed);
 
   // 한쪽이 모자라면 다른 쪽에서 채웁니다 (take는 이미 뽑힌 것을 건너뜁니다)
+  // 총합은 unconfirmed + confirmed 그대로라 게임 화면이 기대하는 개수는 바뀌지 않습니다.
   const short = unconfirmed + confirmed - picked.length;
   if (short > 0) {
     const more = take(confirmedOrder, short);
@@ -176,6 +200,7 @@ export interface PoolSentence {
   sentenceKo: string;   // 예문 해석
   source: "wordbook" | "seed";
   status: "pending" | "confirmed" | "recheck" | "monitoring";
+  nearConfirm?: boolean;   // 한 번만 더 맞히면 별이 되는 표제어
 }
 
 const MIN_TOKENS = 4;   // 3개 이하는 조립이랄 게 없고
@@ -189,7 +214,7 @@ export function tokenizeSentence(text: string): string[] {
     .filter(Boolean);
 }
 
-// 조립 게임용 예문 n개. 미확정 표제어 우선(monitoring → recheck), 부족하면 확정에서 채웁니다.
+// 조립 게임용 예문 n개. 미확정 표제어 우선(monitoring → recheck → 확정 직전), 부족하면 확정에서 채웁니다.
 export async function drawSentences(n: number): Promise<PoolSentence[]> {
   const out: PoolSentence[] = [];
   const seenWord = new Set<string>();
@@ -254,7 +279,17 @@ export async function drawSentences(n: number): Promise<PoolSentence[]> {
       if (!r) continue;
       // 확정 후 60일이 지난 단어는 저장값이 confirmed라도 재검증 대상으로 봅니다
       const st = effectiveStatus(r, now);
-      if (st === "confirmed" || st === "recheck" || st === "monitoring") p.status = st;
+      if (st === "confirmed" || st === "recheck" || st === "monitoring") {
+        p.status = st;
+      } else if (
+        // 증거도 간격도 이미 충족 — 이번에 한 번만 더 맞히면 별이 되는 단어입니다
+        st === "pending" &&
+        (r.evidence ?? r.corrects ?? 0) >= CONFIRM_EVIDENCE - 1 &&
+        r.firstCorrectAt > 0 &&
+        now - r.firstCorrectAt >= CONFIRM_GAP_MS
+      ) {
+        p.nearConfirm = true;
+      }
     }
   } catch {
     // 전부 pending으로 둡니다
@@ -264,7 +299,8 @@ export async function drawSentences(n: number): Promise<PoolSentence[]> {
   const order: PoolSentence[] = [
     ...shuffle(out.filter((p) => p.status === "monitoring")),
     ...shuffle(out.filter((p) => p.status === "recheck")),
-    ...shuffle(out.filter((p) => p.status === "pending")),
+    ...shuffle(out.filter((p) => p.status === "pending" && p.nearConfirm)),
+    ...shuffle(out.filter((p) => p.status === "pending" && !p.nearConfirm)),
     ...shuffle(out.filter((p) => p.status === "confirmed")),
   ];
   return order.slice(0, n);
