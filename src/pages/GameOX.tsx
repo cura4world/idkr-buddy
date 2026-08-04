@@ -415,7 +415,7 @@ const GameOX = () => {
               <p className="font-word text-[1.5rem] leading-tight text-foreground break-words">
                 {question.word}
               </p>
-              <p className="mt-3 font-gothic text-[1.0625rem] leading-snug text-foreground/90 break-words">
+              <p className="mt-3 font-gothic text-[0.9375rem] leading-snug text-foreground/90 break-words">
                 {question.shown}
               </p>
               {reveal ? (
@@ -429,14 +429,14 @@ const GameOX = () => {
               <button
                 type="button"
                 onClick={() => answer(true)}
-                className="flex-1 py-5 rounded-2xl bg-primary text-[1.0625rem] font-medium text-white active:opacity-90"
+                className="flex-1 py-5 rounded-2xl bg-primary text-[0.9375rem] font-medium text-white active:opacity-90"
               >
                 O 맞아요
               </button>
               <button
                 type="button"
                 onClick={() => answer(false)}
-                className="flex-1 py-5 rounded-2xl border border-border bg-card text-[1.0625rem] font-medium text-foreground active:bg-muted/60"
+                className="flex-1 py-5 rounded-2xl border border-border bg-card text-[0.9375rem] font-medium text-foreground active:bg-muted/60"
               >
                 X 아니에요
               </button>
