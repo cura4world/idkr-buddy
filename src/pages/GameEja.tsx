@@ -464,7 +464,7 @@ const GameEja = () => {
                       (v.blank
                         ? v.done
                           ? "bg-primary/15 text-primary"
-                          : "border-b-2 border-primary/60 text-transparent"
+                          : "bg-primary/15 text-transparent"
                         : "text-foreground")
                     }
                   >
