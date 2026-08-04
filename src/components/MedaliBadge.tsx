@@ -15,7 +15,11 @@ interface BadgeView {
   bintangColor: MedaliColor;
 }
 
-export default function MedaliBadge() {
+interface Props {
+  onClick?: () => void;   // 없으면 눌러도 아무 일도 일어나지 않습니다
+}
+
+export default function MedaliBadge({ onClick }: Props) {
   const [view, setView] = useState<BadgeView>(() => {
     const c = loadMedaliCache();
     return { apiColor: c.apiColor, bintangColor: c.bintangColor };
@@ -36,6 +40,7 @@ export default function MedaliBadge() {
     <button
       type="button"
       title="Medali"
+      onClick={onClick}
       className="h-8 px-3 rounded-full flex items-center gap-1.5 bg-white/15 border border-white/20 shrink-0"
     >
       {/* 어두운 단계(Tanah)에서도 실루엣이 보이도록 면은 훈장 색, 테두리는 옅은 흰색 */}
