@@ -193,7 +193,8 @@ const GameOX = () => {
 
     // 2) 단어별 기록 (첫 응답 기준) → 이번에 별이 된 단어
     for (const w of words) {
-      const r = await medaliEngine.recordWordResult(w.word, w.correct, w.source);
+      // OX는 찍어도 절반은 맞으므로 증거를 0.5만 인정합니다
+      const r = await medaliEngine.recordWordResult(w.word, w.correct, w.source, 0.5);
       w.becameConfirmed = r.becameConfirmed;
     }
 
