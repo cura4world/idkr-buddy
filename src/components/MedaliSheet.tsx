@@ -394,7 +394,10 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                 })}
               </div>
 
-              <p className="mt-3 pb-1 text-center text-[0.6875rem] leading-relaxed text-muted-foreground">
+              <p className="mt-4 text-center font-gothic text-[0.65625rem] leading-relaxed text-muted-foreground">
+                동 30 · 은 100 · 금 180 · 백금 280 · 보석 400점
+              </p>
+              <p className="mt-1.5 pb-1 text-center text-[0.6875rem] leading-relaxed text-muted-foreground">
                 Api는 월요일에 다시 시작해요. 주일은 쉬어요.
               </p>
             </div>
