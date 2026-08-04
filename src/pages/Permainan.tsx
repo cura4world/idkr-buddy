@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Blocks, ChevronRight, Grid2X2, ListChecks, X, Zap } from "lucide-react";
+import { ArrowLeft, Blocks, ChevronRight, Grid2X2, ListChecks, Target, Type, X, Zap } from "lucide-react";
 import { goBackOr } from "@/lib/nav";
 import { listRounds } from "@/lib/medali";
 import { getCategories, getWordsByCategory } from "@/lib/store";
@@ -24,6 +24,8 @@ const Permainan = () => {
   const [best, setBest] = useState(0); // 짝맞추기 최고(최단) 기록. 0이면 없음
   const [bestOx, setBestOx] = useState(0); // O/X 최고 정답 수. 0이면 없음
   const [bestSusun, setBestSusun] = useState(0); // 문장 조립 최고(최단) 기록. 0이면 없음
+  const [bestEja, setBestEja] = useState(0); // 철자 채우기 최고 맞힌 단어 수. 0이면 없음
+  const [bestTangkap, setBestTangkap] = useState(0); // 단어 받기 최고 받은 수. 0이면 없음
 
   // 퀴즈는 단어장별이라 최고 기록 대신 "어느 단어장으로 볼까요?" 시트를 띄웁니다.
   const [kuisOpen, setKuisOpen] = useState(false);
@@ -138,6 +140,44 @@ const Permainan = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    listRounds("eja")
+      .then((rounds) => {
+        if (cancelled) return;
+        let max = 0;
+        for (const r of rounds) {
+          if (r && r.score > max) max = r.score;
+        }
+        setBestEja(max);
+      })
+      .catch(() => {
+        // 기록을 못 읽어도 게임은 열립니다
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    listRounds("tangkap")
+      .then((rounds) => {
+        if (cancelled) return;
+        let max = 0;
+        for (const r of rounds) {
+          if (r && r.score > max) max = r.score;
+        }
+        setBestTangkap(max);
+      })
+      .catch(() => {
+        // 기록을 못 읽어도 게임은 열립니다
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-clip bg-background pb-9">
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
@@ -219,6 +259,52 @@ const Permainan = () => {
           {bestSusun > 0 ? (
             <span className="shrink-0 font-word text-[0.78125rem] text-muted-foreground">
               최고 {bestSusun}초
+            </span>
+          ) : null}
+          <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate("/permainan/eja")}
+          className="mt-3 w-full flex items-center gap-3.5 rounded-2xl border border-border bg-card px-4 py-4 text-left active:bg-muted/60 transition-colors"
+        >
+          <Type size={22} className="shrink-0 text-muted-foreground" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[0.9375rem] leading-tight text-foreground">철자 채우기</p>
+            <p className="mt-0.5 font-word text-[0.71875rem] text-muted-foreground truncate">
+              Eja
+            </p>
+            <p className="mt-1.5 text-[0.78125rem] text-muted-foreground">
+              뜻을 보고 빈칸에 글자를 채워요
+            </p>
+          </div>
+          {bestEja > 0 ? (
+            <span className="shrink-0 font-word text-[0.78125rem] text-muted-foreground">
+              최고 {bestEja}개
+            </span>
+          ) : null}
+          <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate("/permainan/tangkap")}
+          className="mt-3 w-full flex items-center gap-3.5 rounded-2xl border border-border bg-card px-4 py-4 text-left active:bg-muted/60 transition-colors"
+        >
+          <Target size={22} className="shrink-0 text-muted-foreground" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[0.9375rem] leading-tight text-foreground">단어 받기</p>
+            <p className="mt-0.5 font-word text-[0.71875rem] text-muted-foreground truncate">
+              Tangkap
+            </p>
+            <p className="mt-1.5 text-[0.78125rem] text-muted-foreground">
+              떨어지는 단어의 뜻을 골라 받아요
+            </p>
+          </div>
+          {bestTangkap > 0 ? (
+            <span className="shrink-0 font-word text-[0.78125rem] text-muted-foreground">
+              최고 {bestTangkap}개
             </span>
           ) : null}
           <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
