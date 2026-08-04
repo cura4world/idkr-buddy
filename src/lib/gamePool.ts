@@ -16,6 +16,7 @@ export interface PoolWord {
 }
 
 const LOOKUP_LIMIT = 300;   // 찾아본 단어는 최근 300개까지만 후보로
+const LOOKUP_WINDOW = 60;   // 그중 최근 60개 안에서 무작위로 뽑습니다 (최근성 + 다양성)
 const MEANING_MAX = 24;     // 카드에 들어갈 뜻 길이 상한
 
 // 카드 한 장에 들어갈 만한 길이로 뜻을 다듬습니다.
@@ -111,13 +112,16 @@ export async function collectCandidates(): Promise<PoolWord[]> {
 export async function drawPool(unconfirmed: number, confirmed: number): Promise<PoolWord[]> {
   const all = await collectCandidates();
 
-  // 미확정 뽑기 순서: recheck 전체 → lookup 최근순 → wordbook → seed 무작위
+  // 미확정 뽑기 순서: recheck → 찾아본 단어 → 단어장 → 시드.
+  // 층의 순서는 지키되 층 안에서는 섞습니다 — 안 그러면 판정이 바뀌기 전까지
+  // 매판 같은 앞줄만 뽑혀 "또 그 단어"가 됩니다.
+  // 찾아본 단어는 최근 60개를 "후보 창"으로 삼고, 그 안에서 무작위로 뽑습니다.
   const recheckList = all.filter((p) => p.status === "recheck");
   const pending = all.filter((p) => p.status === "pending");
   const unconfirmedOrder: PoolWord[] = [
-    ...recheckList,
-    ...pending.filter((p) => p.source === "lookup"),
-    ...pending.filter((p) => p.source === "wordbook"),
+    ...shuffle(recheckList),
+    ...shuffle(pending.filter((p) => p.source === "lookup").slice(0, LOOKUP_WINDOW)),
+    ...shuffle(pending.filter((p) => p.source === "wordbook")),
     ...shuffle(pending.filter((p) => p.source === "seed")),
   ];
   const confirmedOrder = shuffle(all.filter((p) => p.status === "confirmed"));
@@ -245,8 +249,9 @@ export async function drawSentences(n: number): Promise<PoolSentence[]> {
     // 전부 pending으로 둡니다
   }
 
+  // 층 순서는 지키되 층 안에서는 섞습니다 (매판 같은 예문이 나오지 않도록)
   const order: PoolSentence[] = [
-    ...out.filter((p) => p.status === "recheck"),
+    ...shuffle(out.filter((p) => p.status === "recheck")),
     ...shuffle(out.filter((p) => p.status === "pending")),
     ...shuffle(out.filter((p) => p.status === "confirmed")),
   ];
