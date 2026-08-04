@@ -85,7 +85,28 @@ function shuffledQueue(n: number): number[] {
   return a;
 }
 
-// "+3" 같은 점수 표시가 위로 떠오르며 사라집니다. (소리 없음)
+/* 문제가 바뀔 때마다 단어를 읽어 줍니다.
+   폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 (GameEja와 같은 방식).
+   이전 발음은 끊고 새로 재생하며, 실패해도 게임은 그대로 진행됩니다. */
+const speak = (text: string) => {
+  const w = window as any;
+  if (w.AndroidTTS) {
+    try {
+      try { w.AndroidTTS.stop?.(); } catch (e) {}
+      w.AndroidTTS.speak(text, "id-ID");
+      return;
+    } catch (e) { /* 폴백으로 넘어갑니다 */ }
+  }
+  try {
+    window.speechSynthesis?.cancel?.();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "id-ID";
+    u.rate = 1;
+    window.speechSynthesis?.speak?.(u);
+  } catch (e) { /* 지원하지 않는 기기는 조용히 넘어갑니다 */ }
+};
+
+// "+3" 같은 점수 표시가 위로 떠오르며 사라집니다. (효과음 없음)
 const FloatPoint = ({ text }: { text: string }) => {
   const [on, setOn] = useState(false);
   useEffect(() => {
@@ -144,7 +165,9 @@ const GameOX = () => {
     if (pool.length === 0) return;
     if (queueRef.current.length === 0) queueRef.current = shuffledQueue(pool.length);
     const idx = queueRef.current.shift();
-    setQuestion(makeQuestion(pool, typeof idx === "number" ? idx : 0));
+    const q = makeQuestion(pool, typeof idx === "number" ? idx : 0);
+    setQuestion(q);
+    speak(q.word);   // 발음은 그냥 흘려보냅니다 — 기다리지 않으므로 진행이 막히지 않습니다
   }, []);
 
   // 판 종료 — finishedRef 가드로 정확히 1회만 실행됩니다
@@ -268,6 +291,8 @@ const GameOX = () => {
       if (tickRef.current) window.clearInterval(tickRef.current);
       if (revealTimerRef.current) window.clearTimeout(revealTimerRef.current);
       if (floatTimerRef.current) window.clearTimeout(floatTimerRef.current);
+      try { (window as any).AndroidTTS?.stop?.(); } catch (e) {}
+      try { window.speechSynthesis?.cancel?.(); } catch (e) {}
     };
   }, []);
 
@@ -422,11 +447,11 @@ const GameOX = () => {
         {phase === "done" && result ? (
           <div className="mt-4">
             <div className="relative rounded-2xl border border-border bg-card px-4 py-6 text-center">
-              <p className="relative inline-block font-word text-[2rem] leading-none tabular-nums text-foreground">
-                {result.score}개
+              <p className="relative inline-block font-word text-[1.375rem] font-medium leading-snug text-foreground">
+                <span className="tabular-nums text-primary">{result.score}</span>개
                 {floatOn ? <FloatPoint text={"+" + gained} /> : null}
               </p>
-              <p className="mt-2 font-gothic text-[0.78125rem] text-muted-foreground">
+              <p className="mt-2 font-gothic text-[0.8125rem] text-muted-foreground">
                 {result.bestBefore === 0 || result.score > result.bestBefore
                   ? "최고 기록!"
                   : "최고 " + result.bestBefore + "개"}
