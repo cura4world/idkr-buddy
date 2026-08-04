@@ -105,6 +105,39 @@ export function saveWords(words: Word[]) {
   try { localStorage.setItem(WORDS_KEY, JSON.stringify(words)); } catch (e) {}
 }
 
+// ── 단어 뜻 조회 실패 안내문 ───────────────────────────────────────────
+// 팝업에서 Gemini 조회가 실패하면 뜻 칸에 이 문구를 넣는다.
+// 이 문구가 단어장에 "뜻"으로 저장되면 퀴즈·게임 보기로 튀어나오므로,
+// (1) 저장 단계에서 막고 (2) 예전에 저장된 것은 시작할 때 지운다.
+export const LOOKUP_FAIL_TEXT = "뜻을 불러오지 못했어요. 다시 탭해주세요";
+const LOOKUP_FAIL_HEAD = "뜻을 불러오지 못했어요";
+
+// 빈 뜻은 실패로 보지 않는다 — CSV로 들어온 정상 단어를 지우면 안 되기 때문.
+export function isFailedMeaning(meaning: string): boolean {
+  return (meaning || "").trim().startsWith(LOOKUP_FAIL_HEAD);
+}
+
+// 이번 실행에서 지운 단어들 (메인 화면이 한 번 읽어 가서 알려 준다)
+let purgedFailedWords: string[] = [];
+
+function purgeFailedMeaningWords() {
+  try {
+    const words = getWords();
+    const bad = words.filter((w) => isFailedMeaning(w.meaning));
+    if (bad.length === 0) return;
+    const badIds = new Set(bad.map((w) => w.id));
+    saveWords(words.filter((w) => !badIds.has(w.id)));
+    purgedFailedWords = bad.map((w) => w.word);
+  } catch (e) {}
+}
+
+// 메인에서 한 번만 읽어 간다 (읽으면 비워진다)
+export function takePurgedFailedWords(): string[] {
+  const list = purgedFailedWords;
+  purgedFailedWords = [];
+  return list;
+}
+
 function initSharedCategories() {
   const seed = seedData as { version: number; categories: Category[]; words: Word[] };
   // 공용 단어장 + (설정된 경우) 내 개인 폴더 단어장만 반영
@@ -173,6 +206,7 @@ function sortMyWordbookNewestFirstOnce() {
 initSharedCategories();
 ensureMyWordbook();
 sortMyWordbookNewestFirstOnce();
+purgeFailedMeaningWords();
 
 export function addCategory(name: string, emoji: string): Category {
   const categories = getCategories();
@@ -288,7 +322,9 @@ export function hasWordInCategory(categoryId: string, word: string): boolean {
 }
 
 // 중복이면 추가하지 않고 알려줍니다 (사전/이야기의 "단어장에 담기"용)
-export function addWordIfAbsent(word: Omit<Word, "id" | "createdAt">): { added: boolean } {
+export function addWordIfAbsent(word: Omit<Word, "id" | "createdAt">): { added: boolean; rejected?: boolean } {
+  // 조회 실패 안내문은 뜻이 아니다. 절대 저장하지 않는다.
+  if (isFailedMeaning(word.meaning)) return { added: false, rejected: true };
   if (hasWordInCategory(word.categoryId, word.word)) return { added: false };
   addWord(word);
   medaliEngine.addPoints("save", 1).catch(() => {});  // 단어 담기 +1 (조용히)
