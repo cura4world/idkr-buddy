@@ -226,7 +226,8 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
           </button>
         </div>
 
-        <div className="max-h-[78dvh] overflow-y-auto px-4">
+        {/* 탭을 바꿔도 시트 높이가 출렁이지 않게 고정합니다 (내용이 넘치면 안에서 스크롤) */}
+        <div className="h-[68dvh] overflow-y-auto px-4">
           {tab === "api" ? (
             <div className="pt-5">
               {/* 지금 색 */}
