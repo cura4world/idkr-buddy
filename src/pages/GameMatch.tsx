@@ -326,7 +326,7 @@ const GameMatch = () => {
                   type="button"
                   onClick={() => handleCard(c)}
                   className={
-                    "min-h-[3.25rem] rounded-xl border px-2.5 py-2.5 flex items-center justify-center text-center transition-colors " +
+                    "min-h-[3.75rem] rounded-xl border px-2.5 py-3.5 flex items-center justify-center text-center transition-colors " +
                     (face
                       ? done
                         ? "bg-primary/15 border-primary"
@@ -339,8 +339,8 @@ const GameMatch = () => {
                       className={
                         "break-words leading-snug line-clamp-2 " +
                         (c.kind === "id"
-                          ? "font-word text-base text-foreground"
-                          : "font-gothic text-[0.9375rem] text-foreground")
+                          ? "font-word text-[0.9375rem] text-foreground"
+                          : "font-gothic text-[0.875rem] text-foreground")
                       }
                     >
                       {c.text}
