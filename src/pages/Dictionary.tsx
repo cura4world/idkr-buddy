@@ -22,6 +22,7 @@ import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveT
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import { getStoredImage, saveStoredImage } from "@/lib/imageStore";
 import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
+import { medaliEngine } from "@/lib/medali";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // TTS: AndroidTTS 우선, 없으면 speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -321,6 +322,9 @@ const Dictionary = () => {
         setKoSentence(r);
         await saveCachedResult(cacheKey, detected, w, r);
       }
+      // 여기까지 왔다 = API로 새 결과를 받아 캐시까지 넣은 경우만.
+      // 캐시 적중 경로는 위에서 이미 return 되므로 점수가 오르지 않습니다.
+      medaliEngine.addPoints("dict", 1).catch(() => {});  // 새 검색 +1 (조용히)
       finishSuccess();
     } catch (e: any) {
       setError(errorMessage(e?.message || ""));
