@@ -7,6 +7,9 @@ import { useState, useEffect } from "react";
 import { Flame, Star } from "lucide-react";
 import { medaliEngine, loadMedaliCache, MEDALI_COLORS, MedaliColor } from "@/lib/medali";
 
+// 아이콘 외곽선 — 어두운 헤더 위에서 훈장 모양이 묻히지 않게 하는 최소한의 밝기
+const STROKE = "rgba(255,255,255,0.55)";
+
 interface BadgeView {
   apiColor: MedaliColor;
   bintangColor: MedaliColor;
@@ -33,11 +36,12 @@ export default function MedaliBadge() {
     <button
       type="button"
       title="Medali"
-      className="h-[30px] px-2.5 rounded-full flex items-center gap-1.5 bg-white/10 shrink-0"
+      className="h-8 px-3 rounded-full flex items-center gap-1.5 bg-white/15 border border-white/20 shrink-0"
     >
-      <Flame size={16} color={api} fill={api} />
-      <span className="w-px h-3.5 bg-white/25" aria-hidden="true" />
-      <Star size={15} color={bintang} fill={bintang} />
+      {/* 어두운 단계(Tanah)에서도 실루엣이 보이도록 면은 훈장 색, 테두리는 옅은 흰색 */}
+      <Flame size={18} color={STROKE} fill={api} strokeWidth={1.5} />
+      <span className="w-px h-4 bg-white/30" aria-hidden="true" />
+      <Star size={17} color={STROKE} fill={bintang} strokeWidth={1.5} />
     </button>
   );
 }
