@@ -315,7 +315,9 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                 </p>
                 {/* 명찰의 불꽃 옆 숫자가 무엇인지 여기서 읽힙니다 */}
                 <p className="mt-1.5 max-w-[17rem] font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
-                  이번 주 월요일부터 쌓은 공부 점수예요. 토요일 밤까지 모으고 월요일에 다시 시작해요.
+                  이번 주 월요일부터 쌓은 공부 점수예요.
+                  <br />
+                  토요일 밤까지 모으고 월요일에 다시 시작해요.
                 </p>
               </div>
 
@@ -452,7 +454,9 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                 </p>
                 {/* 명찰의 별 옆 숫자가 무엇인지 여기서 읽힙니다 */}
                 <p className="mt-1.5 max-w-[17rem] font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
-                  3일 이상 간격을 두고 두 번 맞힌 단어예요. 리셋 없이 평생 쌓이고, 명찰의 별 옆 숫자와 같아요.
+                  3일 이상 간격을 두고 두 번 맞힌 단어예요.
+                  <br />
+                  리셋 없이 평생 쌓이고, 명찰의 별 옆 숫자와 같아요.
                 </p>
               </div>
 
