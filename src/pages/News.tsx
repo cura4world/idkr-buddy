@@ -14,6 +14,8 @@ import { hasGeminiApiKey } from "@/lib/gemini";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
+import { ReadingTracker } from "@/lib/readingTimer";
+import PointFloat from "@/components/PointFloat";
 
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -59,6 +61,40 @@ const News = () => {
   const todayEdition = editions.find((e) => e.date === tk) || null;
   const article =
     selected && articleIdx !== null ? selected.articles[articleIdx] || null : null;
+
+  // ---------- 읽기 점수 (보이지 않는 타이머) ----------
+  // 기사 1건이 단위입니다. 신문(목록) 화면은 인니어 본문이 아니므로 쌓지 않습니다.
+  const trackerRef = useRef<ReadingTracker | null>(null);
+  const [floatVal, setFloatVal] = useState(0);
+  const [floatSeq, setFloatSeq] = useState(0);
+
+  useEffect(() => {
+    const t = new ReadingTracker((pt) => {
+      setFloatVal(pt);
+      setFloatSeq((n) => n + 1);
+    });
+    trackerRef.current = t;
+    t.attach();
+    return () => {
+      t.dispose();
+      trackerRef.current = null;
+    };
+  }, []);
+
+  const unitKey = selected && articleIdx !== null ? selected.date + ":" + articleIdx : "";
+
+  useEffect(() => {
+    const t = trackerRef.current;
+    if (!t) return;
+    t.setUnit(unitKey);
+  }, [unitKey]);
+
+  useEffect(() => {
+    const t = trackerRef.current;
+    if (!t) return;
+    t.setSide(!!unitKey && !flipped);
+    if (unitKey && flipped) t.koreanOpened();
+  }, [flipped, unitKey]);
 
   // 앞/뒤 문단 DOM 참조 (뒤집을 때 읽던 문단으로 스크롤 맞추기 — Story와 동일 패턴)
   const paraRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
@@ -276,6 +312,7 @@ const News = () => {
   // 단어 탭 → 미니 팝업 (3단 캐시: 카드 메모리 → IndexedDB → API)
   const openWordPopup = async (rawToken: string, sentence: string) => {
     if (shouldIgnoreTap()) return;
+    trackerRef.current?.touch();
     const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
     if (!word) return;
     const key = word.toLowerCase();
@@ -407,6 +444,7 @@ const News = () => {
   if (article && selected) {
     return (
       <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
+        <PointFloat value={floatVal} seq={floatSeq} />
         <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
           <button
             onClick={closeArticle}
