@@ -18,6 +18,8 @@ import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
+import { medaliEngine } from "@/lib/medali";
+import PointFloat from "@/components/PointFloat";
 
 // 화자 배지 색. A / B / C 를 한눈에 구분하기 위한 것입니다.
 const BADGE: Record<string, string> = {
@@ -159,6 +161,37 @@ const PercakapanRead = () => {
     toast.error("음성을 불러오지 못했습니다");
   }, [snap.errorAt, lastErr]);
 
+  // ---------- 회화 완주 점수 ----------
+  // "전체 듣기"가 끝까지 재생되면 onended → stop() 으로
+  // (재생 중 && 이 회화 && 전체 재생) → idle 로 바뀝니다.
+  // 오류로 끊긴 경우(errorAt 변화)는 완주로 보지 않습니다.
+  const [floatVal, setFloatVal] = useState(0);
+  const [floatSeq, setFloatSeq] = useState(0);
+  const prevSnapRef = useRef<PcAudioSnapshot>(snap);
+  const paidScenesRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    const prev = prevSnapRef.current;
+    prevSnapRef.current = snap;
+    if (!scene) return;
+    const wasFullPlaying =
+      prev.state === "playing" && prev.sceneId === scene.id && prev.lineIndex === null;
+    if (!wasFullPlaying) return;
+    if (snap.state !== "idle") return;
+    if (snap.errorAt !== prev.errorAt) return;
+    if (paidScenesRef.current.has(scene.id)) return;   // 같은 회화는 1회만
+    paidScenesRef.current.add(scene.id);
+    medaliEngine
+      .addPoints("percakapan", 3)
+      .then((got) => {
+        if (got > 0) {
+          setFloatVal(got);
+          setFloatSeq((n) => n + 1);
+        }
+      })
+      .catch(() => {});
+  }, [snap, scene]);
+
   // 단어 탭 → 미니 팝업
   // 조회 순서: 화면 메모리 캐시 → 폰 저장소(IndexedDB) → Gemini API
   const openWordPopup = async (rawToken: string, sentence: string) => {
@@ -279,6 +312,7 @@ const PercakapanRead = () => {
 
   return (
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background pb-9"}>
+      <PointFloat value={floatVal} seq={floatSeq} />
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
           <button
