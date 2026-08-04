@@ -456,7 +456,7 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                 <p className="mt-1.5 max-w-[17rem] font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
                   3일 이상 간격을 두고 두 번 맞힌 단어예요.
                   <br />
-                  리셋 없이 평생 쌓이고, 명찰의 별 옆 숫자와 같아요.
+                  별 옆의 숫자로, 리셋 없이 평생 쌓여요.
                 </p>
               </div>
 
