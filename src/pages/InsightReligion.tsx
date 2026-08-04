@@ -1,8 +1,9 @@
 // src/pages/InsightReligion.tsx
 // 인도네시아 종교 — 고정 콘텐츠 (6개 공인 종교의 분포와 특징)
 
-import { useState, ReactNode } from "react";
+import { useState, useEffect, useRef, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { ReadingTracker } from "@/lib/readingTimer";
 import { ArrowLeft, Landmark, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Religion {
@@ -188,6 +189,27 @@ const RELIGIONS: Religion[] = [
 
 const InsightReligion = () => {
   const navigate = useNavigate();
+
+  // ---------- 탐험 점수 (보이지 않음) ----------
+  // 2분 구경 = 1점. 화면에는 아무 표시도 없고 플로팅도 띄우지 않습니다.
+  const trackerRef = useRef<ReadingTracker | null>(null);
+  useEffect(() => {
+    const t = new ReadingTracker(() => {}, {
+      category: "explore",
+      secPerPoint: 120,
+      pointsPerUnit: 1,
+      bonus: 0,
+      autoUnlock: true,
+    });
+    trackerRef.current = t;
+    t.attach();
+    t.setUnit("insight-religion");
+    t.setSide(true);
+    return () => {
+      t.dispose();
+      trackerRef.current = null;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background px-4 pt-4 pb-8 max-w-lg mx-auto">

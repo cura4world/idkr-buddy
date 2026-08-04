@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ReadingTracker } from "@/lib/readingTimer";
 import { ArrowLeft, Lightbulb, Sparkles, Loader2, Volume2, Trash2, BookOpen, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { generateTip, saveTip, listTips, deleteTip, TipRecord } from "@/lib/tips";
@@ -10,6 +11,27 @@ import { hasGeminiApiKey } from "@/lib/gemini";
 
 const InsightTips = () => {
   const navigate = useNavigate();
+
+  // ---------- 탐험 점수 (보이지 않음) ----------
+  // 2분 구경 = 1점. 화면에는 아무 표시도 없고 플로팅도 띄우지 않습니다.
+  const trackerRef = useRef<ReadingTracker | null>(null);
+  useEffect(() => {
+    const t = new ReadingTracker(() => {}, {
+      category: "explore",
+      secPerPoint: 120,
+      pointsPerUnit: 1,
+      bonus: 0,
+      autoUnlock: true,
+    });
+    trackerRef.current = t;
+    t.attach();
+    t.setUnit("insight-tips");
+    t.setSide(true);
+    return () => {
+      t.dispose();
+      trackerRef.current = null;
+    };
+  }, []);
   const [tips, setTips] = useState<TipRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);

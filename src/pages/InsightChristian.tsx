@@ -2,8 +2,9 @@
 // 인도네시아 기독교 — 고정 콘텐츠 (지역·종족·교단 현황, 접이식 상세 포함)
 // 출처: 인도네시아 기독교 현황 및 교단 현황 보고서 (2020~2025 자료 기준)
 
-import { useState, ReactNode } from "react";
+import { useState, useEffect, useRef, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { ReadingTracker } from "@/lib/readingTimer";
 import { ArrowLeft, Cross, ChevronDown, ChevronUp } from "lucide-react";
 
 // ---------- 접이식 섹션 ----------
@@ -176,6 +177,27 @@ const DenomList = ({ items }: { items: Denom[] }) => (
 // ---------- 페이지 ----------
 const InsightChristian = () => {
   const navigate = useNavigate();
+
+  // ---------- 탐험 점수 (보이지 않음) ----------
+  // 2분 구경 = 1점. 화면에는 아무 표시도 없고 플로팅도 띄우지 않습니다.
+  const trackerRef = useRef<ReadingTracker | null>(null);
+  useEffect(() => {
+    const t = new ReadingTracker(() => {}, {
+      category: "explore",
+      secPerPoint: 120,
+      pointsPerUnit: 1,
+      bonus: 0,
+      autoUnlock: true,
+    });
+    trackerRef.current = t;
+    t.attach();
+    t.setUnit("insight-christian");
+    t.setSide(true);
+    return () => {
+      t.dispose();
+      trackerRef.current = null;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background px-4 pt-4 pb-8 max-w-lg mx-auto">
