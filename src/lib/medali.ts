@@ -50,6 +50,9 @@ export const BINTANG_CUTOFFS: { color: MedaliColor; tier: 1 | 2 | 3; min: number
 ];
 
 const CONFIRM_GAP_MS = 3 * 24 * 60 * 60 * 1000; // 확정 판정: 3일 이상 간격 2회 정답
+const CONFIRM_EVIDENCE = 2;    // 확정에 필요한 누적 증거
+const RECOVER_EVIDENCE = 1;    // 재검증 복귀에 필요한 증거
+const RECHECK_AFTER_MS = 60 * 24 * 60 * 60 * 1000;  // 확정 후 60일 지나면 재검증 대상
 
 const MAX_ROUNDS = 500; // rounds 스토어 FIFO 상한
 
@@ -62,12 +65,24 @@ export interface DailyLog {
 
 export interface WordRecord {
   word: string;                               // 소문자
-  status: "pending" | "confirmed" | "recheck";
+  // monitoring = recheck에서 또 틀린 상태. 별은 유지한 채 한 번 더 기회를 준다.
+  status: "pending" | "confirmed" | "recheck" | "monitoring";
   corrects: number;
   firstCorrectAt: number;
   lastCorrectAt: number;
   source: string;                             // "bible" | "story" | "map" | "seed" ...
   confirmedAt?: number;
+  evidence?: number;                          // 확정용 누적 증거 (게임마다 가중치가 다름)
+  recoverEvidence?: number;                   // 재검증 복귀용 누적 증거
+}
+
+// 확정 후 60일이 지난 단어는 저장값이 confirmed라도 "재검증 대기"로 본다.
+// 배치로 훑지 않고 읽는 쪽에서 그때그때 판정한다 (gamePool·MedaliSheet·recordWordResult 공용).
+// confirmedAt이 없는 옛 레코드는 기준 시각을 알 수 없으므로 만료시키지 않는다.
+export function effectiveStatus(rec: WordRecord, now: number): WordRecord["status"] {
+  if (!rec) return "pending";
+  if (rec.status !== "confirmed" || !rec.confirmedAt) return rec.status;
+  return now - rec.confirmedAt >= RECHECK_AFTER_MS ? "recheck" : rec.status;
 }
 
 export interface GameRound {
@@ -341,10 +356,11 @@ class MedaliEngine {
   // ── Bintang: 확정 단어 수 재계산 ────────────────────────────────
   private async recomputeBintang(): Promise<void> {
     const words = await getAll<WordRecord>(STORE_WORDS);
-    // recheck는 "확정 취소"가 아니라 재검증 대기 상태라 확정 수에서 즉시 빼지 않는다.
+    // recheck·monitoring은 "확정 취소"가 아니라 재검증 대기 단계라 확정 수에서 즉시 빼지 않는다.
+    // 60일 만료로 recheck가 되어도 개수는 그대로이고, monitoring에서 또 틀려야 별이 하나 준다.
     let count = 0;
     for (const w of words) {
-      if (w && (w.status === "confirmed" || w.status === "recheck")) count++;
+      if (w && (w.status === "confirmed" || w.status === "recheck" || w.status === "monitoring")) count++;
     }
     const b = bintangFor(count);
     this.emit({ confirmedCount: count, bintangColor: b.color, bintangTier: b.tier });
@@ -385,10 +401,12 @@ class MedaliEngine {
 
   // 2) 단어 정답/오답 기록 → 확정 판정
   // 반환: 이번 호출로 확정(confirmed)으로 새로 전환됐으면 becameConfirmed = true
+  // weight: 정답 한 번의 증거 무게. 찍어서 맞힐 수 있는 게임(스피드OX·짝맞추기)만 0.5를 준다.
   async recordWordResult(
     word: string,
     correct: boolean,
-    source: string
+    source: string,
+    weight = 1
   ): Promise<{ becameConfirmed: boolean }> {
     try {
       const key = String(word || "").trim().toLowerCase();
@@ -403,37 +421,64 @@ class MedaliEngine {
           firstCorrectAt: 0,
           lastCorrectAt: 0,
           source,
+          evidence: 0,
         };
       if (source) rec.source = rec.source || source;
+      // 가중치가 없던 시절의 레코드는 정답 횟수를 그대로 증거로 본다 (확정 단어는 그대로 유지된다)
+      if (typeof rec.evidence !== "number") rec.evidence = rec.corrects || 0;
 
-      const before = rec.status;
-
-      if (correct) {
-        const prevCorrects = rec.corrects || 0;
-        const prevFirst = rec.firstCorrectAt || 0;
-        if (!prevFirst) rec.firstCorrectAt = now; // 최초 정답 시각은 그대로 유지
-        rec.corrects = prevCorrects + 1;
-        rec.lastCorrectAt = now;
-
-        if (rec.status === "recheck") {
-          // 재검증 통과 → 확정 복귀
-          rec.status = "confirmed";
-          if (!rec.confirmedAt) rec.confirmedAt = now;
-        } else if (rec.status !== "confirmed" && prevCorrects >= 1 && now - prevFirst >= CONFIRM_GAP_MS) {
-          rec.status = "confirmed";
-          rec.confirmedAt = now;
-        }
-      } else if (rec.status === "confirmed") {
-        rec.status = "recheck"; // 확정 수에서 즉시 빼지 않고 재검증 대기
+      // 확정 후 60일이 지났으면 이 시점에 재검증 상태로 실제 내려 적는다.
+      const aged = effectiveStatus(rec, now);
+      if (aged !== rec.status) {
+        rec.status = aged;
+        rec.recoverEvidence = 0;
       }
 
+      const before = rec.status;
+      const w = typeof weight === "number" && weight > 0 ? weight : 1;
+
+      if (correct) {
+        rec.corrects = (rec.corrects || 0) + 1;
+        rec.lastCorrectAt = now;
+
+        if (rec.status === "recheck" || rec.status === "monitoring") {
+          // 재검증 통과 → 확정 복귀 (60일 시계도 다시 감는다)
+          rec.recoverEvidence = (rec.recoverEvidence || 0) + w;
+          if (rec.recoverEvidence >= RECOVER_EVIDENCE) {
+            rec.status = "confirmed";
+            rec.confirmedAt = now;
+            rec.recoverEvidence = 0;
+          }
+        } else if (rec.status === "pending") {
+          rec.evidence = (rec.evidence || 0) + w;
+          if (!rec.firstCorrectAt) rec.firstCorrectAt = now; // 최초 정답 시각은 그대로 유지
+          if (rec.evidence >= CONFIRM_EVIDENCE && now - rec.firstCorrectAt >= CONFIRM_GAP_MS) {
+            rec.status = "confirmed";
+            rec.confirmedAt = now;
+          }
+        }
+        // confirmed는 정답 횟수만 쌓고 상태는 그대로
+      } else if (rec.status === "confirmed") {
+        rec.status = "recheck";   // 확정 수에서 즉시 빼지 않고 재검증 대기
+        rec.recoverEvidence = 0;
+      } else if (rec.status === "recheck") {
+        rec.status = "monitoring"; // 별은 유지한 채 마지막 유예
+        rec.recoverEvidence = 0;
+      } else if (rec.status === "monitoring") {
+        // 여기서 또 틀리면 확정을 내려놓고 처음부터 다시 쌓는다 (별 -1)
+        rec.status = "pending";
+        rec.evidence = 0;
+        rec.corrects = 0;
+        rec.recoverEvidence = 0;
+        rec.firstCorrectAt = 0;
+        delete rec.confirmedAt;
+      }
+      // pending 오답은 변화 없음
+
       await putOne(STORE_WORDS, rec);
-      // 확정 개수가 달라질 수 있는 전이에서만 다시 센다.
-      const countChanged =
-        (before !== "confirmed" && before !== "recheck") &&
-        (rec.status === "confirmed" || rec.status === "recheck");
-      if (countChanged) await this.recomputeBintang();
-      // pending→confirmed, recheck→confirmed 처럼 "이번에" 확정이 된 경우만 true
+      // 상태가 바뀌었으면 다시 센다 (개수가 그대로인 전이도 있지만 호출 빈도상 비용 문제 없음)
+      if (before !== rec.status) await this.recomputeBintang();
+      // pending→confirmed, recheck/monitoring→confirmed 처럼 "이번에" 확정이 된 경우만 true
       return { becameConfirmed: before !== "confirmed" && rec.status === "confirmed" };
     } catch {
       // 기록 실패해도 게임 진행에는 영향 없음
