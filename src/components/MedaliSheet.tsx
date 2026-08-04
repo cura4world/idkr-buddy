@@ -36,6 +36,8 @@ const COLOR_NAME: Record<MedaliColor, string> = {
 
 const ROMAN: Record<number, string> = { 1: "I", 2: "II", 3: "III" };
 
+const EXIT_MS = 260;   // 내려가는 연출 길이 (아래 transition duration과 같아야 합니다)
+
 const DAY_LABELS = ["월", "화", "수", "목", "금", "토"];
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -136,6 +138,8 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
   const [words, setWords] = useState<WordRecord[]>([]);
   const [openDay, setOpenDay] = useState<number | null>(null);   // 막대를 탭하면 그날 점수 한 줄
   const [openRow, setOpenRow] = useState<string | null>(null);   // 내역 행 도움말
+  const [shown, setShown] = useState(open);        // 렌더를 유지할지 (퇴장 연출 동안 true)
+  const [entered, setEntered] = useState(false);   // 올라온 상태인지
 
   useEffect(() => {
     return medaliEngine.subscribe((s) => setSnap(s));
@@ -152,7 +156,33 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
     listWordRecords().then(setWords).catch(() => setWords([]));
   }, [open]);
 
-  if (!open) return null;
+  // 올라오고 내려가는 연출. 닫힐 때도 애니메이션이 끝난 뒤에 사라지도록
+  // open 이 false 가 돼도 EXIT_MS 동안은 렌더를 유지합니다.
+  useEffect(() => {
+    if (open) {
+      setShown(true);
+      // 첫 프레임에 "아래에 있는 상태"가 그려져야 올라오는 게 보입니다 (rAF 2번)
+      let inner = 0;
+      const outer = requestAnimationFrame(() => {
+        inner = requestAnimationFrame(() => setEntered(true));
+      });
+      return () => {
+        cancelAnimationFrame(outer);
+        if (inner) cancelAnimationFrame(inner);
+      };
+    }
+    setEntered(false);
+    const t = window.setTimeout(() => setShown(false), EXIT_MS);
+    return () => window.clearTimeout(t);
+  }, [open]);
+
+  if (!shown) return null;
+
+  // 내려가는 중에는 닫기를 다시 부르지 않습니다
+  const requestClose = () => {
+    if (!entered) return;
+    onOpenChange(false);
+  };
 
   const apiHex = MEDALI_COLORS[snap.apiColor];
   const bintangHex = MEDALI_COLORS[snap.bintangColor];
@@ -192,8 +222,20 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/40" onClick={() => onOpenChange(false)} />
-      <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
+      <div
+        className={
+          "fixed inset-0 z-40 bg-black/40 transition-opacity duration-200 " +
+          (entered ? "opacity-100" : "opacity-0")
+        }
+        onClick={requestClose}
+      />
+      <div
+        className={
+          "fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5 " +
+          "transition-transform ease-out duration-[260ms] " +
+          (entered ? "translate-y-0" : "translate-y-full")
+        }
+      >
         <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
 
         {/* 탭 — 고르지 않은 쪽 아이콘도 지금 훈장 색으로 칠해 둡니다 */}
@@ -227,7 +269,7 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
         </div>
 
         {/* 탭을 바꿔도 시트 높이가 출렁이지 않게 고정합니다 (내용이 넘치면 안에서 스크롤) */}
-        <div className="h-[68dvh] overflow-y-auto px-4">
+        <div className="h-[72dvh] overflow-y-auto px-4">
           {tab === "api" ? (
             <div className="pt-5">
               {/* 지금 색 */}
