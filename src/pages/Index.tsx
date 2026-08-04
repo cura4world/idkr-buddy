@@ -18,6 +18,7 @@ import {
 } from "@/lib/peribahasa";
 import SettingsDialog from "@/components/SettingsDialog";
 import MedaliBadge from "@/components/MedaliBadge";
+import MedaliSheet from "@/components/MedaliSheet";
 import { hasSermonConfig } from "@/lib/sermon";
 import {
   RotateCcw,
@@ -122,6 +123,46 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 const Index = () => {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // 훈장 팝업 — 폰의 뒤로가기로 팝업만 닫히게 히스토리를 한 칸 쌓습니다.
+  // (옵션 시트·검색 기록과 같은 방식. 각 리스너가 자기 ref만 보므로 서로 간섭하지 않습니다.)
+  const [medaliOpen, setMedaliOpen] = useState(false);
+  const medaliOpenRef = useRef(false);
+  const medaliPushedRef = useRef(false);
+
+  const openMedali = () => {
+    if (medaliOpenRef.current) return;
+    setMedaliOpen(true);
+    medaliOpenRef.current = true;
+    try {
+      window.history.pushState({ medaliSheet: true }, "");
+      medaliPushedRef.current = true;
+    } catch (e) {
+      medaliPushedRef.current = false;
+    }
+  };
+
+  const closeMedali = () => {
+    if (!medaliOpenRef.current) return;
+    medaliOpenRef.current = false;
+    setMedaliOpen(false);
+    if (medaliPushedRef.current) {
+      medaliPushedRef.current = false;
+      try { window.history.back(); } catch (e) {}
+    }
+  };
+
+  useEffect(() => {
+    const onPopMedali = () => {
+      if (medaliOpenRef.current) {
+        medaliOpenRef.current = false;
+        medaliPushedRef.current = false;
+        setMedaliOpen(false);
+      }
+    };
+    window.addEventListener("popstate", onPopMedali);
+    return () => window.removeEventListener("popstate", onPopMedali);
+  }, []);
   const [kinds, setKinds] = useState<PhraseKind[]>(() => loadKinds());
   const [phrase, setPhrase] = useState<Phrase | null>(() => loadSavedPhrase());
   const [phraseLoading, setPhraseLoading] = useState(false);
@@ -458,7 +499,7 @@ const Index = () => {
             </h1>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <MedaliBadge />
+            <MedaliBadge onClick={openMedali} />
             <button type="button" onClick={() => setSettingsOpen(true)} className={iconBtn} title="설정">
               <Settings size={18} />
             </button>
@@ -744,6 +785,7 @@ const Index = () => {
         </>
       ) : null}
 
+      <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
