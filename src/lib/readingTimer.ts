@@ -18,8 +18,23 @@ const TICK_MS = 5000;         // 내부 누적 주기
 const POINTS_PER_MIN = 2;
 const FINISH_BONUS = 2;       // 완독 보너스 (대기 1분 이상 + 단위당 1회)
 
+// 탐험(이해·지도) 화면도 같은 기계를 쓰되 단위·배점만 다릅니다.
+// 옵션을 주지 않으면 읽기 4화면의 기존 동작 그대로입니다.
+export interface TrackerOptions {
+  category?: "reading" | "explore";   // 기본 "reading"
+  secPerPoint?: number;               // 점수 한 단위가 되는 초. 기본 60
+  pointsPerUnit?: number;             // 한 단위당 점수. 기본 2
+  bonus?: number;                     // 완독 보너스. 기본 2
+  autoUnlock?: boolean;               // true면 한국어 면 없이도 처음부터 해금. 기본 false
+}
+
 export class ReadingTracker {
   private onConfirm: (points: number) => void;
+  private category: "reading" | "explore";
+  private secPerPoint: number;
+  private pointsPerUnit: number;
+  private bonus: number;
+  private autoUnlock: boolean;
 
   private pendingSec = 0;       // 아직 확정되지 않은 초
   private unlocked = false;     // 이 단위에서 한국어 면을 이미 열었는가
@@ -29,8 +44,16 @@ export class ReadingTracker {
   private timer: number | null = null;
   private attached = false;
 
-  constructor(onConfirm: (points: number) => void) {
+  constructor(onConfirm: (points: number) => void, options?: TrackerOptions) {
+    const o = options || {};
     this.onConfirm = onConfirm;
+    this.category = o.category === "explore" ? "explore" : "reading";
+    this.secPerPoint = typeof o.secPerPoint === "number" && o.secPerPoint > 0 ? o.secPerPoint : 60;
+    this.pointsPerUnit =
+      typeof o.pointsPerUnit === "number" && o.pointsPerUnit > 0 ? o.pointsPerUnit : POINTS_PER_MIN;
+    this.bonus = typeof o.bonus === "number" && o.bonus >= 0 ? o.bonus : FINISH_BONUS;
+    this.autoUnlock = o.autoUnlock === true;
+    this.unlocked = this.autoUnlock;
   }
 
   // ── 내부 ────────────────────────────────────────────────────────
@@ -74,13 +97,13 @@ export class ReadingTracker {
 
   // 대기 초 → 점수. withBonus는 첫 확정(한국어 면 열기)에서만 true.
   private async settle(withBonus: boolean): Promise<number> {
-    const mins = Math.floor(this.pendingSec / 60);
-    const bonus = withBonus && mins >= 1 ? FINISH_BONUS : 0;
-    if (mins <= 0) return 0;
-    this.pendingSec -= mins * 60;   // 자투리 초는 다음으로 이어감
-    const amount = mins * POINTS_PER_MIN + bonus;
+    const units = Math.floor(this.pendingSec / this.secPerPoint);
+    const bonus = withBonus && units >= 1 ? this.bonus : 0;
+    if (units <= 0) return 0;
+    this.pendingSec -= units * this.secPerPoint;   // 자투리 초는 다음으로 이어감
+    const amount = units * this.pointsPerUnit + bonus;
     try {
-      return await medaliEngine.addPoints("reading", amount);
+      return await medaliEngine.addPoints(this.category, amount);
     } catch {
       return 0;
     }
@@ -144,7 +167,7 @@ export class ReadingTracker {
       this.accumulate();
       if (this.unlocked) void this.settle(false);  // 해금된 단위는 조용히 확정
       this.pendingSec = 0;                          // 미해금이면 대기 초는 버림
-      this.unlocked = false;
+      this.unlocked = this.autoUnlock;              // 탐험 모드는 새 단위도 바로 해금
       const now = Date.now();
       this.lastTick = now;
       this.lastTouch = now;
