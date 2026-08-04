@@ -89,44 +89,85 @@
 
 ```
 src/
+  App.tsx            라우트 정의 (화면을 새로 만들면 여기에 등록)
+  main.tsx           엔트리 + 서비스워커 자동 업데이트
   pages/
     Index.tsx          메인화면
-    Dictionary.tsx     사전 (~1,043줄, 최대 파일 — 한 곳만 정밀 수정할 것)
+    Dictionary.tsx     사전 (~1,153줄, 최대 파일 — 한 곳만 정밀 수정할 것)
     Story.tsx          이야기
     News.tsx           뉴스
     Devotion.tsx       두란노 QT 묵상
     BibleRead.tsx      성경 읽기 (R2 낭독 스트리밍)
     Prayer.tsx         기도문
     Sermons.tsx        설교문 목록
-    SermonRead.tsx     설교문 읽기 + S펜 필기 (~1,594줄)
+    SermonRead.tsx     설교문 읽기 + S펜 필기 (~1,829줄)
     IndoMap.tsx        인도네시아 지도 (SVG 85핀)
     Insight*.tsx       인도네시아 이해 허브 + 서브 6개
+    PhraseDetail.tsx   오늘의 인도네시아어 문장 상세 (/phrase)
+    SavedPhrases.tsx   저장해 둔 문장 목록 (/phrase/saved)
+    Percakapan.tsx / PercakapanCategory.tsx / PercakapanRead.tsx   회화집 폴더·목록·읽기
+    Permainan.tsx      게임방 입구 (/permainan)
+    Game*.tsx          게임 5종 — Match(짝맞추기) / OX(스피드) / Susun(문장조립)
+                       / Eja(철자채우기) / Tangkap(단어받기)
     Wordbooks.tsx / CategoryDetail.tsx / StudyMode.tsx / QuizMode.tsx
     SavedWords.tsx / SavedStudyMode.tsx / SavedQuizMode.tsx
+    NotFound.tsx       404
   components/
     BiblePicker.tsx / BibleAudioButton.tsx / BibleAudioSeekBar.tsx
     PlayButton.tsx           수정 금지
+    MedaliBadge.tsx          헤더 명찰 캡슐 (불꽃 + 별)
+    MedaliSheet.tsx          훈장 팝업 (명찰을 누르면 올라옴)
+    MedaliNudge.tsx          게임을 며칠 안 하면 뜨는 말풍선
+    PointFloat.tsx           점수 확정 순간 "+N"이 잠깐 떠오름
+    WordbookPickerSheet.tsx  "어디에 담을까요?" 단어장 선택 시트
     CategoryCard.tsx / EditWordDialog.tsx / AddWordDialog.tsx
     AddCategoryDialog.tsx / EditCategoryDialog.tsx / CSVImportDialog.tsx
     SettingsDialog.tsx
+    NavLink.tsx              react-router NavLink 호환 래퍼
+    ui/                      shadcn 기본 컴포넌트 (수정할 일 거의 없음)
   lib/
+    geminiText.ts   Gemini 텍스트 호출 공용 모듈 — 새 기능에서 fetch를 직접 짜지 말 것
+                    (모델 목록·타임아웃·재시도·에러 코드를 여기서만 관리)
+    gemini.ts       단어 뜻/예문 자동 채우기 + API 키(localStorage)
+    claude.ts       Claude API 호출 (묵상·기도문 생성)
     bible.ts        66권 테이블 (id/folder/ko/idName/chapters/usfm/audio)
     bibleAudio.ts   R2 낭독 스트리밍 싱글톤
     dictionary.ts   사전 Gemini 호출 + 타입
     dictStore.ts    사전 결과 IndexedDB 캐시
     store.ts        localStorage 단어장 데이터
     story.ts / storyStore.ts
-    news.ts / prayer.ts / devotion.ts
+    news.ts / newsStore.ts
+    prayer.ts / prayerStore.ts
+    devotion.ts / devotionStore.ts
+    qtToday.ts      두란노 오늘의 QT 가져오기 (저장하지 않고 그때그때 불러옴)
+    percakapan.ts   회화집 저장·백업·생성
+    percakapanAudio.ts  회화 전용 다화자 TTS 재생기 (남/여 두 목소리)
+    peribahasa.ts   오늘의 인도네시아어 문장 풀
+    phrase.ts       문장 상세 해설 생성 + IndexedDB 보관
+    tips.ts         인도네시아 정보(팁) 생성 + IndexedDB
+    medali.ts       Medali 엔진 — 불꽃(주간 점수)·별(확정 단어) 판정, IndexedDB
+    gamePool.ts     게임 출제 풀 (단어장·찾아본 단어·시드 3층, API 호출 없음)
     sermon.ts       Cloudflare Worker 호출 + IndexedDB
     sermonInk.ts    S펜 필기 저장 (IndexedDB)
-    mapData.ts      지도 좌표·핀 (대용량 125KB+)
+    map.ts          지도 지점 설명 Gemini 생성 + IndexedDB 캐시
+    mapData.ts      지도 좌표·핀 (대용량 124KB)
     imageStore.ts / wordStore.ts
+    saveTarget.ts   담을 단어장 설정 (앱 전체에 하나)
+    readingTimer.ts 화면에 보이지 않는 읽기 타이머
+    useSwipeFlip.ts 장문 화면 좌우 스와이프로 앞/뒤 넘기기
+    wideMode.ts     넓게 보기 (폴더블용 좌우 폭 확장)
     tts.ts          수정 금지
     nav.ts          goBackOr / wordbookFallback
-    fontScale.ts / gemini.ts
-  data/seed.json    생성 파일 — 커밋 금지
+    fontScale.ts / utils.ts
+  hooks/            use-mobile.tsx / use-toast.ts
+  data/
+    seed.json       생성 파일 — 커밋 금지
+    percakapan/     기본 회화집 (코드로 들어 있음, 손대지 않음)
+  test/             vitest 설정 + 예제
+  qtToday.ts        lib/qtToday.ts와 내용이 같은 미사용 사본 — 고칠 때 lib 쪽을 볼 것
 data/categories/*.csv       공용 기본 단어장
 data/private/{폴더명}/*.csv  개인 단어장
+data/WORDLIST-PLAN.md       단어장 목표 개수·형식·분류 원칙
 .github/workflows/deploy.yml, build-apk.yml
 ```
 
