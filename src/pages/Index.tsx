@@ -18,6 +18,7 @@ import {
 } from "@/lib/peribahasa";
 import SettingsDialog from "@/components/SettingsDialog";
 import MedaliBadge from "@/components/MedaliBadge";
+import MedaliNudge from "@/components/MedaliNudge";
 import MedaliSheet from "@/components/MedaliSheet";
 import { hasSermonConfig } from "@/lib/sermon";
 import {
@@ -508,8 +509,9 @@ const Index = () => {
               Kata kata<span className="text-accent">.</span>
             </h1>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="relative flex items-center gap-1.5 shrink-0">
             <MedaliBadge onClick={openMedali} />
+            <MedaliNudge />
             <button type="button" onClick={() => setSettingsOpen(true)} className={iconBtn} title="설정">
               <Settings size={18} />
             </button>
