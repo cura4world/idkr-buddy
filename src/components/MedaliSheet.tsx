@@ -11,6 +11,7 @@ import {
   medaliEngine,
   listWeekLogs,
   listWordRecords,
+  effectiveStatus,
   apiColorFor,
   MEDALI_COLORS,
   API_CUTOFFS,
@@ -232,11 +233,17 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
   const apiNext = nextApiStep(snap.apiWeekPoints);
   const bintangNext = nextBintangStep(snap.confirmedCount);
 
+  // 확정 후 60일이 지난 단어는 저장값이 confirmed라도 재검증 대기로 셉니다
+  const nowMs = Date.now();
   const confirmedWords = words
-    .filter((w) => w && w.status === "confirmed")
+    .filter((w) => w && effectiveStatus(w, nowMs) === "confirmed")
     .sort((a, b) => (b.confirmedAt || 0) - (a.confirmedAt || 0))
     .slice(0, 5);
-  const recheckCount = words.filter((w) => w && w.status === "recheck").length;
+  const recheckCount = words.filter((w) => {
+    if (!w) return false;
+    const st = effectiveStatus(w, nowMs);
+    return st === "recheck" || st === "monitoring";
+  }).length;
 
   return (
     <>
