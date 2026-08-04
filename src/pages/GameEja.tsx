@@ -501,11 +501,15 @@ const GameEja = () => {
         {phase === "done" && result ? (
           <div className="mt-4">
             <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center">
-              <p className="relative inline-block font-word text-[2rem] leading-none tabular-nums text-foreground">
-                {result.items.length}단어 중 {result.items.filter((it) => it.correct).length}단어
+              <p className="relative inline-block font-word text-[1.375rem] font-medium leading-snug text-foreground">
+                <span className="tabular-nums text-primary">{result.items.length}</span>단어 중{" "}
+                <span className="tabular-nums text-primary">
+                  {result.items.filter((it) => it.correct).length}
+                </span>
+                단어
                 {floatOn ? <FloatPoint text={"+" + gained} /> : null}
               </p>
-              <p className="mt-2 font-gothic text-[0.78125rem] text-muted-foreground">
+              <p className="mt-2 font-gothic text-[0.8125rem] text-muted-foreground">
                 {result.durationSec}초
                 {result.bestBefore === 0 ||
                 result.items.filter((it) => it.correct).length > result.bestBefore
