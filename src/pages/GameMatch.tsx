@@ -11,7 +11,10 @@ import { drawPool } from "@/lib/gamePool";
 import type { PoolWord } from "@/lib/gamePool";
 import { medaliEngine, listRounds, dateKey, MEDALI_COLORS } from "@/lib/medali";
 
-const PAIRS = 6;              // 한 판에 쓰는 단어 수
+// 잘하면 카드가 늘어납니다. 레벨은 내려가지 않습니다.
+const PAIRS_BY_LEVEL = [4, 5, 6];     // 레벨 1·2·3 (8장 → 10장 → 12장)
+const LEVEL_UP_MISSES = 2;            // 한 판에 틀린 횟수가 이 이하면 다음 레벨로
+const LEVEL_KEY = "cocokkan-level";
 const MIN_PAIRS = 4;          // 이보다 적으면 게임을 못 엽니다
 const CLOSE_MS = 1200;        // 짝이 아닐 때 다시 닫히기까지 (틀린 짝을 읽을 시간)
 const GOOD_MISS = 1;          // 미스가 이 이하면 "맞힌 것"으로 봅니다
@@ -38,6 +41,30 @@ interface RoundResult {
   durationSec: number;
   bestBefore: number;         // 이번 판 이전의 최고(최단) 기록. 없으면 0
   words: WordResult[];
+  leveledTo: number;          // 이번 판으로 올라간 레벨. 그대로면 0
+}
+
+// 레벨은 이 기기에만 남습니다 (읽기 실패·이상한 값은 1로 봅니다)
+export function loadLevel(): number {
+  try {
+    const n = Number(localStorage.getItem(LEVEL_KEY));
+    return n === 1 || n === 2 || n === 3 ? n : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function saveLevel(level: number): void {
+  try {
+    localStorage.setItem(LEVEL_KEY, String(level));
+  } catch {
+    // 저장 못 해도 이번 판은 정상 진행됩니다
+  }
+}
+
+export function pairsForLevel(level: number): number {
+  const i = Math.max(1, Math.min(PAIRS_BY_LEVEL.length, level)) - 1;
+  return PAIRS_BY_LEVEL[i];
 }
 
 const SOURCE_LABEL: Record<PoolWord["source"], string> = {
@@ -105,8 +132,11 @@ const GameMatch = () => {
   const [gained, setGained] = useState(0);              // 이번 판에 실제로 오른 점수
   const [floatOn, setFloatOn] = useState(false);
 
+  const [level, setLevel] = useState(loadLevel);
+
   const startedAtRef = useRef(0);
   const missesRef = useRef<number[]>([]);
+  const levelRef = useRef(level);   // startRound가 항상 최신 레벨을 보게 합니다
   const finishedRef = useRef(false);
   const closeTimerRef = useRef<number | null>(null);
   const floatTimerRef = useRef<number | null>(null);
@@ -125,14 +155,16 @@ const GameMatch = () => {
     setFloatOn(false);
     setPhase("loading");
 
-    drawPool(4, 2)
+    // 확정 2개는 고정, 나머지는 미확정으로 채웁니다 (레벨이 오르면 그만큼 더 뽑습니다)
+    const pairs = pairsForLevel(levelRef.current);
+    drawPool(Math.max(1, pairs - 2), 2)
       .then((list) => {
         if (list.length < MIN_PAIRS) {
           setPool([]);
           setPhase("empty");
           return;
         }
-        const use = list.slice(0, PAIRS);
+        const use = list.slice(0, pairs);
         missesRef.current = use.map(() => 0);
         setPool(use);
         setCards(buildCards(use));
@@ -217,7 +249,19 @@ const GameMatch = () => {
       words: words.map((w) => ({ word: w.word, correct: w.correct, source: w.source })),
     });
 
-    setResult({ durationSec, bestBefore, words });
+    // 레벨업 — 짝이 아닌 카드를 연 횟수(missesRef는 실패 한 번에 두 쌍이 오르므로 2로 나눕니다)가
+    // 적으면 다음 판부터 카드가 늘어납니다. 이번 판에는 적용하지 않습니다.
+    const wrongTries = Math.round(misses.reduce((a, b) => a + (b || 0), 0) / 2);
+    let leveledTo = 0;
+    if (wrongTries <= LEVEL_UP_MISSES && levelRef.current < PAIRS_BY_LEVEL.length) {
+      const next = levelRef.current + 1;
+      levelRef.current = next;
+      saveLevel(next);
+      setLevel(next);
+      leveledTo = next;
+    }
+
+    setResult({ durationSec, bestBefore, words, leveledTo });
     setPhase("done");
   };
 
@@ -283,7 +327,9 @@ const GameMatch = () => {
         {phase === "playing" || phase === "done" ? (
           <div className="relative flex items-center justify-between pt-3">
             <span className="font-gothic text-[0.75rem] text-muted-foreground">
-              {phase === "done" ? "끝" : matched.length + " / " + pool.length + " 쌍"}
+              {phase === "done"
+                ? "끝"
+                : matched.length + " / " + pool.length + " 쌍 · " + pool.length * 2 + "장"}
             </span>
             <span className="relative font-word text-[0.9375rem] tabular-nums text-foreground">
               {elapsed}초
@@ -365,6 +411,11 @@ const GameMatch = () => {
                   ? "최고 기록!"
                   : "최고 " + result.bestBefore + "초"}
               </p>
+              {result.leveledTo > 0 ? (
+                <p className="mt-1.5 font-gothic text-[0.8125rem] text-primary">
+                  다음 판부터 {pairsForLevel(result.leveledTo) * 2}장이에요
+                </p>
+              ) : null}
             </div>
 
             {result.words.some((w) => w.becameConfirmed) ? (
