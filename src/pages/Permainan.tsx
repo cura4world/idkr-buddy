@@ -13,6 +13,7 @@ const Permainan = () => {
   const location = useLocation();
 
   const [best, setBest] = useState(0); // 짝맞추기 최고(최단) 기록. 0이면 없음
+  const [bestOx, setBestOx] = useState(0); // O/X 최고 정답 수. 0이면 없음
 
   useEffect(() => {
     let cancelled = false;
@@ -24,6 +25,25 @@ const Permainan = () => {
           if (r && r.durationSec > 0 && (min === 0 || r.durationSec < min)) min = r.durationSec;
         }
         setBest(min);
+      })
+      .catch(() => {
+        // 기록을 못 읽어도 게임은 열립니다
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    listRounds("ox")
+      .then((rounds) => {
+        if (cancelled) return;
+        let max = 0;
+        for (const r of rounds) {
+          if (r && r.score > max) max = r.score;
+        }
+        setBestOx(max);
       })
       .catch(() => {
         // 기록을 못 읽어도 게임은 열립니다
@@ -73,7 +93,11 @@ const Permainan = () => {
           <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
         </button>
 
-        <div className="mt-3 flex items-center gap-3.5 rounded-2xl border border-border bg-card px-4 py-4 opacity-50">
+        <button
+          type="button"
+          onClick={() => navigate("/permainan/ox")}
+          className="mt-3 w-full flex items-center gap-3.5 rounded-2xl border border-border bg-card px-4 py-4 text-left active:bg-muted/60 transition-colors"
+        >
           <Zap size={22} className="shrink-0 text-muted-foreground" />
           <div className="flex-1 min-w-0">
             <p className="text-[0.9375rem] leading-tight text-foreground">스피드 O/X</p>
@@ -84,10 +108,13 @@ const Permainan = () => {
               뜻이 맞는지 빠르게 골라요
             </p>
           </div>
-          <span className="shrink-0 rounded-full border border-border px-2 py-0.5 font-gothic text-[0.6875rem] text-muted-foreground">
-            곧 열려요
-          </span>
-        </div>
+          {bestOx > 0 ? (
+            <span className="shrink-0 font-word text-[0.78125rem] text-muted-foreground">
+              최고 {bestOx}개
+            </span>
+          ) : null}
+          <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
+        </button>
 
         <p className="mt-5 px-1 text-center font-gothic text-[0.71875rem] leading-relaxed text-muted-foreground">
           게임에서 맞힌 단어는 Medali Bintang에 쌓여요.
