@@ -17,6 +17,8 @@ import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import SettingsDialog from "@/components/SettingsDialog";
 import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
+import { ReadingTracker } from "@/lib/readingTimer";
+import PointFloat from "@/components/PointFloat";
 
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -67,6 +69,39 @@ const Devotion = () => {
 
   const [current, setCurrent] = useState<DevotionRecord | null>(null);
   const [flipped, setFlipped] = useState(false);
+
+  // ---------- 읽기 점수 (보이지 않는 타이머) ----------
+  // 화면에는 아무 표시도 없고, 한국어 면을 처음 여는 순간에만 "+N"이 한 번 뜽니다.
+  // TB 성경 토글 같은 내부 토글은 관계없고, 오직 flipped만 봅니다.
+  const trackerRef = useRef<ReadingTracker | null>(null);
+  const [floatVal, setFloatVal] = useState(0);
+  const [floatSeq, setFloatSeq] = useState(0);
+
+  useEffect(() => {
+    const t = new ReadingTracker((pt) => {
+      setFloatVal(pt);
+      setFloatSeq((n) => n + 1);
+    });
+    trackerRef.current = t;
+    t.attach();
+    return () => {
+      t.dispose();
+      trackerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const t = trackerRef.current;
+    if (!t) return;
+    t.setUnit(current ? current.id : "");
+  }, [current]);
+
+  useEffect(() => {
+    const t = trackerRef.current;
+    if (!t) return;
+    t.setSide(!!current && !flipped);
+    if (current && flipped) t.koreanOpened();
+  }, [flipped, current]);
 
   // 앞/뒤 문단 DOM 참조 (뒤집을 때 읽던 문단으로 스크롤 맞추기)
   const paraRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
@@ -332,6 +367,7 @@ const Devotion = () => {
   // ---------- 단어 탭 → 미니 팝업 ----------
   const openWordPopup = async (rawToken: string, sentence: string) => {
     if (shouldIgnoreTap()) return;
+    trackerRef.current?.touch();
     const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
     if (!word) return;
     const key = word.toLowerCase();
@@ -472,6 +508,7 @@ const Devotion = () => {
 
     return (
       <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
+        <PointFloat value={floatVal} seq={floatSeq} />
         <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
           <button
             onClick={closeSub}
