@@ -20,6 +20,8 @@ import SettingsDialog from "@/components/SettingsDialog";
 import MedaliBadge from "@/components/MedaliBadge";
 import MedaliNudge from "@/components/MedaliNudge";
 import MedaliSheet from "@/components/MedaliSheet";
+import MedaliIdDialog from "@/components/MedaliIdDialog";
+import { hasMyMedaliId, pushMyMedali } from "@/lib/medaliSync";
 import { hasSermonConfig } from "@/lib/sermon";
 import {
   RotateCcw,
@@ -124,6 +126,17 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 const Index = () => {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // 짝꿍 비교용 이름. 없으면 첫 진입에 닫을 수 없는 팝업이 떠서 받습니다.
+  const [needId, setNeedId] = useState(false);
+  useEffect(() => {
+    if (!hasMyMedaliId()) {
+      setNeedId(true);
+      return;
+    }
+    // 이름이 있으면 내 요약을 올려 둡니다 (5분에 한 번, 실패는 무시)
+    pushMyMedali().catch(() => {});
+  }, []);
 
   // 훈장 팝업 — 폰의 뒤로가기로 팝업만 닫히게 히스토리를 한 칸 쌓습니다.
   // (옵션 시트·검색 기록과 같은 방식. 각 리스너가 자기 ref만 보므로 서로 간섭하지 않습니다.)
@@ -799,6 +812,7 @@ const Index = () => {
 
       <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <MedaliIdDialog open={needId} onDone={() => setNeedId(false)} />
     </div>
   );
 };

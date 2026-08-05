@@ -22,6 +22,8 @@ import {
   loadMedaliCache,
 } from "@/lib/medali";
 import type { MedaliColor, DailyLog, WordRecord, ApiCategory } from "@/lib/medali";
+import { fetchPeer, loadPeerCache, staleLabel } from "@/lib/medaliSync";
+import type { PeerSummary } from "@/lib/medaliSync";
 
 // 아이콘 외곽선 — 명찰 캡슐과 같은 값 (어두운 색 단계에서도 형태가 보이도록)
 const STROKE = "rgba(255,255,255,0.55)";
@@ -161,6 +163,8 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
   const [openRow, setOpenRow] = useState<string | null>(null);   // 내역 행 도움말
   const [shown, setShown] = useState(open);        // 렌더를 유지할지 (퇴장 연출 동안 true)
   const [entered, setEntered] = useState(false);   // 올라온 상태인지
+  // 짝꿍 요약. 캐시를 초기값으로 두어 통신 전에도 바로 보입니다.
+  const [peer, setPeer] = useState<PeerSummary | null>(() => loadPeerCache());
 
   useEffect(() => {
     return medaliEngine.subscribe((s) => setSnap(s));
@@ -175,6 +179,20 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
     medaliEngine.refresh();
     listWeekLogs().then(setLogs).catch(() => setLogs([]));
     listWordRecords().then(setWords).catch(() => setWords([]));
+  }, [open]);
+
+  // 짝꿍 요약은 시트를 열 때 한 번만 받아 옵니다. 닫힌 뒤 응답이 와도 setState 하지 않습니다.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    fetchPeer()
+      .then((p) => {
+        if (alive && p) setPeer(p);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, [open]);
 
   // 올라오고 내려가는 연출. 닫힐 때도 애니메이션이 끝난 뒤에 사라지도록
@@ -333,7 +351,28 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
           style={{ touchAction: "pan-y" }}
         >
           {tab === "api" ? (
-            <div className="pt-5">
+            <div className="relative pt-5">
+              {peer ? (
+                <div className="absolute right-0 top-3 flex flex-col items-end leading-tight">
+                  <div className="flex items-center gap-1">
+                    <span className="font-gothic text-[0.6875rem] text-muted-foreground">{peer.id}</span>
+                    <Flame
+                      size={12}
+                      color={MEDALI_COLORS[peer.apiColor]}
+                      fill={MEDALI_COLORS[peer.apiColor]}
+                      strokeWidth={1.5}
+                    />
+                    <span className="font-gothic text-[0.6875rem] text-muted-foreground">
+                      이번 주 {peer.weekPoints}점
+                    </span>
+                  </div>
+                  {staleLabel(peer.savedAt) ? (
+                    <span className="font-gothic text-[0.5625rem] text-muted-foreground/60">
+                      {staleLabel(peer.savedAt)}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
               {/* 지금 색 */}
               <div className="flex flex-col items-center text-center">
                 <Flame size={48} color={STROKE} fill={apiHex} strokeWidth={1.5} className="shrink-0" />
@@ -490,7 +529,28 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
               </p>
             </div>
           ) : (
-            <div className="pt-5">
+            <div className="relative pt-5">
+              {peer ? (
+                <div className="absolute right-0 top-3 flex flex-col items-end leading-tight">
+                  <div className="flex items-center gap-1">
+                    <span className="font-gothic text-[0.6875rem] text-muted-foreground">{peer.id}</span>
+                    <Star
+                      size={12}
+                      color={MEDALI_COLORS[peer.bintangColor]}
+                      fill={MEDALI_COLORS[peer.bintangColor]}
+                      strokeWidth={1.5}
+                    />
+                    <span className="font-gothic text-[0.6875rem] text-muted-foreground">
+                      {ROMAN[peer.bintangTier] || "III"} · {peer.confirmedCount}개
+                    </span>
+                  </div>
+                  {staleLabel(peer.savedAt) ? (
+                    <span className="font-gothic text-[0.5625rem] text-muted-foreground/60">
+                      {staleLabel(peer.savedAt)}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
               {/* 지금 단계 */}
               <div className="flex flex-col items-center text-center">
                 <Star size={48} color={STROKE} fill={bintangHex} strokeWidth={1.5} className="shrink-0" />

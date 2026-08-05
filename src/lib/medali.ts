@@ -268,6 +268,7 @@ export interface MedaliSnapshot {
 export interface MedaliSummary {
   apiColor: MedaliColor;
   bintangColor: MedaliColor;
+  bintangTier: 1 | 2 | 3;
   weekPoints: number;
   confirmedCount: number;
   updatedAt: number;
@@ -516,6 +517,7 @@ class MedaliEngine {
     return {
       apiColor: this.snap.apiColor,
       bintangColor: this.snap.bintangColor,
+      bintangTier: this.snap.bintangTier,
       weekPoints: this.snap.apiWeekPoints,
       confirmedCount: this.snap.confirmedCount,
       updatedAt: loadMedaliCache().updatedAt,
