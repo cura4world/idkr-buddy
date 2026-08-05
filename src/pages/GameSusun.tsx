@@ -15,7 +15,7 @@ import { medaliEngine, listRounds, dateKey, MEDALI_COLORS } from "@/lib/medali";
 
 const ROUND_SENTENCES = 5;    // 한 판에 조립할 문장 수
 const MIN_SENTENCES = 3;      // 이보다 적으면 게임을 못 엽니다
-const DONE_MS = 800;          // 완성한 문장을 보여주는 시간
+const DONE_MS = 1700;         // 완성한 문장을 보여주는 시간
 const SHAKE_MS = 300;         // 틀린 알약이 붉게 흔들리는 시간
 const GOOD_MISS = 1;          // 미스가 이 이하면 "맞힌 것"으로 봅니다
 
@@ -455,7 +455,7 @@ const GameSusun = () => {
               <button
                 type="button"
                 onClick={() => loadPool(true)}
-                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-medium text-white active:opacity-90"
+                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-gothic font-medium text-white active:opacity-90"
               >
                 한 판 더
               </button>
