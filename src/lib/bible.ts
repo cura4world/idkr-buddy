@@ -135,10 +135,48 @@ export async function fetchChapter(bookId: string, chapter: number): Promise<Bib
 
   const verses = chapters[String(chapter)];
   if (!Array.isArray(verses) || verses.length === 0) throw new Error("CHAPTER_NOT_FOUND");
-  return [...verses]
-    .filter((v) => v && typeof v.verse === "number" && typeof v.text === "string")
-    .map((v) => ({ verse: v.verse, text: stripTbMarks(v.text) }))
-    .sort((a, b) => a.verse - b.verse);
+  return repairVerses(
+    [...verses]
+      .filter((v) => v && typeof v.verse === "number" && typeof v.text === "string")
+      .map((v) => ({ verse: v.verse, text: stripTbMarks(v.text) }))
+  );
+}
+
+// ── 원본 데이터 보정 ───────────────────────────────────────────
+// alkitab-api 원문(인쇄본 기반)에는 한 절이 두 조각으로 잘려 들어간 곳이 있습니다.
+// 뒷조각이 엉뚱한 절번호를 달고 오는 바람에 한 장에 같은 절번호가 두 번 나타나고,
+// 화면에서 React key가 겹쳐 화면을 다시 그릴 때마다 그 문단이 하나씩 쌓입니다.
+//
+// 66권 전수 점검(2026-08)에서 확인된 곳은 7군데뿐입니다.
+//   시편 5·8·68편 — 1절이 "(5-" 에서 끊기고, 뒷조각 ") Berilah ..." 이 2절로 들어옴
+//   열왕기상 1장 · 역대상 2·3·4장 — 쪽 머리글이 1절짜리 절로 끼어듦
+//
+// 두 규칙으로 원래 한 절이던 것을 되돌립니다.
+//   1) ")" 로 시작하고 앞 절이 "(숫자-" 로 끝나면 → 앞 절 + 절번호 + 이 조각
+//      (잘려나간 절번호가 곧 "(5-2)" 의 2이므로 그대로 되붙습니다)
+//   2) 절번호가 앞 절보다 크지 않으면(중복·역행) → 앞 절 뒤에 이어붙임
+// 결과적으로 한 장 안의 절번호는 항상 유일해집니다.
+
+const HEBREW_MARK_TAIL = new RegExp("\\(\\d+-$");
+
+function repairVerses(raw: BibleVerse[]): BibleVerse[] {
+  const out: BibleVerse[] = [];
+  raw.forEach((v) => {
+    const prev = out.length > 0 ? out[out.length - 1] : null;
+    if (prev) {
+      if (v.text.indexOf(")") === 0 && HEBREW_MARK_TAIL.test(prev.text)) {
+        prev.text = (prev.text + String(v.verse) + v.text).trim();
+        return;
+      }
+      if (v.verse <= prev.verse) {
+        if (v.text) prev.text = (prev.text + " " + v.text).trim();
+        return;
+      }
+    }
+    if (!v.text) return;
+    out.push({ verse: v.verse, text: v.text });
+  });
+  return out.sort((a, b) => a.verse - b.verse);
 }
 
 // ── 한국어(새번역, RNKSV) ──────────────────────────────────────
@@ -154,7 +192,7 @@ function stripTbMarks(text: string): string {
     .replace(new RegExp("[/*]", "g"), "")
     // 인쇄본에서 딸려 들어온 쪽 머리글 + 쪽 번호 (예: "Yunus 1.6-10 2")
     .replace(
-      new RegExp("\\s*[A-Z][A-Za-z]*(?:-[A-Za-z]+)*\\s\\d+[.:]\\d+[\\u2013\\u2014-]\\d+\\s+\\d+\\s*", "g"),
+      new RegExp("\\s*[A-Z][A-Za-z]*(?:-[A-Za-z]+)*\\s\\d+[.:]\\d+[\\u2013\\u2014-]\\d+(?:[.:]\\d+)?\\s+\\d+\\s*", "g"),
       " "
     )
     .replace(new RegExp("\\s{2,}", "g"), " ")
@@ -209,7 +247,8 @@ export function stripVerseIntro(text: string, verse: number): string {
 
 /**
  * 절 하나를 문장처럼 보여줘도 되는지 봅니다.
- * 표제만 있고 본문이 없는 절(하박국 3:1)이나, 원본이 잘려 있는 절(시편 8:1, 68:1)을 걸러냅니다.
+ * 표제만 있고 본문이 없는 절(하박국 3:1)을 걸러냅니다.
+ * (시편 8:1 · 68:1처럼 원본이 잘려 있던 절은 repairVerses가 미리 이어붙입니다.)
  */
 export function isUsableVerseText(text: string): boolean {
   const t = text.trim();
@@ -242,9 +281,16 @@ export async function fetchChapterKo(bookId: string, chapter: number): Promise<B
   const data = await res.json();
   if (!Array.isArray(data) || data.length === 0) throw new Error("CHAPTER_NOT_FOUND");
 
+  // 같은 절번호가 두 번 오면 화면 key가 겹쳐 문단이 쌓이므로 첫 것만 남깁니다
+  const seenVerse = new Set<number>();
   const verses: BibleVerse[] = data
     .filter((v: any) => v && typeof v.verse === "number" && typeof v.text === "string")
     .map((v: any) => ({ verse: v.verse, text: stripHtml(v.text) }))
+    .filter((v: BibleVerse) => {
+      if (seenVerse.has(v.verse)) return false;
+      seenVerse.add(v.verse);
+      return true;
+    })
     .sort((a: BibleVerse, b: BibleVerse) => a.verse - b.verse);
 
   if (verses.length === 0) throw new Error("CHAPTER_NOT_FOUND");
