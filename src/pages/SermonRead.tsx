@@ -314,10 +314,6 @@ const hitInkGroup = (g: SVGGElement, x: number, y: number): boolean => {
 const RETURN_KEY = "sermon-return";
 const RETURN_TTL = 10 * 60 * 1000; // 10분이 지난 표는 버립니다
 
-// 폰에서 어디까지 동작하는지 확인하려고 잠깐 켜 둔 안내입니다.
-// 확인이 끝나면 false 로 바꿉니다.
-const DEBUG_RESTORE = true;
-
 function writeReturnTicket(id: string, y: number) {
   try {
     const t = { id: id, y: Math.max(0, Math.round(y)), at: Date.now() };
@@ -428,27 +424,23 @@ const SermonRead = () => {
     restoreTriedRef.current = true;
 
     const target = takeReturnTicket(id);
-    if (target < 1) {
-      if (DEBUG_RESTORE) toast("복원: 적어둔 자리 없음");
-      return;
-    }
-    if (DEBUG_RESTORE) toast("복원 시도 y=" + target);
+    if (target < 1) return;
 
     let raf = 0;
     let stopped = false;
     const startedAt = Date.now();
 
+    // 되돌리는 도중에 사용자가 화면을 만지면 곧바로 멈춥니다 (손과 다투지 않도록)
     const onUserTouch = () => {
-      finish("복원 중단(손댐)");
+      finish();
     };
 
-    function finish(msg: string) {
+    function finish() {
       if (stopped) return;
       stopped = true;
       if (raf) window.cancelAnimationFrame(raf);
       window.removeEventListener("touchstart", onUserTouch);
       window.removeEventListener("wheel", onUserTouch);
-      if (DEBUG_RESTORE && msg) toast(msg);
     }
 
     const tick = () => {
@@ -460,11 +452,11 @@ const SermonRead = () => {
       const now = window.scrollY || document.documentElement.scrollTop || 0;
       const elapsed = Date.now() - startedAt;
       if (elapsed > 400 && max >= target - 2 && Math.abs(now - target) < 2) {
-        finish("복원 완료 y=" + Math.round(now));
+        finish();
         return;
       }
       if (elapsed > 2500) {
-        finish("복원 종료 y=" + Math.round(now) + " max=" + Math.round(max));
+        finish();
         return;
       }
       raf = window.requestAnimationFrame(tick);
@@ -474,7 +466,7 @@ const SermonRead = () => {
     window.addEventListener("wheel", onUserTouch, { passive: true });
     raf = window.requestAnimationFrame(tick);
 
-    return () => finish("");
+    return () => finish();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, rec, id]);
 
@@ -706,7 +698,6 @@ const SermonRead = () => {
     // 돌아올 자리를 표로 한 장 적어 둡니다 (돌아온 첫 렌더에서 이 자리로 되돌립니다)
     const backY = window.scrollY || document.documentElement.scrollTop || 0;
     if (id) writeReturnTicket(id, backY);
-    if (DEBUG_RESTORE) toast("자리 저장 y=" + Math.round(backY));
     // 단어 팝업이 쌓아 둔 히스토리 한 칸을 사전 화면으로 덮어씁니다.
     // 그래야 사전에서 뒤로가기 한 번에 설교문으로 돌아오고,
     // 같은 화면이 두 번 나타나는 헛걸음이 없어집니다.
