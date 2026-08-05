@@ -15,6 +15,7 @@ import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
 import { ReadingTracker } from "@/lib/readingTimer";
+import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import PointFloat from "@/components/PointFloat";
 
 const DIFF_KEY = "story-difficulty";
@@ -255,20 +256,40 @@ const Story = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ---------- 돌아올 자리로 되돌리기 ----------
+  // 사전에 다녀오면 이 화면은 새로 마운트되어 목록으로 돌아갑니다.
+  // 표가 있으면 보던 이야기 카드를 다시 열고, 면과 스크롤까지 되돌립니다.
+  const pendingReturnRef = useRef<{ y: number; flipped: boolean } | null>(null);
+  const cancelRestoreRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     listStories().then((all) => {
       setStories(all);
-      // 사전에서 "이야기로" 버튼으로 돌아온 경우, 보던 이야기 카드를 다시 연다
-      try {
-        const rid = sessionStorage.getItem("story-return-id");
-        if (rid) {
-          sessionStorage.removeItem("story-return-id");
-          const found = all.find((s) => s.id === rid);
-          if (found) openCard(found);
-        }
-      } catch (e) {}
+      const t = takeReturnTicket("story");
+      if (!t) return;
+      const found = all.find((s) => s.id === t.key);
+      if (!found) return;
+      pendingReturnRef.current = { y: t.y, flipped: t.flipped };
+      openCard(found);
     });
+    return () => {
+      if (cancelRestoreRef.current) cancelRestoreRef.current();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 카드가 그려진 뒤에 면을 맞추고, 그 다음 자리를 되돌립니다.
+  useEffect(() => {
+    const p = pendingReturnRef.current;
+    if (!p || !current) return;
+    if (p.flipped && !flipped) {
+      setFlipped(true);
+      return;
+    }
+    pendingReturnRef.current = null;
+    cancelRestoreRef.current = restoreScrollTo(p.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, flipped]);
 
   const pickDifficulty = (d: StoryDifficulty) => {
     setDifficulty(d);
@@ -368,8 +389,14 @@ const Story = () => {
 
   const openInDictionary = () => {
     if (!popupWord) return;
-    try { if (current) sessionStorage.setItem("story-return-id", current.id); } catch (e) {}
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=story");
+    // 돌아올 자리를 표로 한 장 적어 둡니다 (어느 이야기 + 스크롤 + 보고 있던 면)
+    if (current) writeReturnTicket("story", current.id, currentScrollY(), flipped);
+    // 카드가 쌓아 둔 히스토리 한 칸을 사전 화면으로 덮어씁니다.
+    // 그래야 사전에서 뒤로가기 한 번에 이야기로 돌아옵니다.
+    navigate(
+      "/dictionary?q=" + encodeURIComponent(popupWord) + "&from=story",
+      { replace: cardStateRef.current }
+    );
   };
 
   const savePopupWord = () => {
