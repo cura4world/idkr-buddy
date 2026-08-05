@@ -4,6 +4,7 @@ import { goBackOr } from "@/lib/nav";
 import { getSavedWords, Word } from "@/lib/store";
 import { ArrowLeft, RotateCcw, Shuffle, Volume2, VolumeX } from "lucide-react";
 import { medaliEngine } from "@/lib/medali";
+import { displayWord } from "@/lib/wordCase";
 import PointFloat from "@/components/PointFloat";
 
 function shuffle<T>(arr: T[]): T[] {
@@ -236,10 +237,10 @@ export default function SavedQuizMode() {
           <button
             type="button"
             onClick={() => speak(currentQ.word.word)}
-            className="font-word text-3xl font-semibold text-foreground active:opacity-70"
+            className="font-word text-2xl font-semibold text-foreground active:opacity-70"
             title="발음 듣기"
           >
-            {currentQ.word.word}
+            {displayWord(currentQ.word.word, currentQ.word.example)}
           </button>
           {currentQ.word.example && (
             <p className="text-base text-foreground font-word mt-2">{currentQ.word.example}</p>
