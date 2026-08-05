@@ -16,6 +16,8 @@ import SettingsDialog from "@/components/SettingsDialog";
 import { medaliEngine } from "@/lib/medali";
 import PointFloat from "@/components/PointFloat";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
+import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
+import PhraseFindBar from "@/components/PhraseFindBar";
 
 /* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 */
 const speak = (text: string, lang: "id" | "ko") => {
@@ -260,9 +262,21 @@ const PhraseDetail = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, sentence]);
 
+  // 본문에서 고른 표현 찾기
+  const { phrase: selPhrase, take: takeSelPhrase } = useSelectedPhrase();
+
+  const openPhrasePopup = () => {
+    const s = takeSelPhrase();
+    if (!s.phrase) return;
+    openWordPopup(s.phrase);
+  };
+
   // 조회 순서: 화면 캐시 → 폰 저장소(IndexedDB) → Gemini API
   const openWordPopup = async (rawToken: string) => {
-    const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
+    // 글자를 고르는 중이면 팝업을 열지 않습니다
+    const liveSel = window.getSelection();
+    if (liveSel && !liveSel.isCollapsed) return;
+    const word = cleanPhrase(rawToken);
     if (!word) return;
     const key = word.toLowerCase();
     const reqId = ++popupReqId.current;
@@ -344,7 +358,7 @@ const PhraseDetail = () => {
   // 표제 문장을 단어 단위로 쪼개 탭 가능하게 렌더링
   const renderTokens = (text: string) =>
     text.split(" ").map((tok, ti) => (
-      <span key={"t" + ti}>
+      <span key={"t" + ti} data-idw="1">
         <span
           onClick={(e) => { e.stopPropagation(); openWordPopup(tok); }}
           className="cursor-pointer rounded active:bg-primary/20"
@@ -525,6 +539,7 @@ const PhraseDetail = () => {
       </div>
 
       {/* 단어 미니 팝업 */}
+      <PhraseFindBar phrase={selPhrase} onFind={openPhrasePopup} hidden={!!popupWord} />
       {popupWord && (
         <div className="fixed inset-0 z-50" onClick={() => setPopupWord(null)}>
           <div className="absolute inset-0 bg-black/40" />
