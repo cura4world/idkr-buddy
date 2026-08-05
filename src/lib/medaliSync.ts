@@ -53,6 +53,25 @@ export function hasMyMedaliId(): boolean {
   return isValidMedaliId(getMyMedaliId());
 }
 
+// 이 기기를 Medali 동기화에서 제외합니다 (태블릿·세컨폰용).
+// "-" 는 아이디 규칙에 어긋나므로 업로드·다운로드가 자동으로 건너뛰어집니다.
+const OPT_OUT = "-";
+
+export function optOutMedali(): void {
+  try {
+    localStorage.setItem(ID_KEY, OPT_OUT);
+  } catch {
+    // 무시
+  }
+}
+
+// 팝업을 띄울지 판단합니다. 아이디가 있거나 제외를 선택했으면 띄우지 않습니다.
+export function needsMedaliId(): boolean {
+  const v = getMyMedaliId();
+  if (v === OPT_OUT) return false;
+  return !isValidMedaliId(v);
+}
+
 // ---------- 상대 요약 캐시 ----------
 
 export function loadPeerCache(): PeerSummary | null {

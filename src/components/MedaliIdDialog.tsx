@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   fetchRegisteredIds,
   isValidMedaliId,
+  optOutMedali,
   pushMyMedali,
   setMyMedaliId,
 } from "@/lib/medaliSync";
@@ -116,12 +117,16 @@ export default function MedaliIdDialog({ open, onDone }: Props) {
           className="px-5 pt-5"
           style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
         >
-          <p className="font-body text-base font-semibold text-card-foreground">이름을 정해주세요</p>
+          <p className="font-body text-base font-semibold text-card-foreground">
+            앱에서 사용할 ID를 입력하세요
+          </p>
           <p className="mt-1.5 font-gothic text-[0.75rem] leading-relaxed text-muted-foreground">
-            짝꿍과 서로의 기록을 볼 때 쓰는 이름이에요. 한글·영문·숫자 6자 이내.
+            영문 6자 이내로 적어주세요. 아이디를 입력하면 상대방의 학습 점수를 확인할 수 있어요.
           </p>
 
           <form onSubmit={handleSubmit}>
+            {/* 흰 카드 위에서 입력칸이 묻히지 않도록 한 톤 어두운 면(bg-muted)에 테두리를 줍니다.
+                반투명 배경은 밑바탕에 따라 색이 달라지므로 불투명 색만 씁니다. */}
             <input
               ref={inputRef}
               value={value}
@@ -131,7 +136,8 @@ export default function MedaliIdDialog({ open, onDone }: Props) {
               autoCapitalize="none"
               autoCorrect="off"
               autoComplete="off"
-              className="mt-4 w-full bg-transparent border-0 border-b border-border/60 rounded-none px-0 py-2 text-base text-card-foreground outline-none focus:border-primary transition-colors"
+              placeholder="ID"
+              className="mt-4 mb-1 w-full rounded-xl border-2 border-primary/40 bg-muted px-4 py-3 text-center font-word text-[1.125rem] tracking-wide text-foreground outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-primary focus:bg-background"
             />
 
             {/* 안내 한 줄 — 자리는 늘 잡아 두어 입력 중 화면이 튀지 않게 합니다 */}
@@ -154,6 +160,18 @@ export default function MedaliIdDialog({ open, onDone }: Props) {
               }
             >
               시작하기
+            </button>
+
+            {/* 설교문만 보는 태블릿·세컨폰용. "나중에"가 아니라 다시 묻지 않는 확정입니다. */}
+            <button
+              type="button"
+              onClick={() => {
+                optOutMedali();
+                onDone();
+              }}
+              className="mt-3 w-full py-2 font-gothic text-[0.75rem] text-muted-foreground underline underline-offset-2"
+            >
+              이 기기에서는 사용하지 않을래요
             </button>
           </form>
         </div>

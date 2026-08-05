@@ -21,7 +21,7 @@ import MedaliBadge from "@/components/MedaliBadge";
 import MedaliNudge from "@/components/MedaliNudge";
 import MedaliSheet from "@/components/MedaliSheet";
 import MedaliIdDialog from "@/components/MedaliIdDialog";
-import { hasMyMedaliId, pushMyMedali } from "@/lib/medaliSync";
+import { needsMedaliId, pushMyMedali } from "@/lib/medaliSync";
 import { hasSermonConfig } from "@/lib/sermon";
 import {
   RotateCcw,
@@ -127,14 +127,15 @@ const Index = () => {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // 짝꿍 비교용 이름. 없으면 첫 진입에 닫을 수 없는 팝업이 떠서 받습니다.
+  // 짝꿍 비교용 아이디. 없으면 첫 진입에 닫을 수 없는 팝업이 떠서 받습니다.
+  // 태블릿·세컨폰처럼 "사용 안 함"을 고른 기기는 다시 묻지 않습니다.
   const [needId, setNeedId] = useState(false);
   useEffect(() => {
-    if (!hasMyMedaliId()) {
+    if (needsMedaliId()) {
       setNeedId(true);
       return;
     }
-    // 이름이 있으면 내 요약을 올려 둡니다 (5분에 한 번, 실패는 무시)
+    // 아이디가 있으면 내 요약을 올려 둡니다 (5분에 한 번, 실패는 무시)
     pushMyMedali().catch(() => {});
   }, []);
 
