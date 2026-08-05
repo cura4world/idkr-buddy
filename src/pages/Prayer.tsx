@@ -25,6 +25,7 @@ import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import SettingsDialog from "@/components/SettingsDialog";
 import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
+import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 
 
 /* 기도 메뉴 — 메인화면 목록과 같은 어법 (아이콘 + 한국어 + 인니어) */
@@ -287,11 +288,18 @@ const Prayer = () => {
 
   // 하위 화면이 열려 있는지 (히스토리 한 칸)
   const subOpenRef = useRef(false);
+  // 히스토리를 실제로 쌓았는지 (사전으로 나갈 때 그 칸을 덮어쓸지 판단하는 데 씁니다)
+  const subPushedRef = useRef(false);
 
   const pushSub = () => {
     if (!subOpenRef.current) {
       subOpenRef.current = true;
-      try { window.history.pushState({ prayerSub: true }, ""); } catch (e) {}
+      try {
+        window.history.pushState({ prayerSub: true }, "");
+        subPushedRef.current = true;
+      } catch (e) {
+        subPushedRef.current = false;
+      }
     }
   };
 
@@ -335,6 +343,7 @@ const Prayer = () => {
       }
       if (subOpenRef.current) {
         subOpenRef.current = false;
+        subPushedRef.current = false;
         resetSub();
       }
     };
@@ -343,9 +352,41 @@ const Prayer = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ---------- 돌아올 자리로 되돌리기 ----------
+  // 사전에 다녀오면 이 화면은 새로 마운트되어 목록으로 돌아갑니다.
+  // 표가 있으면 보던 기도문을 다시 열고, 면과 스크롤까지 되돌립니다.
+  const pendingReturnRef = useRef<{ y: number; flipped: boolean } | null>(null);
+  const cancelRestoreRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
-    listPrayers().then(setRecords);
+    listPrayers().then((all) => {
+      setRecords(all);
+      const t = takeReturnTicket("prayer");
+      if (!t) return;
+      const found = all.find((r) => r.id === t.key);
+      if (!found) return;
+      pendingReturnRef.current = { y: t.y, flipped: t.flipped };
+      openPrayer(found);
+    });
+    return () => {
+      if (cancelRestoreRef.current) cancelRestoreRef.current();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 기도문이 그려진 뒤에 면을 맞추고, 그 다음 자리를 되돌립니다.
+  // (openPrayer 가 맨 위로 올리므로 되돌리기는 반드시 그 뒤에 와야 합니다)
+  useEffect(() => {
+    const p = pendingReturnRef.current;
+    if (!p || view !== "prayer" || !current) return;
+    if (p.flipped && !flipped) {
+      setFlipped(true);
+      return;
+    }
+    pendingReturnRef.current = null;
+    cancelRestoreRef.current = restoreScrollTo(p.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, current, flipped]);
 
   // 스크롤을 내린 상태에서 들어와도 맨 위부터 보이게 합니다.
   useEffect(() => {
@@ -601,7 +642,12 @@ const Prayer = () => {
 
   const openInDictionary = () => {
     if (!popupWord) return;
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord));
+    // 돌아올 자리를 표로 한 장 적어 둡니다 (어느 기도문 + 스크롤 + 보고 있던 면)
+    if (current) writeReturnTicket("prayer", current.id, currentScrollY(), flipped);
+    navigate(
+      "/dictionary?q=" + encodeURIComponent(popupWord) + "&from=prayer",
+      { replace: subPushedRef.current }
+    );
   };
 
   const savePopupWord = () => {
