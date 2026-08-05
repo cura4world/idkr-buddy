@@ -53,6 +53,7 @@ import {
   saveInk,
   deleteInk,
 } from "@/lib/sermonInk";
+import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 
 
 const speak = (text: string, lang: "id" | "ko") => {
@@ -302,43 +303,6 @@ const hitInkGroup = (g: SVGGElement, x: number, y: number): boolean => {
   return false;
 };
 
-// ── 돌아올 자리 ───────────────────────────────────────────────
-// 단어 팝업 → "사전에서 보기" 로 나갔다가 돌아오면 이 화면은 새로 마운트되고,
-// 본문을 비동기로 불러오는 사이 브라우저의 기본 스크롤 복원이 실패해 맨 위에 머뭅니다.
-//
-// 처음에는 세션 저장소에 위치를 계속 기억하면서 뒤로가기(POP)일 때만 되돌리게 했는데
-// 폰에서 동작하지 않았습니다. 판단 조건이 많을수록 어디서 막혔는지 알기 어려우므로,
-// "사전으로 나갈 때 표를 한 장 적고, 돌아온 첫 렌더에서 그 표를 쓰고 버린다" 로 단순화했습니다.
-// 표는 사전으로 나갈 때만 적히므로 목록에서 새로 열 때는 영향이 없습니다.
-
-const RETURN_KEY = "sermon-return";
-const RETURN_TTL = 10 * 60 * 1000; // 10분이 지난 표는 버립니다
-
-function writeReturnTicket(id: string, y: number) {
-  try {
-    const t = { id: id, y: Math.max(0, Math.round(y)), at: Date.now() };
-    window.localStorage.setItem(RETURN_KEY, JSON.stringify(t));
-  } catch (e) {
-    // 저장소를 못 쓰는 환경이면 그냥 넘어갑니다
-  }
-}
-
-// 표는 한 번만 쓰입니다 — 읽자마자 지웁니다.
-function takeReturnTicket(id: string): number {
-  try {
-    const raw = window.localStorage.getItem(RETURN_KEY);
-    if (!raw) return 0;
-    window.localStorage.removeItem(RETURN_KEY);
-    const t = JSON.parse(raw);
-    if (!t || t.id !== id) return 0;
-    if (typeof t.y !== "number" || !isFinite(t.y) || t.y < 1) return 0;
-    if (typeof t.at !== "number" || Date.now() - t.at > RETURN_TTL) return 0;
-    return Math.round(t.y);
-  } catch (e) {
-    return 0;
-  }
-}
-
 const SermonRead = () => {
   const navigate = useNavigate();
   const { widthClass, canWide, wide, toggle } = useWideMode();
@@ -414,8 +378,6 @@ const SermonRead = () => {
 
   // ---------- 돌아올 자리로 되돌리기 ----------
   // 본문이 그려진 뒤 한 번만 실행합니다. 표가 없으면 아무것도 하지 않습니다.
-  // 글꼴·필기 층 때문에 높이가 늦게 늘어나므로 첫 성공에 끝내지 않고
-  // 최소 0.4초 · 최대 2.5초 동안 계속 다시 적용합니다.
   const restoreTriedRef = useRef(false);
 
   useEffect(() => {
@@ -423,50 +385,9 @@ const SermonRead = () => {
     if (restoreTriedRef.current) return;
     restoreTriedRef.current = true;
 
-    const target = takeReturnTicket(id);
-    if (target < 1) return;
-
-    let raf = 0;
-    let stopped = false;
-    const startedAt = Date.now();
-
-    // 되돌리는 도중에 사용자가 화면을 만지면 곧바로 멈춥니다 (손과 다투지 않도록)
-    const onUserTouch = () => {
-      finish();
-    };
-
-    function finish() {
-      if (stopped) return;
-      stopped = true;
-      if (raf) window.cancelAnimationFrame(raf);
-      window.removeEventListener("touchstart", onUserTouch);
-      window.removeEventListener("wheel", onUserTouch);
-    }
-
-    const tick = () => {
-      if (stopped) return;
-      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-      const y = Math.min(target, max);
-      window.scrollTo(0, y);
-      if (document.documentElement.scrollTop !== y) document.documentElement.scrollTop = y;
-      const now = window.scrollY || document.documentElement.scrollTop || 0;
-      const elapsed = Date.now() - startedAt;
-      if (elapsed > 400 && max >= target - 2 && Math.abs(now - target) < 2) {
-        finish();
-        return;
-      }
-      if (elapsed > 2500) {
-        finish();
-        return;
-      }
-      raf = window.requestAnimationFrame(tick);
-    };
-
-    window.addEventListener("touchstart", onUserTouch, { passive: true });
-    window.addEventListener("wheel", onUserTouch, { passive: true });
-    raf = window.requestAnimationFrame(tick);
-
-    return () => finish();
+    const t = takeReturnTicket("sermon");
+    if (!t || t.key !== id) return;
+    return restoreScrollTo(t.y);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, rec, id]);
 
@@ -696,8 +617,7 @@ const SermonRead = () => {
   const openInDictionary = () => {
     if (!popupWord) return;
     // 돌아올 자리를 표로 한 장 적어 둡니다 (돌아온 첫 렌더에서 이 자리로 되돌립니다)
-    const backY = window.scrollY || document.documentElement.scrollTop || 0;
-    if (id) writeReturnTicket(id, backY);
+    if (id) writeReturnTicket("sermon", id, currentScrollY(), false);
     // 단어 팝업이 쌓아 둔 히스토리 한 칸을 사전 화면으로 덮어씁니다.
     // 그래야 사전에서 뒤로가기 한 번에 설교문으로 돌아오고,
     // 같은 화면이 두 번 나타나는 헛걸음이 없어집니다.
