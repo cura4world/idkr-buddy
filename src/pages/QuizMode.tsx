@@ -285,15 +285,15 @@ export default function QuizMode() {
       <div className="flex justify-center gap-2 py-4">
         <button
           onClick={handleToggleRandom}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+          title={isRandom ? "랜덤 끄기" : "랜덤 켜기"}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full transition-colors border ${
             isRandom
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
-          <Shuffle size={14} />
-          <span>랜덤</span>
-          <span className="font-gothic text-[0.6875rem] font-semibold tracking-wide opacity-90">
+          <Shuffle size={15} />
+          <span className="font-gothic text-[0.75rem] font-semibold tracking-wide">
             {isRandom ? "ON" : "OFF"}
           </span>
         </button>
@@ -305,15 +305,14 @@ export default function QuizMode() {
             setSpeakOn(next);
           }}
           title={speakOn ? "발음 끄기" : "발음 켜기"}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full transition-colors border ${
             speakOn
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
-          {speakOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
-          <span>발음</span>
-          <span className="font-gothic text-[0.6875rem] font-semibold tracking-wide opacity-90">
+          {speakOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
+          <span className="font-gothic text-[0.75rem] font-semibold tracking-wide">
             {speakOn ? "ON" : "OFF"}
           </span>
         </button>
