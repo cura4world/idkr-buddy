@@ -109,7 +109,7 @@ export function makeQuestion(
 }
 
 // 뜻 버튼 색. 받았을 때는 누른 버튼이 청록으로 켜지고,
-// 놓쳤을 때는 누른 버튼이 붉게·정답 버튼이 청록으로 함께 켜집니다(바닥에 닿았으면 정답만).
+// 놓쳤을 때는 누른 버튼이 붉게·정답 버튼이 초록으로 함께 켜집니다(바닥에 닿았으면 정답만).
 export function choiceClass(
   choice: string,
   truth: string,
@@ -126,7 +126,7 @@ export function choiceClass(
     if (picked && choice === picked && choice !== truth) {
       return "border-destructive bg-destructive/15 text-destructive";
     }
-    if (choice === truth) return "border-primary bg-primary/15 text-foreground";
+    if (choice === truth) return "border-emerald-500 bg-emerald-500/15 text-foreground";
     return "border-border bg-card text-foreground";
   }
   return "border-border bg-card text-foreground active:bg-muted/60";
