@@ -197,9 +197,11 @@ export default function QuizMode() {
             let className = "w-full text-left px-5 py-4 rounded-xl border transition-all duration-300 font-body text-sm ";
             if (selected) {
               if (choice === currentQ.correctAnswer) {
-                className += "bg-accent/15 border-accent text-foreground";
+                // 정답은 항상 초록. accent(탠저린)는 붉게 보여 오답으로 오해됩니다.
+                className += "bg-emerald-500/15 border-emerald-500 text-foreground";
               } else if (choice === selected) {
-                className += "bg-muted/80 border-border/50 text-muted-foreground";
+                // 내가 잘못 고른 것만 빨강
+                className += "bg-rose-500/15 border-rose-500 text-foreground";
               } else {
                 className += "bg-card border-border/30 text-muted-foreground/50";
               }
