@@ -20,6 +20,7 @@ import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveT
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import { medaliEngine } from "@/lib/medali";
 import PointFloat from "@/components/PointFloat";
+import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 
 // 화자 배지 색. A / B / C 를 한눈에 구분하기 위한 것입니다.
 const BADGE: Record<string, string> = {
@@ -140,6 +141,21 @@ const PercakapanRead = () => {
     };
   }, [id, navigate]);
 
+  // ---------- 돌아올 자리로 되돌리기 ----------
+  // 어느 회화집이었는지는 주소(/percakapan/:id)로 저절로 돌아오므로 스크롤만 챙깁니다.
+  // 본문이 그려진 뒤 한 번만 실행합니다. 표가 없으면 아무것도 하지 않습니다.
+  const restoreTriedRef = useRef(false);
+
+  useEffect(() => {
+    if (loading) return;
+    if (restoreTriedRef.current) return;
+    restoreTriedRef.current = true;
+    const t = takeReturnTicket("percakapan");
+    if (!t || t.key !== id) return;
+    return restoreScrollTo(t.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, id]);
+
   useEffect(() => {
     return percakapanAudioPlayer.subscribe((s) => setSnap(s));
   }, []);
@@ -258,10 +274,12 @@ const PercakapanRead = () => {
     }
   };
 
-  // 회화집은 주소(/percakapan/:id)만으로 돌아오므로 복귀 id 를 따로 저장하지 않습니다.
-  // setState 없이 navigate 만 부릅니다.
+  // 회화집은 주소(/percakapan/:id)만으로 돌아오므로 어느 글이었는지는 표에 기대지 않습니다.
+  // 읽던 자리(스크롤)만 표로 한 장 적어 둡니다. setState 없이 navigate 만 부릅니다.
+  // 단어 팝업이 히스토리를 쌓지 않는 화면이라 replace 는 주지 않습니다.
   const openInDictionary = () => {
     if (!popupWord) return;
+    writeReturnTicket("percakapan", id, currentScrollY(), false);
     navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=percakapan");
   };
 
