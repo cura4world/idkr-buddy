@@ -9,6 +9,7 @@ import { ArrowLeft, Lightbulb, Sparkles, Loader2, Volume2, Trash2, BookOpen, Che
 import { toast } from "sonner";
 import { generateTip, saveTip, listTips, deleteTip, TipRecord } from "@/lib/tips";
 import { hasGeminiApiKey } from "@/lib/gemini";
+import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 
 const InsightTips = () => {
   const navigate = useNavigate();
@@ -40,13 +41,45 @@ const InsightTips = () => {
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
 
+  // ---------- 돌아올 자리로 되돌리기 ----------
+  // 사전에 다녀오면 이 화면은 새로 마운트됩니다. 펼쳐 둔 항목(openId)과 스크롤을
+  // 함께 되돌립니다. 뒤집힌 면이 없는 화면이라 openId 는 표의 key 에 담아 나릅니다.
+  const pendingReturnRef = useRef<{ y: number; openId: string | null } | null>(null);
+  const cancelRestoreRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     listTips().then((all) => {
       setTips(all);
       setLoaded(true);
+      const t = takeReturnTicket("tips");
+      if (t) {
+        const wanted = t.key !== "-" && all.some((x) => x.id === t.key) ? t.key : null;
+        pendingReturnRef.current = { y: t.y, openId: wanted };
+        setOpenId(wanted);
+        return;
+      }
       if (all.length) setOpenId(all[0].id);
     });
+    return () => {
+      if (cancelRestoreRef.current) cancelRestoreRef.current();
+    };
   }, []);
+
+  // 항목이 펼쳐진 뒤라야 높이가 맞으므로, 그 다음 렌더에서 자리를 되돌립니다.
+  useEffect(() => {
+    const p = pendingReturnRef.current;
+    if (!p || !loaded) return;
+    if (openId !== p.openId) return;
+    pendingReturnRef.current = null;
+    cancelRestoreRef.current = restoreScrollTo(p.y);
+  }, [loaded, openId]);
+
+  // 펼쳐 둔 항목과 읽던 자리를 표로 한 장 적어 두고 사전으로 갑니다.
+  // 히스토리를 쌓는 장치가 없는 화면이라 replace 는 주지 않습니다.
+  const openInDictionary = (word: string) => {
+    writeReturnTicket("tips", openId || "-", currentScrollY(), false);
+    navigate("/dictionary?q=" + encodeURIComponent(word) + "&from=tips");
+  };
 
   const speak = (text: string, lang: "id" | "ko") => {
     if ((window as any).AndroidTTS) {
@@ -189,9 +222,7 @@ const InsightTips = () => {
                       )}
                     </div>
                     <button
-                      onClick={() =>
-                        navigate("/dictionary?q=" + encodeURIComponent(t.indo as string) + "&from=tips")
-                      }
+                      onClick={() => openInDictionary(t.indo as string)}
                       className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center shrink-0 active:bg-emerald-500/20"
                       title="사전에서 보기"
                     >
