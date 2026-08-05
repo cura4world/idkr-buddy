@@ -3,9 +3,10 @@
 // 핀 탭 → 하단 시트: 이미지 보기(영구 저장) + Gemini 설명(IndexedDB 캐싱) + 사전 연결
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ReadingTracker } from "@/lib/readingTimer";
-import { ArrowLeft, Plus, Minus, Volume2, Loader2, X } from "lucide-react";
+import { goBackOr } from "@/lib/nav";
+import { ArrowLeft, Plus, Minus, Volume2, Loader2, Map, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   MAP_VIEW,
@@ -67,6 +68,7 @@ const speak = (text: string, lang: "id" | "ko") => {
 
 const IndoMap = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ---------- 탐험 점수 (보이지 않음) ----------
   // 2분 구경 = 1점. 화면에는 아무 표시도 없고 플로팅도 띄우지 않습니다.
@@ -495,15 +497,17 @@ const IndoMap = () => {
       {/* 헤더 */}
       <header className="relative flex items-center gap-2 px-4 pt-5 pb-3 shrink-0">
         <button
-          onClick={() => navigate("/")}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-black/5 active:bg-black/10"
-          title="홈으로"
+          onClick={() => goBackOr(navigate, location.key, "/insight")}
+          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-black/5 active:bg-black/10 -ml-1"
+          title="뒤로"
         >
           <ArrowLeft size={20} />
         </button>
-        <div>
-          <h1 className="text-xl font-semibold text-foreground leading-none">인도네시아 지도</h1>
-          <p className="mt-1 text-xs font-word italic text-muted-foreground">Peta Indonesia</p>
+        <div className="flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl bg-sky-500 flex items-center justify-center shadow-lg shadow-black/30">
+            <Map size={18} className="text-white" />
+          </span>
+          <h1 className="text-lg font-semibold text-foreground leading-none">인도네시아 지도</h1>
         </div>
       </header>
 
