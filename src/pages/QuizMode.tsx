@@ -152,11 +152,12 @@ export default function QuizMode() {
       } else {
         setReviewList((r) => [...r, currentQ.word]);
       }
-      // 틀렸을 때는 정답을 읽을 시간이 필요해 더 오래 보여줍니다.
+      // 초록·빨강이 켜진 화면을 눈으로 확인할 시간을 줍니다.
+      // 틀렸을 때는 정답까지 읽어야 하므로 더 오래 보여줍니다.
       setTimeout(() => {
         setSelected(null);
         setQuestionIndex((i) => i + 1);
-      }, isCorrect ? 1200 : 2600);
+      }, isCorrect ? 2000 : 3600);
     },
     [selected, currentQ]
   );

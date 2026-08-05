@@ -145,10 +145,12 @@ export default function SavedQuizMode() {
       } else {
         setReviewList((r) => [...r, currentQ.word]);
       }
+      // 초록·빨강이 켜진 화면을 눈으로 확인할 시간을 줍니다.
+      // 틀렸을 때는 정답까지 읽어야 하므로 더 오래 보여줍니다.
       setTimeout(() => {
         setSelected(null);
         setQuestionIndex((i) => i + 1);
-      }, 1200);
+      }, choice === currentQ.correctAnswer ? 2000 : 3600);
     },
     [selected, currentQ]
   );
