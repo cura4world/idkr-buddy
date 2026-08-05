@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getCategories, getWordsByCategory, Word } from "@/lib/store";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
-import { ArrowLeft, RotateCcw, Shuffle } from "lucide-react";
+import { ArrowLeft, RotateCcw, Shuffle, Volume2, VolumeX } from "lucide-react";
 import { medaliEngine } from "@/lib/medali";
 import PointFloat from "@/components/PointFloat";
 
@@ -14,6 +14,46 @@ function shuffle<T>(arr: T[]): T[] {
   }
   return a;
 }
+
+const SPEAK_KEY = "quiz-speak";
+
+function loadSpeakOn(): boolean {
+  try {
+    return localStorage.getItem(SPEAK_KEY) !== "0";  // 기본값 켜짐
+  } catch {
+    return true;
+  }
+}
+
+function saveSpeakOn(on: boolean): void {
+  try {
+    localStorage.setItem(SPEAK_KEY, on ? "1" : "0");
+  } catch {
+    // 저장 실패해도 이번 판은 동작합니다
+  }
+}
+
+/* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 (게임 화면과 같은 방식) */
+const speak = (text: string) => {
+  const w = window as any;
+  if (w.AndroidTTS) {
+    try {
+      w.AndroidTTS.speak(text, "id-ID");
+      return;
+    } catch (e) { /* 폴백으로 넘어갑니다 */ }
+  }
+  try {
+    window.speechSynthesis?.cancel?.();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "id-ID";
+    u.rate = 0.95;
+    window.speechSynthesis?.speak?.(u);
+  } catch (e) { /* 지원하지 않는 기기는 조용히 넘어갑니다 */ }
+};
+
+const stopSpeak = () => {
+  try { window.speechSynthesis?.cancel?.(); } catch (e) {}
+};
 
 export default function QuizMode() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +70,7 @@ export default function QuizMode() {
   const [correctCount, setCorrectCount] = useState(0);
   const [reviewList, setReviewList] = useState<Word[]>([]);
   const [isRandom, setIsRandom] = useState(false);
+  const [speakOn, setSpeakOn] = useState(() => loadSpeakOn());
 
   const makeQuestions = (random: boolean) => {
     const source = random ? shuffle(allWords) : allWords;
@@ -44,6 +85,20 @@ export default function QuizMode() {
   const [questions, setQuestions] = useState(() => makeQuestions(false));
   const currentQ = questions[questionIndex];
   const isFinished = questionIndex >= questions.length;
+
+  // 문제가 바뀌면 단어를 읽어줍니다. 첫 문제는 건너뜁니다
+  // (화면 진입 직후 자동재생은 놀랍기도 하고 PWA에서 막힐 수 있습니다).
+  useEffect(() => {
+    if (!speakOn) return;
+    if (isFinished || !currentQ) return;
+    if (questionIndex === 0) return;
+    speak(currentQ.word.word);
+  }, [questionIndex, speakOn, isFinished, currentQ]);
+
+  // 화면을 벗어날 때 소리가 뒤따라 울리지 않게 합니다.
+  useEffect(() => {
+    return () => { stopSpeak(); };
+  }, []);
 
   // ---------- 퀴즈 점수 + Bintang 판정 ----------
   // 문항별 정답 여부를 ref 배열로만 모으므로 기존 채점(correctCount) 로직과 섞이지 않습니다.
@@ -88,6 +143,7 @@ export default function QuizMode() {
   const handleSelect = useCallback(
     (choice: string) => {
       if (selected) return;
+      stopSpeak();
       setSelected(choice);
       const isCorrect = choice === currentQ.correctAnswer;
       answersRef.current.push({ word: currentQ.word.word, correct: isCorrect });
@@ -185,7 +241,14 @@ export default function QuizMode() {
 
       <div className="flex-1 flex flex-col items-center justify-center px-6">
         <div className="mb-10 text-center">
-          <p className="font-word text-3xl font-semibold">{currentQ.word.word}</p>
+          <button
+            type="button"
+            onClick={() => speak(currentQ.word.word)}
+            className="font-word text-3xl font-semibold text-foreground active:opacity-70"
+            title="발음 듣기"
+          >
+            {currentQ.word.word}
+          </button>
           {currentQ.word.example && (
             <p className="text-base text-foreground font-word mt-2">
               {currentQ.word.example}
@@ -217,7 +280,7 @@ export default function QuizMode() {
         </div>
       </div>
 
-      <div className="flex justify-center py-4">
+      <div className="flex justify-center gap-2 py-4">
         <button
           onClick={handleToggleRandom}
           className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
@@ -227,6 +290,22 @@ export default function QuizMode() {
           }`}
         >
           <Shuffle size={14} /> 랜덤
+        </button>
+        <button
+          onClick={() => {
+            const next = !speakOn;
+            if (!next) stopSpeak();
+            saveSpeakOn(next);
+            setSpeakOn(next);
+          }}
+          title={speakOn ? "발음 끄기" : "발음 켜기"}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-body transition-colors border ${
+            speakOn
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+          }`}
+        >
+          {speakOn ? <VolumeX size={14} /> : <Volume2 size={14} />} 발음
         </button>
       </div>
     </div>
