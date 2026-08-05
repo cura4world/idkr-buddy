@@ -14,7 +14,7 @@ import { medaliEngine, listRounds, dateKey, MEDALI_COLORS } from "@/lib/medali";
 
 const ROUND_SEC = 30;         // 한 판 길이
 const MIN_WORDS = 6;          // 이보다 적으면 게임을 못 엽니다
-const REVEAL_MS = 1200;       // 틀렸을 때 진짜 뜻을 보여주는 시간
+const REVEAL_MS = 1900;       // 틀렸을 때 진짜 뜻을 보여주는 시간
 const TICK_MS = 200;          // 남은 시간 갱신 주기
 
 type Phase = "loading" | "empty" | "ready" | "playing" | "done";
@@ -420,8 +420,8 @@ const GameOX = () => {
                 {question.shown}
               </p>
               {reveal ? (
-                <p className="mt-3 font-gothic text-[0.8125rem] leading-snug text-emerald-500 break-words">
-                  진짜 뜻: {reveal}
+                <p className="mt-3 font-gothic text-[1.0625rem] font-medium leading-snug text-emerald-500 break-words">
+                  {reveal}
                 </p>
               ) : null}
             </div>
@@ -517,7 +517,7 @@ const GameOX = () => {
               <button
                 type="button"
                 onClick={() => loadPool(true)}
-                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-medium text-white active:opacity-90"
+                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-gothic font-medium text-white active:opacity-90"
               >
                 한 판 더
               </button>
