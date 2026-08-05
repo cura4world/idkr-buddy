@@ -17,9 +17,27 @@ const LIVES = 3;
 const FALL_START_MS = 6500;   // 처음 낙하 시간 (뜻 세 개를 읽을 여유)
 const FALL_STEP_MS = 120;     // 하나 받을 때마다 빨라지는 폭
 const FALL_MIN_MS = 3500;     // 아무리 빨라도 여기까지
-const CATCH_MS = 400;         // 받았을 때 청록으로 켜 두는 시간
+const CATCH_MS = 1000;        // 받았을 때 청록으로 켜 두는 시간 (발음을 듣는 동안)
 const MISS_MS = 1100;         // 놓쳤을 때 정답 뜻을 보여주는 시간
 const CHOICES = 3;            // 뜻 버튼 수
+
+/* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 (GameEja와 같은 방식) */
+const speak = (text: string) => {
+  const w = window as any;
+  if (w.AndroidTTS) {
+    try {
+      w.AndroidTTS.speak(text, "id-ID");
+      return;
+    } catch (e) { /* 폴백으로 넘어갑니다 */ }
+  }
+  try {
+    window.speechSynthesis?.cancel?.();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "id-ID";
+    u.rate = 0.95;
+    window.speechSynthesis?.speak?.(u);
+  } catch (e) { /* 지원하지 않는 기기는 조용히 넘어갑니다 */ }
+};
 
 type Phase = "loading" | "empty" | "ready" | "playing" | "done";
 
@@ -241,6 +259,8 @@ const GameTangkap = () => {
     if (finishedRef.current) return;
     finishedRef.current = true;
     clearStep();
+    // 점수 화면으로 넘어간 뒤 발음이 남아 울리지 않게 끊습니다
+    try { window.speechSynthesis?.cancel?.(); } catch (e) {}
 
     const words = Array.from(answeredRef.current.values());
     const finalScore = scoreRef.current;
@@ -349,6 +369,7 @@ const GameTangkap = () => {
     return () => {
       if (stepTimerRef.current) window.clearTimeout(stepTimerRef.current);
       if (floatTimerRef.current) window.clearTimeout(floatTimerRef.current);
+      try { window.speechSynthesis?.cancel?.(); } catch (e) {}
     };
   }, []);
 
@@ -395,6 +416,7 @@ const GameTangkap = () => {
       fallMsRef.current = Math.max(FALL_MIN_MS, fallMsRef.current - FALL_STEP_MS);
       setFallMs(fallMsRef.current);
       setCaught(true);
+      speak(q.word);   // 맞힌 단어의 발음을 들려줍니다 (점수와 무관)
       stepTimerRef.current = window.setTimeout(() => {
         if (finishedRef.current) return;
         nextWord();
@@ -597,7 +619,7 @@ const GameTangkap = () => {
               <button
                 type="button"
                 onClick={() => loadPool(true)}
-                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-medium text-white active:opacity-90"
+                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-gothic font-medium text-white active:opacity-90"
               >
                 한 판 더
               </button>
