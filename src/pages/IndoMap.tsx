@@ -135,14 +135,16 @@ const IndoMap = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [photoState, setPhotoState] = useState<"idle" | "loading" | "error">("idle");
   const [lightbox, setLightbox] = useState<string | null>(null);
+  // 처음에는 도시만 켜 둡니다. 나머지는 범례 버튼으로 켭니다.
+  // state(버튼 색)와 ref(렌더 루프)는 반드시 같은 값으로 짝을 맞춰야 합니다.
   const [showCities, setShowCities] = useState(true);
-  const [showSpots, setShowSpots] = useState(true);
-  const [showFaith, setShowFaith] = useState(true);
-  const [showCulture, setShowCulture] = useState(true);
+  const [showSpots, setShowSpots] = useState(false);
+  const [showFaith, setShowFaith] = useState(false);
+  const [showCulture, setShowCulture] = useState(false);
   const showCitiesRef = useRef(true);
-  const showSpotsRef = useRef(true);
-  const showFaithRef = useRef(true);
-  const showCultureRef = useRef(true);
+  const showSpotsRef = useRef(false);
+  const showFaithRef = useRef(false);
+  const showCultureRef = useRef(false);
   const sheetOpenRef = useRef(false);
   const sheetOpenedAt = useRef(0);
   const reqIdRef = useRef(0);
@@ -549,8 +551,8 @@ const IndoMap = () => {
         </svg>
 
         {/* 범례 겸 토글 버튼 (좌측 하단, +/- 버튼과 같은 높이) */}
-        {/* 네 줄이 세로로 쌓이면 지도를 가려서 2열로 눕혔습니다 */}
-        <div className="absolute left-3.5 bottom-4 grid grid-cols-2 gap-x-1.5 gap-y-2">
+        {/* 도시 → 관광지 → 종교·역사 → 민족·문화 순으로 세로 일렬 */}
+        <div className="absolute left-3.5 bottom-4 flex flex-col items-start gap-1.5">
           <button
             onClick={toggleCities}
             className={
