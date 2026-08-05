@@ -41,6 +41,26 @@ const EXIT_MS = 260;   // 내려가는 연출 길이 (아래 transition duration
 
 const DAY_LABELS = ["월", "화", "수", "목", "금", "토"];
 
+// 막대 위 표기: 60분 미만은 분 숫자만(45), 그 이상은 시:분(1:20).
+function usageLabel(ms: number): string {
+  const m = Math.floor(ms / 60000);
+  if (m <= 0) return "";
+  if (m < 60) return String(m);
+  const h = Math.floor(m / 60);
+  const rest = m % 60;
+  return h + ":" + (rest < 10 ? "0" + rest : String(rest));
+}
+
+// 막대를 탭했을 때 한 줄에 쓰는 풀 표기.
+function usageText(ms: number): string {
+  const m = Math.floor(ms / 60000);
+  if (m <= 0) return "";
+  if (m < 60) return m + "분";
+  const h = Math.floor(m / 60);
+  const rest = m % 60;
+  return rest > 0 ? h + "시간 " + rest + "분" : h + "시간";
+}
+
 const SOURCE_LABEL: Record<string, string> = {
   wordbook: "단어장",
   lookup: "찾아본",
@@ -216,12 +236,15 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
   const bars = DAY_LABELS.map((label, i) => {
     const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
     const key = dateKey(d);
-    const total = (byDate.get(key) || { total: 0 }).total || 0;
+    const dayLog = byDate.get(key);
+    const total = (dayLog || { total: 0 }).total || 0;
+    const usageMs = (dayLog && dayLog.usageMs) || 0;
     running += total;
     return {
       label,
       key,
       total,
+      usageMs,
       color: total > 0 ? MEDALI_COLORS[apiColorFor(running)] : "",
       isToday: key === todayKey,
       isFuture: key > todayKey,
@@ -357,6 +380,15 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                       className="flex flex-1 flex-col items-center justify-end gap-1.5"
                     >
                       <span
+                        className="font-gothic text-[0.5625rem] leading-none"
+                        style={{
+                          color: b.total > 0 ? b.color : undefined,
+                          opacity: b.isFuture ? 0.4 : 1,
+                        }}
+                      >
+                        {usageLabel(b.usageMs)}
+                      </span>
+                      <span
                         className={"w-full rounded-md " + (b.total > 0 ? "" : "bg-border")}
                         style={{
                           height: Math.max(4, Math.round((b.total / barMax) * 60)) + "px",
@@ -375,8 +407,17 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                     </button>
                   ))}
                 </div>
-                <p className="mt-1.5 h-4 text-center text-[0.6875rem] text-muted-foreground">
-                  {openDay !== null ? bars[openDay].label + " · " + bars[openDay].total + "점" : ""}
+                <p className="mt-1.5 text-center font-gothic text-[0.625rem] text-muted-foreground">
+                  숫자는 그날 앱에 접속한 시간(분)
+                </p>
+                <p className="mt-1 h-4 text-center text-[0.6875rem] text-muted-foreground">
+                  {openDay !== null
+                    ? bars[openDay].label +
+                      " · " +
+                      bars[openDay].total +
+                      "점" +
+                      (usageText(bars[openDay].usageMs) ? " · " + usageText(bars[openDay].usageMs) : "")
+                    : ""}
                 </p>
               </div>
 
