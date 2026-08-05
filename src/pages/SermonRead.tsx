@@ -303,6 +303,24 @@ const hitInkGroup = (g: SVGGElement, x: number, y: number): boolean => {
   return false;
 };
 
+// ── 두 단어 관용구 묶기 ────────────────────────────────────────
+// 인니어에는 kipas angin(선풍기), kambing hitam(희생양)처럼 두 단어가 붙어야
+// 뜻이 되는 표현이 많습니다. 팝업에서 이웃 단어를 붙일 수 있게 토큰을 다룹니다.
+// 화면에 보이는 토큰에는 쉼표·마침표가 붙어 있으므로 조회에 쓸 때는 걷어냅니다.
+
+const cleanToken = (t: string) => t.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
+
+// 토큰 배열에서 from~to 구간을 조회에 쓸 구절로 만듭니다 (끝 포함).
+const phraseOf = (tokens: string[], from: number, to: number) =>
+  tokens
+    .slice(from, to + 1)
+    .map(cleanToken)
+    .filter(Boolean)
+    .join(" ");
+
+// 한 번에 묶을 수 있는 최대 단어 수
+const MAX_PHRASE_WORDS = 3;
+
 const SermonRead = () => {
   const navigate = useNavigate();
   const { widthClass, canWide, wide, toggle } = useWideMode();
@@ -328,6 +346,10 @@ const SermonRead = () => {
   const [popupInfo, setPopupInfo] = useState("");
   const [popupSentenceKo, setPopupSentenceKo] = useState("");
   const [popupSaved, setPopupSaved] = useState(false);
+  // 팝업이 보고 있는 토큰 묶음과 그 범위 (이웃 단어를 붙일 때 씁니다)
+  const [popupTokens, setPopupTokens] = useState<string[]>([]);
+  const [popupFrom, setPopupFrom] = useState(0);
+  const [popupTo, setPopupTo] = useState(0);
   const popupReqId = useRef(0);
   const wordCache = useRef(new Map<string, { meaning: string; info: string; sentenceKo: string }>());
   // 팝업이 열려 있는지 (popstate 핸들러는 첫 렌더의 함수를 붙들고 있어 state 를 못 읽습니다)
@@ -553,12 +575,17 @@ const SermonRead = () => {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  const openWordPopup = async (rawToken: string, sentence: string) => {
-    const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
+  // 토큰 구간(from~to, 끝 포함)을 하나의 표현으로 보고 조회합니다.
+  // 한 단어든 두 단어든 아래 흐름은 같습니다 — 3단 캐시도 그대로 씁니다.
+  const lookupRange = async (tokens: string[], from: number, to: number, sentence: string) => {
+    const word = phraseOf(tokens, from, to);
     if (!word) return;
     const key = word.toLowerCase();
     const reqId = ++popupReqId.current;
     setPopupWord(word);
+    setPopupTokens(tokens);
+    setPopupFrom(from);
+    setPopupTo(to);
     setPopupSentence(sentence);
     setPopupSaved(!!saveTargetId && hasWordInCategory(saveTargetId, word));
     pushSub();
@@ -604,6 +631,21 @@ const SermonRead = () => {
       });
   };
 
+  // 본문에서 단어 하나를 탭했을 때
+  const openWordPopup = (tokens: string[], index: number, sentence: string) => {
+    lookupRange(tokens, index, index, sentence);
+  };
+
+  // 팝업에서 앞(-1) 또는 뒤(+1) 단어를 붙입니다
+  const extendPopup = (dir: number) => {
+    if (popupTokens.length === 0) return;
+    const from = dir < 0 ? popupFrom - 1 : popupFrom;
+    const to = dir < 0 ? popupTo : popupTo + 1;
+    if (from < 0 || to > popupTokens.length - 1) return;
+    if (to - from + 1 > MAX_PHRASE_WORDS) return;
+    lookupRange(popupTokens, from, to, popupSentence);
+  };
+
   const copyPopupWord = async () => {
     if (!popupWord) return;
     try {
@@ -641,17 +683,19 @@ const SermonRead = () => {
     toast(added ? `${saveTargetName}에 담았습니다` : `이미 ${saveTargetName}에 있는 단어입니다`);
   };
 
-  const renderTokens = (text: string, keyPrefix: string) =>
-    text.split(" ").map((tok, ti) => (
+  const renderTokens = (text: string, keyPrefix: string) => {
+    const tokens = text.split(" ");
+    return tokens.map((tok, ti) => (
       <span key={keyPrefix + ti}>
         <span
-          onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
+          onClick={(e) => { e.stopPropagation(); openWordPopup(tokens, ti, text); }}
           className="cursor-pointer rounded active:bg-indigo-500/20"
         >
           {tok}
         </span>{" "}
       </span>
     ));
+  };
 
   const changeFont = (delta: number) => {
     setFontStep((prev) => {
@@ -1797,6 +1841,29 @@ const SermonRead = () => {
                   <p className="text-xs text-gray-500 mt-1 break-words font-gothic">{popupInfo}</p>
                 )}
               </>
+            )}
+            {/* 두 단어 관용구 묶기 — 실제 이웃 단어를 보여주고, 누르면 붙여서 다시 찾습니다 */}
+            {!popupLoading && popupTokens.length > 0 && popupTo - popupFrom + 1 < MAX_PHRASE_WORDS && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                {popupFrom > 0 && cleanToken(popupTokens[popupFrom - 1]) ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); extendPopup(-1); }}
+                    className="shrink-0 rounded-full py-1 px-2.5 text-xs bg-black/5 text-gray-700 font-word"
+                    title="앞 단어까지 함께 찾기"
+                  >
+                    ← {cleanToken(popupTokens[popupFrom - 1])}
+                  </button>
+                ) : null}
+                {popupTo < popupTokens.length - 1 && cleanToken(popupTokens[popupTo + 1]) ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); extendPopup(1); }}
+                    className="shrink-0 rounded-full py-1 px-2.5 text-xs bg-black/5 text-gray-700 font-word"
+                    title="뒤 단어까지 함께 찾기"
+                  >
+                    {cleanToken(popupTokens[popupTo + 1])} →
+                  </button>
+                ) : null}
+              </div>
             )}
             <div className="flex gap-2 mt-4">
               <div className="flex-1 min-w-0 flex items-stretch overflow-hidden rounded-full text-xs font-medium">
