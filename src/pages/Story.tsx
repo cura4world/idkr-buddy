@@ -593,7 +593,11 @@ const Story = () => {
                   <button
                     onClick={(e) => { e.stopPropagation(); openPicker(); }}
                     title="담을 단어장 고르기"
-                    className="shrink-0 flex items-center px-2.5 border-l border-white/30 bg-primary text-white"
+                    className={`shrink-0 flex items-center px-2.5 border-l ${
+                      popupSaved || !saveTargetId
+                        ? "border-gray-200 bg-gray-100 text-gray-400"
+                        : "border-white/30 bg-primary text-white"
+                    }`}
                   >
                     <ChevronDown size={13} />
                   </button>
