@@ -17,6 +17,7 @@ const LEVEL_UP_MISSES = 2;            // 한 판에 틀린 횟수가 이 이하�
 const LEVEL_KEY = "cocokkan-level";
 const MIN_PAIRS = 4;          // 이보다 적으면 게임을 못 엽니다
 const CLOSE_MS = 1200;        // 짝이 아닐 때 다시 닫히기까지 (틀린 짝을 읽을 시간)
+const LAST_PAIR_MS = 1100;    // 마지막 짝을 맞힌 판을 보여주는 시간
 const GOOD_MISS = 1;          // 미스가 이 이하면 "맞힌 것"으로 봅니다
 
 type Phase = "loading" | "empty" | "playing" | "done";
@@ -290,7 +291,10 @@ const GameMatch = () => {
       if (nextMatched.length >= pool.length) {
         const sec = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000));
         setElapsed(sec);
-        finishRound(pool, sec);
+        // 마지막 짝이 뒤집힌 판을 눈으로 확인할 시간을 줍니다
+        closeTimerRef.current = window.setTimeout(() => {
+          finishRound(pool, sec);
+        }, LAST_PAIR_MS);
       }
       return;
     }
@@ -373,7 +377,7 @@ const GameMatch = () => {
                   type="button"
                   onClick={() => handleCard(c)}
                   className={
-                    "min-h-[3.75rem] rounded-xl border px-2.5 py-3.5 flex items-center justify-center text-center transition-colors " +
+                    "h-[4.75rem] rounded-xl border px-2.5 py-2 flex items-center justify-center text-center transition-colors " +
                     (face
                       ? done
                         ? "bg-primary/15 border-primary"
@@ -475,7 +479,7 @@ const GameMatch = () => {
               <button
                 type="button"
                 onClick={startRound}
-                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-medium text-white active:opacity-90"
+                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-gothic font-medium text-white active:opacity-90"
               >
                 한 판 더
               </button>
