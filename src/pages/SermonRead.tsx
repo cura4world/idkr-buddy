@@ -5,7 +5,7 @@
 // 인도네시아어와 한국어를 뒤집지 않고 한 화면에 위아래로 같이 보여줍니다.
 
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams, useLocation, useNavigationType } from "react-router-dom";
 import {
   ArrowLeft,
   BookMarked,
@@ -302,6 +302,44 @@ const hitInkGroup = (g: SVGGElement, x: number, y: number): boolean => {
   return false;
 };
 
+// ── 읽던 자리 기억 ────────────────────────────────────────────
+// 단어 팝업 → "사전에서 보기" 로 나갔다가 돌아오면 이 화면은 새로 마운트되고,
+// 본문을 비동기로 불러오는 사이 브라우저의 기본 스크롤 복원이 실패해 맨 위에 머뭅니다.
+// 그래서 나갈 때 위치를 직접 적어 두었다가 돌아왔을 때 되돌려 놓습니다.
+// 사전에 다녀오는 동안만 필요한 값이라 세션 저장소를 씁니다 (앱을 닫으면 사라집니다).
+
+const SCROLL_MEMO_KEY = "sermon-scroll";
+
+function readScrollMemo(id: string): number {
+  try {
+    const raw = window.sessionStorage.getItem(SCROLL_MEMO_KEY);
+    if (!raw) return 0;
+    const map = JSON.parse(raw);
+    const v = map && map[id];
+    return typeof v === "number" && isFinite(v) && v > 0 ? v : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function saveScrollMemo(id: string, y: number) {
+  try {
+    const raw = window.sessionStorage.getItem(SCROLL_MEMO_KEY);
+    let map: Record<string, number> = {};
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") map = parsed;
+    }
+    map[id] = Math.max(0, Math.round(y));
+    // 여러 편을 오가도 계속 커지지 않도록 최근 것 몇 개만 남깁니다
+    const keys = Object.keys(map);
+    if (keys.length > 8) delete map[keys[0]];
+    window.sessionStorage.setItem(SCROLL_MEMO_KEY, JSON.stringify(map));
+  } catch (e) {
+    // 저장소를 못 쓰는 환경이면 그냥 넘어갑니다
+  }
+}
+
 const SermonRead = () => {
   const navigate = useNavigate();
   const { widthClass, canWide, wide, toggle } = useWideMode();
@@ -374,6 +412,75 @@ const SermonRead = () => {
   // 그리기 엔진이 도구막대를 숨길 때 쓰는 통로. 엔진 effect 의 의존성을 늘리지 않으려고 ref 로 둡니다.
   const hideBarRef = useRef<(() => void) | null>(null);
   const eraseAnchorRef = useRef<HTMLDivElement | null>(null);
+
+  // ---------- 읽던 자리 기억·복원 ----------
+  // 뒤로가기(POP)로 들어온 경우에만 되돌립니다.
+  // 목록에서 새로 열 때(PUSH)는 예전처럼 맨 위에서 시작합니다.
+  const navType = useNavigationType();
+  // 복원이 끝나기 전에는 저장하지 않습니다 (마운트 직후의 0이 기억을 덮어쓰는 것을 막습니다)
+  const canSaveScrollRef = useRef(false);
+  const scrollSaveTimer = useRef<number | null>(null);
+
+  const rememberScroll = () => {
+    if (!id) return;
+    saveScrollMemo(id, window.scrollY || document.documentElement.scrollTop || 0);
+  };
+
+  useEffect(() => {
+    const onScroll = () => {
+      if (!canSaveScrollRef.current) return;
+      if (scrollSaveTimer.current !== null) return;
+      scrollSaveTimer.current = window.setTimeout(() => {
+        scrollSaveTimer.current = null;
+        rememberScroll();
+      }, 200);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (scrollSaveTimer.current !== null) {
+        window.clearTimeout(scrollSaveTimer.current);
+        scrollSaveTimer.current = null;
+      }
+      if (canSaveScrollRef.current) rememberScroll();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // 본문이 그려진 뒤에 자리를 되돌립니다.
+  // 글꼴·필기 층 때문에 높이가 나중에 늘어나므로, 목표 위치에 닿을 때까지
+  // 프레임마다 다시 시도합니다 (최대 약 1초).
+  useEffect(() => {
+    if (loading || !rec || !id) return;
+    if (navType !== "POP") {
+      canSaveScrollRef.current = true;
+      return;
+    }
+    const target = readScrollMemo(id);
+    if (target < 1) {
+      canSaveScrollRef.current = true;
+      return;
+    }
+    let raf = 0;
+    let tries = 0;
+    const tick = () => {
+      tries += 1;
+      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      window.scrollTo(0, Math.min(target, max));
+      const reached = max >= target - 2 && Math.abs((window.scrollY || 0) - target) < 2;
+      if (reached || tries > 60) {
+        canSaveScrollRef.current = true;
+        return;
+      }
+      raf = window.requestAnimationFrame(tick);
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => {
+      if (raf) window.cancelAnimationFrame(raf);
+      canSaveScrollRef.current = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, rec, id, navType]);
 
   // ---------- 본문 불러오기 (폰 저장분 우선, 없으면 서버) ----------
   useEffect(() => {
@@ -600,7 +707,16 @@ const SermonRead = () => {
 
   const openInDictionary = () => {
     if (!popupWord) return;
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=sermon");
+    // 지금 읽던 자리를 적어 둡니다 (돌아왔을 때 여기로 되돌립니다)
+    rememberScroll();
+    // 단어 팝업이 쌓아 둔 히스토리 한 칸을 사전 화면으로 덮어씁니다.
+    // 그래야 사전에서 뒤로가기 한 번에 설교문으로 돌아오고,
+    // 같은 화면이 두 번 나타나는 헛걸음이 없어집니다.
+    // (pushState 가 실패해 쌓인 칸이 없으면 덮어쓰면 안 됩니다 — 설교문 칸 자체가 사라집니다)
+    navigate(
+      "/dictionary?q=" + encodeURIComponent(popupWord) + "&from=sermon",
+      { replace: subPushedRef.current }
+    );
   };
 
   const savePopupWord = () => {
