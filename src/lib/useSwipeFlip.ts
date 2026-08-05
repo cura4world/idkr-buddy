@@ -6,6 +6,7 @@
 
 import { useRef } from "react";
 import type { TouchEvent as ReactTouchEvent } from "react";
+import { hasLiveSelection } from "@/lib/phraseSelect";
 
 /** 가로 이동이 이만큼 넘어야 스와이프로 봅니다 (px) */
 const MIN_X = 60;
@@ -47,6 +48,9 @@ export function useSwipeFlip(onFlip: () => void, enabled: boolean = true): Swipe
 
     if (Math.abs(dx) < MIN_X) return;
     if (Math.abs(dx) < Math.abs(dy) * RATIO) return; // 세로 스크롤로 봅니다
+    // 본문 글자를 고르는 중이면 뒤집지 않습니다.
+    // 꾹 누른 채 옆으로 끌어 두 단어를 고르는 동작이 스와이프로 잡히던 문제입니다.
+    if (hasLiveSelection()) return;
 
     suppressRef.current = Date.now() + SUPPRESS_MS;
     onFlip();
