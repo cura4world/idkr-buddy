@@ -61,6 +61,7 @@ export interface DailyLog {
   date: string;                               // "2026-08-04" (KST 로컬 날짜)
   points: Partial<Record<ApiCategory, number>>;
   total: number;
+  usageMs?: number;                           // 그날 앱을 켜 둔 시간(ms). 점수와 무관하며 주일에도 쌓인다.
 }
 
 export interface WordRecord {
@@ -397,6 +398,19 @@ class MedaliEngine {
     } catch {
       return 0;
     }
+  }
+
+  // 1-b) 앱을 켜 둔 시간 적립. 점수가 아니므로 주일 제외도 상한도 없고
+  //      log.total 을 건드리지 않는다 — 훈장 색 판정에는 전혀 영향이 없다.
+  async addUsageMs(ms: number): Promise<void> {
+    try {
+      if (!(ms > 0)) return;
+      const key = dateKey(new Date());
+      const log: DailyLog =
+        (await getOne<DailyLog>(STORE_DAILY, key)) || { date: key, points: {}, total: 0 };
+      log.usageMs = (log.usageMs || 0) + Math.round(ms);
+      await putOne(STORE_DAILY, log);
+    } catch {}
   }
 
   // 2) 단어 정답/오답 기록 → 확정 판정
