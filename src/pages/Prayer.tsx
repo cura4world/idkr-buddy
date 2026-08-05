@@ -26,6 +26,8 @@ import SettingsDialog from "@/components/SettingsDialog";
 import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
+import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
+import PhraseFindBar from "@/components/PhraseFindBar";
 
 
 /* 기도 메뉴 — 메인화면 목록과 같은 어법 (아이콘 + 한국어 + 인니어) */
@@ -582,9 +584,22 @@ const Prayer = () => {
 
 
   // ---------- 단어 탭 → 미니 팝업 (카드 메모리 → 폰 저장소 → API) ----------
+  // 본문에서 고른 표현 찾기
+  const { phrase: selPhrase, take: takeSelPhrase } = useSelectedPhrase();
+
+  const openPhrasePopup = () => {
+    const s = takeSelPhrase();
+    if (!s.phrase) return;
+    openWordPopup(s.phrase, s.sentence);
+  };
+
   const openWordPopup = async (rawToken: string, sentence: string) => {
     if (shouldIgnoreTap()) return;
-    const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
+    // 글자를 고르는 중이면 팝업을 열지 않습니다
+    // (선택을 끝내며 나는 탭이 단어 팝업을 잘못 여는 것을 막습니다)
+    const liveSel = window.getSelection();
+    if (liveSel && !liveSel.isCollapsed) return;
+    const word = cleanPhrase(rawToken);
     if (!word) return;
     const key = word.toLowerCase();
     const reqId = ++popupReqId.current;
@@ -667,7 +682,7 @@ const Prayer = () => {
   // ---------- 렌더 도우미 ----------
   const renderTokens = (text: string, keyPrefix: string) =>
     text.split(" ").map((tok, ti) => (
-      <span key={keyPrefix + ti}>
+      <span key={keyPrefix + ti} data-idw="1">
         <span
           onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
           className="cursor-pointer rounded active:bg-emerald-500/20"
@@ -749,7 +764,7 @@ const Prayer = () => {
         </header>
 
         <div className="px-4 py-4">
-          <div {...swipeHandlers} className="-mx-4 bg-card border-y border-border/60 px-4 py-5 min-h-[72vh] content-bump select-none">
+          <div {...swipeHandlers} className="-mx-4 bg-card border-y border-border/60 px-4 py-5 min-h-[72vh] content-bump">
               {/* 제목(상황) 한 줄, 다음 줄 우측: 날짜 + 글자크기(-,+) 또는 연필 */}
               <div className="mb-3">
                 <div className="flex items-center gap-2">
@@ -890,6 +905,7 @@ const Prayer = () => {
         </div>
 
         {/* 단어 미니 팝업 */}
+        <PhraseFindBar phrase={selPhrase} onFind={openPhrasePopup} hidden={!!popupWord} widthClass={widthClass} />
         {popupWord && (
           <div className="fixed inset-0 z-50" onClick={() => setPopupWord(null)}>
             <div className="absolute inset-0 bg-black/40" />
