@@ -15,6 +15,7 @@ import { hasGeminiApiKey } from "@/lib/gemini";
 import SettingsDialog from "@/components/SettingsDialog";
 import { medaliEngine } from "@/lib/medali";
 import PointFloat from "@/components/PointFloat";
+import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 
 /* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 */
 const speak = (text: string, lang: "id" | "ko") => {
@@ -244,6 +245,21 @@ const PhraseDetail = () => {
     };
   }, []);
 
+  // ---------- 돌아올 자리로 되돌리기 ----------
+  // 어느 문장이었는지는 주소(?s=...)로 저절로 돌아오므로 스크롤만 챙깁니다.
+  // 설명이 그려진 뒤 한 번만 실행합니다. 표가 없으면 아무것도 하지 않습니다.
+  const restoreTriedRef = useRef(false);
+
+  useEffect(() => {
+    if (loading) return;
+    if (restoreTriedRef.current) return;
+    restoreTriedRef.current = true;
+    const t = takeReturnTicket("phrase");
+    if (!t || t.key !== sentence) return;
+    return restoreScrollTo(t.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, sentence]);
+
   // 조회 순서: 화면 캐시 → 폰 저장소(IndexedDB) → Gemini API
   const openWordPopup = async (rawToken: string) => {
     const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
@@ -302,6 +318,14 @@ const PhraseDetail = () => {
     } catch (e) {
       toast("복사에 실패했어요");
     }
+  };
+
+  // 어느 문장이었는지는 주소(?s=...)로 저절로 돌아오므로 읽던 자리만 표로 적어 둡니다.
+  // 단어 팝업이 히스토리를 쌓지 않는 화면이라 replace 는 주지 않습니다.
+  const openInDictionary = () => {
+    if (!popupWord) return;
+    writeReturnTicket("phrase", sentence, currentScrollY(), false);
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=phrase");
   };
 
   const savePopupWord = () => {
@@ -574,7 +598,7 @@ const PhraseDetail = () => {
                 복사
               </button>
               <button
-                onClick={() => navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=phrase")}
+                onClick={openInDictionary}
                 className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-foreground/80"
               >
                 사전에서 보기
