@@ -84,12 +84,19 @@ export async function clearMapPlaces(): Promise<void> {
 export async function fetchPlaceInfo(
   id: string,
   ko: string,
-  type: "city" | "spot"
+  type: "city" | "spot" | "faith" | "culture"
 ): Promise<MapPlaceInfo> {
   const cached = await getCachedPlace(id);
   if (cached) return cached;
 
-  const typeLabel = type === "spot" ? "관광지" : "도시";
+  const typeLabel =
+    type === "spot"
+      ? "관광지"
+      : type === "faith"
+        ? "종교·역사 유적지"
+        : type === "culture"
+          ? "민족·전통문화 지역"
+          : "도시";
   const prompt =
     "한국인을 위한 인도네시아 학습 지도 앱입니다. 아래 지역에 대한 충실한 한국어 설명을 JSON으로 작성해주세요.\n\n" +
     "[지역] " + ko + " (" + id + ") — " + typeLabel + "\n\n" +
@@ -152,7 +159,14 @@ const WIKI_TITLE: Record<string, string> = {
   "Surakarta": "Surakarta",
 };
 
-// 위키피디아 페이지의 대표 이미지 + 본문 내 이미지들에서 최대 3장을 뽑습니다.
+// 여러 지역에서 똑같이 나오는 공용 이미지(국기·주 문장·위치 지도 등)를 걸러냅니다.
+// 이게 느슨하면 어느 지역을 눌러도 인도네시아 국기가 나옵니다.
+const BAD = new RegExp(
+  "logo|icon|map|peta|flag|bendera|seal|emblem|lambang|coat|arms|locator|location|banner|commons|wikimedia|symbol|blank|crystal|indonesia_|_indonesia|question|disambig",
+  "i"
+);
+
+// 위키피디아 페이지의 대표 이미지 + 본문 내 이미지들에서 최대 2장을 뽑습니다.
 export async function fetchPlacePhotos(id: string): Promise<string[]> {
   const title = WIKI_TITLE[id] || id;
   const urls: string[] = [];
@@ -181,11 +195,11 @@ export async function fetchPlacePhotos(id: string): Promise<string[]> {
       const first = Object.values(pages)[0] as any;
       const files: string[] = (first?.images || [])
         .map((x: any) => x.title as string)
-        .filter((t: string) => /\.(jpg|jpeg|png)$/i.test(t) && !/logo|icon|map|flag|seal|coat|svg/i.test(t))
+        .filter((t: string) => new RegExp("\\.(jpg|jpeg|png)$", "i").test(t) && !BAD.test(t))
         .slice(0, 6);
 
       for (const f of files) {
-        if (urls.length >= 3) break;
+        if (urls.length >= 2) break;
         try {
           const ii = await fetch(
             "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=imageinfo&iiprop=url&iiurlwidth=600&titles=" +
@@ -201,5 +215,5 @@ export async function fetchPlacePhotos(id: string): Promise<string[]> {
     }
   } catch (e) {}
 
-  return urls.slice(0, 3);
+  return urls.slice(0, 2);
 }
