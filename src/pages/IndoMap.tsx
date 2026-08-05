@@ -13,6 +13,8 @@ import {
   NEIGHBOR_LABELS,
   MAP_CITIES,
   MAP_SPOTS,
+  MAP_FAITH,
+  MAP_CULTURE,
   MAP_ISLANDS,
   INDONESIA_PATH,
   MapPlace,
@@ -21,16 +23,25 @@ import { fetchPlaceInfo, fetchPlacePhotos, MapPlaceInfo } from "@/lib/map";
 import { hasGeminiApiKey } from "@/lib/gemini";
 
 const KMIN = 1;
-const KMAX = 32;
+// 최대 64배. 탭 허용 반경이 56px이라 32배에서는 지도 좌표 4.5 이내의 두 핀을
+// 손가락으로 구분해 누를 수 없었습니다 (자카르타–브카시 3.4, 스마랑–드막 4.7).
+const KMAX = 64;
 
-type PinType = "city" | "spot";
+type PinType = "city" | "spot" | "faith" | "culture";
 interface Pin extends MapPlace {
   type: PinType;
 }
 
+// tier별로 핀이 나타나기 시작하는 줌 배율. render와 findPin이 같은 값을 써야
+// "보이는데 안 눌리는" 핀이 생기지 않습니다.
+const tierStart = (tier: number): number =>
+  tier === 1 ? 1.35 : tier === 2 ? 2.4 : tier === 3 ? 3.0 : 4.5;
+
 const PINS: Pin[] = [
   ...MAP_CITIES.map((p) => ({ ...p, type: "city" as PinType })),
   ...MAP_SPOTS.map((p) => ({ ...p, type: "spot" as PinType })),
+  ...MAP_FAITH.map((p) => ({ ...p, type: "faith" as PinType })),
+  ...MAP_CULTURE.map((p) => ({ ...p, type: "culture" as PinType })),
 ];
 
 // TTS (앱 공통 패턴: AndroidTTS 우선 + speechSynthesis 폴백)
@@ -104,6 +115,18 @@ const IndoMap = () => {
     setShowSpots(v);
     renderRef.current();
   };
+  const toggleFaith = () => {
+    const v = !showFaithRef.current;
+    showFaithRef.current = v;
+    setShowFaith(v);
+    renderRef.current();
+  };
+  const toggleCulture = () => {
+    const v = !showCultureRef.current;
+    showCultureRef.current = v;
+    setShowCulture(v);
+    renderRef.current();
+  };
 
   // 하단 시트
   const [selected, setSelected] = useState<Pin | null>(null);
@@ -114,8 +137,12 @@ const IndoMap = () => {
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [showCities, setShowCities] = useState(true);
   const [showSpots, setShowSpots] = useState(true);
+  const [showFaith, setShowFaith] = useState(true);
+  const [showCulture, setShowCulture] = useState(true);
   const showCitiesRef = useRef(true);
   const showSpotsRef = useRef(true);
+  const showFaithRef = useRef(true);
+  const showCultureRef = useRef(true);
   const sheetOpenRef = useRef(false);
   const sheetOpenedAt = useRef(0);
   const reqIdRef = useRef(0);
@@ -165,13 +192,21 @@ const IndoMap = () => {
     });
 
     // 핀: 부분 역스케일(1/k^0.65 — 확대할수록 화면상 글자가 커짐)
-    // tier별 표시 시점: 1=대도시 k≥1.35, 2=중소도시 k≥2.4, 3=관광지 k≥3.0
+    // tier별 표시 시점: 1=대도시 k≥1.35, 2=중소도시 k≥2.4, 3=관광지 k≥3.0,
+    //                   4=종교·역사/민족·문화 k≥4.5 (tierStart 참조)
     const pinScale = 1 / Math.pow(s.k, 0.65);
     PINS.forEach((p, i) => {
       const el = pinRefs.current[i];
       if (!el) return;
-      const start = p.tier === 1 ? 1.35 : p.tier === 2 ? 2.4 : 3.0;
-      const kindOn = p.type === "spot" ? showSpotsRef.current : showCitiesRef.current;
+      const start = tierStart(p.tier);
+      const kindOn =
+        p.type === "spot"
+          ? showSpotsRef.current
+          : p.type === "faith"
+            ? showFaithRef.current
+            : p.type === "culture"
+              ? showCultureRef.current
+              : showCitiesRef.current;
       const op = !kindOn || s.k < start ? 0 : Math.min(1, (s.k - start) / 0.5);
       el.setAttribute("transform", "translate(" + p.x + " " + p.y + ") scale(" + pinScale + ")");
       el.setAttribute("opacity", op.toFixed(2));
@@ -243,8 +278,15 @@ const IndoMap = () => {
       let best: Pin | null = null;
       let bestD = 1e9;
       PINS.forEach((pin) => {
-        const start = pin.tier === 1 ? 1.35 : pin.tier === 2 ? 2.4 : 3.0;
-        const kindOn = pin.type === "spot" ? showSpotsRef.current : showCitiesRef.current;
+        const start = tierStart(pin.tier);
+        const kindOn =
+          pin.type === "spot"
+            ? showSpotsRef.current
+            : pin.type === "faith"
+              ? showFaithRef.current
+              : pin.type === "culture"
+                ? showCultureRef.current
+                : showCitiesRef.current;
         if (!kindOn || s.k < start) return;
         const sx = pin.x * s.k + s.tx;
         const sy = pin.y * s.k + s.ty;
@@ -438,6 +480,8 @@ const IndoMap = () => {
         .kkm-isl-ko { font-family: inherit; font-style: normal; fill: #9cc3c8; }
         .kkm-pin-dot { fill: #f97316; stroke: #fff; stroke-width: 1.6; }
         .kkm-pin-dot.spot { fill: #fbbf24; }
+        .kkm-pin-dot.faith { fill: #38bdf8; }
+        .kkm-pin-dot.culture { fill: #c084fc; }
         .kkm-pin-name { font-size: 20px; fill: #ffffff; text-anchor: middle; font-weight: 600;
           paint-order: stroke; stroke: rgba(9,34,40,0.85); stroke-width: 4px; }
         .kkm-lb-backdrop { animation: kkmLbFade 0.18s ease-out; }
@@ -492,7 +536,10 @@ const IndoMap = () => {
             ))}
             {PINS.map((p, i) => (
               <g key={p.type + "-" + p.id} ref={(el) => (pinRefs.current[i] = el)} opacity={0}>
-                <circle r={p.tier === 1 ? 9 : p.tier === 2 ? 8 : 7.5} className={"kkm-pin-dot" + (p.type === "spot" ? " spot" : "")} />
+                <circle
+                  r={p.tier === 1 ? 9 : p.tier === 2 ? 8 : p.tier === 3 ? 7.5 : 7}
+                  className={"kkm-pin-dot" + (p.type === "city" ? "" : " " + p.type)}
+                />
                 <text className="kkm-pin-name" y={-15}>
                   {p.id}
                 </text>
@@ -502,7 +549,8 @@ const IndoMap = () => {
         </svg>
 
         {/* 범례 겸 토글 버튼 (좌측 하단, +/- 버튼과 같은 높이) */}
-        <div className="absolute left-3.5 bottom-4 flex flex-col gap-2.5">
+        {/* 네 줄이 세로로 쌓이면 지도를 가려서 2열로 눕혔습니다 */}
+        <div className="absolute left-3.5 bottom-4 grid grid-cols-2 gap-x-1.5 gap-y-2">
           <button
             onClick={toggleCities}
             className={
@@ -522,6 +570,26 @@ const IndoMap = () => {
           >
             <span className="w-3 h-3 rounded-full bg-[#fbbf24] border border-white/80 shrink-0" />
             <span className="text-[0.6875rem] font-gothic text-white/85">관광지</span>
+          </button>
+          <button
+            onClick={toggleFaith}
+            className={
+              "flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5 transition-opacity " +
+              (showFaith ? "bg-[rgba(9,34,40,0.7)]" : "bg-[rgba(9,34,40,0.4)] opacity-50")
+            }
+          >
+            <span className="w-3 h-3 rounded-full bg-[#38bdf8] border border-white/80 shrink-0" />
+            <span className="text-[0.6875rem] font-gothic text-white/85">종교·역사</span>
+          </button>
+          <button
+            onClick={toggleCulture}
+            className={
+              "flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5 transition-opacity " +
+              (showCulture ? "bg-[rgba(9,34,40,0.7)]" : "bg-[rgba(9,34,40,0.4)] opacity-50")
+            }
+          >
+            <span className="w-3 h-3 rounded-full bg-[#c084fc] border border-white/80 shrink-0" />
+            <span className="text-[0.6875rem] font-gothic text-white/85">민족·문화</span>
           </button>
         </div>
         <div className="absolute right-3.5 bottom-4 flex flex-col gap-2">
@@ -601,21 +669,32 @@ const IndoMap = () => {
                     "text-[0.6875rem] font-gothic font-semibold px-2.5 py-1 rounded-full " +
                     (selected.type === "spot"
                       ? "bg-amber-500/15 text-amber-700"
-                      : "bg-orange-500/15 text-orange-700")
+                      : selected.type === "faith"
+                        ? "bg-sky-500/15 text-sky-700"
+                        : selected.type === "culture"
+                          ? "bg-purple-500/15 text-purple-700"
+                          : "bg-orange-500/15 text-orange-700")
                   }
                 >
-                  {selected.type === "spot" ? "관광지" : "도시"}
+                  {selected.type === "spot"
+                    ? "관광지"
+                    : selected.type === "faith"
+                      ? "종교·역사"
+                      : selected.type === "culture"
+                        ? "민족·문화"
+                        : "도시"}
                 </span>
               </div>
               <p className="mt-1 text-xs font-gothic text-gray-400">{selected.hint}</p>
 
-              {/* 실제 사진 (위키피디아) — 썸네일 3장, 탭하면 확대 */}
+              {/* 실제 사진 (위키피디아) — 썸네일 최대 2장, 탭하면 확대.
+                  한 장도 없거나 실패하면 안내 없이 영역 자체를 그리지 않습니다. */}
               {photoState === "loading" ? (
                 <div className="mt-3 flex items-center justify-center gap-2 py-8 bg-gray-50 rounded-xl text-sm font-gothic text-gray-400">
                   <Loader2 size={16} className="animate-spin" /> 사진을 불러오는 중...
                 </div>
-              ) : photos.length > 0 ? (
-                <div className="mt-3 grid grid-cols-3 gap-1.5">
+              ) : photoState !== "error" && photos.length > 0 ? (
+                <div className="mt-3 grid grid-cols-2 gap-1.5">
                   {photos.map((u, i) => (
                     <button
                       key={i}
