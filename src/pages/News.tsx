@@ -17,6 +17,7 @@ import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
 import { ReadingTracker } from "@/lib/readingTimer";
 import PointFloat from "@/components/PointFloat";
+import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -260,28 +261,51 @@ const News = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ---------- 돌아올 자리로 되돌리기 ----------
+  // 사전에 다녀오면 이 화면은 새로 마운트되어 신문 첫면으로 돌아갑니다.
+  // 표가 있으면 보던 기사를 다시 열고, 면과 스크롤까지 되돌립니다.
+  const pendingReturnRef = useRef<{ y: number; flipped: boolean } | null>(null);
+  const cancelRestoreRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     listEditions().then((all) => {
       setEditions(all);
-      // 사전에서 "뉴스로" 버튼으로 돌아온 경우, 보던 기사를 다시 연다
-      try {
-        const raw = sessionStorage.getItem("news-return");
-        if (raw) {
-          sessionStorage.removeItem("news-return");
-          const r = JSON.parse(raw);
-          const found = all.find((e) => e.date === r.date);
-          if (found && typeof r.idx === "number" && found.articles[r.idx]) {
-            openArticle(found, r.idx);
-            return;
-          }
+      // 사전에 다녀온 경우, 보던 기사를 다시 연다
+      const t = takeReturnTicket("news");
+      if (t) {
+        const parts = t.key.split(":");
+        const date = parts[0];
+        const idx = Number(parts[1]);
+        const ed = all.find((e) => e.date === date);
+        if (ed && !isNaN(idx) && ed.articles[idx]) {
+          pendingReturnRef.current = { y: t.y, flipped: t.flipped };
+          openArticle(ed, idx);
+          return;
         }
-      } catch (e) {}
+      }
       const today = all.find((e) => e.date === todayKey());
       if (today) setSelected(today);
       else if (all.length > 0) setSelected(all[0]);
     });
+    return () => {
+      if (cancelRestoreRef.current) cancelRestoreRef.current();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 기사가 그려진 뒤에 면을 맞추고, 그 다음 자리를 되돌립니다.
+  // (openArticle 이 맨 위로 올리므로 되돌리기는 반드시 그 뒤에 와야 합니다)
+  useEffect(() => {
+    const p = pendingReturnRef.current;
+    if (!p || articleIdx === null) return;
+    if (p.flipped && !flipped) {
+      setFlipped(true);
+      return;
+    }
+    pendingReturnRef.current = null;
+    cancelRestoreRef.current = restoreScrollTo(p.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [articleIdx, flipped]);
 
   // 오늘의 뉴스 가져오기 — 오늘 에디션이 이미 있으면 절대 호출하지 않음 (하루 1회 과금)
   const handleFetchToday = async () => {
@@ -376,15 +400,14 @@ const News = () => {
 
   const openInDictionary = () => {
     if (!popupWord) return;
-    try {
-      if (selected && articleIdx !== null) {
-        sessionStorage.setItem(
-          "news-return",
-          JSON.stringify({ date: selected.date, idx: articleIdx })
-        );
-      }
-    } catch (e) {}
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=news");
+    // 돌아올 자리를 표로 한 장 적어 둡니다 (어느 날짜의 몇 번째 기사 + 스크롤 + 면)
+    if (selected && articleIdx !== null) {
+      writeReturnTicket("news", selected.date + ":" + articleIdx, currentScrollY(), flipped);
+    }
+    navigate(
+      "/dictionary?q=" + encodeURIComponent(popupWord) + "&from=news",
+      { replace: articleStateRef.current }
+    );
   };
 
   const savePopupWord = () => {
