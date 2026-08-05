@@ -20,6 +20,7 @@ import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
 import { ReadingTracker } from "@/lib/readingTimer";
 import PointFloat from "@/components/PointFloat";
+import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -219,11 +220,18 @@ const Devotion = () => {
   }, [popupWord, saveTargetId]);
 
   const subOpenRef = useRef(false);
+  // 히스토리를 실제로 쌓았는지 (사전으로 나갈 때 그 칸을 덮어쓸지 판단하는 데 씁니다)
+  const subPushedRef = useRef(false);
 
   const pushSub = () => {
     if (!subOpenRef.current) {
       subOpenRef.current = true;
-      try { window.history.pushState({ devotionSub: true }, ""); } catch (e) {}
+      try {
+        window.history.pushState({ devotionSub: true }, "");
+        subPushedRef.current = true;
+      } catch (e) {
+        subPushedRef.current = false;
+      }
     }
   };
 
@@ -260,6 +268,7 @@ const Devotion = () => {
       }
       if (subOpenRef.current) {
         subOpenRef.current = false;
+        subPushedRef.current = false;
         resetSub();
       }
     };
@@ -278,21 +287,43 @@ const Devotion = () => {
       .finally(() => setQtLoading(false));
   };
 
+  // ---------- 돌아올 자리로 되돌리기 ----------
+  // 사전에 다녀오면 이 화면은 새로 마운트되어 목록으로 돌아갑니다.
+  // 표가 있으면 보던 묵상 카드를 다시 열고, 면과 스크롤까지 되돌립니다.
+  const pendingReturnRef = useRef<{ y: number; flipped: boolean } | null>(null);
+  const cancelRestoreRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     loadTodayQt();
     listDevotions().then((all) => {
       setRecords(all);
-      try {
-        const rid = sessionStorage.getItem("devotion-return-id");
-        if (rid) {
-          sessionStorage.removeItem("devotion-return-id");
-          const found = all.find((r) => r.id === rid);
-          if (found) openCard(found);
+      const t = takeReturnTicket("devotion");
+      if (t) {
+        const found = all.find((r) => r.id === t.key);
+        if (found) {
+          pendingReturnRef.current = { y: t.y, flipped: t.flipped };
+          openCard(found);
         }
-      } catch (e) {}
+      }
     });
+    return () => {
+      if (cancelRestoreRef.current) cancelRestoreRef.current();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 카드가 그려진 뒤에 면을 맞추고, 그 다음 자리를 되돌립니다.
+  useEffect(() => {
+    const p = pendingReturnRef.current;
+    if (!p || !current) return;
+    if (p.flipped && !flipped) {
+      setFlipped(true);
+      return;
+    }
+    pendingReturnRef.current = null;
+    cancelRestoreRef.current = restoreScrollTo(p.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, flipped]);
 
   const todayRec = todayQt ? records.find((r) => r.id === qtIdFor(todayQt.date)) : undefined;
 
@@ -431,8 +462,12 @@ const Devotion = () => {
 
   const openInDictionary = () => {
     if (!popupWord) return;
-    try { if (current) sessionStorage.setItem("devotion-return-id", current.id); } catch (e) {}
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=devotion");
+    // 돌아올 자리를 표로 한 장 적어 둡니다 (어느 묵상 + 스크롤 + 보고 있던 면)
+    if (current) writeReturnTicket("devotion", current.id, currentScrollY(), flipped);
+    navigate(
+      "/dictionary?q=" + encodeURIComponent(popupWord) + "&from=devotion",
+      { replace: subPushedRef.current }
+    );
   };
 
   const savePopupWord = () => {
