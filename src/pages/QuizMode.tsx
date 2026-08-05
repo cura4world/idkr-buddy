@@ -291,7 +291,11 @@ export default function QuizMode() {
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
-          <Shuffle size={14} /> 랜덤
+          <Shuffle size={14} />
+          <span>랜덤</span>
+          <span className="font-gothic text-[0.6875rem] font-semibold tracking-wide opacity-90">
+            {isRandom ? "ON" : "OFF"}
+          </span>
         </button>
         <button
           onClick={() => {
@@ -307,7 +311,11 @@ export default function QuizMode() {
               : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
           }`}
         >
-          {speakOn ? <VolumeX size={14} /> : <Volume2 size={14} />} 발음
+          {speakOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          <span>발음</span>
+          <span className="font-gothic text-[0.6875rem] font-semibold tracking-wide opacity-90">
+            {speakOn ? "ON" : "OFF"}
+          </span>
         </button>
       </div>
     </div>
