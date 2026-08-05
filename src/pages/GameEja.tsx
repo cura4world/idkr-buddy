@@ -20,7 +20,7 @@ const BLANK_RATIO = 0.35;
 const MIN_BLANKS = 1;
 const MAX_BLANKS = 4;
 const WRONG_TILES = 3;        // 정답에 없는 훼방 글자
-const DONE_MS = 600;          // 완성한 단어를 보여주는 시간
+const DONE_MS = 1600;         // 완성한 단어를 보여주는 시간 (발음을 듣는 동안)
 const SHAKE_MS = 300;
 const GOOD_MISS = 1;          // 미스가 이 이하면 "맞힌 것"으로 봅니다
 
@@ -574,7 +574,7 @@ const GameEja = () => {
               <button
                 type="button"
                 onClick={() => loadPool(true)}
-                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-medium text-white active:opacity-90"
+                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-gothic font-medium text-white active:opacity-90"
               >
                 한 판 더
               </button>
