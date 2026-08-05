@@ -27,6 +27,7 @@ import BibleAudioButton from "@/components/BibleAudioButton";
 import BibleAudioSeekBar from "@/components/BibleAudioSeekBar";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import { ReadingTracker } from "@/lib/readingTimer";
+import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import PointFloat from "@/components/PointFloat";
 
 const LAST_POS_KEY = "bible-last-pos";
@@ -216,10 +217,17 @@ const BibleRead = () => {
 
   // ---------- 뒤로가기 (시트/팝업만 한 단계 닫기) ----------
   const subOpenRef = useRef(false);
+  // 히스토리를 실제로 쌓았는지 (사전으로 나갈 때 그 칸을 덮어쓸지 판단하는 데 씁니다)
+  const subPushedRef = useRef(false);
   const pushSub = () => {
     if (!subOpenRef.current) {
       subOpenRef.current = true;
-      try { window.history.pushState({ bibleSub: true }, ""); } catch (e) {}
+      try {
+        window.history.pushState({ bibleSub: true }, "");
+        subPushedRef.current = true;
+      } catch (e) {
+        subPushedRef.current = false;
+      }
     }
   };
   const resetSub = () => {
@@ -241,6 +249,7 @@ const BibleRead = () => {
       }
       if (subOpenRef.current) {
         subOpenRef.current = false;
+        subPushedRef.current = false;
         resetSub();
       }
     };
@@ -253,6 +262,42 @@ const BibleRead = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ---------- 돌아올 자리로 되돌리기 ----------
+  // 마운트할 때 표를 집어 듭니다. 여기서는 상태를 건드리지 않습니다 —
+  // 바로 뒤에 도는 장 로드가 flipped 를 false 로 되돌리기 때문입니다.
+  const pendingReturnRef = useRef<{ y: number; flipped: boolean } | null>(null);
+  const cancelRestoreRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const t = takeReturnTicket("bible");
+    if (t && t.key === pos.bookId + ":" + pos.chapter) {
+      pendingReturnRef.current = { y: t.y, flipped: t.flipped };
+    }
+    return () => {
+      if (cancelRestoreRef.current) cancelRestoreRef.current();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 본문이 그려진 뒤에 면을 맞추고, 그 다음 자리를 되돌립니다.
+  // 한국어 면이었다면 뒷면 본문이 도착할 때까지 기다립니다.
+  useEffect(() => {
+    const p = pendingReturnRef.current;
+    if (!p || loading) return;
+    if (p.flipped) {
+      if (!versesKo) return;
+      if (!flipped) {
+        setFlipped(true);
+        return;
+      }
+    } else if (!verses) {
+      return;
+    }
+    pendingReturnRef.current = null;
+    cancelRestoreRef.current = restoreScrollTo(p.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, verses, versesKo, flipped]);
 
   // ---------- 장 로드 ----------
   const loadChapter = async (p: BiblePos) => {
@@ -435,7 +480,15 @@ const BibleRead = () => {
 
   const openInDictionary = () => {
     if (!popupWord) return;
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=bible");
+    // 돌아올 자리를 표로 한 장 적어 둡니다 (스크롤 + 보고 있던 면)
+    writeReturnTicket("bible", pos.bookId + ":" + pos.chapter, currentScrollY(), flipped);
+    // 단어 팝업이 쌓아 둔 히스토리 한 칸을 사전 화면으로 덮어씁니다.
+    // 그래야 사전에서 뒤로가기 한 번에 성경 읽기로 돌아옵니다.
+    // (pushState 가 실패해 쌓인 칸이 없으면 덮어쓰면 안 됩니다 — 성경 칸 자체가 사라집니다)
+    navigate(
+      "/dictionary?q=" + encodeURIComponent(popupWord) + "&from=bible",
+      { replace: subPushedRef.current }
+    );
   };
 
   const savePopupWord = () => {
