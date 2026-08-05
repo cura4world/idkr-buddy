@@ -22,6 +22,7 @@ import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveT
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import { getStoredImage, saveStoredImage } from "@/lib/imageStore";
 import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
+import { dropReturnTicket } from "@/lib/readReturn";
 import { medaliEngine } from "@/lib/medali";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -626,7 +627,7 @@ const Dictionary = () => {
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => { dropReturnTicket(); navigate("/"); }}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >

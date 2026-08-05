@@ -64,6 +64,18 @@ export function takeReturnTicket(scope: string): ReturnTicket | null {
   }
 }
 
+// 표를 그냥 버립니다.
+// 사전에서 뒤로가기가 아니라 헤더 화살표로 홈에 나가는 경우처럼,
+// "돌아가지 않겠다"는 뜻이 분명할 때 씁니다. 표를 남겨두면 나중에 그 화면에
+// 다시 들어갔을 때 히스토리에 없는 칸을 있다고 여겨 뒤로가기가 한 단계 어긋납니다.
+export function dropReturnTicket() {
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch (e) {
+    // 저장소를 못 쓰는 환경이면 그냥 넘어갑니다
+  }
+}
+
 // 지금 화면의 스크롤 위치를 읽습니다.
 export function currentScrollY(): number {
   return window.scrollY || document.documentElement.scrollTop || 0;
