@@ -29,6 +29,8 @@ import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import PointFloat from "@/components/PointFloat";
+import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
+import PhraseFindBar from "@/components/PhraseFindBar";
 
 const LAST_POS_KEY = "bible-last-pos";
 
@@ -415,10 +417,23 @@ const BibleRead = () => {
     setPopupSaved(hasWordInCategory(saveTargetId, popupWord));
   }, [popupWord, saveTargetId]);
 
+  // 본문에서 고른 표현 찾기
+  const { phrase: selPhrase, take: takeSelPhrase } = useSelectedPhrase();
+
+  const openPhrasePopup = () => {
+    const s = takeSelPhrase();
+    if (!s.phrase) return;
+    openWordPopup(s.phrase, s.sentence);
+  };
+
   const openWordPopup = async (rawToken: string, sentence: string) => {
     if (shouldIgnoreTap()) return;
+    // 글자를 고르는 중이면 팝업을 열지 않습니다
+    // (선택을 끝내며 나는 탭이 단어 팝업을 잘못 여는 것을 막습니다)
+    const liveSel = window.getSelection();
+    if (liveSel && !liveSel.isCollapsed) return;
     trackerRef.current?.touch();
-    const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
+    const word = cleanPhrase(rawToken);
     if (!word) return;
     const key = word.toLowerCase();
     const reqId = ++popupReqId.current;
@@ -507,7 +522,7 @@ const BibleRead = () => {
   // ---------- 렌더 도우미 ----------
   const renderTokens = (text: string, keyPrefix: string) =>
     text.split(" ").map((tok, ti) => (
-      <span key={keyPrefix + ti}>
+      <span key={keyPrefix + ti} data-idw="1">
         <span
           onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
           className="cursor-pointer rounded active:bg-sky-500/20"
@@ -707,6 +722,7 @@ const BibleRead = () => {
       />
 
       {/* 단어 미니 팝업 */}
+      <PhraseFindBar phrase={selPhrase} onFind={openPhrasePopup} hidden={!!popupWord} widthClass={widthClass} />
       {popupWord && (
         <div className="fixed inset-0 z-50" onClick={closeSub}>
           <div className="absolute inset-0 bg-black/40" />
