@@ -279,6 +279,8 @@ const News = () => {
         const ed = all.find((e) => e.date === date);
         if (ed && !isNaN(idx) && ed.articles[idx]) {
           pendingReturnRef.current = { y: t.y, flipped: t.flipped };
+          // 기사 칸은 히스토리에 이미 남아 있습니다 — 새로 쌓지 않습니다.
+          articleStateRef.current = true;
           openArticle(ed, idx);
           return;
         }
@@ -404,10 +406,8 @@ const News = () => {
     if (selected && articleIdx !== null) {
       writeReturnTicket("news", selected.date + ":" + articleIdx, currentScrollY(), flipped);
     }
-    navigate(
-      "/dictionary?q=" + encodeURIComponent(popupWord) + "&from=news",
-      { replace: articleStateRef.current }
-    );
+    // 기사 칸은 히스토리에 그대로 둡니다 (이야기 화면과 같은 이유).
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=news");
   };
 
   const savePopupWord = () => {

@@ -366,6 +366,9 @@ const Prayer = () => {
       const found = all.find((r) => r.id === t.key);
       if (!found) return;
       pendingReturnRef.current = { y: t.y, flipped: t.flipped };
+      // 기도문 칸은 히스토리에 이미 남아 있습니다 — pushSub 이 새로 쌓지 않도록 미리 켜 둡니다.
+      subOpenRef.current = true;
+      subPushedRef.current = true;
       openPrayer(found);
     });
     return () => {
@@ -644,10 +647,8 @@ const Prayer = () => {
     if (!popupWord) return;
     // 돌아올 자리를 표로 한 장 적어 둡니다 (어느 기도문 + 스크롤 + 보고 있던 면)
     if (current) writeReturnTicket("prayer", current.id, currentScrollY(), flipped);
-    navigate(
-      "/dictionary?q=" + encodeURIComponent(popupWord) + "&from=prayer",
-      { replace: subPushedRef.current }
-    );
+    // 기도문 칸은 히스토리에 그대로 둡니다 (이야기 화면과 같은 이유).
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=prayer");
   };
 
   const savePopupWord = () => {

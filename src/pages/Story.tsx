@@ -270,6 +270,9 @@ const Story = () => {
       const found = all.find((s) => s.id === t.key);
       if (!found) return;
       pendingReturnRef.current = { y: t.y, flipped: t.flipped };
+      // 카드 칸은 히스토리에 이미 남아 있습니다 (지금 그 칸 위에 서 있습니다).
+      // 미리 켜 두어 openCard 가 칸을 새로 쌓지 않게 합니다.
+      cardStateRef.current = true;
       openCard(found);
     });
     return () => {
@@ -391,12 +394,10 @@ const Story = () => {
     if (!popupWord) return;
     // 돌아올 자리를 표로 한 장 적어 둡니다 (어느 이야기 + 스크롤 + 보고 있던 면)
     if (current) writeReturnTicket("story", current.id, currentScrollY(), flipped);
-    // 카드가 쌓아 둔 히스토리 한 칸을 사전 화면으로 덮어씁니다.
-    // 그래야 사전에서 뒤로가기 한 번에 이야기로 돌아옵니다.
-    navigate(
-      "/dictionary?q=" + encodeURIComponent(popupWord) + "&from=story",
-      { replace: cardStateRef.current }
-    );
+    // 카드가 쌓아 둔 히스토리 칸은 그대로 둡니다.
+    // 사전에서 뒤로가기를 누르면 그 칸으로 돌아오고, 한 번 더 누르면 목록으로 나갑니다.
+    // (칸을 덮어썼다가 돌아와서 다시 쌓으면, 조작 없이 쌓은 칸이라 뒤로가기가 먹지 않습니다)
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=story");
   };
 
   const savePopupWord = () => {
