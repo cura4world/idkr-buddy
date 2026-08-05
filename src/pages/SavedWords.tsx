@@ -1,11 +1,13 @@
 import { useState, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/lib/nav";
 import { getSavedWords, removeSavedWord, Word } from "@/lib/store";
 import { ArrowLeft, Volume2, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SavedWords() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const words = getSavedWords();
@@ -98,7 +100,7 @@ export default function SavedWords() {
   return (
     <div className="min-h-screen bg-background px-4 py-6 max-w-lg mx-auto">
       <button
-        onClick={() => navigate("/")}
+        onClick={() => goBackOr(navigate, location.key, "/")}
         className="flex items-center gap-2 text-sm text-foreground mb-6 hover:text-foreground/80"
       >
         <ArrowLeft size={16} />

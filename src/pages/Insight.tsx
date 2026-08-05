@@ -2,7 +2,8 @@
 // "인도네시아 이해" 허브: 개관 / 지도 / 종족 / 종교 / 기독교 / 역사 / 정보 7개 하위 메뉴.
 // 메인화면·기도 화면과 같은 목록 어법 (섹션 라벨 + 흰 카드 안의 행).
 
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/lib/nav";
 import {
   ArrowLeft,
   Globe,
@@ -50,12 +51,13 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 
 const Insight = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto pb-9">
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => goBackOr(navigate, location.key, "/")}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="홈으로"
         >

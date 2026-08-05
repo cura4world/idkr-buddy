@@ -2,7 +2,8 @@
 // 인도네시아 정보: 버튼을 누르면 팁 하나를 생성해 위에 쌓습니다. IndexedDB 영구 보관.
 
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/lib/nav";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { ArrowLeft, Lightbulb, Sparkles, Loader2, Volume2, Trash2, BookOpen, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +12,7 @@ import { hasGeminiApiKey } from "@/lib/gemini";
 
 const InsightTips = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ---------- 탐험 점수 (보이지 않음) ----------
   // 2분 구경 = 1점. 화면에는 아무 표시도 없고 플로팅도 띄우지 않습니다.
@@ -106,7 +108,7 @@ const InsightTips = () => {
     <div className="min-h-screen bg-background px-4 pt-4 pb-28 max-w-lg mx-auto">
       <header className="flex items-center gap-2 mb-3">
         <button
-          onClick={() => navigate("/insight")}
+          onClick={() => goBackOr(navigate, location.key, "/insight")}
           className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-black/5 active:bg-black/10 -ml-1"
           title="뒤로"
         >

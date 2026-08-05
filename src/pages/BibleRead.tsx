@@ -4,7 +4,8 @@
 // 마지막 읽던 위치는 localStorage("bible-last-pos")에 기억.
 
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/lib/nav";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, ChevronDown,
   Loader2, RotateCcw, Volume2, X, Check, Plus, Minus,
@@ -88,6 +89,7 @@ const speak = (text: string, lang: "id" | "ko") => {
 
 const BibleRead = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { widthClass, canWide, wide, toggle } = useWideMode();
 
   // ---------- 위치 / 본문 ----------
@@ -498,7 +500,7 @@ const BibleRead = () => {
       <PointFloat value={floatVal} seq={floatSeq} />
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => goBackOr(navigate, location.key, "/devotion")}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >

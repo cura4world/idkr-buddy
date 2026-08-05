@@ -2,7 +2,8 @@
 // 설교문 목록 (/sermon). 폰에 저장된 것을 먼저 그리고, 설정이 있으면 조용히 서버와 맞춥니다.
 
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/lib/nav";
 import { ArrowLeft, RefreshCw, ChevronRight, Maximize2, Minimize2, Trash2 } from "lucide-react";
 import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
@@ -41,6 +42,7 @@ const lastSyncLabel = (ms: number): string => {
 
 const Sermons = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { widthClass, canWide, wide, toggle } = useWideMode();
 
   const [items, setItems] = useState<SermonMeta[]>([]);
@@ -239,7 +241,7 @@ const Sermons = () => {
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => goBackOr(navigate, location.key, "/")}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >

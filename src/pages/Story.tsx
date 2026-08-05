@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/lib/nav";
 import { ArrowLeft, Sparkles, Volume2, Loader2, Plus, Check, BookOpen, X, Maximize2, Minimize2, ChevronDown } from "lucide-react";
 import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
@@ -42,6 +43,7 @@ const fmtDate = (t: number) => {
 
 const Story = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { widthClass, canWide, wide, toggle } = useWideMode();
   const [stories, setStories] = useState<StoryRecord[]>([]);
   const [difficulty, setDifficulty] = useState<StoryDifficulty>(() => {
@@ -638,7 +640,7 @@ const Story = () => {
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => goBackOr(navigate, location.key, "/")}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >

@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/lib/nav";
 import { getCategories, Category } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import { ArrowLeft } from "lucide-react";
@@ -31,6 +32,7 @@ function groupLabelOf(name: string): string {
 
 const Wordbooks = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   // 폴더 화면은 시드에서 온 공용 단어장(읽기 전용 "책")만 보여줍니다.
   // 사용자가 만들거나 보관한 단어장은 내 단어장 안에서 관리합니다.
   const categories = getCategories().filter((c) => c.isShared);
@@ -53,7 +55,7 @@ const Wordbooks = () => {
     <div className="min-h-screen bg-background max-w-lg mx-auto pb-9">
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => goBackOr(navigate, location.key, "/")}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >

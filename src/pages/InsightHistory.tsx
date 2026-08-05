@@ -3,7 +3,8 @@
 // 고정 콘텐츠, 전체 한국어.
 
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/lib/nav";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { ArrowLeft, Hourglass, X } from "lucide-react";
 
@@ -310,6 +311,7 @@ const ERAS: Era[] = [
 
 const InsightHistory = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ---------- 탐험 점수 (보이지 않음) ----------
   // 2분 구경 = 1점. 화면에는 아무 표시도 없고 플로팅도 띄우지 않습니다.
@@ -371,7 +373,7 @@ const InsightHistory = () => {
     <div className="min-h-screen bg-background px-4 pt-4 pb-10 max-w-lg mx-auto">
       <header className="flex items-center gap-2 mb-2">
         <button
-          onClick={() => navigate("/insight")}
+          onClick={() => goBackOr(navigate, location.key, "/insight")}
           className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-black/5 active:bg-black/10 -ml-1"
           title="뒤로"
         >

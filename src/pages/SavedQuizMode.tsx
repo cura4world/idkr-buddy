@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/lib/nav";
 import { getSavedWords, Word } from "@/lib/store";
 import { ArrowLeft, RotateCcw, Shuffle } from "lucide-react";
 import { medaliEngine } from "@/lib/medali";
@@ -16,6 +17,7 @@ function shuffle<T>(arr: T[]): T[] {
 
 export default function SavedQuizMode() {
   const navigate = useNavigate();
+  const location = useLocation();
   const allWords = getSavedWords();
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -162,7 +164,7 @@ export default function SavedQuizMode() {
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
       <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={() => navigate("/saved")} className="text-foreground hover:text-foreground/80">
+        <button onClick={() => goBackOr(navigate, location.key, "/saved")} className="text-foreground hover:text-foreground/80">
           <ArrowLeft size={20} />
         </button>
         <span className="text-sm text-foreground font-body">

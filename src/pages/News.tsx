@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/lib/nav";
 import { ArrowLeft, Newspaper, Volume2, Loader2, Plus, Check, X, Maximize2, Minimize2, ChevronDown } from "lucide-react";
 import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
@@ -50,6 +51,7 @@ const catStyle = (cat: string): string => {
 
 const News = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { widthClass, canWide, wide, toggle } = useWideMode();
   const [editions, setEditions] = useState<NewsEdition[]>([]);
   const [selected, setSelected] = useState<NewsEdition | null>(null);
@@ -620,7 +622,7 @@ const News = () => {
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => goBackOr(navigate, location.key, "/")}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >

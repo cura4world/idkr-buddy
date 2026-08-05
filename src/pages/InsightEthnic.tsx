@@ -3,7 +3,8 @@
 // 비율은 2010년 인구센서스(BPS) 기준이며, 인도네시아 종족 통계에서 가장 널리 인용되는 수치입니다.
 
 import { useState, useEffect, useRef, ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/lib/nav";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { ArrowLeft, Users, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -188,6 +189,7 @@ const ETHNICS: Ethnic[] = [
 
 const InsightEthnic = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ---------- 탐험 점수 (보이지 않음) ----------
   // 2분 구경 = 1점. 화면에는 아무 표시도 없고 플로팅도 띄우지 않습니다.
@@ -214,7 +216,7 @@ const InsightEthnic = () => {
     <div className="min-h-screen bg-background px-4 pt-4 pb-8 max-w-lg mx-auto">
       <header className="flex items-center gap-2 mb-4">
         <button
-          onClick={() => navigate("/insight")}
+          onClick={() => goBackOr(navigate, location.key, "/insight")}
           className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-black/5 active:bg-black/10 -ml-1"
           title="뒤로"
         >

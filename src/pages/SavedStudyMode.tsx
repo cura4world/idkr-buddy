@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOr } from "@/lib/nav";
 import { getSavedWords, removeSavedWord, Word } from "@/lib/store";
 import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Play, Square, RefreshCw, Lock, Unlock, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SavedStudyMode() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const words = getSavedWords();
@@ -192,7 +194,7 @@ export default function SavedStudyMode() {
         </div>
       )}
       <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={() => { cancelOperations(); navigate("/saved"); }} className="text-foreground hover:text-foreground/80">
+        <button onClick={() => { cancelOperations(); goBackOr(navigate, location.key, "/saved"); }} className="text-foreground hover:text-foreground/80">
           <ArrowLeft size={20} />
         </button>
         <span className="text-sm text-foreground font-body">
