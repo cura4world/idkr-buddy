@@ -558,7 +558,11 @@ const PhraseDetail = () => {
                 <button
                   onClick={(e) => { e.stopPropagation(); openWbPicker(); }}
                   title="담을 단어장 고르기"
-                  className="shrink-0 flex items-center px-2.5 border-l border-white/30 bg-primary text-white"
+                  className={`shrink-0 flex items-center px-2.5 border-l ${
+                    popupSaved || !saveTargetId
+                      ? "border-black/5 bg-black/5 text-muted-foreground"
+                      : "border-white/30 bg-primary text-white"
+                  }`}
                 >
                   <ChevronDown size={13} />
                 </button>
