@@ -1123,12 +1123,16 @@ const Dictionary = () => {
                         : "단어장을 먼저 만들어 주세요"}
                   </span>
                 </button>
-                {/* 담긴 뒤에도 다른 단어장에는 담을 수 있어야 하므로
-                    ⌄ 는 잠그지 않고 색도 살려 둡니다 (본체만 잠깁니다) */}
+                {/* 담긴 뒤에도 다른 단어장에는 담을 수 있으므로 기능은 살려 두고,
+                    한 알약이 반쪽씩 다른 색으로 보이지 않게 색만 본체와 맞춥니다 */}
                 <button
                   onClick={(e) => { e.stopPropagation(); openSaveSheet(); }}
                   title="담을 단어장 고르기"
-                  className="shrink-0 flex items-center px-4 border-l border-white/30 bg-primary text-white transition-colors hover:bg-primary/90"
+                  className={`shrink-0 flex items-center px-4 border-l transition-colors ${
+                    saved || !saveTargetId
+                      ? "border-gray-300 bg-gray-100 text-gray-400 hover:bg-gray-200"
+                      : "border-white/30 bg-primary text-white hover:bg-primary/90"
+                  }`}
                 >
                   <ChevronDown size={14} />
                 </button>
