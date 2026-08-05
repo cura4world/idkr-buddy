@@ -17,6 +17,8 @@ import { ttsPlayer } from "@/lib/tts";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import PointFloat from "@/components/PointFloat";
+import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
+import PhraseFindBar from "@/components/PhraseFindBar";
 
 const DIFF_KEY = "story-difficulty";
 const DIFFS: StoryDifficulty[] = ["하", "중", "상"];
@@ -324,10 +326,23 @@ const Story = () => {
 
   // 단어 탭 → 미니 팝업
   // 조회 순서: 카드 메모리 캐시 → 폰 저장소(IndexedDB) → Gemini API
+  // 본문에서 고른 표현 찾기
+  const { phrase: selPhrase, take: takeSelPhrase } = useSelectedPhrase();
+
+  const openPhrasePopup = () => {
+    const s = takeSelPhrase();
+    if (!s.phrase) return;
+    openWordPopup(s.phrase, s.sentence);
+  };
+
   const openWordPopup = async (rawToken: string, sentence: string) => {
     if (shouldIgnoreTap()) return;
+    // 글자를 고르는 중이면 팝업을 열지 않습니다
+    // (선택을 끝내며 나는 탭이 단어 팝업을 잘못 여는 것을 막습니다)
+    const liveSel = window.getSelection();
+    if (liveSel && !liveSel.isCollapsed) return;
     trackerRef.current?.touch();
-    const word = rawToken.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
+    const word = cleanPhrase(rawToken);
     if (!word) return;
     const key = word.toLowerCase();
     const reqId = ++popupReqId.current;
@@ -416,7 +431,7 @@ const Story = () => {
   // 인니어 텍스트를 단어 단위로 쪼개 탭 가능하게 렌더링 (제목/본문 공용)
   const renderTokens = (text: string, keyPrefix: string) =>
     text.split(" ").map((tok, ti) => (
-      <span key={keyPrefix + ti}>
+      <span key={keyPrefix + ti} data-idw="1">
         <span
           onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
           className="cursor-pointer rounded active:bg-primary/20"
@@ -486,7 +501,7 @@ const Story = () => {
         <div className="px-4 py-4">
           <div
             {...swipeHandlers}
-            className="-mx-4 bg-card border-y border-border/60 px-4 py-5 min-h-[72vh] content-bump select-none"
+            className="-mx-4 bg-card border-y border-border/60 px-4 py-5 min-h-[72vh] content-bump"
           >
             {!flipped ? (
               <>
@@ -568,6 +583,7 @@ const Story = () => {
         </div>
 
         {/* 단어 미니 팝업 */}
+        <PhraseFindBar phrase={selPhrase} onFind={openPhrasePopup} hidden={!!popupWord} widthClass={widthClass} />
         {popupWord && (
           <div className="fixed inset-0 z-50" onClick={() => setPopupWord(null)}>
             <div className="absolute inset-0 bg-black/40" />
