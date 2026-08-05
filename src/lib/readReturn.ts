@@ -52,7 +52,11 @@ export function takeReturnTicket(scope: string): ReturnTicket | null {
     const t = JSON.parse(raw);
     if (!t || t.scope !== scope) return null;
     if (typeof t.key !== "string" || !t.key) return null;
-    if (typeof t.y !== "number" || !isFinite(t.y) || t.y < 1) return null;
+    // 스크롤이 0이어도 표는 살려야 합니다.
+    // 표에는 스크롤뿐 아니라 "어느 글이었는지(key)"와 "뒤집힌 면(flipped)"도 담겨 있어서,
+    // 글 위쪽에서 사전에 다녀온 경우(y=0)에 표를 버리면 이야기는 목록으로,
+    // 성경은 앞면 맨 위로 돌아가 버립니다.
+    if (typeof t.y !== "number" || !isFinite(t.y) || t.y < 0) return null;
     if (typeof t.at !== "number" || Date.now() - t.at > TTL) return null;
     return { scope: t.scope, key: t.key, y: Math.round(t.y), flipped: !!t.flipped };
   } catch (e) {
