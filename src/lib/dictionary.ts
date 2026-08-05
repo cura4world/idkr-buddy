@@ -16,6 +16,11 @@ const IMAGE_MODEL_CANDIDATES = [
   "gemini-2.5-flash-image", // 구형 폴백 (무료 티어 지원)
 ];
 
+// 이미지 생성은 텍스트보다 오래 걸립니다 (보통 10~30초).
+// 그래도 응답이 영영 안 오면 "이미지 보기"가 끝나지 않으므로 반드시 끊어 줍니다.
+const IMAGE_TIMEOUT_MS = 45000;   // 한 모델당
+const IMAGE_DEADLINE_MS = 75000;  // 후보를 다 돌아도 이 시간을 넘기지 않습니다
+
 export interface DictExample {
   id: string;      // 인도네시아어 예문
   ko: string;      // 한국어 번역
@@ -200,13 +205,28 @@ export async function generateWordImage(word: string, meaning: string): Promise<
     ". Minimal flat style, soft colors, no text or letters in the image, easy to understand at a glance.";
 
   let lastStatus = 0;
+  const startedAt = Date.now();
 
   for (const model of IMAGE_MODEL_CANDIDATES) {
+    // 앞 후보에서 이미 오래 끌었으면 남은 후보는 시도하지 않습니다
+    if (Date.now() - startedAt >= IMAGE_DEADLINE_MS) break;
     const endpoint =
       "https://generativelanguage.googleapis.com/v1beta/models/" +
       model +
       ":generateContent?key=" +
       encodeURIComponent(apiKey);
+
+    // 남은 마감 시간과 한 모델 몫 중 짧은 쪽으로 끊습니다
+    const left = IMAGE_DEADLINE_MS - (Date.now() - startedAt);
+    const budget = Math.min(IMAGE_TIMEOUT_MS, left);
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        controller.abort();
+      } catch (e) {}
+    }, budget);
 
     let res: Response;
     try {
@@ -216,11 +236,14 @@ export async function generateWordImage(word: string, meaning: string): Promise<
         body: JSON.stringify({
           contents: [{ parts: [{ text: imgPrompt }] }],
         }),
+        signal: controller.signal,
       });
     } catch (e) {
-      lastStatus = -1; // 네트워크 오류
+      clearTimeout(timer);
+      lastStatus = timedOut ? -2 : -1; // -2 시간 초과 / -1 네트워크 오류
       continue;
     }
+    clearTimeout(timer);
 
     if (!res.ok) {
       lastStatus = res.status;
@@ -241,6 +264,7 @@ export async function generateWordImage(word: string, meaning: string): Promise<
 
   if (lastStatus === 429) throw new Error("RATE_LIMIT");
   if (lastStatus === 200) throw new Error("NO_IMAGE");
+  if (lastStatus === -2) throw new Error("IMAGE_TIMEOUT");
   throw new Error("IMAGE_FAILED_" + lastStatus);
 }
 

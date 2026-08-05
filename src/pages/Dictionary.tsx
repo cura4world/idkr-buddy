@@ -553,6 +553,7 @@ const Dictionary = () => {
   const imgErrorMessage = (code: string): string => {
     if (code === "RATE_LIMIT") return "요청이 많습니다. 잠시 후 다시 시도해주세요.";
     if (code === "NO_IMAGE") return "모델이 이미지를 만들지 못했어요.";
+    if (code === "IMAGE_TIMEOUT") return "이미지 생성이 오래 걸려 중단했어요. 잠시 후 다시 시도해주세요.";
     if (code === "IMAGE_FAILED_-1") return "네트워크 오류로 이미지를 불러오지 못했어요.";
     if (code.indexOf("IMAGE_FAILED_") === 0) return "이미지 생성에 실패했습니다 (오류 " + code.replace("IMAGE_FAILED_", "") + ")";
     return "이미지 생성에 실패했습니다.";
