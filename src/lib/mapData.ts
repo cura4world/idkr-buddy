@@ -1,6 +1,7 @@
 // src/lib/mapData.ts
-// 인도네시아 지도 데이터: Natural Earth 50m 해안선(메르카토르 투영, viewBox 1000x460) + 학습 지점 85곳.
-// tier 1=대도시(낮은 줌부터 표시), 2=중소도시, 3=관광지. x/y는 경위도가 아니라 viewBox 좌표입니다.
+// 인도네시아 지도 데이터: Natural Earth 50m 해안선(메르카토르 투영, viewBox 1000x460) + 학습 지점 131곳.
+// tier 1=대도시(낮은 줌부터 표시), 2=중소도시, 3=관광지, 4=종교·역사/민족·문화(가장 깊은 줌).
+// x/y는 경위도가 아니라 viewBox 좌표입니다.
 
 export interface MapPlace { id: string; ko: string; x: number; y: number; hint: string; tier: number; }
 export interface MapIslandLabel { id: string; ko: string; x: number; y: number; }
@@ -60,7 +61,21 @@ export const MAP_CITIES: MapPlace[] = [
   {"id":"Ende","ko":"엔데","x":574.2,"y":365.6,"hint":"플로레스 섬의 도시","tier":2},
   {"id":"Labuan Bajo","ko":"라부안바조","x":538.1,"y":357.1,"hint":"코모도 여행의 관문","tier":2},
   {"id":"Singkawang","ko":"싱카왕","x":307,"y":157.2,"hint":"중국계 문화의 도시","tier":2},
-  {"id":"Bukittinggi","ko":"부키팅기","x":124.4,"y":182.9,"hint":"미낭카바우 고원의 도시","tier":2}
+  {"id":"Bukittinggi","ko":"부키팅기","x":124.4,"y":182.9,"hint":"미낭카바우 고원의 도시","tier":2},
+  {"id":"Bekasi","ko":"브카시","x":264.8,"y":309.3,"hint":"자카르타 동쪽 위성도시","tier":2},
+  {"id":"Depok","ko":"데폭","x":261.0,"y":312.7,"hint":"자카르타 남쪽 위성도시","tier":2},
+  {"id":"Tangerang","ko":"탕에랑","x":257.0,"y":308.0,"hint":"자카르타 서쪽, 공항이 있는 도시","tier":2},
+  {"id":"Sukabumi","ko":"수카부미","x":263.3,"y":323.8,"hint":"서부 자바의 산간 도시","tier":2},
+  {"id":"Tasikmalaya","ko":"타식말라야","x":290.6,"y":332.5,"hint":"순다 공예의 도시","tier":2},
+  {"id":"Purwokerto","ko":"푸르워커르토","x":312.0,"y":334.4,"hint":"슬라멧 산 아래 중부 자바 도시","tier":2},
+  {"id":"Magelang","ko":"마글랑","x":332.2,"y":332.6,"hint":"보로부두르 관문 도시","tier":2},
+  {"id":"Salatiga","ko":"살라티가","x":338.9,"y":332.5,"hint":"중부 자바의 서늘한 대학 도시","tier":2},
+  {"id":"Pati","ko":"파티","x":350.4,"y":320.2,"hint":"북부 자바 해안의 농업 도시","tier":2},
+  {"id":"Madiun","ko":"마디운","x":360.5,"y":338.9,"hint":"동부 자바 내륙의 철도 도시","tier":2},
+  {"id":"Sidoarjo","ko":"시도아르조","x":386.0,"y":335.1,"hint":"수라바야 남쪽 산업 도시","tier":2},
+  {"id":"Probolinggo","ko":"프로볼링고","x":396.5,"y":341.5,"hint":"브로모로 가는 항구 도시","tier":2},
+  {"id":"Pematangsiantar","ko":"프마탕시안타르","x":96.6,"y":113.5,"hint":"북수마트라 제2의 도시","tier":2},
+  {"id":"Binjai","ko":"빈자이","x":84.5,"y":99.9,"hint":"메단 서쪽의 위성도시","tier":2}
 ];
 
 export const MAP_SPOTS: MapPlace[] = [
@@ -95,7 +110,47 @@ export const MAP_SPOTS: MapPlace[] = [
   {"id":"Kepulauan Banda","ko":"반다 제도","x":750.2,"y":272.4,"hint":"향신료 역사의 제도","tier":3},
   {"id":"Lembah Baliem","ko":"발리엠 계곡","x":942.1,"y":263.3,"hint":"파푸아 고원의 계곡","tier":3},
   {"id":"Pulau Sumba","ko":"숨바 섬","x":527.7,"y":381.9,"hint":"초원과 전통 마을의 섬","tier":3},
-  {"id":"Danau Kelimutu","ko":"클리무투 호수","x":579.8,"y":360.4,"hint":"삼색 화구호","tier":3}
+  {"id":"Danau Kelimutu","ko":"클리무투 호수","x":579.8,"y":360.4,"hint":"삼색 화구호","tier":3},
+  {"id":"Sawahlunto","ko":"사왈룬토","x":133.0,"y":191.0,"hint":"옴빌린 탄광, 세계문화유산","tier":3},
+  {"id":"Sangiran","ko":"상기란","x":345.9,"y":334.0,"hint":"초기 인류 화석 유적, 세계문화유산","tier":3},
+  {"id":"Muara Jambi","ko":"무아라 잠비","x":195.3,"y":208.0,"hint":"수마트라 최대 불교 사원군 유적","tier":3},
+  {"id":"Trowulan","ko":"트로울란","x":378.8,"y":337.2,"hint":"마자파힛 왕국의 옛 수도터","tier":3},
+  {"id":"Taman Nasional Lorentz","ko":"로렌츠 국립공원","x":910.9,"y":277.6,"hint":"만년설과 열대우림, 세계자연유산","tier":3},
+  {"id":"Gunung Leuser","ko":"르우세르 국립공원","x":63.6,"y":96.7,"hint":"오랑우탄의 마지막 서식지","tier":3},
+  {"id":"Maros-Pangkep","ko":"마로스-팡켑","x":533.4,"y":282.9,"hint":"카르스트와 선사 동굴벽화","tier":3}
+];
+
+// tier 4 — 종교·역사. 가장 깊은 줌에서만 보입니다.
+export const MAP_FAITH: MapPlace[] = [
+  {"id":"Demak","ko":"드막","x":341.9,"y":323.1,"hint":"자바 최초의 이슬람 왕국, 대모스크","tier":4},
+  {"id":"Kudus","ko":"쿠두스","x":346.1,"y":321.2,"hint":"힌두를 존중해 소를 잡지 않는 전통","tier":4},
+  {"id":"Tuban","ko":"투반","x":372.0,"y":323.4,"hint":"왈리송오 전승이 남은 북부 해안","tier":4},
+  {"id":"Banten Lama","ko":"반텐 라마","x":247.0,"y":303.8,"hint":"반텐 술탄국의 옛 수도","tier":4},
+  {"id":"Muntilan","ko":"문틸란","x":334.5,"y":337.8,"hint":"판 리트 신부가 세운 자바 가톨릭의 요람","tier":4},
+  {"id":"Tarutung","ko":"타루퉁","x":94.7,"y":133.5,"hint":"바탁 개신교(HKBP) 본부 페아라자가 있는 도시","tier":4},
+  {"id":"Tomohon","ko":"토모혼","x":642.7,"y":148.2,"hint":"GMIM 총회 본부, 주민 96%가 기독교인","tier":4},
+  {"id":"Tobelo","ko":"토벨로","x":709.8,"y":139.7,"hint":"할마헤라 기독교의 중심 도시","tier":4},
+  {"id":"Saparua","ko":"사파루아","x":723.6,"y":252.7,"hint":"말루쿠 기독교와 파티무라 항쟁의 섬","tier":4},
+  {"id":"Pulau Mansinam","ko":"만시남 섬","x":841.0,"y":197.5,"hint":"1855년 파푸아 선교가 시작된 섬","tier":4},
+  {"id":"Larantuka","ko":"라란투카","x":603.3,"y":354.0,"hint":"포르투갈이 남긴 성주간 행렬 스마나 산타","tier":4},
+  {"id":"Maumere","ko":"마우메레","x":587.0,"y":360.0,"hint":"플로레스 가톨릭의 중심 도시","tier":4},
+  {"id":"Pulau Sabu","ko":"사부 섬","x":579.3,"y":400.0,"hint":"초기 선교가 뿌리내린 건조한 섬","tier":4},
+  {"id":"Soe","ko":"소에","x":630.8,"y":386.4,"hint":"서티모르 개신교의 고원 도시","tier":4}
+];
+
+// tier 4 — 민족·문화. 가장 깊은 줌에서만 보입니다.
+export const MAP_CULTURE: MapPlace[] = [
+  {"id":"Baduy","ko":"바두이","x":248.9,"y":315.9,"hint":"외부 문물을 멀리하는 순다 바두이족","tier":4},
+  {"id":"Kampung Naga","ko":"캄풍 나가","x":288.1,"y":332.9,"hint":"순다 전통 가옥이 남은 마을","tier":4},
+  {"id":"Pamekasan","ko":"파므카산","x":402.1,"y":328.9,"hint":"마두라 문화의 중심","tier":4},
+  {"id":"Berastagi","ko":"브라스타기","x":85.0,"y":108.6,"hint":"카로 바탁의 고원 마을","tier":4},
+  {"id":"Pagaruyung","ko":"파가루융","x":129.6,"y":186.3,"hint":"미낭카바우 왕궁","tier":4},
+  {"id":"Takengon","ko":"타큉온","x":49.8,"y":77.9,"hint":"가요족의 고원, 아체 커피 산지","tier":4},
+  {"id":"Putussibau","ko":"푸투시바우","x":390.4,"y":158.8,"hint":"다약 롱하우스가 남은 카푸아스 상류","tier":4},
+  {"id":"Bone","ko":"보네","x":547.2,"y":273.1,"hint":"부기스 왕국의 옛 수도","tier":4},
+  {"id":"Tenganan","ko":"텅아난","x":446.3,"y":357.0,"hint":"발리 원주민 발리아가 마을","tier":4},
+  {"id":"Sade","ko":"사데","x":461.4,"y":364.9,"hint":"롬복 사삭족 전통 마을","tier":4},
+  {"id":"Agats","ko":"아가츠","x":924.2,"y":294.6,"hint":"아스맛족 목조각의 고장","tier":4}
 ];
 
 export const MAP_ISLANDS: MapIslandLabel[] = [
