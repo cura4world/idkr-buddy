@@ -208,6 +208,21 @@ ensureMyWordbook();
 sortMyWordbookNewestFirstOnce();
 purgeFailedMeaningWords();
 
+// 지도에서 담은 단어가 모이는 단어장.
+// 앱 시작 때 만들지 않고, 지도에서 처음 담을 때 만들어집니다.
+export const MAP_WORDBOOK_ID = "map-words";
+
+export function ensureMapWordbook(): string {
+  const categories = getCategories();
+  if (!categories.some((c) => c.id === MAP_WORDBOOK_ID)) {
+    const cat: Category = { id: MAP_WORDBOOK_ID, name: "지도에서 배운 단어", emoji: "🗺️" };
+    const myIdx = categories.findIndex((c) => c.id === MY_WORDBOOK_ID);
+    categories.splice(myIdx < 0 ? 0 : myIdx + 1, 0, cat);
+    saveCategories(categories);
+  }
+  return MAP_WORDBOOK_ID;
+}
+
 export function addCategory(name: string, emoji: string): Category {
   const categories = getCategories();
   const cat: Category = { id: crypto.randomUUID(), name, emoji };
