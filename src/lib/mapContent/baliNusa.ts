@@ -334,4 +334,119 @@ export const BALI_NUSA: MapContentTable = {
     ],
     wiki: "Sumba",
   },
+
+  // ---------------- 동누사틍가라 · 기독교의 여러 갈래 ----------------
+  "Larantuka": {
+    desc:
+      "플로레스 섬 동쪽 끝의 항구 마을입니다. 이곳에는 인도네시아 어디에도 없는 성주간 행렬이 있습니다.\n\n" +
+      "16세기 포르투갈 배가 이 해안에 닿았고, 도미니코회 신부들이 머물면서 신앙이 뿌리내렸습니다. 그런데 그 뒤 오랫동안 신부가 없었습니다. 네덜란드가 들어오고 포르투갈이 물러가면서 사제 없이 백 년 넘게 지낸 시기가 있었는데, 그동안 신앙을 지킨 것은 평신도 조직이었습니다. 이들은 기도문과 노래를 포르투갈어에 가까운 옛말 그대로 외워 후대에 넘겼고, 그 말을 지금도 행렬에서 씁니다.\n\n" +
+      "성금요일이면 마을 전체가 촛불을 들고 밤길을 걷습니다. 마리아 상을 모신 작은 예배소에서 출발해 항구를 돌아 나오는 이 행렬을 스마나 산타라 부르고, 인도네시아 각지에서 사람들이 이 밤을 보러 옵니다.",
+    words: [
+      {
+        word: "arak-arakan",
+        meaning: "행렬",
+        example: "Arak-arakan itu berjalan sepanjang malam.",
+        exampleKo: "그 행렬은 밤새도록 걷습니다.",
+      },
+      {
+        word: "lilin",
+        meaning: "초, 양초",
+        example: "Setiap orang membawa lilin di tangannya.",
+        exampleKo: "저마다 손에 초를 들고 있습니다.",
+      },
+      {
+        word: "doa",
+        meaning: "기도",
+        example: "Doa itu diucapkan dalam bahasa yang sangat tua.",
+        exampleKo: "그 기도는 아주 오래된 말로 드려집니다.",
+      },
+    ],
+  },
+
+  "Maumere": {
+    desc:
+      "플로레스 중부의 가장 큰 도시이자 이 섬 가톨릭의 중심입니다. 라란투카가 포르투갈이 남긴 옛 신앙을 지키는 곳이라면, 마우메레는 20세기에 조직으로 자란 교회의 자리입니다. 신학교와 수도원이 모여 있어 인도네시아 전역으로 사제를 내보냅니다.\n\n" +
+      "1989년 교황 요한 바오로 2세가 이곳을 찾아 들판에 모인 수십만 명과 미사를 드렸습니다. 그 자리에 세운 큰 십자가가 지금도 서 있습니다.\n\n" +
+      "3년 뒤 큰 지진과 해일이 이 해안을 덮쳐 수천 명이 목숨을 잃었습니다. 무너진 성당과 학교를 다시 세우는 일이 오래 이어졌고, 그 기억이 이 도시 사람들에게 아직 생생합니다. 앞바다는 산호가 좋아 잠수하러 오는 사람도 많습니다.",
+    words: [
+      {
+        word: "gereja",
+        meaning: "교회, 성당",
+        example: "Gereja di kota ini dibangun kembali setelah gempa.",
+        exampleKo: "이 도시의 교회는 지진 뒤에 다시 지어졌습니다.",
+      },
+      {
+        word: "misa",
+        meaning: "미사",
+        example: "Ribuan orang mengikuti misa di lapangan itu.",
+        exampleKo: "수천 명이 그 들판에서 미사에 참여했습니다.",
+      },
+    ],
+    wiki: "Maumere",
+  },
+
+  "Kupang": {
+    desc:
+      "티모르 섬 서쪽 끝에 있는 항구이자 동누사틍가라 주의 중심입니다. 건조한 땅이라 야자와 옥수수가 자라고, 물이 늘 모자랍니다.\n\n" +
+      "이 항구에는 뜻밖의 이야기가 하나 있습니다. 1789년 바운티호에서 쫓겨난 선장 블라이가 작은 보트에 열여덟 명을 태우고 태평양을 47일 동안 6,700킬로미터 건너 닿은 곳이 쿠팡이었습니다. 항해 역사에서 손꼽히는 생존 기록입니다.\n\n" +
+      "1965년 이후 이 지역에서는 교회가 빠르게 자랐습니다. 지금 동누사틍가라는 인도네시아에서 기독교인 비율이 가장 높은 주이고, 쿠팡에는 개신교 대학과 신학교가 있어 티모르·로테·사부·숨바에서 학생이 모입니다. 주일 아침이면 도시의 길이 예배당으로 향하는 사람들로 붐빕니다.",
+    words: [
+      {
+        word: "jemaat",
+        meaning: "교인, 회중",
+        example: "Jemaat berkumpul di gereja setiap hari Minggu.",
+        exampleKo: "교인들이 주일마다 교회에 모입니다.",
+      },
+      {
+        word: "perahu kecil",
+        meaning: "작은 배",
+        example: "Mereka menyeberangi laut dengan perahu kecil.",
+        exampleKo: "그들은 작은 배로 바다를 건넜습니다.",
+      },
+    ],
+  },
+
+  "Soe": {
+    desc:
+      "서티모르 산속 해발 800미터에 있는 서늘한 읍입니다. 밤에는 담요가 필요할 만큼 기온이 내려가고, 사람들은 둥근 벌집 모양의 흙집에서 불을 피워 겨울을 납니다.\n\n" +
+      "이 조용한 곳이 인도네시아 교회사에서 자주 언급됩니다. 1965년 무렵 이 지역 교회에 큰 각성이 일어나 사람들이 밤낮으로 모여 기도하고 회개했고, 그 불길이 티모르 전역으로 번졌습니다. 짧은 기간에 수만 명이 교회로 들어왔습니다. 그때의 일 가운데 기적으로 전해지는 이야기들이 있어 지금도 논의가 갈리지만, 티모르 교회의 모습이 그 무렵에 크게 달라진 것은 분명합니다.\n\n" +
+      "지금 소에는 다시 조용합니다. 장이 서는 날 산에서 내려온 사람들이 오렌지와 콩을 늘어놓고, 그 옆 언덕마다 작은 예배당이 서 있습니다.",
+    words: [
+      {
+        word: "bertobat",
+        meaning: "회개하다",
+        example: "Banyak orang bertobat pada masa itu.",
+        exampleKo: "그 시기에 많은 사람이 회개했습니다.",
+      },
+      {
+        word: "dingin",
+        meaning: "추운, 차가운",
+        example: "Malam di daerah ini sangat dingin.",
+        exampleKo: "이 지역의 밤은 아주 춥습니다.",
+      },
+    ],
+    wiki: "Soe, Indonesia",
+  },
+
+  "Pulau Sabu": {
+    desc:
+      "티모르와 숨바 사이에 놓인 작은 섬입니다. 비가 거의 오지 않아 논농사를 지을 수 없고, 사람들은 오래도록 론타르 야자에 기대어 살았습니다. 꽃대를 잘라 흐르는 수액을 받아 졸이면 설탕이 되고, 잎으로는 그릇과 지붕을 만듭니다. 이 섬에서 야자는 나무가 아니라 살림 전체입니다.\n\n" +
+      "19세기에 개신교가 들어왔을 때, 이 섬 사람들은 신앙과 함께 글을 배웠습니다. 그리고 교사와 전도자가 되어 숨바와 티모르로 건너갔습니다. 자기 섬은 작았지만 이웃 섬의 교회를 세우는 데 사부 사람들의 몫이 컸습니다.\n\n" +
+      "지금도 인구가 몇 만에 지나지 않고 배편도 드뭅니다. 그러나 이 섬 출신을 동누사틍가라 곳곳의 교회와 학교에서 만날 수 있습니다.",
+    words: [
+      {
+        word: "gula",
+        meaning: "설탕",
+        example: "Gula dibuat dari air pohon lontar.",
+        exampleKo: "설탕은 론타르 야자의 수액으로 만듭니다.",
+      },
+      {
+        word: "guru",
+        meaning: "교사, 선생",
+        example: "Banyak guru dari pulau ini pergi ke pulau lain.",
+        exampleKo: "이 섬 출신 교사들이 다른 섬으로 많이 갔습니다.",
+      },
+    ],
+    wiki: "Savu",
+  },
 };
