@@ -139,4 +139,138 @@ export const KALIMANTAN: MapContentTable = {
     ],
     wiki: "Banjarmasin",
   },
+
+  // ---------------- 동칼리만탄 ----------------
+  "Nusantara": {
+    desc:
+      "인도네시아가 짓고 있는 새 수도입니다. 자카르타가 가라앉고 막히고 넘치는 문제를 더는 손볼 수 없다고 보고, 2019년 정부가 수도를 칼리만탄 동쪽 숲으로 옮기겠다고 발표했습니다. 이름은 옛말로 여러 섬이라는 뜻입니다.\n\n" +
+      "자바에 인구와 돈이 지나치게 몰린 나라에서 중심을 국토 한가운데로 옮긴다는 구상은 수카르노 때부터 있었습니다. 팔랑카라야에서 한 번 좌절된 그 생각이 60여 년 만에 다시 시도되는 셈입니다.\n\n" +
+      "2024년 독립기념일 행사를 이곳에서 열며 대통령궁과 광장이 먼저 문을 열었습니다. 그러나 도시 하나를 통째로 짓는 일이라 예산과 투자, 원주민의 땅 문제, 숲을 미는 데 따른 반발이 함께 따라옵니다. 완성까지는 20년 넘게 걸릴 계획입니다.",
+    words: [
+      {
+        word: "memindahkan",
+        meaning: "옮기다, 이전하다",
+        example: "Pemerintah memindahkan ibu kota ke pulau ini.",
+        exampleKo: "정부는 수도를 이 섬으로 옮기고 있습니다.",
+      },
+      {
+        word: "pembangunan",
+        meaning: "건설, 개발",
+        example: "Pembangunan kota baru itu memakan waktu puluhan tahun.",
+        exampleKo: "그 새 도시의 건설은 수십 년이 걸립니다.",
+      },
+    ],
+    wiki: "Nusantara (city)",
+  },
+
+  "Balikpapan": {
+    desc:
+      "동칼리만탄 해안의 석유 도시입니다. 1897년 이 앞바다에서 처음 기름이 솟았고, 곧 정유소와 항구가 세워지면서 도시가 생겼습니다. 지금도 인도네시아에서 손꼽히는 정유 시설이 이곳에 있습니다.\n\n" +
+      "그 기름 때문에 이 도시는 전쟁의 표적이 되었습니다. 태평양전쟁 때 일본군이 가장 먼저 노린 곳 중 하나였고, 종전 무렵에는 연합군이 상륙하며 다시 크게 부서졌습니다. 지금도 앞바다에는 그때 가라앉은 배들이 남아 있습니다.\n\n" +
+      "회사가 운영하는 도시로 자란 덕에 인도네시아 도시치고 길과 상하수도가 잘 정비되어 있습니다. 도심 가까운 숲에는 보호받는 곰이 살고, 새 수도로 가는 관문 공항도 이 도시에 있습니다.",
+    words: [
+      {
+        word: "kilang minyak",
+        meaning: "정유소",
+        example: "Kilang minyak besar berdiri di tepi kota ini.",
+        exampleKo: "큰 정유소가 이 도시 가장자리에 있습니다.",
+      },
+      {
+        word: "perang",
+        meaning: "전쟁",
+        example: "Kota ini rusak berat karena perang.",
+        exampleKo: "이 도시는 전쟁으로 크게 부서졌습니다.",
+      },
+    ],
+    wiki: "Balikpapan",
+  },
+
+  "Samarinda": {
+    desc:
+      "마하캄 강가에 있는 동칼리만탄의 주도입니다. 강이 워낙 넓어 큰 배가 도시 한복판까지 들어오고, 석탄을 실은 바지선이 줄지어 지나갑니다. 이 지역은 인도네시아 최대의 석탄 산지여서, 강을 오르내리는 배 대부분이 검은 짐을 싣고 있습니다.\n\n" +
+      "노천 광산이 도시 가까이까지 파고들면서 문제도 생겼습니다. 파낸 자리에 물이 고인 웅덩이가 시내 근처에 수백 개 남아 있고, 여기서 아이들이 목숨을 잃는 사고가 이어져 오래 논란이 되었습니다.\n\n" +
+      "강 상류에는 다약 마을이 있어 나무를 깎은 기둥과 구슬 공예가 이어집니다. 이 지역에서 나는 실크 사롱은 손으로 짜는데, 무늬 하나를 완성하는 데 여러 날이 걸립니다.",
+    words: [
+      {
+        word: "tongkang",
+        meaning: "바지선, 짐배",
+        example: "Tongkang batu bara lewat di sungai ini setiap hari.",
+        exampleKo: "석탄 바지선이 매일 이 강을 지나갑니다.",
+      },
+      {
+        word: "manik-manik",
+        meaning: "구슬, 비즈 공예",
+        example: "Manik-manik dipakai untuk menghias pakaian adat.",
+        exampleKo: "구슬은 전통 의상을 꾸미는 데 쓰입니다.",
+      },
+    ],
+    wiki: "Samarinda",
+  },
+
+  // ---------------- 북칼리만탄 ----------------
+  "Tanjung Selor": {
+    desc:
+      "북칼리만탄 주의 중심입니다. 이 주는 2012년에야 동칼리만탄에서 갈라져 나온, 인도네시아에서 가장 젊은 주입니다. 주도라고는 해도 강가의 작은 읍에 가깝고, 관공서 건물 몇 채가 들판 사이에 서 있습니다.\n\n" +
+      "이 일대는 말레이시아와 국경을 맞대고 있어 예부터 국경을 넘나드는 생활이 자연스러웠습니다. 산속 마을 사람들에게는 인도네시아 도시보다 국경 너머 말레이시아 마을이 더 가깝고, 물건도 그쪽에서 사 오는 일이 많습니다. 그래서 국경 지역 개발이 이 주의 오랜 과제입니다.\n\n" +
+      "강 하구에는 불란 사람들의 마을이 있고, 옛 술탄국의 흔적도 남아 있습니다. 상류로 올라가면 여전히 배가 유일한 길입니다.",
+    words: [
+      {
+        word: "perbatasan",
+        meaning: "국경, 접경",
+        example: "Warga di perbatasan sering berbelanja di negara tetangga.",
+        exampleKo: "접경 주민들은 이웃 나라에서 자주 장을 봅니다.",
+      },
+      {
+        word: "provinsi termuda",
+        meaning: "가장 젊은 주",
+        example: "Ini provinsi termuda di Indonesia.",
+        exampleKo: "이곳은 인도네시아에서 가장 젊은 주입니다.",
+      },
+    ],
+    wiki: "Tanjung Selor",
+  },
+
+  "Tarakan": {
+    desc:
+      "북칼리만탄 앞바다의 작은 섬 도시입니다. 이곳에서도 20세기 초에 기름이 나왔고, 그 때문에 이 섬은 태평양전쟁의 첫 전장 중 하나가 되었습니다. 1942년 일본군이 이 섬을 노려 상륙했고, 1945년에는 호주군이 다시 밀고 들어왔습니다. 작은 섬에서 오래 격렬한 싸움이 이어져 지금도 참호와 포대의 흔적이 남아 있습니다.\n\n" +
+      "지금 이 섬의 살림은 새우입니다. 갯벌을 막아 만든 못에서 큰 새우를 길러 일본과 한국으로 보냅니다.\n\n" +
+      "섬 한쪽에는 맹그로브 숲이 보호되고 있습니다. 나무 위 데크를 걸으면 코주부원숭이가 앉아 있는 것을 도시 한가운데서 볼 수 있습니다.",
+    words: [
+      {
+        word: "udang windu",
+        meaning: "블랙타이거 새우",
+        example: "Udang windu dari pulau ini diekspor ke Jepang.",
+        exampleKo: "이 섬의 블랙타이거 새우는 일본으로 수출됩니다.",
+      },
+      {
+        word: "bakau",
+        meaning: "맹그로브",
+        example: "Hutan bakau dilindungi di tepi kota.",
+        exampleKo: "맹그로브 숲이 도시 가장자리에서 보호되고 있습니다.",
+      },
+    ],
+    wiki: "Tarakan",
+  },
+
+  "Kepulauan Derawan": {
+    desc:
+      "동칼리만탄 앞바다에 흩어진 산호섬들입니다. 물이 얕고 맑아 배에서 내리기 전에 바닥이 보입니다.\n\n" +
+      "이곳은 바다거북이 알을 낳으러 오는 곳으로 이름났습니다. 밤이면 암컷이 모래밭으로 기어 올라와 구멍을 파고 알을 묻고, 몇 주 뒤 새끼들이 한꺼번에 나와 바다로 달려갑니다. 예전에는 알을 걷어 파는 일이 흔했지만 지금은 금지되고 사람들이 둥지를 지킵니다.\n\n" +
+      "카칵반이라는 섬에는 바닷물이 갇혀 만들어진 호수가 있는데, 그 안에 침을 쓰지 않는 해파리가 삽니다. 오랜 세월 천적이 없어 독이 필요 없어진 것입니다. 그 호수에서는 해파리 사이를 헤엄쳐 다닐 수 있습니다.",
+    words: [
+      {
+        word: "bertelur",
+        meaning: "알을 낳다",
+        example: "Penyu bertelur di pantai ini setiap malam.",
+        exampleKo: "바다거북이 밤마다 이 해변에서 알을 낳습니다.",
+      },
+      {
+        word: "ubur-ubur",
+        meaning: "해파리",
+        example: "Ubur-ubur di danau itu tidak menyengat.",
+        exampleKo: "그 호수의 해파리는 쏘지 않습니다.",
+      },
+    ],
+    wiki: "Derawan Islands",
+  },
 };
