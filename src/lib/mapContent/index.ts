@@ -12,12 +12,14 @@ import { JAWA_TENGAH_TIMUR } from "./jawaTengahTimur";
 import { JAWA_BARAT } from "./jawaBarat";
 import { BALI_NUSA } from "./baliNusa";
 import { SUMATERA_UTARA } from "./sumateraUtara";
+import { SUMATERA_SELATAN } from "./sumateraSelatan";
 
 const TABLES: MapContentTable[] = [
   JAWA_TENGAH_TIMUR,
   JAWA_BARAT,
   BALI_NUSA,
   SUMATERA_UTARA,
+  SUMATERA_SELATAN,
 ];
 
 const ALL: MapContentTable = Object.assign({}, ...TABLES);
