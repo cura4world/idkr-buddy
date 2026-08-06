@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { goBackOr } from "@/lib/nav";
-import { ArrowLeft, Plus, Minus, Volume2, Loader2, Map, X } from "lucide-react";
+import { ArrowLeft, Plus, Minus, Volume2, Loader2, Map, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import {
   MAP_VIEW,
@@ -22,8 +22,9 @@ import {
   MapPlace,
 } from "@/lib/mapData";
 import { fetchPlaceInfo, fetchPlacePhotos, MapPlaceInfo } from "@/lib/map";
-import type { MapContentEntry } from "@/lib/mapContent";
+import type { MapContentEntry, MapWord } from "@/lib/mapContent";
 import { hasGeminiApiKey } from "@/lib/gemini";
+import { addWordIfAbsent, hasWordInCategory, ensureMapWordbook, MAP_WORDBOOK_ID } from "@/lib/store";
 
 const KMIN = 1;
 // 최대 64배. 탭 허용 반경이 56px이라 32배에서는 지도 좌표 4.5 이내의 두 핀을
@@ -165,6 +166,8 @@ const IndoMap = () => {
   const [info, setInfo] = useState<MapPlaceInfo | null>(null);
   // 미리 써 둔 정적 내용. 있으면 Gemini 를 부르지 않습니다.
   const [entry, setEntry] = useState<MapContentEntry | null>(null);
+  // 이 시트의 단어가 이미 단어장에 담겨 있는지 (단어 → true)
+  const [savedWords, setSavedWords] = useState<Record<string, boolean>>({});
   const [infoState, setInfoState] = useState<"idle" | "loading" | "error">("idle");
   const [photos, setPhotos] = useState<string[]>([]);
   const [photoState, setPhotoState] = useState<"idle" | "loading" | "error">("idle");
@@ -441,6 +444,7 @@ const IndoMap = () => {
     sheetOpenedAt.current = Date.now();
     setSelected(pin);
     setEntry(null);
+    setSavedWords({});
     setInfo(null);
     setPhotos([]);
     setLightbox(null);
@@ -472,6 +476,11 @@ const IndoMap = () => {
       // 미리 써 둔 내용이 있으면 여기서 끝입니다 (Gemini 호출 없음, 과금 없음)
       if (e) {
         setEntry(e);
+        const marks: Record<string, boolean> = {};
+        e.words.forEach((w) => {
+          marks[w.word] = hasWordInCategory(MAP_WORDBOOK_ID, w.word);
+        });
+        setSavedWords(marks);
         setInfoState("idle");
         return;
       }
@@ -491,6 +500,21 @@ const IndoMap = () => {
         });
     })();
   };
+  // 단어 담기 — "지도에서 배운 단어" 단어장에만 담습니다 (처음 담을 때 폴더가 생깁니다).
+  // 중복 방지와 Medali 저장 점수는 addWordIfAbsent 안에서 처리됩니다.
+  const saveMapWord = (w: MapWord) => {
+    ensureMapWordbook();
+    const r = addWordIfAbsent({
+      word: w.word,
+      meaning: w.meaning,
+      example: w.example,
+      exampleMeaning: w.exampleKo,
+      categoryId: MAP_WORDBOOK_ID,
+    });
+    setSavedWords((prev) => ({ ...prev, [w.word]: true }));
+    toast.success(r.added ? "지도에서 배운 단어에 담았어요" : "이미 담긴 단어예요");
+  };
+
   openSheetRef.current = openSheet;
 
   const closeSheet = useCallback((viaPop = false) => {
@@ -800,16 +824,29 @@ const IndoMap = () => {
                     <div className="mt-2 space-y-2">
                       {entry.words.map((w) => (
                         <div key={w.word} className="rounded-2xl bg-gray-50 px-4 py-3">
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
                             <span className="font-word italic text-base text-gray-900">{w.word}</span>
                             <button
                               onClick={() => speak(w.word, "id")}
-                              className="w-7 h-7 rounded-full bg-teal-600/10 text-teal-700 flex items-center justify-center active:bg-teal-600/20"
+                              className="w-7 h-7 rounded-full bg-teal-600/10 text-teal-700 flex items-center justify-center active:bg-teal-600/20 shrink-0"
                               title="발음 듣기"
                             >
                               <Volume2 size={13} />
                             </button>
-                            <span className="font-gothic text-sm text-gray-600">{w.meaning}</span>
+                            <span className="font-gothic text-sm text-gray-600 flex-1 min-w-0">{w.meaning}</span>
+                            <button
+                              onClick={() => saveMapWord(w)}
+                              disabled={!!savedWords[w.word]}
+                              className={
+                                "w-8 h-8 rounded-full flex items-center justify-center shrink-0 " +
+                                (savedWords[w.word]
+                                  ? "bg-teal-700 text-white"
+                                  : "bg-white border border-gray-200 text-gray-500 active:bg-gray-100")
+                              }
+                              title={savedWords[w.word] ? "이미 담긴 단어" : "단어장에 담기"}
+                            >
+                              {savedWords[w.word] ? <Check size={15} /> : <Plus size={15} />}
+                            </button>
                           </div>
                           <p className="mt-1.5 font-word text-sm text-gray-700">{w.example}</p>
                           <p className="mt-0.5 font-gothic text-xs text-gray-500">{w.exampleKo}</p>
