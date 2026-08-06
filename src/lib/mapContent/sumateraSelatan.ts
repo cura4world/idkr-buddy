@@ -70,7 +70,7 @@ export const SUMATERA_SELATAN: MapContentTable = {
         exampleKo: "그는 말레이어 사전과 문법을 엮었습니다.",
       },
     ],
-    wiki: "Tanjung Pinang",
+    wiki: "Tanjungpinang",
   },
 
   // ---------------- 잠비 · 븡쿨루 ----------------
@@ -93,7 +93,7 @@ export const SUMATERA_SELATAN: MapContentTable = {
         exampleKo: "그들은 예전에 숲속을 옮겨 다니며 살았습니다.",
       },
     ],
-    wiki: "Jambi City",
+    wiki: "Jambi (city)",
   },
 
   "Muara Jambi": {
@@ -227,7 +227,7 @@ export const SUMATERA_SELATAN: MapContentTable = {
         exampleKo: "그 폐광 자리는 지금 못이 되었습니다.",
       },
     ],
-    wiki: "Pangkal Pinang",
+    wiki: "Pangkalpinang",
   },
 
   "Pulau Belitung": {
@@ -249,6 +249,6 @@ export const SUMATERA_SELATAN: MapContentTable = {
         exampleKo: "큰 화강암들이 해변에 흩어져 있습니다.",
       },
     ],
-    wiki: "Belitung",
+    wiki: "Belitung Regency",
   },
 };

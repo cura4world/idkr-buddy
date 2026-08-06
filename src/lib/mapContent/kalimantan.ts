@@ -26,7 +26,7 @@ export const KALIMANTAN: MapContentTable = {
         exampleKo: "그날에는 사람의 그림자가 잠시 사라집니다.",
       },
     ],
-    wiki: "Pontianak, Indonesia",
+    wiki: "Pontianak",
   },
 
   "Singkawang": {
@@ -160,7 +160,7 @@ export const KALIMANTAN: MapContentTable = {
         exampleKo: "그 새 도시의 건설은 수십 년이 걸립니다.",
       },
     ],
-    wiki: "Nusantara (city)",
+    wiki: "Nusantara",
   },
 
   "Balikpapan": {

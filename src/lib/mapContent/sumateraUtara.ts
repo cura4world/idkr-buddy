@@ -295,7 +295,7 @@ export const SUMATERA_UTARA: MapContentTable = {
         exampleKo: "주술사가 그 마을의 의식을 이끕니다.",
       },
     ],
-    wiki: "Mentawai Islands",
+    wiki: "Mentawai Islands Regency",
   },
 
   // ---------------- 서수마트라 · 미낭카바우 ----------------

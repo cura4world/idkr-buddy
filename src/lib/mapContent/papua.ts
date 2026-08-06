@@ -98,7 +98,7 @@ export const PAPUA: MapContentTable = {
         exampleKo: "그 기념 행사는 매년 2월 5일에 열립니다.",
       },
     ],
-    wiki: "Mansinam",
+    wiki: "Mansinam Island",
   },
 
   "Timika": {

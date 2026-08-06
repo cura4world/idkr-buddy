@@ -70,7 +70,7 @@ export const SULAWESI: MapContentTable = {
         exampleKo: "동굴 벽의 손자국은 수만 년 되었습니다.",
       },
     ],
-    wiki: "Maros-Pangkep Karst",
+    wiki: "Bantimurung-Bulusaraung National Park",
   },
 
   "Tana Toraja": {
@@ -115,7 +115,7 @@ export const SULAWESI: MapContentTable = {
         exampleKo: "그 배는 돛을 올리면 빠르게 나아갑니다.",
       },
     ],
-    wiki: "Mamuju",
+    wiki: "Mamuju (city)",
   },
 
   "Kendari": {

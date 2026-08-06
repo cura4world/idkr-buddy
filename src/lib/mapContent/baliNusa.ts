@@ -133,7 +133,7 @@ export const BALI_NUSA: MapContentTable = {
         exampleKo: "그 지진으로 많은 건물이 무너졌습니다.",
       },
     ],
-    wiki: "Mataram, Lombok",
+    wiki: "Mataram (city)",
   },
 
   "Gili Trawangan": {
@@ -222,7 +222,7 @@ export const BALI_NUSA: MapContentTable = {
         exampleKo: "그 분화의 재가 몇 달 동안 하늘을 덮었습니다.",
       },
     ],
-    wiki: "Bima, Indonesia",
+    wiki: "Bima",
   },
 
   "Labuan Bajo": {
@@ -288,7 +288,7 @@ export const BALI_NUSA: MapContentTable = {
         exampleKo: "그는 그 큰 나무 아래 자주 앉았습니다.",
       },
     ],
-    wiki: "Ende, Ende",
+    wiki: "Ende, Indonesia",
   },
 
   "Danau Kelimutu": {
@@ -425,7 +425,7 @@ export const BALI_NUSA: MapContentTable = {
         exampleKo: "이 지역의 밤은 아주 춥습니다.",
       },
     ],
-    wiki: "Soe, Indonesia",
+    wiki: "South Central Timor Regency",
   },
 
   "Pulau Sabu": {

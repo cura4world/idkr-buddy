@@ -224,7 +224,7 @@ export const JAWA_TENGAH_TIMUR: MapContentTable = {
         exampleKo: "기둥 하나는 작은 나무 조각들로 만들어졌습니다.",
       },
     ],
-    wiki: "Great Mosque of Demak",
+    wiki: "Demak Great Mosque",
   },
 
   "Sangiran": {
@@ -360,6 +360,7 @@ export const JAWA_TENGAH_TIMUR: MapContentTable = {
         exampleKo: "그 왕의 예언은 지금도 자주 인용됩니다.",
       },
     ],
+    wiki: "Kediri (city)",
   },
 
   "Tuban": {
