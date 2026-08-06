@@ -744,18 +744,9 @@ const IndoMap = () => {
                   </div>
                 )}
                 {info && (
-                  <>
-                    <p className="mt-1 text-sm font-gothic text-gray-700 leading-relaxed whitespace-pre-line content-bump">
-                      {info.desc}
-                    </p>
-
-                    <button
-                      onClick={() => navigate("/dictionary?q=" + encodeURIComponent(selected.id) + "&from=map")}
-                      className="mt-5 w-full py-3 rounded-xl bg-teal-700 text-white text-sm font-semibold active:bg-teal-800"
-                    >
-                      사전에서 {selected.id} 보기
-                    </button>
-                  </>
+                  <p className="mt-1 text-sm font-gothic text-gray-700 leading-relaxed whitespace-pre-line content-bump">
+                    {info.desc}
+                  </p>
                 )}
               </div>
             </div>
