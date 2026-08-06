@@ -167,8 +167,8 @@ const BAD = new RegExp(
 );
 
 // 위키피디아 페이지의 대표 이미지 + 본문 내 이미지들에서 최대 2장을 뽑습니다.
-export async function fetchPlacePhotos(id: string): Promise<string[]> {
-  const title = WIKI_TITLE[id] || id;
+export async function fetchPlacePhotos(id: string, titleOverride?: string): Promise<string[]> {
+  const title = titleOverride || WIKI_TITLE[id] || id;
   const urls: string[] = [];
 
   try {
