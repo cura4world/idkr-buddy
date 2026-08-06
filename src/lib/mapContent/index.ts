@@ -9,9 +9,11 @@
 
 import { MapContentEntry, MapContentTable } from "./types";
 import { JAWA_TENGAH_TIMUR } from "./jawaTengahTimur";
+import { JAWA_BARAT } from "./jawaBarat";
 
 const TABLES: MapContentTable[] = [
   JAWA_TENGAH_TIMUR,
+  JAWA_BARAT,
 ];
 
 const ALL: MapContentTable = Object.assign({}, ...TABLES);
