@@ -183,4 +183,72 @@ export const SUMATERA_SELATAN: MapContentTable = {
     ],
     wiki: "Palembang",
   },
+
+  // ---------------- 남부 해안 · 섬 ----------------
+  "Bandar Lampung": {
+    desc:
+      "수마트라 남쪽 끝의 항구 도시입니다. 자바와는 좁은 해협 하나를 사이에 두고 있어, 두 섬을 오가는 차와 사람이 모두 이 도시의 항구를 지납니다. 밤이면 대형 여객선이 줄지어 해협을 건넙니다.\n\n" +
+      "1883년 크라카타우가 터졌을 때 이 해안이 정면으로 파도를 맞았습니다. 도시가 통째로 쓸려 나가 지금 자리에 다시 세워졌고, 바닷가에 그때 파도에 떠밀려 온 등부표가 기념물로 서 있습니다.\n\n" +
+      "람풍은 인도네시아의 이주 정책이 가장 크게 시행된 곳이기도 합니다. 네덜란드 시절부터 자바에서 사람들을 옮겨 와 땅을 나눠 주었고, 그 결과 지금은 자바계 주민이 원주민보다 많습니다. 마을 이름에 자바 지명이 그대로 붙어 있는 곳이 많습니다.",
+    words: [
+      {
+        word: "penyeberangan",
+        meaning: "건너감, 도선",
+        example: "Penyeberangan ke Jawa berlangsung sepanjang malam.",
+        exampleKo: "자바로 건너가는 배가 밤새 오갑니다.",
+      },
+      {
+        word: "perpindahan penduduk",
+        meaning: "주민 이주",
+        example: "Perpindahan penduduk dari Jawa mengubah daerah ini.",
+        exampleKo: "자바에서 온 주민 이주가 이 지역을 바꿨습니다.",
+      },
+    ],
+    wiki: "Bandar Lampung",
+  },
+
+  "Pangkalpinang": {
+    desc:
+      "방카 섬의 중심 도시입니다. 이 섬의 역사는 주석이 만들었습니다. 18세기부터 이 땅에서 주석이 쏟아져 나왔고, 캐낼 사람을 대려고 중국 남부에서 노동자를 대규모로 실어 왔습니다. 그 후손들이 지금 섬 인구의 큰 몫을 이룹니다.\n\n" +
+      "그래서 이 도시는 이슬람 모스크와 중국 사원, 성당과 힌두 사원이 한 구역에 모여 있는 광장을 가지고 있습니다. 다른 종교의 건물을 나란히 세워 두고 오간다는 점에서 인도네시아에서도 자주 언급되는 곳입니다.\n\n" +
+      "독립 직후 네덜란드가 다시 밀고 들어왔을 때 수카르노와 하타가 이 섬으로 유배되었습니다. 그들이 갇혀 지내던 집이 남아 있고, 그곳에서 네덜란드와의 마지막 협상이 시작되었습니다.\n\n" +
+      "주석 광산이 파낸 자리에는 물이 고여 푸른 못이 되었습니다. 아름다워 보이지만 물에 금속이 섞여 있어 사람이 들어가면 안 되는 곳입니다.",
+    words: [
+      {
+        word: "timah",
+        meaning: "주석",
+        example: "Timah dari pulau ini dijual ke seluruh dunia.",
+        exampleKo: "이 섬의 주석은 전 세계로 팔려 나갑니다.",
+      },
+      {
+        word: "tambang",
+        meaning: "광산",
+        example: "Bekas tambang itu kini menjadi kolam.",
+        exampleKo: "그 폐광 자리는 지금 못이 되었습니다.",
+      },
+    ],
+    wiki: "Pangkal Pinang",
+  },
+
+  "Pulau Belitung": {
+    desc:
+      "방카 옆에 있는 섬입니다. 해변에 집채만 한 화강암 덩어리들이 모래 위에 흩어져 있어 다른 곳에서 보기 어려운 풍경을 만듭니다. 물이 얕고 맑아 바위 사이로 배를 저어 다닐 수 있습니다.\n\n" +
+      "이 섬도 오래 주석을 캐던 곳이었습니다. 광산이 문을 닫으면서 섬은 가난해졌고 젊은이들이 떠났습니다.\n\n" +
+      "그 시절 이야기를 쓴 소설 한 권이 섬을 바꿨습니다. 문 닫힐 위기의 시골 학교에서 열 명의 아이가 배우는 이야기였는데, 인도네시아에서 크게 읽히고 영화로도 만들어졌습니다. 그 뒤 사람들이 소설 속 학교와 해변을 보러 오기 시작했고, 지금은 관광이 섬의 새 살림이 되었습니다. 배움이 사람을 어디까지 데려가는가를 다룬 이야기가 실제로 섬의 형편을 바꾼 셈입니다.",
+    words: [
+      {
+        word: "novel",
+        meaning: "소설",
+        example: "Novel itu membuat pulau ini terkenal.",
+        exampleKo: "그 소설이 이 섬을 유명하게 만들었습니다.",
+      },
+      {
+        word: "batu granit",
+        meaning: "화강암",
+        example: "Batu granit besar berserakan di pantai.",
+        exampleKo: "큰 화강암들이 해변에 흩어져 있습니다.",
+      },
+    ],
+    wiki: "Belitung",
+  },
 };
