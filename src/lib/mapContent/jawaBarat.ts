@@ -217,6 +217,7 @@ export const JAWA_BARAT: MapContentTable = {
         exampleKo: "그 공연은 결혼식에서 자주 열립니다.",
       },
     ],
+    wiki: "Serang",
   },
 
   "Banten Lama": {
