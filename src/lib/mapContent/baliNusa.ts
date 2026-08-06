@@ -288,7 +288,7 @@ export const BALI_NUSA: MapContentTable = {
         exampleKo: "그는 그 큰 나무 아래 자주 앉았습니다.",
       },
     ],
-    wiki: "Ende, Indonesia",
+    wiki: "Ende (town)",
   },
 
   "Danau Kelimutu": {
