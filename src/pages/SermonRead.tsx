@@ -9,7 +9,6 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   BookMarked,
-  Search,
   Minus,
   Plus,
   ChevronUp,
@@ -55,6 +54,8 @@ import {
   deleteInk,
 } from "@/lib/sermonInk";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
+import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
+import PhraseFindBar from "@/components/PhraseFindBar";
 
 
 const speak = (text: string, lang: "id" | "ko") => {
@@ -303,23 +304,6 @@ const hitInkGroup = (g: SVGGElement, x: number, y: number): boolean => {
   }
   return false;
 };
-
-// ── 본문에서 고른 표현 다듬기 ─────────────────────────────────
-// 인니어에는 kipas angin(선풍기), kambing hitam(희생양)처럼 두 단어가 붙어야
-// 뜻이 되는 표현이 많습니다. 본문을 꾹 눌러 긁으면 그 표현을 통째로 찾아줍니다.
-// 고른 문자열에는 쉼표·마침표·줄바꿈이 섞여 있으므로 조회 전에 걷어냅니다.
-
-const cleanToken = (t: string) => t.replace(new RegExp("[^A-Za-z\\-']", "g"), "").trim();
-
-const cleanPhrase = (s: string) =>
-  s
-    .split(new RegExp("\\s+"))
-    .map(cleanToken)
-    .filter(Boolean)
-    .join(" ");
-
-// 한 번에 찾을 수 있는 최대 단어 수
-const MAX_PHRASE_WORDS = 3;
 
 const SermonRead = () => {
   const navigate = useNavigate();
@@ -624,66 +608,14 @@ const SermonRead = () => {
   };
 
   // ---------- 본문에서 고른 표현 ----------
-  // 안드로이드 기본 텍스트 선택을 그대로 씁니다. 우리가 하는 일은
-  // "지금 고른 게 본문 안의 인니어 1~3단어인가"를 보고 아래 버튼을 띄우는 것뿐입니다.
+  // 안드로이드 기본 텍스트 선택을 그대로 씁니다 (다른 읽기 화면과 공용 모듈을 씁니다).
   // user-select 를 막지 않으므로 본문을 긁어 복사하는 기능은 그대로 살아 있습니다.
-  const [selText, setSelText] = useState("");
-  const selSentenceRef = useRef("");
+  const { phrase: selPhrase, take: takeSelPhrase } = useSelectedPhrase();
 
-  useEffect(() => {
-    let timer = 0;
-    const onSel = () => {
-      if (timer) window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        const sel = window.getSelection();
-        if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
-          setSelText("");
-          return;
-        }
-        const raw = sel.toString();
-        if (!raw || raw.length > 60) {
-          setSelText("");
-          return;
-        }
-        // 본문 안에서 고른 것만 (헤더·도구막대에서 긁은 것은 무시)
-        const node = sel.anchorNode;
-        const el = node
-          ? (node.nodeType === 1 ? (node as Element) : node.parentElement)
-          : null;
-        const host = contentRef.current;
-        if (!el || !host || !host.contains(el)) {
-          setSelText("");
-          return;
-        }
-        const phrase = cleanPhrase(raw);
-        const words = phrase ? phrase.split(" ") : [];
-        if (words.length < 1 || words.length > MAX_PHRASE_WORDS) {
-          setSelText("");
-          return;
-        }
-        // 뜻풀이에 문맥으로 넘길 문장 = 고른 곳이 속한 문단
-        const para = el.closest("p");
-        selSentenceRef.current = (para && para.textContent) || raw;
-        setSelText(phrase);
-      }, 180);
-    };
-    document.addEventListener("selectionchange", onSel);
-    return () => {
-      document.removeEventListener("selectionchange", onSel);
-      if (timer) window.clearTimeout(timer);
-    };
-  }, []);
-
-  const openSelectionPopup = () => {
-    const phrase = selText;
-    const sentence = selSentenceRef.current;
-    if (!phrase) return;
-    try {
-      const sel = window.getSelection();
-      if (sel) sel.removeAllRanges();
-    } catch (e) {}
-    setSelText("");
-    lookupText(phrase, sentence);
+  const openPhrasePopup = () => {
+    const s = takeSelPhrase();
+    if (!s.phrase) return;
+    lookupText(s.phrase, s.sentence);
   };
 
   // 본문 단어를 탭했을 때. 글자를 고르는 중이면 팝업을 열지 않습니다
@@ -733,7 +665,7 @@ const SermonRead = () => {
 
   const renderTokens = (text: string, keyPrefix: string) =>
     text.split(" ").map((tok, ti) => (
-      <span key={keyPrefix + ti}>
+      <span key={keyPrefix + ti} data-idw="1">
         <span
           onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
           className="cursor-pointer rounded active:bg-indigo-500/20"
@@ -1783,26 +1715,14 @@ const SermonRead = () => {
 
       {/* 빠른 이동 — 본문과 같은 폭에 붙여 넓은 화면에서도 본문 오른쪽에 옵니다.
           단어 팝업·목차 시트가 떠 있는 동안에는 아예 렌더하지 않습니다 (실수 탭 방지). */}
-      {/* 본문에서 표현을 고르면 아래에 뜨는 찾기 버튼.
-          OS 기본 복사 메뉴는 고른 자리 근처에 뜨므로 서로 가리지 않습니다. */}
-      {selText && !popupWord && !tocOpen && !inkMode ? (
-        <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-5 pt-6 pointer-events-none bg-gradient-to-t from-background via-background/90 to-transparent">
-          <button
-            onClick={openSelectionPopup}
-            className={
-              "pointer-events-auto w-full " +
-              widthClass +
-              " mx-auto flex items-center justify-center gap-2 rounded-full bg-primary text-white py-3 text-sm font-medium shadow-lg"
-            }
-          >
-            <Search size={15} className="shrink-0" />
-            <span className="truncate font-word">{selText}</span>
-            <span className="shrink-0 font-gothic">찾기</span>
-          </button>
-        </div>
-      ) : null}
+      <PhraseFindBar
+        phrase={selPhrase}
+        onFind={openPhrasePopup}
+        hidden={!!popupWord || tocOpen || inkMode}
+        widthClass={widthClass}
+      />
 
-      {!loading && !error && rec && !inkMode && !popupWord && !tocOpen && !selText ? (
+      {!loading && !error && rec && !inkMode && !popupWord && !tocOpen && !selPhrase ? (
         <div className={"fixed inset-x-0 bottom-6 z-40 mx-auto " + widthClass + " pointer-events-none"}>
           <div className="flex flex-col items-end gap-2 pr-4">
             <button
