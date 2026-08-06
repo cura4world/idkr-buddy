@@ -13,6 +13,7 @@ import { JAWA_BARAT } from "./jawaBarat";
 import { BALI_NUSA } from "./baliNusa";
 import { SUMATERA_UTARA } from "./sumateraUtara";
 import { SUMATERA_SELATAN } from "./sumateraSelatan";
+import { KALIMANTAN } from "./kalimantan";
 
 const TABLES: MapContentTable[] = [
   JAWA_TENGAH_TIMUR,
@@ -20,6 +21,7 @@ const TABLES: MapContentTable[] = [
   BALI_NUSA,
   SUMATERA_UTARA,
   SUMATERA_SELATAN,
+  KALIMANTAN,
 ];
 
 const ALL: MapContentTable = Object.assign({}, ...TABLES);
