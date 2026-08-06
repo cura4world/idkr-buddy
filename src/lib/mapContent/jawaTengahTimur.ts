@@ -203,4 +203,204 @@ export const JAWA_TENGAH_TIMUR: MapContentTable = {
       },
     ],
   },
+
+  // ---------------- 북부 해안 · 이슬람화 ----------------
+  "Demak": {
+    desc:
+      "자바 최초의 이슬람 왕국이 선 자리입니다. 15세기 말 마자파힛이 기울 때 라덴 파타가 이곳에서 나라를 열었고, 자바의 무게중심이 힌두 내륙에서 이슬람 해안으로 넘어갔습니다. 지금은 스마랑 옆의 조용한 소도시이지만, 자바 이슬람의 출발점으로 여겨집니다.\n\n" +
+      "대모스크에는 유명한 기둥이 하나 있습니다. 네 개의 큰 기둥 중 하나가 통나무가 아니라 자투리 나무를 묶어 만든 것인데, 왈리송오의 한 사람인 수난 칼리자가가 남은 조각을 모아 세웠다고 전해집니다.\n\n" +
+      "이 모스크에는 첨탑이 없고 대신 자바 전통 가옥의 삼단 지붕을 얹었습니다. 있던 것을 부수는 대신 그 위에 새 신앙을 얹은 방식이 건물에 그대로 남아 있습니다.",
+    words: [
+      {
+        word: "masjid",
+        meaning: "모스크, 이슬람 사원",
+        example: "Masjid tertua di Jawa berdiri di kota ini.",
+        exampleKo: "자바에서 가장 오래된 모스크가 이 도시에 서 있습니다.",
+      },
+      {
+        word: "tiang",
+        meaning: "기둥",
+        example: "Salah satu tiang dibuat dari potongan kayu kecil.",
+        exampleKo: "기둥 하나는 작은 나무 조각들로 만들어졌습니다.",
+      },
+    ],
+    wiki: "Great Mosque of Demak",
+  },
+
+  "Sangiran": {
+    desc:
+      "솔로 북쪽의 나지막한 언덕과 마른 개울이 이어지는 평범해 보이는 들판입니다. 그러나 이 땅은 백만 년 전 지층이 그대로 드러난 곳이어서, 1930년대부터 초기 인류의 화석이 쏟아져 나왔습니다.\n\n" +
+      "여기서 나온 호모 에렉투스 화석은 세계에서 발견된 같은 종 화석의 상당수를 차지합니다. 아시아에 인류가 언제 도착했는가 하는 질문의 답이 이 언덕에서 나온 셈입니다.\n\n" +
+      "지금은 지층을 그대로 보여주는 박물관이 서 있고, 밭을 갈던 마을 사람들이 화석을 알아보고 신고해 온 내력도 함께 전시되어 있습니다. 유네스코 세계문화유산입니다.",
+    words: [
+      {
+        word: "fosil",
+        meaning: "화석",
+        example: "Fosil manusia purba ditemukan di ladang ini.",
+        exampleKo: "고대 인류의 화석이 이 밭에서 발견되었습니다.",
+      },
+      {
+        word: "purba",
+        meaning: "태고의, 아주 오래된",
+        example: "Lapisan tanah purba masih terlihat jelas.",
+        exampleKo: "아주 오래된 지층이 아직 뚜렷하게 보입니다.",
+      },
+    ],
+  },
+
+  "Surakarta": {
+    desc:
+      "솔로라고 더 많이 불립니다. 1745년 옛 왕궁이 반란으로 불탄 뒤 이곳으로 옮겨 세운 도시이고, 얼마 지나지 않아 왕실이 둘로 갈라지면서 카수나난과 망쿠느가란 두 왕궁이 한 도시 안에 남게 되었습니다.\n\n" +
+      "그 덕에 궁정 예술이 두 갈래로 이어졌습니다. 가믈란과 궁중 무용의 격식이 여기서 다듬어졌고, 바틱도 마찬가지입니다. 라웨얀과 카우만 골목에 들어가면 담 너머로 천을 널어 말리는 집들이 아직 늘어서 있습니다.\n\n" +
+      "격식의 도시라는 인상과 달리 상인의 도시이기도 합니다. 클레웨르 시장은 자바 최대의 직물 도매시장이고, 새벽 5시에 여는 소토집 앞에 줄이 서는 곳입니다.",
+    words: [
+      {
+        word: "batik",
+        meaning: "바틱 (밀랍으로 무늬를 낸 천)",
+        example: "Kain batik dijemur di halaman rumah.",
+        exampleKo: "바틱 천을 집 마당에 널어 말립니다.",
+      },
+      {
+        word: "keris",
+        meaning: "끄리스 (물결 모양 단검)",
+        example: "Keris disimpan sebagai pusaka keluarga.",
+        exampleKo: "끄리스는 집안의 가보로 보관됩니다.",
+      },
+    ],
+  },
+
+  "Kudus": {
+    desc:
+      "이름부터 다릅니다. 인도네시아에서 유일하게 아랍어 지명을 가진 도시로, 예루살렘을 뜻하는 알쿠드스에서 왔습니다.\n\n" +
+      "이 도시가 기억되는 이유는 왈리송오의 한 사람인 수난 쿠두스의 방식 때문입니다. 그는 힌두 신자가 많던 이곳에서 이슬람을 전하면서 소를 잡지 말라고 가르쳤습니다. 힌두교가 소를 신성하게 여기는 것을 존중한 것입니다. 지금도 쿠두스에서는 소 대신 물소를 씁니다. 모스크 옆에 선 붉은 벽돌 탑도 이슬람 첨탑이 아니라 힌두 사원 문 모양 그대로입니다.\n\n" +
+      "오늘의 쿠두스는 담배 도시이기도 합니다. 정향을 섞어 만드는 인도네시아 특유의 담배 산업이 여기서 컸고, 큰 회사의 본사와 공장이 도시를 먹여 살립니다.",
+    words: [
+      {
+        word: "menara",
+        meaning: "탑",
+        example: "Menara itu dibangun seperti gapura Hindu.",
+        exampleKo: "그 탑은 힌두 사원 문처럼 지어졌습니다.",
+      },
+      {
+        word: "menyembelih",
+        meaning: "도축하다, 잡다",
+        example: "Warga di sini tidak menyembelih sapi.",
+        exampleKo: "이곳 주민들은 소를 잡지 않습니다.",
+      },
+    ],
+    wiki: "Menara Kudus Mosque",
+  },
+
+  "Pati": {
+    desc:
+      "중부 자바 북해안의 농업 도시입니다. 무리아 산에서 내려온 물로 논이 넓게 펼쳐져 있고, 지역 표어에도 논과 물고기가 들어갑니다.\n\n" +
+      "인도네시아 사람이라면 이 도시 이름을 땅콩 봉지에서 먼저 봤을 가능성이 높습니다. 전국에서 팔리는 볶은 땅콩 상표 중 하나가 이곳에서 시작해 지금도 공장을 두고 있습니다.\n\n" +
+      "해안 쪽 주와나 마을은 놋쇠 공예로 알려져 있습니다. 대대로 놋을 두드려 그릇과 장식을 만들어 왔고, 옆으로는 새우 양식장이 이어집니다.",
+    words: [
+      {
+        word: "kacang",
+        meaning: "땅콩, 콩",
+        example: "Pabrik kacang di kota ini terkenal di seluruh Indonesia.",
+        exampleKo: "이 도시의 땅콩 공장은 인도네시아 전역에 알려져 있습니다.",
+      },
+      {
+        word: "kuningan",
+        meaning: "놋쇠",
+        example: "Pengrajin kuningan bekerja turun-temurun di desa itu.",
+        exampleKo: "놋쇠 장인들이 그 마을에서 대를 이어 일합니다.",
+      },
+    ],
+    wiki: "Pati Regency",
+  },
+
+  // ---------------- 동부 자바 내륙 ----------------
+  "Madiun": {
+    desc:
+      "동부 자바 내륙, 솔로에서 수라바야로 가는 철길 한가운데 있는 도시입니다. 네덜란드가 설탕을 실어 나르려 깐 철도가 도시의 뼈대가 되었고, 지금도 인도네시아에서 기차를 직접 만드는 유일한 공장이 여기 있습니다. 자카르타의 통근 전동차도, 이웃 나라로 수출되는 객차도 마디운에서 나옵니다.\n\n" +
+      "이 도시의 이름이 현대사에 남은 것은 1948년 때문입니다. 독립전쟁이 한창이던 그해 9월 공산당 세력이 마디운을 장악하고 정부에 맞섰다가 한 달 만에 진압되었습니다. 네덜란드와 싸우는 중에 벌어진 내부 충돌이라 상처가 깊었고, 이후 인도네시아 정치에서 공산주의를 말할 때 늘 따라붙는 이름이 되었습니다.\n\n" +
+      "오늘의 마디운은 훨씬 소박합니다. 땅콩 소스를 끼얹은 채소 요리는 마디운식이 표준으로 통하고, 발효 찹쌀로 만든 사탕은 역 앞에서 파는 대표 선물입니다.",
+    words: [
+      {
+        word: "kereta api",
+        meaning: "기차",
+        example: "Gerbong kereta api itu dibuat di Madiun.",
+        exampleKo: "그 기차 객차는 마디운에서 만들어졌습니다.",
+      },
+      {
+        word: "pabrik",
+        meaning: "공장",
+        example: "Pabrik itu mempekerjakan ribuan orang.",
+        exampleKo: "그 공장은 수천 명을 고용합니다.",
+      },
+      {
+        word: "pemberontakan",
+        meaning: "반란, 봉기",
+        example: "Pemberontakan tahun 1948 hanya bertahan satu bulan.",
+        exampleKo: "1948년의 봉기는 한 달만 버텼습니다.",
+      },
+    ],
+  },
+
+  "Kediri": {
+    desc:
+      "브란타스 강가에 앉은 동부 자바의 오래된 도시입니다. 11세기부터 12세기까지 크디리 왕국의 중심이었고, 그 시절 왕 자야바야가 남겼다는 예언은 지금도 인도네시아에서 회자됩니다. 자바가 오래 지배당한 뒤 결국 스스로 서게 된다는 내용이라, 독립운동기에 특히 많이 인용되었습니다.\n\n" +
+      "현대의 크디리는 담배 회사의 도시입니다. 정향 담배를 만드는 대기업 한 곳이 여기서 태어나 도시 경제의 큰 부분을 차지하고 있습니다.\n\n" +
+      "도시 입구에는 파리 개선문을 닮은 커다란 건축물이 서 있어 처음 오는 사람을 어리둥절하게 만듭니다. 지역의 상징으로 2000년대에 세운 것입니다.",
+    words: [
+      {
+        word: "rokok",
+        meaning: "담배",
+        example: "Pabrik rokok besar berdiri di kota ini.",
+        exampleKo: "큰 담배 공장이 이 도시에 있습니다.",
+      },
+      {
+        word: "ramalan",
+        meaning: "예언",
+        example: "Ramalan raja itu masih sering dikutip.",
+        exampleKo: "그 왕의 예언은 지금도 자주 인용됩니다.",
+      },
+    ],
+  },
+
+  "Tuban": {
+    desc:
+      "자바 북해안의 항구 마을입니다. 마자파힛 시절에는 왕국의 바깥 문 역할을 하던 큰 항구여서 중국과 참파의 배가 드나들었고, 이슬람도 이 해안을 통해 들어왔습니다.\n\n" +
+      "왈리송오의 한 사람인 수난 보낭의 묘가 시내 한복판에 있습니다. 그는 가믈란과 노래로 가르쳤다고 전해지며, 지금도 자바 각지에서 순례객이 버스를 타고 이 무덤을 찾아옵니다.\n\n" +
+      "땅은 석회암입니다. 그래서 물이 귀하고 농사가 어려운 대신 시멘트 공장이 들어섰고, 해안가에는 야자수에서 받은 수액을 파는 가게가 늘어서 있습니다. 갓 받은 것은 달고 시원하지만 하루만 두면 술이 됩니다.",
+    words: [
+      {
+        word: "makam",
+        meaning: "무덤, 묘",
+        example: "Peziarah datang ke makam wali setiap hari.",
+        exampleKo: "순례객이 매일 성인의 무덤을 찾아옵니다.",
+      },
+      {
+        word: "nira",
+        meaning: "야자 수액",
+        example: "Nira yang baru diambil rasanya manis.",
+        exampleKo: "갓 받은 야자 수액은 맛이 답니다.",
+      },
+    ],
+  },
+
+  "Trowulan": {
+    desc:
+      "지금은 사탕수수밭과 마을이 이어진 평범한 들판이지만, 이 아래에 마자파힛의 수도가 묻혀 있습니다. 14세기 하얌 우룩 왕과 재상 가자 마다의 시대에 이 왕국은 지금의 인도네시아 대부분과 그 너머까지 영향을 미쳤고, 인도네시아가 하나의 나라라는 관념의 뿌리를 여기서 찾습니다.\n\n" +
+      "남은 것은 대부분 붉은 벽돌입니다. 돌이 아니라 벽돌로 지은 도시였기 때문에, 바장 라투 문이나 목욕터처럼 형태가 남은 몇 곳을 빼면 유적은 밭 아래에 흩어져 있습니다. 한 변이 수백 미터에 이르는 인공 저수지 스가란은 물을 다루던 기술을 보여줍니다.\n\n" +
+      "흥미롭게도 이 마을은 지금도 청동과 벽돌을 다룹니다. 조상의 일이 손끝에 남은 셈입니다.",
+    words: [
+      {
+        word: "kerajaan",
+        meaning: "왕국",
+        example: "Kerajaan itu pernah menguasai banyak pulau.",
+        exampleKo: "그 왕국은 한때 많은 섬을 다스렸습니다.",
+      },
+      {
+        word: "bata",
+        meaning: "벽돌",
+        example: "Bangunan kuno di sini dibuat dari bata merah.",
+        exampleKo: "이곳의 옛 건물은 붉은 벽돌로 지어졌습니다.",
+      },
+    ],
+  },
 };
