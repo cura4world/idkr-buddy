@@ -11,11 +11,13 @@ import { MapContentEntry, MapContentTable } from "./types";
 import { JAWA_TENGAH_TIMUR } from "./jawaTengahTimur";
 import { JAWA_BARAT } from "./jawaBarat";
 import { BALI_NUSA } from "./baliNusa";
+import { SUMATERA_UTARA } from "./sumateraUtara";
 
 const TABLES: MapContentTable[] = [
   JAWA_TENGAH_TIMUR,
   JAWA_BARAT,
   BALI_NUSA,
+  SUMATERA_UTARA,
 ];
 
 const ALL: MapContentTable = Object.assign({}, ...TABLES);
