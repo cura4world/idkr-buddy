@@ -68,6 +68,7 @@ export const BALI_NUSA: MapContentTable = {
         exampleKo: "희생자들의 이름이 그 기념비에 적혀 있습니다.",
       },
     ],
+    wiki: "Kuta, Bali",
   },
 
   "Nusa Penida": {
@@ -132,6 +133,7 @@ export const BALI_NUSA: MapContentTable = {
         exampleKo: "그 지진으로 많은 건물이 무너졌습니다.",
       },
     ],
+    wiki: "Mataram, Lombok",
   },
 
   "Gili Trawangan": {
@@ -176,5 +178,160 @@ export const BALI_NUSA: MapContentTable = {
       },
     ],
     wiki: "Sasak people",
+  },
+
+  "Gunung Rinjani": {
+    desc:
+      "롬복 한가운데 솟은 3,726미터 화산으로, 인도네시아에서 두 번째로 높은 화산입니다. 정상까지 이틀 이상 걸어야 하는데, 능선에 올라서면 발밑에 초승달 모양의 푸른 호수가 나타납니다.\n\n" +
+      "이 호수는 사삭족과 발리 힌두 신자 모두에게 성스러운 곳입니다. 사람들은 이곳까지 걸어 올라와 호수에 제물을 놓고 기도하며, 호숫가에서 솟는 온천물로 몸을 씻습니다. 순례와 등반이 같은 길 위에서 이루어지는 셈입니다.\n\n" +
+      "이 산은 무서운 내력도 있습니다. 1257년 같은 자리에 있던 화산이 터졌는데, 그 재가 지구 전체의 기온을 끌어내려 유럽에 흉년과 기근을 불렀다고 봅니다. 지금의 린자니는 그 폭발이 남긴 그릇 안에 새로 자란 산입니다.",
+    words: [
+      {
+        word: "mendaki",
+        meaning: "(산을) 오르다",
+        example: "Mereka mendaki selama dua hari untuk sampai ke puncak.",
+        exampleKo: "그들은 정상에 닿으려고 이틀 동안 올랐습니다.",
+      },
+      {
+        word: "suci",
+        meaning: "거룩한, 신성한",
+        example: "Danau itu dianggap suci oleh dua agama.",
+        exampleKo: "그 호수는 두 종교 모두에게 거룩하게 여겨집니다.",
+      },
+    ],
+    wiki: "Mount Rinjani",
+  },
+
+  // ---------------- 숨바와 · 코모도 ----------------
+  "Bima": {
+    desc:
+      "숨바와 섬 동쪽 끝의 항구 도시입니다. 예부터 술탄국이 있던 곳이고, 목재와 말과 소금을 실어 나르는 배가 드나들었습니다. 지금도 이 지역 말은 인도네시아 안에서 이름이 있습니다.\n\n" +
+      "이 도시에서 서쪽으로 얼마 떨어지지 않은 곳에 탐보라 화산이 있습니다. 1815년 이 산이 터졌는데, 기록에 남은 인류 역사상 가장 큰 분화였습니다. 산의 윗부분이 통째로 날아가 높이가 천 미터 넘게 낮아졌고, 근처의 작은 왕국 하나가 사람과 언어까지 통째로 사라졌습니다.\n\n" +
+      "그 재는 지구를 한 바퀴 돌았습니다. 이듬해 유럽과 북미에서는 여름에도 눈이 내려 그해를 여름이 없던 해라 부릅니다. 인도네시아의 한 산이 세계의 밥상을 흔든 셈입니다.",
+    words: [
+      {
+        word: "kuda",
+        meaning: "말",
+        example: "Kuda dari daerah ini terkenal kuat.",
+        exampleKo: "이 지역의 말은 튼튼하기로 유명합니다.",
+      },
+      {
+        word: "abu",
+        meaning: "재",
+        example: "Abu letusan itu menutupi langit selama berbulan-bulan.",
+        exampleKo: "그 분화의 재가 몇 달 동안 하늘을 덮었습니다.",
+      },
+    ],
+    wiki: "Bima, Indonesia",
+  },
+
+  "Labuan Bajo": {
+    desc:
+      "플로레스 섬 서쪽 끝의 작은 항구입니다. 얼마 전까지 어부들이 살던 마을이었는데, 코모도로 가는 배가 모두 여기서 뜨면서 인도네시아에서 가장 빠르게 변한 곳 중 하나가 되었습니다. 언덕마다 호텔이 서고, 공항이 커졌습니다.\n\n" +
+      "앞바다에는 섬이 흩어져 있습니다. 배를 타고 나가면 분홍빛이 도는 모래 해변과, 계단처럼 이어진 언덕에서 내려다보는 파당 섬의 풍경이 나옵니다. 물속에서는 만타가리 떼가 지나갑니다.\n\n" +
+      "빠른 변화에는 그늘도 있습니다. 물과 전기가 모자라고, 배 삯과 땅값이 오르면서 원래 살던 사람들이 밀려나는 문제가 계속 이야기됩니다.",
+    words: [
+      {
+        word: "nelayan",
+        meaning: "어부",
+        example: "Dulu kampung ini hanya dihuni nelayan.",
+        exampleKo: "예전에 이 마을에는 어부들만 살았습니다.",
+      },
+      {
+        word: "kapal",
+        meaning: "배, 선박",
+        example: "Semua kapal menuju Komodo berangkat dari sini.",
+        exampleKo: "코모도로 가는 배는 모두 여기서 출발합니다.",
+      },
+    ],
+  },
+
+  "Pulau Komodo": {
+    desc:
+      "코모도왕도마뱀이 사는 섬입니다. 몸길이가 3미터에 이르는 세계에서 가장 큰 도마뱀으로, 이 섬과 이웃한 몇 개의 섬에만 삽니다. 침에 독이 있어 한 번 물면 사냥감이 오래 버티지 못합니다.\n\n" +
+      "바깥 세계가 이 짐승을 안 것은 1910년대입니다. 네덜란드 관리가 소문을 듣고 확인하러 왔다가 표본을 가져가면서 알려졌고, 곧 사냥꾼들이 몰려들자 1930년대에 보호가 시작되었습니다.\n\n" +
+      "섬 사람들에게는 다른 이야기가 있습니다. 옛날 한 여인이 쌍둥이를 낳았는데 하나는 사람이고 하나는 도마뱀이어서, 둘은 남매로 여겨진다는 것입니다. 그래서 이곳 사람들은 이 짐승을 오라라고 부르며 함부로 해치지 않았습니다.",
+    words: [
+      {
+        word: "kadal",
+        meaning: "도마뱀",
+        example: "Kadal raksasa ini hanya hidup di beberapa pulau.",
+        exampleKo: "이 거대한 도마뱀은 몇 개의 섬에만 삽니다.",
+      },
+      {
+        word: "berburu",
+        meaning: "사냥하다",
+        example: "Mereka berburu rusa di padang rumput.",
+        exampleKo: "그들은 초원에서 사슴을 사냥합니다.",
+      },
+    ],
+    wiki: "Komodo (island)",
+  },
+
+  // ---------------- 플로레스 · 숨바 ----------------
+  "Ende": {
+    desc:
+      "플로레스 섬 남쪽 해안의 항구 도시입니다. 이 도시가 인도네시아 역사에 남은 것은 한 사람의 유배 때문입니다.\n\n" +
+      "1934년 네덜란드는 젊은 수카르노를 이곳으로 보냈습니다. 자바에서 멀리 떼어놓으려던 것이었고, 그는 아내와 함께 작은 집에 살며 4년을 보냈습니다. 할 일이 없던 그는 마을 사람들과 연극을 만들고, 집 앞 브링인 나무 아래 앉아 오래 생각했다고 전해집니다. 나중에 그가 내놓은 판짜실라, 곧 인도네시아 건국 다섯 원칙의 뼈대를 이 나무 아래에서 얻었다고 스스로 말했습니다.\n\n" +
+      "가톨릭이 다수인 이 섬에서 무슬림이던 그가 신부들과 책을 빌려 읽고 토론한 경험도 그 생각에 스몄습니다. 유배지의 집은 지금 박물관이고, 나무는 아직 그 자리에 있습니다.",
+    words: [
+      {
+        word: "diasingkan",
+        meaning: "유배되다, 격리되다",
+        example: "Dia diasingkan ke pulau ini selama empat tahun.",
+        exampleKo: "그는 4년 동안 이 섬으로 유배되었습니다.",
+      },
+      {
+        word: "pohon",
+        meaning: "나무",
+        example: "Dia sering duduk di bawah pohon besar itu.",
+        exampleKo: "그는 그 큰 나무 아래 자주 앉았습니다.",
+      },
+    ],
+    wiki: "Ende, Ende",
+  },
+
+  "Danau Kelimutu": {
+    desc:
+      "플로레스 산꼭대기에 나란히 있는 세 개의 화구호입니다. 놀라운 것은 색입니다. 하나는 청록, 하나는 짙은 초록, 하나는 검붉은 색을 띠는데, 붙어 있는데도 색이 다르고 몇 년마다 색이 바뀝니다. 호수 아래에서 올라오는 화산 가스가 물속 성분을 바꾸기 때문입니다.\n\n" +
+      "이 지역 리오족은 이곳을 죽은 사람의 영혼이 모이는 자리로 여깁니다. 젊어서 죽은 이, 나이 들어 죽은 이, 나쁜 일을 한 이가 각각 다른 호수로 간다고 믿어 왔습니다.\n\n" +
+      "새벽에 어둠 속을 걸어 올라가 정상에서 해가 뜨기를 기다립니다. 빛이 들면서 세 호수의 색이 차례로 드러나는 순간이 이곳을 찾는 이유입니다.",
+    words: [
+      {
+        word: "warna",
+        meaning: "색",
+        example: "Warna danau itu berubah setiap beberapa tahun.",
+        exampleKo: "그 호수의 색은 몇 년마다 바뀝니다.",
+      },
+      {
+        word: "roh",
+        meaning: "영혼, 혼",
+        example: "Mereka percaya roh orang mati berkumpul di sini.",
+        exampleKo: "그들은 죽은 이의 영혼이 여기 모인다고 믿습니다.",
+      },
+    ],
+    wiki: "Kelimutu",
+  },
+
+  "Pulau Sumba": {
+    desc:
+      "누사틍가라 남쪽에 있는 마른 섬입니다. 비가 적어 밀림 대신 누런 초원이 펼쳐지고, 그 위에 말이 풀을 뜯습니다. 인도네시아의 다른 섬과 풍경이 확연히 다릅니다.\n\n" +
+      "숨바 사람들은 마라뿌라 부르는 조상 신앙을 오래 지켜 왔습니다. 마을은 언덕 위에 짓고, 가운데에 뾰족하게 솟은 지붕의 집들이 돌무덤을 둘러싸고 있습니다. 무덤에 쓰는 돌은 수 톤에 이르러 온 마을이 함께 끌어 옮깁니다.\n\n" +
+      "해마다 건기가 끝날 무렵 파솔라가 열립니다. 두 편으로 나뉜 기수들이 말을 달리며 나무 창을 던지는 행사인데, 땅에 피가 떨어져야 그해 농사가 잘된다고 여겨 왔습니다. 지금은 창끝을 뭉툭하게 하고 경찰이 지켜보지만, 여전히 거칩니다.",
+    words: [
+      {
+        word: "padang rumput",
+        meaning: "초원, 풀밭",
+        example: "Kuda liar berlari di padang rumput yang luas.",
+        exampleKo: "야생마가 넓은 초원을 달립니다.",
+      },
+      {
+        word: "kubur",
+        meaning: "무덤",
+        example: "Batu kubur itu sangat berat.",
+        exampleKo: "그 무덤 돌은 아주 무겁습니다.",
+      },
+    ],
+    wiki: "Sumba",
   },
 };
