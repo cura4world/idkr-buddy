@@ -1,6 +1,7 @@
 // src/pages/IndoMap.tsx
 // 인도네시아 학습 지도: 실제 해안선 SVG + 핀치줌/팬 + 3단 줌(섬→도시→관광지)
-// 핀 탭 → 하단 시트: 이미지 보기(영구 저장) + Gemini 설명(IndexedDB 캐싱) + 사전 연결
+// 핀 탭 → 하단 시트: 위키 사진 + 미리 써 둔 지점 내용(mapContent) + 그 지역 단어
+// 원고가 없는 지점만 예전처럼 Gemini 설명을 생성합니다 (IndexedDB 캐싱)
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -21,6 +22,7 @@ import {
   MapPlace,
 } from "@/lib/mapData";
 import { fetchPlaceInfo, fetchPlacePhotos, MapPlaceInfo } from "@/lib/map";
+import type { MapContentEntry } from "@/lib/mapContent";
 import { hasGeminiApiKey } from "@/lib/gemini";
 
 const KMIN = 1;
@@ -91,6 +93,34 @@ const IndoMap = () => {
     };
   }, []);
 
+  // ---------- 지점 내용(정적) ----------
+  // 지역별 원고 모듈은 덩치가 크므로 정적 import 하지 않고, 지도에 들어올 때 한 번만
+  // 불러옵니다. 지도를 열지 않는 사람의 첫 로드에는 영향이 없습니다.
+  const contentRef = useRef<((id: string) => MapContentEntry | null) | null>(null);
+  useEffect(() => {
+    let alive = true;
+    import("@/lib/mapContent")
+      .then((m) => {
+        if (alive) contentRef.current = m.getMapContent;
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  // 로드가 끝나기 전에 핀을 누른 경우에만 여기서 기다립니다.
+  const takeContent = useCallback(async (id: string): Promise<MapContentEntry | null> => {
+    if (!contentRef.current) {
+      try {
+        const m = await import("@/lib/mapContent");
+        contentRef.current = m.getMapContent;
+      } catch (e) {
+        return null;
+      }
+    }
+    return contentRef.current ? contentRef.current(id) : null;
+  }, []);
+
   const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const viewRef = useRef<SVGGElement>(null);
@@ -133,6 +163,8 @@ const IndoMap = () => {
   // 하단 시트
   const [selected, setSelected] = useState<Pin | null>(null);
   const [info, setInfo] = useState<MapPlaceInfo | null>(null);
+  // 미리 써 둔 정적 내용. 있으면 Gemini 를 부르지 않습니다.
+  const [entry, setEntry] = useState<MapContentEntry | null>(null);
   const [infoState, setInfoState] = useState<"idle" | "loading" | "error">("idle");
   const [photos, setPhotos] = useState<string[]>([]);
   const [photoState, setPhotoState] = useState<"idle" | "loading" | "error">("idle");
@@ -408,6 +440,7 @@ const IndoMap = () => {
   const openSheet = (pin: Pin) => {
     sheetOpenedAt.current = Date.now();
     setSelected(pin);
+    setEntry(null);
     setInfo(null);
     setPhotos([]);
     setLightbox(null);
@@ -418,33 +451,45 @@ const IndoMap = () => {
       } catch (e) {}
     }
     const reqId = ++reqIdRef.current;
-
-    // 실제 사진 (위키피디아, 무과금)
     setPhotoState("loading");
-    fetchPlacePhotos(pin.id)
-      .then((urls) => {
-        if (reqIdRef.current !== reqId) return;
-        setPhotos(urls);
-        setPhotoState(urls.length ? "idle" : "error");
-      })
-      .catch(() => {
-        if (reqIdRef.current === reqId) setPhotoState("error");
-      });
-    if (!hasGeminiApiKey()) {
-      setInfoState("error");
-      return;
-    }
     setInfoState("loading");
-    fetchPlaceInfo(pin.id, pin.ko, pin.type)
-      .then((r) => {
-        if (reqIdRef.current === reqId) {
-          setInfo(r);
-          setInfoState("idle");
-        }
-      })
-      .catch(() => {
-        if (reqIdRef.current === reqId) setInfoState("error");
-      });
+
+    void (async () => {
+      const e = await takeContent(pin.id);
+      if (reqIdRef.current !== reqId) return;
+
+      // 실제 사진 (위키피디아, 무과금). 원고에 위키 문서 제목이 적혀 있으면 그것을 씁니다.
+      fetchPlacePhotos(pin.id, e ? e.wiki : undefined)
+        .then((urls) => {
+          if (reqIdRef.current !== reqId) return;
+          setPhotos(urls);
+          setPhotoState(urls.length ? "idle" : "error");
+        })
+        .catch(() => {
+          if (reqIdRef.current === reqId) setPhotoState("error");
+        });
+
+      // 미리 써 둔 내용이 있으면 여기서 끝입니다 (Gemini 호출 없음, 과금 없음)
+      if (e) {
+        setEntry(e);
+        setInfoState("idle");
+        return;
+      }
+      if (!hasGeminiApiKey()) {
+        setInfoState("error");
+        return;
+      }
+      fetchPlaceInfo(pin.id, pin.ko, pin.type)
+        .then((r) => {
+          if (reqIdRef.current === reqId) {
+            setInfo(r);
+            setInfoState("idle");
+          }
+        })
+        .catch(() => {
+          if (reqIdRef.current === reqId) setInfoState("error");
+        });
+    })();
   };
   openSheetRef.current = openSheet;
 
@@ -743,10 +788,35 @@ const IndoMap = () => {
                     )}
                   </div>
                 )}
-                {info && (
+                {(entry || info) && (
                   <p className="mt-1 text-sm font-gothic text-gray-700 leading-relaxed whitespace-pre-line content-bump">
-                    {info.desc}
+                    {entry ? entry.desc : info ? info.desc : ""}
                   </p>
+                )}
+
+                {entry && entry.words.length > 0 && (
+                  <div className="mt-5">
+                    <p className="text-xs font-gothic font-semibold text-gray-400">이 지역에서 배우는 단어</p>
+                    <div className="mt-2 space-y-2">
+                      {entry.words.map((w) => (
+                        <div key={w.word} className="rounded-2xl bg-gray-50 px-4 py-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-word italic text-base text-gray-900">{w.word}</span>
+                            <button
+                              onClick={() => speak(w.word, "id")}
+                              className="w-7 h-7 rounded-full bg-teal-600/10 text-teal-700 flex items-center justify-center active:bg-teal-600/20"
+                              title="발음 듣기"
+                            >
+                              <Volume2 size={13} />
+                            </button>
+                            <span className="font-gothic text-sm text-gray-600">{w.meaning}</span>
+                          </div>
+                          <p className="mt-1.5 font-word text-sm text-gray-700">{w.example}</p>
+                          <p className="mt-0.5 font-gothic text-xs text-gray-500">{w.exampleKo}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
