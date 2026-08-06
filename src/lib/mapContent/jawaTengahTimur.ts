@@ -403,4 +403,197 @@ export const JAWA_TENGAH_TIMUR: MapContentTable = {
       },
     ],
   },
+
+  // ---------------- 동부 자바 동쪽 · 마두라 ----------------
+  "Malang": {
+    desc:
+      "해발 450미터 분지에 자리해 자바의 큰 도시 중 가장 서늘합니다. 네덜란드가 계획도시로 다듬은 곳이라 넓은 가로수길과 그 시절 주택이 지금도 남아 있고, 그 위로 사과 과수원이 있는 고원 마을 바투가 이어집니다.\n\n" +
+      "이 일대는 훨씬 오래된 역사도 품고 있습니다. 13세기 싱하사리 왕국이 여기서 일어나 마자파힛으로 이어졌고, 시내 주변에 그때의 작은 사원들이 흩어져 있습니다.\n\n" +
+      "젊은 도시이기도 합니다. 브라위자야 대학을 비롯한 여러 대학이 있어 학생이 많고, 축구 응원 열기가 인도네시아에서 손꼽힐 만큼 뜨겁습니다.",
+    words: [
+      {
+        word: "apel",
+        meaning: "사과",
+        example: "Kebun apel banyak terdapat di daerah Batu.",
+        exampleKo: "바투 지역에는 사과 과수원이 많습니다.",
+      },
+      {
+        word: "sejuk",
+        meaning: "서늘한, 시원한",
+        example: "Udara di kota ini sejuk sepanjang tahun.",
+        exampleKo: "이 도시의 공기는 일 년 내내 서늘합니다.",
+      },
+    ],
+  },
+
+  "Sidoarjo": {
+    desc:
+      "수라바야 바로 남쪽에 붙은 도시입니다. 두 강 사이 저지대여서 예부터 못을 파 새우와 밀크피시를 길렀고, 지역 상징에도 이 두 가지가 들어갑니다. 새우 머리로 만든 검은 소스는 동부 자바 음식의 기본 맛입니다.\n\n" +
+      "그러나 이 도시의 이름을 전국에 알린 것은 2006년의 사고입니다. 가스 시추 중에 뜨거운 진흙이 솟기 시작했고, 멈추지 않은 채 여러 마을을 삼켰습니다. 수천 가구가 집을 잃었고 지금도 진흙 위에 제방을 쌓아 가둬 둔 상태입니다.\n\n" +
+      "그 넓은 진흙 벌판 옆으로 고속도로와 공장이 지나갑니다. 인도네시아의 빠른 성장과 그 대가가 한 화면에 들어오는 드문 곳입니다.",
+    words: [
+      {
+        word: "lumpur",
+        meaning: "진흙",
+        example: "Lumpur panas menenggelamkan beberapa desa.",
+        exampleKo: "뜨거운 진흙이 여러 마을을 삼켰습니다.",
+      },
+      {
+        word: "tambak",
+        meaning: "양식장",
+        example: "Udang dari tambak ini dikirim ke luar negeri.",
+        exampleKo: "이 양식장의 새우는 해외로 보내집니다.",
+      },
+    ],
+  },
+
+  "Surabaya": {
+    desc:
+      "인도네시아 제2의 도시이자 동부 자바의 관문 항구입니다. 이름은 상어와 악어를 뜻하는 두 단어에서 왔다고 하며, 둘이 싸우는 모습이 도시의 상징입니다.\n\n" +
+      "1945년 11월 10일이 이 도시의 날입니다. 독립을 선언한 지 석 달도 안 된 때, 영국군이 최후통첩을 보내자 청년들이 물러서지 않고 맞섰습니다. 몇 주 동안의 전투로 수많은 사람이 죽었지만 그 저항이 인도네시아 독립 의지를 세계에 알렸고, 그날은 지금 영웅의 날로 기념됩니다.\n\n" +
+      "옛 도심 암펠 일대에는 수난 암펠의 묘를 중심으로 아랍계 거리가 형성되어 있어, 향과 대추야자를 파는 좁은 골목을 지나면 곧바로 순례객이 모인 마당이 나옵니다.",
+    words: [
+      {
+        word: "pahlawan",
+        meaning: "영웅",
+        example: "Hari Pahlawan diperingati setiap 10 November.",
+        exampleKo: "영웅의 날은 매년 11월 10일에 기념됩니다.",
+      },
+      {
+        word: "pertempuran",
+        meaning: "전투",
+        example: "Pertempuran itu berlangsung selama tiga minggu.",
+        exampleKo: "그 전투는 3주 동안 이어졌습니다.",
+      },
+    ],
+  },
+
+  "Gunung Bromo": {
+    desc:
+      "화산 안에 화산이 들어 있는 지형입니다. 옛 거대 분화가 남긴 칼데라 바닥에 모래 벌판이 펼쳐지고, 그 한가운데 브로모가 김을 뿜으며 서 있습니다. 새벽에 능선에서 내려다보면 안개 위로 봉우리만 떠오르는데, 인도네시아에서 가장 많이 찍힌 풍경 중 하나입니다.\n\n" +
+      "이 산자락에는 텡거족이 삽니다. 자바가 이슬람으로 바뀔 때 산으로 물러난 사람들의 후손으로, 지금도 힌두 신앙을 지키고 있습니다.\n\n" +
+      "해마다 카사다가 되면 이들은 농작물과 가축을 지고 분화구 가장자리까지 올라가 아래로 던집니다. 조상의 약속을 지키는 제사입니다. 그 아래 비탈에서는 던져진 제물을 받으려는 사람들이 그물을 들고 기다립니다.",
+    words: [
+      {
+        word: "kawah",
+        meaning: "분화구",
+        example: "Asap putih keluar dari kawah setiap hari.",
+        exampleKo: "매일 분화구에서 흰 연기가 나옵니다.",
+      },
+      {
+        word: "sesaji",
+        meaning: "제물, 공물",
+        example: "Warga membawa sesaji ke tepi kawah.",
+        exampleKo: "주민들이 제물을 분화구 가장자리로 가져갑니다.",
+      },
+    ],
+    wiki: "Mount Bromo",
+  },
+
+  "Probolinggo": {
+    desc:
+      "브로모로 올라가는 사람들이 거쳐 가는 북해안 항구 도시입니다. 마두라 해협에 면해 있어 어선이 많고, 마두라계 주민이 섞여 살아 말씨가 이웃 도시와 조금 다릅니다.\n\n" +
+      "이 도시는 바람으로 유명합니다. 건기 끝 무렵이면 산에서 바다로 마른 바람이 몇 달씩 불어 나뭇가지를 흔들고 빨래를 하루 만에 말립니다. 사람들은 이 바람에 이름을 따로 붙여 부릅니다.\n\n" +
+      "그 바람과 볕 덕에 망고가 답니다. 프로볼링고 망고는 인도네시아 안에서 이름값이 있고, 길가 노점에 계절마다 산더미처럼 쌓입니다.",
+    words: [
+      {
+        word: "mangga",
+        meaning: "망고",
+        example: "Mangga dari kota ini terkenal manis.",
+        exampleKo: "이 도시의 망고는 달기로 유명합니다.",
+      },
+      {
+        word: "angin",
+        meaning: "바람",
+        example: "Angin kering bertiup selama musim kemarau.",
+        exampleKo: "건기 동안 마른 바람이 붑니다.",
+      },
+    ],
+  },
+
+  "Pamekasan": {
+    desc:
+      "마두라 섬 가운데에 있는 도시입니다. 자바와 좁은 해협을 사이에 두고 있을 뿐인데 분위기가 확 다릅니다. 땅이 척박해 논 대신 옥수수와 소금밭이 많고, 사람들은 말이 직설적이며 이슬람 색채가 자바보다 진합니다.\n\n" +
+      "마두라를 소금의 섬이라 부르는 이유가 이 일대에 있습니다. 볕이 강하고 비가 적어 바닷물을 가두어 말리기에 좋아서, 건기가 되면 해안을 따라 하얀 소금 더미가 줄지어 쌓입니다.\n\n" +
+      "추수가 끝나면 소 경주가 열립니다. 두 마리를 나무 썰매에 매어 짧은 흙길을 달리게 하는데, 경주에 나가는 소는 사람보다 좋은 대접을 받으며 길러집니다. 이 도시는 마두라 바틱의 중심이기도 해서, 자바 바틱보다 색이 훨씬 강렬합니다.",
+    words: [
+      {
+        word: "garam",
+        meaning: "소금",
+        example: "Petani garam bekerja pada musim kemarau.",
+        exampleKo: "소금 농부는 건기에 일합니다.",
+      },
+      {
+        word: "sapi",
+        meaning: "소",
+        example: "Sapi untuk lomba dirawat dengan sangat baik.",
+        exampleKo: "경주에 나가는 소는 아주 정성껏 길러집니다.",
+      },
+    ],
+  },
+
+  "Jember": {
+    desc:
+      "동부 자바 남동쪽의 농업 도시입니다. 네덜란드 시절 이 일대에 대규모 농원이 들어서면서 자바 각지에서 사람이 모여들었고, 그래서 자바인과 마두라인이 섞인 독특한 말씨가 자리 잡았습니다.\n\n" +
+      "이곳의 담뱃잎은 세계 시장에서 이름이 있습니다. 시가를 감싸는 겉잎으로 쓰이는 종류가 이 땅에서 잘 자라, 지금도 유럽 경매장으로 실려 나갑니다. 수확기가 되면 잎을 그늘에 매달아 말리는 긴 창고들이 들판에 늘어섭니다.\n\n" +
+      "한편 이 조용한 도시는 해마다 한 번 완전히 달라집니다. 거리를 활주로 삼아 수백 명이 거대한 의상을 입고 행진하는 축제가 열리는데, 규모로는 세계에서 손꼽히는 패션 카니발입니다.",
+    words: [
+      {
+        word: "tembakau",
+        meaning: "담뱃잎",
+        example: "Tembakau dari Jember diekspor ke Eropa.",
+        exampleKo: "즘버르의 담뱃잎은 유럽으로 수출됩니다.",
+      },
+      {
+        word: "perkebunan",
+        meaning: "농원, 플랜테이션",
+        example: "Perkebunan besar dibuka pada masa kolonial.",
+        exampleKo: "큰 농원들이 식민지 시대에 열렸습니다.",
+      },
+    ],
+    wiki: "Jember Regency",
+  },
+
+  "Banyuwangi": {
+    desc:
+      "자바 섬의 동쪽 끝입니다. 여기서 배를 타면 30분 만에 발리에 닿기 때문에, 부두에는 밤낮없이 화물차와 오토바이가 줄을 섭니다. 자바와 발리를 오가는 거의 모든 육상 물류가 이 좁은 해협을 건넙니다.\n\n" +
+      "이 지역 원주민은 오싱족입니다. 자바인도 발리인도 아닌 자기 말과 자기 춤을 지켜 왔고, 대표적인 춤 간드룽은 원래 추수를 감사하며 추던 것입니다. 힌두 유산과 이슬람이 한 마을 안에 겹쳐 있는 곳이 많습니다.\n\n" +
+      "뒤로는 이젠 화산, 앞으로는 서핑으로 알려진 남쪽 해변이 있어 관광의 관문 노릇도 합니다.",
+    words: [
+      {
+        word: "tarian",
+        meaning: "춤",
+        example: "Tarian Gandrung berasal dari daerah ini.",
+        exampleKo: "간드룽 춤은 이 지역에서 나왔습니다.",
+      },
+      {
+        word: "dermaga",
+        meaning: "부두, 선착장",
+        example: "Truk mengantre di dermaga sepanjang malam.",
+        exampleKo: "트럭들이 밤새 부두에 줄을 섭니다.",
+      },
+    ],
+  },
+
+  "Kawah Ijen": {
+    desc:
+      "분화구 안에 청록색 호수가 담긴 화산입니다. 아름다워 보이지만 이 물은 세계에서 가장 산성이 강한 호수 중 하나여서, 금속도 오래 견디지 못합니다.\n\n" +
+      "밤에 오르는 사람이 많은 이유는 파란 불꽃 때문입니다. 바위틈에서 새어 나온 유황 가스가 공기와 만나 타면서 푸른 불길을 냅니다. 어두울 때만 보이기 때문에 새벽 두세 시에 손전등을 들고 오릅니다.\n\n" +
+      "그 불길 옆에서 사람이 일합니다. 굳은 유황 덩어리를 깨어 대나무 바구니에 담고, 70에서 90킬로그램을 어깨에 지고 분화구 벽을 걸어 올라와 산 아래까지 내려갑니다. 하루 두 번 나르는 사람도 있습니다. 관광객이 새벽 풍경을 찍는 바로 그 자리에서 벌어지는 일입니다.",
+    words: [
+      {
+        word: "belerang",
+        meaning: "유황",
+        example: "Para penambang memikul belerang dari dasar kawah.",
+        exampleKo: "광부들이 분화구 바닥에서 유황을 짊어지고 나릅니다.",
+      },
+      {
+        word: "memikul",
+        meaning: "짊어지다, 메다",
+        example: "Dia memikul beban hampir sembilan puluh kilogram.",
+        exampleKo: "그는 거의 90킬로그램의 짐을 짊어집니다.",
+      },
+    ],
+    wiki: "Ijen",
+  },
 };
