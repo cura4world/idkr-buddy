@@ -19,6 +19,8 @@ import {
   Maximize2,
   Minimize2,
   Volume2,
+  Pause,
+  Square,
   X,
   Check,
   PenLine,
@@ -56,6 +58,7 @@ import {
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
+import { ttsPlayer, TtsState, TtsPart, sermonTtsModels } from "@/lib/tts";
 
 
 const speak = (text: string, lang: "id" | "ko") => {
@@ -97,6 +100,18 @@ const saveFontStep = (n: number) => {
 // ID_BASE 에는 글자색을 넣지 않습니다. 여기에 text-foreground 를 두면
 // 뒤에 붙이는 text-cyan-600 같은 색과 같은 특이도로 충돌하고,
 // Tailwind 출력 순서상 커스텀 색(foreground)이 뒤에 나와 항상 이깁니다.
+// 문단 오디오 캐시 키. 설교문을 다시 올려 본문이 바뀌면 해시가 달라져
+// 옛 음성이 남아 있어도 새로 만듭니다.
+const hashText = (s: string): string => {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+};
+
+// 찬양(hymn)은 노래라 낭독에서 뺍니다. 나머지(제목·성경장절·소제목·본문)는 모두 읽습니다.
+const canReadBlock = (b: any): boolean =>
+  !!(b && b.kind !== "hymn" && typeof b.id === "string" && b.id.trim().length > 0);
+
 const ID_BASE = "font-word leading-[1.75] break-words";
 const KO_BASE = "font-gothic text-muted-foreground leading-[1.7] break-words mt-1.5";
 // 성경 인용(ref/verse) 공통 색 — 뉴스 '과학기술' 배지와 같은 cyan-600 입니다.
@@ -323,6 +338,10 @@ const SermonRead = () => {
   const subPushedRef = useRef(false);
 
   // 단어 탭 팝업 (성경 읽기와 동일한 3단 캐시)
+  // 문단 듣기 / 전체 듣기 상태 (구독은 이 화면에서 한 번만 합니다)
+  const [ttsKey, setTtsKey] = useState<string | null>(null);
+  const [ttsState, setTtsState] = useState<TtsState>("idle");
+
   const [popupWord, setPopupWord] = useState<string | null>(null);
   const [popupSentence, setPopupSentence] = useState("");
   const [popupLoading, setPopupLoading] = useState(false);
@@ -674,6 +693,57 @@ const SermonRead = () => {
         </span>{" "}
       </span>
     ));
+
+  // 화면을 벗어나면 재생을 멈춥니다.
+  useEffect(() => {
+    const unsub = ttsPlayer.subscribe((s) => {
+      setTtsKey(s.key);
+      setTtsState(s.state);
+    });
+    return () => {
+      unsub();
+      ttsPlayer.stop();
+    };
+  }, []);
+
+  const playParts = (stateKey: string, parts: TtsPart[]) => {
+    if (!parts || parts.length === 0) return;
+    ttsPlayer.toggleParts(stateKey, parts, {
+      models: sermonTtsModels(),
+      onError: () => toast("음성을 만들지 못했어요. 잠시 뒤 다시 시도해 주세요"),
+    });
+  };
+
+  // 문단 끝에 붙는 작은 스피커. 아이콘은 px 고정이라 글자 크기를 바꿔도 자리가 흔들리지 않습니다.
+  const renderSpeaker = (stateKey: string, parts: TtsPart[]) => {
+    const mine = ttsKey === stateKey;
+    const loading = mine && ttsState === "loading";
+    const playing = mine && ttsState === "playing";
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          playParts(stateKey, parts);
+        }}
+        className={
+          "select-none align-middle ml-1 inline-flex items-center justify-center w-6 h-6 rounded-full shrink-0 " +
+          (mine ? "bg-indigo-500 text-white" : "text-indigo-500/70 active:bg-indigo-500/10")
+        }
+        style={{ fontSize: "1rem" }}
+        aria-label="이 문단 듣기"
+        title="이 문단 듣기"
+      >
+        {loading ? (
+          <Loader2 size={13} className="animate-spin" />
+        ) : playing ? (
+          <Pause size={13} />
+        ) : (
+          <Volume2 size={13} />
+        )}
+      </button>
+    );
+  };
 
   const changeFont = (delta: number) => {
     setFontStep((prev) => {
@@ -1262,6 +1332,22 @@ const SermonRead = () => {
 
   const blocks: SermonBlock[] = (rec && rec.blocks) || [];
 
+  // 문단 하나짜리 재생과 전체 듣기가 **같은 캐시 키**를 씁니다.
+  // 그래서 이미 들어본 문단은 전체 듣기에서 새로 만들지 않고 그대로 이어 붙입니다.
+  const partKeyOf = (b: SermonBlock, i: number): string =>
+    "sermon:" + String(id) + ":" + String(i) + ":" + hashText(b.id);
+
+  const audioParts: TtsPart[] = blocks
+    .map((b, i) => ({ b: b, i: i }))
+    .filter((x) => canReadBlock(x.b))
+    .map((x) => ({ key: partKeyOf(x.b, x.i), text: x.b.id }));
+
+  const allKey = "sermon-all:" + String(id);
+  const allMine = ttsKey === allKey;
+  const allLoading = allMine && ttsState === "loading";
+  const allPlaying = allMine && ttsState === "playing";
+  const allPaused = allMine && ttsState === "paused";
+
   const fontPx = Math.round(BASE_PX * SCALE[fontStep]) + "px";
 
   // ---------- 빠른 이동 (위 / 목차 / 아래) ----------
@@ -1340,6 +1426,9 @@ const SermonRead = () => {
         {b.id ? (
           <p className={st.idClass} style={{ fontSize: st.idSize }}>
             {renderTokens(b.id, "w" + i + "-")}
+            {canReadBlock(b)
+              ? renderSpeaker(partKeyOf(b, i), [{ key: partKeyOf(b, i), text: b.id }])
+              : null}
           </p>
         ) : null}
         {b.ko ? (
@@ -1626,6 +1715,34 @@ const SermonRead = () => {
                 <Plus size={16} />
               </button>
             </span>
+            {/* 전체 듣기 — 문단별로 만든 오디오를 순서대로 이어 붙여 읽습니다. */}
+            <button
+              type="button"
+              onClick={() => playParts(allKey, audioParts)}
+              disabled={audioParts.length === 0}
+              className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-indigo-600 active:bg-muted disabled:opacity-30"
+              aria-label="전체 듣기"
+              title="전체 듣기"
+            >
+              {allLoading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : allPlaying ? (
+                <Pause size={16} />
+              ) : (
+                <Volume2 size={16} />
+              )}
+            </button>
+            {allPlaying || allPaused ? (
+              <button
+                type="button"
+                onClick={() => ttsPlayer.stop()}
+                className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-muted-foreground active:bg-muted"
+                aria-label="정지"
+                title="정지"
+              >
+                <Square size={14} />
+              </button>
+            ) : null}
           </span>
         </div>
 
