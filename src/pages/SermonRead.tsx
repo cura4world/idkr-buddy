@@ -110,6 +110,12 @@ const hashText = (s: string): string => {
 
 // 스피커를 붙이지 않는 소제목 — 구역 이름만 있는 줄은 소리내어 읽을 것이 없습니다.
 // 숫자·기호·괄호 안 한글은 떼고 비교하므로 "1. Pendahuluan", "Doa (기도)" 도 잡힙니다.
+// ── 임시 진단 표시 (원인 확인용, 확인 뒤 코드째 걷어냅니다) ────────
+// 성경 장절과 성경 구절이 왜 한 묶음이 되지 않는지, 각 줄의 종류(kind)를
+// 폰에서 눈으로 읽기 위한 것입니다. 이 상수와 renderBlock 안의 표시 코드는
+// 원인이 확정되는 대로 함께 삭제합니다.
+const DEBUG_BLOCKS = true;
+
 const SILENT_HEADINGS = ["pendahuluan", "doa"];
 const normHeading = (s: string): string =>
   String(s || "").toLowerCase().replace(new RegExp("[^a-z]+", "g"), "");
@@ -1500,6 +1506,14 @@ const SermonRead = () => {
     if (!b) return null;
     // 찬양 중의 빈 줄 — 절·후렴을 구분하는 여백입니다 (업로드 도구가 빈 블록으로 보냅니다).
     if (b.kind === "hymn" && !b.id && !b.ko) {
+      // 진단 중에는 이 빈 줄도 번호가 보이게 둡니다 (번호가 건너뛰면 헷갈립니다).
+      if (DEBUG_BLOCKS) {
+        return (
+          <p key={i} className="select-none font-gothic text-[10px] leading-tight text-red-500">
+            {"[" + i + "] " + b.kind + " · (빈 줄)"}
+          </p>
+        );
+      }
       return <div key={i} className="h-4" aria-hidden="true" />;
     }
     const st = styleFor(b.kind);
@@ -1509,6 +1523,12 @@ const SermonRead = () => {
         id={b.kind === "heading" ? "sec-" + i : undefined}
         className={st.wrap}
       >
+        {DEBUG_BLOCKS ? (
+          <p className="select-none font-gothic text-[10px] leading-tight text-red-500">
+            {"[" + i + "] " + b.kind + " · id:" + (b.id ? "O" : "-") +
+              " ko:" + (b.ko ? "O" : "-") + (speakerAt[i] ? " · SPK" : "")}
+          </p>
+        ) : null}
         {b.id ? (
           <p className={st.idClass} style={{ fontSize: st.idSize }}>
             {renderTokens(b.id, "w" + i + "-")}
