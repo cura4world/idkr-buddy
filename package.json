@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/csv-to-seed.js && vite",
     "build": "node scripts/csv-to-seed.js && vite build",
-    "build:dev": "vite build --mode development",
+    "build:dev": "node scripts/csv-to-seed.js && vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

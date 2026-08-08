@@ -26,3 +26,6 @@ dist-ssr
 # Android signing (never commit)
 *.jks
 keystore/
+
+# 빌드 때 CSV 에서 생성되는 파일 — 추적하면 빌드마다 변경으로 잡혀 커밋에 딸려 들어간다
+src/data/seed.json
