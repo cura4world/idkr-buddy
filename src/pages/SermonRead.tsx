@@ -110,17 +110,18 @@ const hashText = (s: string): string => {
 
 // 스피커를 붙이지 않는 소제목 — 구역 이름만 있는 줄은 소리내어 읽을 것이 없습니다.
 // 숫자·기호·괄호 안 한글은 떼고 비교하므로 "1. Pendahuluan", "Doa (기도)" 도 잡힙니다.
-// ── 임시 진단 표시 (원인 확인용, 확인 뒤 코드째 걷어냅니다) ────────
-// 성경 장절과 성경 구절이 왜 한 묶음이 되지 않는지, 각 줄의 종류(kind)를
-// 폰에서 눈으로 읽기 위한 것입니다. 이 상수와 renderBlock 안의 표시 코드는
-// 원인이 확정되는 대로 함께 삭제합니다.
-const DEBUG_BLOCKS = true;
-
 const SILENT_HEADINGS = ["pendahuluan", "doa"];
 const normHeading = (s: string): string =>
   String(s || "").toLowerCase().replace(new RegExp("[^a-z]+", "g"), "");
 const isSilentHeading = (s: string): boolean =>
   SILENT_HEADINGS.indexOf(normHeading(s)) >= 0;
+
+// 성경 장절 줄. 업로드된 설교문에서 "1 Korintus 10:6-13" 같은 줄이 ref 가 아니라
+// heading 으로 들어오는 것을 폰 진단으로 확인했습니다. 그래서 종류(kind)만 믿지 않고
+// 글 모양으로도 알아봅니다 — "장:절" 처럼 숫자·콜론·숫자가 있으면 장절로 봅니다.
+// (일반 소제목 "1. Peringatan bagi kita" 에는 콜론이 없어 걸리지 않습니다)
+const BIBLE_REF_RE = new RegExp("[0-9] *: *[0-9]");
+const looksLikeBibleRef = (s: string): boolean => BIBLE_REF_RE.test(String(s || ""));
 
 // 읽기 묶음 — 붙어 있는 줄을 한 덩어리로 보고, 스피커는 그 덩어리의 마지막 줄에 하나만 둡니다.
 //  - 성경 장절(ref) + 이어지는 성경 본문(verse) → 한 덩어리
@@ -184,6 +185,13 @@ const buildAudioGroups = (bs: SermonBlock[]): AudioGroup[] => {
     if (b.kind === "heading") {
       if (isSilentHeading(raw)) {
         cur = null;
+        continue;
+      }
+      // 장절 줄이면 성경 묶음을 엽니다 — 뒤따르는 ref/verse 가 여기에 붙어
+      // 스피커는 성경 본문 마지막 줄에 하나만 남습니다.
+      if (looksLikeBibleRef(raw)) {
+        cur = { start: i, last: i, texts: [text], type: "bible" };
+        out.push(cur);
         continue;
       }
       cur = { start: i, last: i, texts: text ? [text] : [], type: "heading" };
@@ -1506,14 +1514,6 @@ const SermonRead = () => {
     if (!b) return null;
     // 찬양 중의 빈 줄 — 절·후렴을 구분하는 여백입니다 (업로드 도구가 빈 블록으로 보냅니다).
     if (b.kind === "hymn" && !b.id && !b.ko) {
-      // 진단 중에는 이 빈 줄도 번호가 보이게 둡니다 (번호가 건너뛰면 헷갈립니다).
-      if (DEBUG_BLOCKS) {
-        return (
-          <p key={i} className="select-none font-gothic text-[10px] leading-tight text-red-500">
-            {"[" + i + "] " + b.kind + " · (빈 줄)"}
-          </p>
-        );
-      }
       return <div key={i} className="h-4" aria-hidden="true" />;
     }
     const st = styleFor(b.kind);
@@ -1523,12 +1523,6 @@ const SermonRead = () => {
         id={b.kind === "heading" ? "sec-" + i : undefined}
         className={st.wrap}
       >
-        {DEBUG_BLOCKS ? (
-          <p className="select-none font-gothic text-[10px] leading-tight text-red-500">
-            {"[" + i + "] " + b.kind + " · id:" + (b.id ? "O" : "-") +
-              " ko:" + (b.ko ? "O" : "-") + (speakerAt[i] ? " · SPK" : "")}
-          </p>
-        ) : null}
         {b.id ? (
           <p className={st.idClass} style={{ fontSize: st.idSize }}>
             {renderTokens(b.id, "w" + i + "-")}
