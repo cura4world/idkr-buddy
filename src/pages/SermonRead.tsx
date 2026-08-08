@@ -145,6 +145,10 @@ const buildAudioGroups = (bs: SermonBlock[]): AudioGroup[] => {
     }
     const raw = typeof b.id === "string" ? b.id : "";
     const text = raw.trim().length > 0 ? raw : "";
+    // 읽을 인니어가 없는 줄(빈 줄·한국어만 있는 줄)은 묶음을 끊지 않고 그대로 지나갑니다.
+    // 이 줄이 없으면 성경 장절과 성경 본문 사이에 낀 빈 줄 하나가 묶음을 둘로 쪼개
+    // 장절에 스피커가 하나 더 붙습니다. (읽을 것이 없으니 묶음에 넣지도 않습니다)
+    if (!text) continue;
     if (b.kind === "hymn") {
       // 찬양 가사는 바로 앞 찬양 제목(heading) 덩어리에 합칩니다.
       if (cur !== null && (cur.type === "hymn" || cur.type === "heading")) {
