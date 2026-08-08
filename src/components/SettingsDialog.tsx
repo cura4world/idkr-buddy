@@ -17,6 +17,7 @@ import { getFontStep, getStepCount, stepFont } from "@/lib/fontScale";
 import { getTtsVoice, setTtsVoice, TTS_VOICES, TtsVoiceId, clearTtsCache } from "@/lib/tts";
 import { getSermonBase, setSermonBase, getSermonKey, setSermonKey } from "@/lib/sermon";
 import { getPercakapanBase, setPercakapanBase, getPercakapanKey, setPercakapanKey, hasPercakapanConfig, pushBackup } from "@/lib/percakapan";
+import { getMyMedaliId, setMyMedaliId, optOutMedali, isValidMedaliId, fetchRegisteredIds, syncMedali } from "@/lib/medaliSync";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -40,6 +41,9 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   // 회화집 백업: 서버에 백업이 있는데 이 기기가 비었을 때 한 번 더 확인받습니다
   const [pcConfirmErase, setPcConfirmErase] = useState(0);
   const [pcBusy, setPcBusy] = useState(false);
+  // Medali 아이디 — 내 기기끼리 점수를 합치려면 세 기기가 같은 아이디를 써야 합니다.
+  const [medaliId, setMedaliIdState] = useState("");
+  const [medaliTaken, setMedaliTaken] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -53,6 +57,11 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
       setPercakapanBaseState(getPercakapanBase());
       setPercakapanKeyState(getPercakapanKey());
       setPcConfirmErase(0);
+      const cur = getMyMedaliId();
+      setMedaliIdState(cur === "-" ? "" : cur);
+      fetchRegisteredIds()
+        .then((ids) => setMedaliTaken(ids))
+        .catch(() => {});
     }
   }, [open]);
 
@@ -69,6 +78,25 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     setPercakapanKey(percakapanKey);
     toast("API 키 설정이 저장되었습니다");
     onOpenChange(false);
+  };
+
+  // 아이디를 넣으면 그 자리에서 한 번 맞춰 봅니다 (다른 기기 점수를 바로 받아옵니다)
+  const handleApplyMedaliId = () => {
+    const v = (medaliId || "").trim();
+    if (!isValidMedaliId(v)) {
+      toast("한글·영문·숫자 6자 이내로 적어주세요");
+      return;
+    }
+    setMyMedaliId(v);
+    setMedaliIdState(v);
+    toast(v + " 아이디로 점수를 함께 셉니다");
+    syncMedali(true).catch(() => {});
+  };
+
+  const handleOptOutMedali = () => {
+    optOutMedali();
+    setMedaliIdState("");
+    toast("이 기기에서는 점수를 세지 않습니다");
   };
 
   const handleClearImages = async () => {
@@ -313,6 +341,54 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
           <Button onClick={handleSave} className="w-full">
             저장
           </Button>
+          <div className="pt-3 border-t border-border/60">
+            <Label className="font-body text-sm text-gray-900">Medali 아이디</Label>
+            <p className="mt-1 text-xs text-muted-foreground font-gothic">
+              같은 아이디를 쓰는 내 기기들의 점수가 하나로 합쳐집니다. 폰·태블릿에 <b>똑같이</b> 적어주세요.
+              대소문자까지 같아야 하니, 아래 이름을 눌러 고르는 편이 안전합니다.
+            </p>
+            {medaliTaken.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {medaliTaken.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setMedaliIdState(t)}
+                    className={
+                      "rounded-full px-3 py-1 text-xs font-gothic border transition-colors " +
+                      (t === medaliId
+                        ? "bg-primary text-white border-primary"
+                        : "bg-muted text-foreground border-border")
+                    }
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2 mt-2">
+              <Input
+                value={medaliId}
+                onChange={(e) => setMedaliIdState(e.target.value)}
+                placeholder="아이디"
+                maxLength={6}
+                autoCapitalize="none"
+                autoCorrect="off"
+                autoComplete="off"
+                className="flex-1 text-sm"
+              />
+              <Button type="button" variant="outline" className="text-xs" onClick={handleApplyMedaliId}>
+                적용
+              </Button>
+            </div>
+            <button
+              type="button"
+              onClick={handleOptOutMedali}
+              className="mt-2 font-gothic text-[0.7rem] text-muted-foreground underline underline-offset-2"
+            >
+              이 기기에서는 점수를 세지 않기
+            </button>
+          </div>
           <div className="pt-3 border-t border-border/60">
             <Label className="font-body text-sm text-gray-900">개인 단어장 (선택)</Label>
             <p className="mt-1 text-xs text-muted-foreground font-gothic">
