@@ -21,7 +21,7 @@ import MedaliBadge from "@/components/MedaliBadge";
 import MedaliNudge from "@/components/MedaliNudge";
 import MedaliSheet from "@/components/MedaliSheet";
 import MedaliIdDialog from "@/components/MedaliIdDialog";
-import { needsMedaliId, pushMyMedali } from "@/lib/medaliSync";
+import { needsMedaliId, syncMedali } from "@/lib/medaliSync";
 import { hasSermonConfig } from "@/lib/sermon";
 import {
   RotateCcw,
@@ -135,8 +135,17 @@ const Index = () => {
       setNeedId(true);
       return;
     }
-    // 아이디가 있으면 내 요약을 올려 둡니다 (5분에 한 번, 실패는 무시)
-    pushMyMedali().catch(() => {});
+    // 아이디가 있으면 기기끼리 점수를 맞춥니다 (받기 → 재계산 → 올리기, 5분에 한 번)
+    syncMedali().catch(() => {});
+
+    // 밖에서 오프라인으로 쓰다가 Wi-Fi에 붙는 경우가 있어, 화면이 다시 보일 때도 맞춥니다.
+    const onShow = () => {
+      try {
+        if (document.visibilityState === "visible") syncMedali().catch(() => {});
+      } catch {}
+    };
+    document.addEventListener("visibilitychange", onShow);
+    return () => document.removeEventListener("visibilitychange", onShow);
   }, []);
 
   // 훈장 팝업 — 폰의 뒤로가기로 팝업만 닫히게 히스토리를 한 칸 쌓습니다.
