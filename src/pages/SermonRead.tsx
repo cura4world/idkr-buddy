@@ -108,9 +108,85 @@ const hashText = (s: string): string => {
   return h.toString(36);
 };
 
-// 찬양(hymn)은 노래라 낭독에서 뺍니다. 나머지(제목·성경장절·소제목·본문)는 모두 읽습니다.
-const canReadBlock = (b: any): boolean =>
-  !!(b && b.kind !== "hymn" && typeof b.id === "string" && b.id.trim().length > 0);
+// 스피커를 붙이지 않는 소제목 — 구역 이름만 있는 줄은 소리내어 읽을 것이 없습니다.
+// 숫자·기호·괄호 안 한글은 떼고 비교하므로 "1. Pendahuluan", "Doa (기도)" 도 잡힙니다.
+const SILENT_HEADINGS = ["pendahuluan", "doa"];
+const normHeading = (s: string): string =>
+  String(s || "").toLowerCase().replace(new RegExp("[^a-z]+", "g"), "");
+const isSilentHeading = (s: string): boolean =>
+  SILENT_HEADINGS.indexOf(normHeading(s)) >= 0;
+
+// 읽기 묶음 — 붙어 있는 줄을 한 덩어리로 보고, 스피커는 그 덩어리의 마지막 줄에 하나만 둡니다.
+//  - 성경 장절(ref) + 이어지는 성경 본문(verse) → 한 덩어리
+//  - 찬양 제목(heading) + 이어지는 가사(hymn)    → 한 덩어리 (가사 사이 빈 줄은 그대로 통과)
+//  - 그 밖(설교 제목 · 본문 문단 · 일반 소제목)   → 각각 한 덩어리
+//  - Pendahuluan · Doa 같은 구역 이름 소제목      → 덩어리를 만들지 않음(스피커 없음)
+interface AudioGroup {
+  start: number; // 캐시 키에 쓰는 첫 줄 번호
+  last: number;  // 스피커가 붙는 줄 번호
+  text: string;  // 읽을 글 (여러 줄이면 빈 줄로 이어 붙임)
+}
+
+interface GroupDraft {
+  start: number;
+  last: number;
+  texts: string[];
+  type: string;
+}
+
+const buildAudioGroups = (bs: SermonBlock[]): AudioGroup[] => {
+  const out: GroupDraft[] = [];
+  let cur: GroupDraft | null = null;
+  for (let i = 0; i < bs.length; i++) {
+    const b = bs[i];
+    if (!b) {
+      cur = null;
+      continue;
+    }
+    const raw = typeof b.id === "string" ? b.id : "";
+    const text = raw.trim().length > 0 ? raw : "";
+    if (b.kind === "hymn") {
+      // 찬양 가사는 바로 앞 찬양 제목(heading) 덩어리에 합칩니다.
+      if (cur !== null && (cur.type === "hymn" || cur.type === "heading")) {
+        cur.type = "hymn";
+        if (text) {
+          cur.texts.push(text);
+          cur.last = i;
+        }
+        continue;
+      }
+      cur = { start: i, last: i, texts: text ? [text] : [], type: "hymn" };
+      out.push(cur);
+      continue;
+    }
+    if (b.kind === "ref" || b.kind === "verse") {
+      if (cur !== null && cur.type === "bible") {
+        if (text) {
+          cur.texts.push(text);
+          cur.last = i;
+        }
+        continue;
+      }
+      cur = { start: i, last: i, texts: text ? [text] : [], type: "bible" };
+      out.push(cur);
+      continue;
+    }
+    if (b.kind === "heading") {
+      if (isSilentHeading(raw)) {
+        cur = null;
+        continue;
+      }
+      cur = { start: i, last: i, texts: text ? [text] : [], type: "heading" };
+      out.push(cur);
+      continue;
+    }
+    cur = { start: i, last: i, texts: text ? [text] : [], type: "single" };
+    out.push(cur);
+  }
+  return out
+    .filter((g) => g.texts.length > 0)
+    .map((g) => ({ start: g.start, last: g.last, text: g.texts.join("\n\n") }));
+};
 
 const ID_BASE = "font-word leading-[1.75] break-words";
 const KO_BASE = "font-gothic text-muted-foreground leading-[1.7] break-words mt-1.5";
@@ -1332,15 +1408,21 @@ const SermonRead = () => {
 
   const blocks: SermonBlock[] = (rec && rec.blocks) || [];
 
-  // 문단 하나짜리 재생과 전체 듣기가 **같은 캐시 키**를 씁니다.
-  // 그래서 이미 들어본 문단은 전체 듣기에서 새로 만들지 않고 그대로 이어 붙입니다.
-  const partKeyOf = (b: SermonBlock, i: number): string =>
-    "sermon:" + String(id) + ":" + String(i) + ":" + hashText(b.id);
+  // 읽기 묶음. 한 줄짜리 묶음의 캐시 키는 예전과 같아서 이미 만든 음성을 그대로 씁니다.
+  // (성경 묶음·찬양 묶음만 글이 합쳐지므로 새로 만듭니다)
+  const audioGroups = buildAudioGroups(blocks);
 
-  const audioParts: TtsPart[] = blocks
-    .map((b, i) => ({ b: b, i: i }))
-    .filter((x) => canReadBlock(x.b))
-    .map((x) => ({ key: partKeyOf(x.b, x.i), text: x.b.id }));
+  const groupKeyOf = (g: AudioGroup): string =>
+    "sermon:" + String(id) + ":" + String(g.start) + ":" + hashText(g.text);
+
+  // 전체 듣기 = 스피커가 붙은 묶음 전부를 순서대로. 문단 버튼과 같은 캐시 키를 씁니다.
+  const audioParts: TtsPart[] = audioGroups.map((g) => ({ key: groupKeyOf(g), text: g.text }));
+
+  // 줄 번호 → 그 줄 끝에 붙일 스피커
+  const speakerAt: Record<number, TtsPart> = {};
+  audioGroups.forEach((g) => {
+    speakerAt[g.last] = { key: groupKeyOf(g), text: g.text };
+  });
 
   const allKey = "sermon-all:" + String(id);
   const allMine = ttsKey === allKey;
@@ -1426,9 +1508,7 @@ const SermonRead = () => {
         {b.id ? (
           <p className={st.idClass} style={{ fontSize: st.idSize }}>
             {renderTokens(b.id, "w" + i + "-")}
-            {canReadBlock(b)
-              ? renderSpeaker(partKeyOf(b, i), [{ key: partKeyOf(b, i), text: b.id }])
-              : null}
+            {speakerAt[i] ? renderSpeaker(speakerAt[i].key, [speakerAt[i]]) : null}
           </p>
         ) : null}
         {b.ko ? (
