@@ -10,8 +10,8 @@ import {
   fetchRegisteredIds,
   isValidMedaliId,
   optOutMedali,
-  pushMyMedali,
   setMyMedaliId,
+  syncMedali,
 } from "@/lib/medaliSync";
 
 interface Props {
@@ -68,25 +68,28 @@ export default function MedaliIdDialog({ open, onDone }: Props) {
 
   const trimmed = value.trim();
   const formatOk = isValidMedaliId(trimmed);
+  // 내 다른 기기(세컨폰·태블릿)는 같은 이름을 써야 점수가 합쳐지므로 중복을 막지 않습니다.
+  // 대신 이미 있는 이름이면 한 줄 알려 주어, 짝꿍 이름을 잘못 고르는 것만 막습니다.
   const isTaken =
     formatOk && taken.some((t) => (t || "").trim().toLowerCase() === trimmed.toLowerCase());
-  const canSubmit = formatOk && !isTaken;
+  const canSubmit = formatOk;
 
   const hint = !trimmed
     ? ""
     : !formatOk
       ? "한글·영문·숫자만, 6자 이내로 적어주세요."
       : isTaken
-        ? "이미 있는 이름이에요. 다른 이름으로 해주세요."
+        ? "이미 등록된 이름이에요. 내 다른 기기면 그대로 시작하세요."
         : "";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
     setMyMedaliId(trimmed);
-    // 팝업이 먼저 닫히고, 올리는 일은 뒤에서 알아서 끝냅니다
+    // 팝업이 먼저 닫히고, 주고받는 일은 뒤에서 알아서 끝냅니다.
+    // syncMedali는 다른 기기 점수를 먼저 받아오므로, 새 기기에서도 바로 합산 점수가 보입니다.
     onDone();
-    pushMyMedali(true).catch(() => {});
+    syncMedali(true).catch(() => {});
   };
 
   return (
@@ -142,12 +145,24 @@ export default function MedaliIdDialog({ open, onDone }: Props) {
 
             {/* 안내 한 줄 — 자리는 늘 잡아 두어 입력 중 화면이 튀지 않게 합니다 */}
             <p className="mt-2 min-h-4 font-gothic text-[0.6875rem] leading-tight text-muted-foreground">
-              {hint ? (
-                <span className="text-destructive">{hint}</span>
-              ) : taken.length > 0 ? (
-                <span>먼저 등록한 사람: {taken.join(", ")}</span>
-              ) : null}
+              {hint ? <span className={isTaken ? "" : "text-destructive"}>{hint}</span> : null}
             </p>
+
+            {/* 이름을 눌러 그대로 넣을 수 있습니다 — 내 다른 기기에서 오타 없이 같은 이름을 쓰는 길입니다 */}
+            {taken.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {taken.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setValue(t)}
+                    className="rounded-full border border-border bg-muted px-3 py-1 font-gothic text-[0.6875rem] text-foreground"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <button
               type="submit"
