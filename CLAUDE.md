@@ -9,6 +9,7 @@
 3. 단어장(`data/categories/*.csv`) 관련 작업이면 **`data/WORDLIST-PLAN.md`를 먼저 읽는다.** 목표 개수·CSV 형식·분류 원칙이 거기 있다.
 4. 사용자는 **목회를 하며 주로 폰에서** 작업을 확인한다. 코드베이스를 직접 읽지 않으므로, 보고는 무엇이 어떻게 바뀌었는지 한국어로 분명하게 쓴다.
 5. 규칙끼리 충돌하거나 판단이 갈리면 **임의로 정하지 말고 먼저 묻는다.**
+6. **작업을 시작하기 전에 `node scripts/csv-to-seed.js` 를 한 번 돌린다.** `src/data/seed.json` 은 저장소에 없는 생성 파일(`.gitignore` 대상)이라, 만들지 않으면 `npx tsc --noEmit` 과 `npm run dev` 가 모듈을 찾지 못해 실패한다.
 
 | 항목 | 값 |
 |---|---|
@@ -49,7 +50,11 @@
 - **이미지를 localStorage에 저장 금지** — 5~10MB 한도라 단어장 데이터까지 깨짐. IndexedDB를 쓸 것
 - **YAML 안 Java 코드에서 큰따옴표 이스케이프(`\"`) 금지**
 - **필터된 목록에서 인덱스 기반 순서 이동 금지** — ID 기반 함수를 쓸 것
-- **`src/data/seed.json` 커밋 금지** — CI가 매 빌드 재생성하는 산출물
+- **`src/data/seed.json` 커밋 금지** — CSV에서 매 빌드 재생성되는 산출물이며 `.gitignore` 대상이다.
+  강제로 되살리지 말 것(`git add -f` 금지). 추적 중이던 때는 빌드할 때마다 3만 줄이 변경으로
+  잡혀 커밋에 딸려 들어갈 뻔한 전례가 있다
+- **`git add -A` / `git commit -a` 금지** — 바꾼 파일을 **경로로 지정해** 담는다(`git add <경로>`).
+  한 번에 담으면 생성 파일이나 걷어내야 할 임시 진단 코드가 조용히 섞인다
 
 ## 필수 패턴
 - 모든 `speechSynthesis` 호출은 optional chaining + try/catch로 감싼다 (WebView에서 `undefined`일 수 있음)
@@ -96,14 +101,15 @@ src/
   main.tsx           엔트리 + 서비스워커 자동 업데이트
   pages/
     Index.tsx          메인화면
-    Dictionary.tsx     사전 (~1,153줄, 최대 파일 — 한 곳만 정밀 수정할 것)
+    Dictionary.tsx     사전 (~1,160줄)
     Story.tsx          이야기
     News.tsx           뉴스
     Devotion.tsx       두란노 QT 묵상
     BibleRead.tsx      성경 읽기 (R2 낭독 스트리밍)
     Prayer.tsx         기도문
     Sermons.tsx        설교문 목록
-    SermonRead.tsx     설교문 읽기 + S펜 필기 (~1,829줄)
+    SermonRead.tsx     설교문 읽기 + S펜 필기 + 문단 듣기
+                       (~2,100줄, **최대 파일** — 한 곳만 정밀 수정할 것)
     IndoMap.tsx        인도네시아 지도 (SVG 85핀)
     Insight*.tsx       인도네시아 이해 허브 + 서브 6개
     PhraseDetail.tsx   오늘의 인도네시아어 문장 상세 (/phrase)
@@ -165,7 +171,7 @@ src/
     fontScale.ts / utils.ts
   hooks/            use-mobile.tsx / use-toast.ts
   data/
-    seed.json       생성 파일 — 커밋 금지
+    seed.json       생성 파일 — `.gitignore` 대상, 커밋 금지 (세션 시작 시 생성)
     percakapan/     기본 회화집 (코드로 들어 있음, 손대지 않음)
   test/             vitest 설정 + 예제
   qtToday.ts        lib/qtToday.ts와 내용이 같은 미사용 사본 — 고칠 때 lib 쪽을 볼 것
@@ -180,7 +186,7 @@ data/WORDLIST-PLAN.md       단어장 목표 개수·형식·분류 원칙
 | 저장소 | 내용 |
 |---|---|
 | localStorage | 단어장/단어, `geminiApiKey`, `app-font-scale-step`, `dict-search-history`(50개), 개인 폴더명, 난이도, TTS 음성, 설교문 서버 설정 |
-| IndexedDB | `kata-dict-images`(5,000 FIFO) · `kata-dict-results`(5,000 FIFO) · `kata-lookup-words` · `kata-stories` · `kata-qt-*` · `kata-sermon` · `kata-sermon-ink` · TTS 캐시(5,000 FIFO) · `kata-sermon-audio`(설교문 낭독, **개수 제한 없음** — 한 편이 수십 MB 라 공용 TTS 캐시와 분리했다) |
+| IndexedDB | `kata-dict-images`(5,000 FIFO) · `kata-dict-results`(5,000 FIFO) · `kata-lookup-words` · `kata-stories` · `kata-qt-*` · `kata-sermon` · `kata-sermon-ink` · `kata-tts-audio`(공용 TTS 캐시, 5,000 FIFO) · `kata-sermon-audio`(설교문 낭독, **개수 제한 없음** — 한 편이 수십 MB 라 공용 TTS 캐시와 분리했다) |
 | GitHub CSV | `data/categories/*.csv` → 빌드 시 seed.json → 모든 기기 기본 단어장 |
 | Cloudflare R2 | 성경 낭독 mp3 1,189장 |
 | Cloudflare KV | 설교문 (Worker 경유) |
