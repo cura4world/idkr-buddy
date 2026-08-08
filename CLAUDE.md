@@ -41,7 +41,10 @@
 - **정규식 리터럴(`/.../`) 금지** — 항상 `new RegExp("...")` 사용 (주입 과정에서 깨짐)
 - **setState 여러 개 + `navigate()` 동시 호출 금지** — 언마운트 중 setState로 WebView가 크래시함. setState 없는 `cancelOperations()` / `teardown()` 패턴을 쓸 것
 - **성경 약어에 `toLowerCase()` 금지** — R2 키는 대소문자를 구분하고 66권 중 룻기만 `RUT`(대문자)라 404가 남
-- **`src/lib/tts.ts` / `src/components/PlayButton.tsx` 수정 금지** — 여러 페이지 공용
+- **`src/components/PlayButton.tsx` 수정 금지** — 여러 페이지 공용
+- **`src/lib/tts.ts` 의 기존 함수·메서드 동작 변경 금지** — 묵상·이야기·기도·회화·사전이
+  모두 이 하나를 쓴다. 새 기능이 필요하면 **추가 전용**으로만 넣는다 (새 메서드, 또는
+  기본값이 있는 선택 매개변수). 설교문 문단 듣기의 `toggleParts` 가 그 예다
 - **`src/lib/bibleAudio.ts`의 `AUDIO_BASE` 변경 금지**
 - **이미지를 localStorage에 저장 금지** — 5~10MB 한도라 단어장 데이터까지 깨짐. IndexedDB를 쓸 것
 - **YAML 안 Java 코드에서 큰따옴표 이스케이프(`\"`) 금지**
@@ -156,7 +159,8 @@ src/
     readingTimer.ts 화면에 보이지 않는 읽기 타이머
     useSwipeFlip.ts 장문 화면 좌우 스와이프로 앞/뒤 넘기기
     wideMode.ts     넓게 보기 (폴더블용 좌우 폭 확장)
-    tts.ts          수정 금지
+    tts.ts          Gemini Cloud TTS 싱글톤. 기존 동작 변경 금지, 추가만 허용
+                    (toggleParts = 문단 여러 개를 이어 붙여 재생, 설교문 듣기용)
     nav.ts          goBackOr / wordbookFallback
     fontScale.ts / utils.ts
   hooks/            use-mobile.tsx / use-toast.ts
@@ -176,7 +180,7 @@ data/WORDLIST-PLAN.md       단어장 목표 개수·형식·분류 원칙
 | 저장소 | 내용 |
 |---|---|
 | localStorage | 단어장/단어, `geminiApiKey`, `app-font-scale-step`, `dict-search-history`(50개), 개인 폴더명, 난이도, TTS 음성, 설교문 서버 설정 |
-| IndexedDB | `kata-dict-images`(5,000 FIFO) · `kata-dict-results`(5,000 FIFO) · `kata-lookup-words` · `kata-stories` · `kata-qt-*` · `kata-sermon` · `kata-sermon-ink` · TTS 캐시(5,000 FIFO) |
+| IndexedDB | `kata-dict-images`(5,000 FIFO) · `kata-dict-results`(5,000 FIFO) · `kata-lookup-words` · `kata-stories` · `kata-qt-*` · `kata-sermon` · `kata-sermon-ink` · TTS 캐시(5,000 FIFO) · `kata-sermon-audio`(설교문 낭독, **개수 제한 없음** — 한 편이 수십 MB 라 공용 TTS 캐시와 분리했다) |
 | GitHub CSV | `data/categories/*.csv` → 빌드 시 seed.json → 모든 기기 기본 단어장 |
 | Cloudflare R2 | 성경 낭독 mp3 1,189장 |
 | Cloudflare KV | 설교문 (Worker 경유) |
@@ -214,6 +218,12 @@ npm run build
   "무엇이 나와야 정상인지"를 먼저 적어 두고 그것과 맞는지 본다.
   - 치환 횟수 (예: 편집 8곳이 각각 1회씩)
   - 호출 개수 (예: 정의 1 + 사용처 2 = 3곳)
+  - **`grep -c` 는 등장 횟수가 아니라 줄 수를 센다.** 한 줄에 같은 이름이 세 번 나오면 1로
+    세어진다. 등장 횟수가 필요하면 `grep -o <말> <파일> | wc -l` 을 쓴다. 기대값을 적을 때도
+    둘 중 어느 쪽인지 밝힌다 (예: "줄 수 4")
+  - **기대값이 어긋나면 코드를 의심하기 전에 세는 단위부터 확인한다.** 실제로 기대값 5,
+    실측 3 이 나온 적이 있는데 편집은 정확했고 기대값이 등장 횟수로 잘못 적혀 있었다.
+    보고할 때 "줄 수 N / 등장 횟수 M" 을 함께 적으면 사용자가 바로 판별할 수 있다
   - **결과가 하나도 없어야 정상인 `grep`을 반드시 하나 넣는다** — 옛 코드·레거시 키가
     남아 있는지 확인하는 용도다. 있어야 할 것만 세면 지우다 만 것을 놓친다
 - **기대값과 다르면 커밋하지 말고 보고한다.** 임의로 맞추거나 그럴듯하게 설명하지 않는다.
@@ -281,6 +291,25 @@ curl -s "https://api.github.com/repos/cura4world/idkr-buddy/actions/runs?per_pag
 후보를 적고, 각각을 어떻게 구분할 수 있는지 적는다. 그리고 후보 전부를 무력화하는
 보수적인 수정(예: 문제 될 조건을 없애고 예전에 검증된 구조로 되돌리기)을 택한 뒤,
 사용자에게 확인해 달라고 부탁할 **관찰 항목 한 가지**를 보고에 남긴다.
+
+**6. 같은 요청을 두 번 고쳤는데도 그대로면, 코드가 아니라 데이터를 의심한다.**
+코드는 저장된 데이터가 어떤 모양일 것이라고 **가정**한다. 그 가정이 틀리면 로직을
+아무리 고쳐도 증상이 그대로다. 종류를 나타내는 값(`kind`·타입·플래그)은 특히 위험하다 —
+이름이 그럴듯해서 확인 없이 믿게 된다.
+
+(실제 사례: 설교문에서 "성경 장절 + 성경 본문"을 한 묶음으로 묶는 작업. `ref` 와 `verse`
+를 묶도록 두 번 고쳤는데 장절 줄에 스피커가 계속 따로 붙었다. 화면에 블록 종류를 찍어 보니
+장절 줄이 `ref` 가 아니라 **`heading`** 으로 저장돼 있었다. 코드는 처음부터 맞았고
+데이터가 달랐다.)
+
+- **두 번째 수정에 들어가기 전에 멈추고, 실제 데이터를 먼저 눈으로 본다.** 세 번째 수정을
+  시도하는 것은 금지다
+- 폰에서만 볼 수 있는 데이터라면 3번의 일시 진단 장치를 쓴다. `toast` 말고 **각 항목 옆에
+  종류·판정 결과를 작게 찍는 방식**이 목록형 데이터에는 더 빠르다
+  (예: `[7] verse · id:O ko:O · SPK`). 확인이 끝나면 코드째 걷어낸다
+- 데이터가 가정과 다르면 **데이터를 고치려 하기 전에 판별 조건을 데이터에 맞춘다.**
+  이미 저장된 설교문·단어장을 다시 만들 수는 없다. 종류 값만 믿지 말고
+  글 모양으로도 알아보는 보조 판별을 함께 둔다 (예: 장절은 "숫자:숫자" 모양)
 
 ## 완료 정의
 
