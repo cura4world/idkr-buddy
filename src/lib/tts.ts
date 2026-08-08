@@ -8,6 +8,14 @@
 import { getGeminiApiKey } from "@/lib/gemini";
 
 const TTS_MODEL = "gemini-3.1-flash-tts-preview";
+// 설교문 전용 — 값싼 모델을 먼저 시도하고, 실패하면 기본 모델로 넘어갑니다.
+// (2.5 Flash Preview TTS 는 출력 단가가 3.1 의 절반입니다)
+const SERMON_TTS_MODELS = ["gemini-2.5-flash-preview-tts", TTS_MODEL];
+export function sermonTtsModels(): string[] { return SERMON_TTS_MODELS.slice(); }
+
+// 설교문 오디오는 한 편이 수십 MB 라 기존 캐시(개수 5,000 FIFO)와 섞으면
+// 회화·묵상 음성을 밀어냅니다. 그래서 저장소를 따로 두고 개수 제한을 두지 않습니다.
+const SERMON_DB_NAME = "kata-sermon-audio";
 const VOICE_STORAGE = "tts-voice";
 const DB_NAME = "kata-tts-audio";
 const STORE = "audio";
@@ -125,6 +133,75 @@ export async function clearTtsCache(): Promise<void> {
   } catch {}
 }
 
+// ── 설교문 전용 오디오 저장소 (개수 제한 없음) ─────────────────
+// 기존 캐시와 DB 를 나눠 두어 서로 밀어내지 않습니다.
+let sermonDbPromise: Promise<IDBDatabase> | null = null;
+function openSermonDB(): Promise<IDBDatabase> {
+  if (sermonDbPromise) return sermonDbPromise;
+  sermonDbPromise = new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") { reject(new Error("NO_INDEXEDDB")); return; }
+    const req = indexedDB.open(SERMON_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        const store = db.createObjectStore(STORE, { keyPath: "key" });
+        store.createIndex("savedAt", "savedAt", { unique: false });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error("DB_OPEN_FAILED"));
+  });
+  return sermonDbPromise;
+}
+
+async function getSermonAudio(key: string): Promise<string | null> {
+  try {
+    const db = await openSermonDB();
+    return await new Promise((resolve) => {
+      const tx = db.transaction(STORE, "readonly");
+      const req = tx.objectStore(STORE).get(key);
+      req.onsuccess = () => resolve(req.result ? (req.result.dataUrl as string) : null);
+      req.onerror = () => resolve(null);
+    });
+  } catch { return null; }
+}
+
+async function saveSermonAudio(key: string, dataUrl: string): Promise<void> {
+  try {
+    const db = await openSermonDB();
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put({ key, dataUrl, savedAt: Date.now() });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch {}
+}
+
+export async function clearSermonAudioCache(): Promise<void> {
+  try {
+    const db = await openSermonDB();
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch {}
+}
+
+export async function countSermonAudio(): Promise<number> {
+  try {
+    const db = await openSermonDB();
+    return await new Promise((resolve) => {
+      const tx = db.transaction(STORE, "readonly");
+      const req = tx.objectStore(STORE).count();
+      req.onsuccess = () => resolve(req.result || 0);
+      req.onerror = () => resolve(0);
+    });
+  } catch { return 0; }
+}
+
 // ── PCM(base64) → WAV(base64 data URL) ─────────────────────────
 function pcmBase64ToWavDataUrl(pcmB64: string): string {
   const binary = atob(pcmB64);
@@ -165,7 +242,7 @@ function pcmBase64ToWavDataUrl(pcmB64: string): string {
 }
 
 // ── Gemini TTS 호출 (문단 1개) ─────────────────────────────────
-async function generateAudioForText(text: string, voiceName: string, attempt = 0): Promise<string> {
+async function generateAudioForText(text: string, voiceName: string, attempt = 0, model: string = TTS_MODEL): Promise<string> {
   const apiKey = getGeminiApiKey();
   if (!apiKey) throw new Error("NO_API_KEY");
 
@@ -175,7 +252,7 @@ async function generateAudioForText(text: string, voiceName: string, attempt = 0
     "Read only the text after the colon, do not read these instructions.\n\n: " + text;
 
   const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/" + TTS_MODEL +
+    "https://generativelanguage.googleapis.com/v1beta/models/" + model +
     ":generateContent?key=" + encodeURIComponent(apiKey);
 
   let res: Response;
@@ -199,7 +276,7 @@ async function generateAudioForText(text: string, voiceName: string, attempt = 0
 
   if (!res.ok) {
     // 500은 가끔 오디오 대신 텍스트 토큰을 반환하는 알려진 이슈 → 1회 재시도
-    if (res.status === 500 && attempt < 1) return generateAudioForText(text, voiceName, attempt + 1);
+    if (res.status === 500 && attempt < 1) return generateAudioForText(text, voiceName, attempt + 1, model);
     if (res.status === 400 || res.status === 403) throw new Error("INVALID_API_KEY");
     if (res.status === 429) throw new Error("RATE_LIMIT");
     throw new Error("REQUEST_FAILED_" + res.status);
@@ -208,7 +285,7 @@ async function generateAudioForText(text: string, voiceName: string, attempt = 0
   const data = await res.json();
   const b64: string = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ?? "";
   if (!b64) {
-    if (attempt < 1) return generateAudioForText(text, voiceName, attempt + 1);
+    if (attempt < 1) return generateAudioForText(text, voiceName, attempt + 1, model);
     throw new Error("EMPTY_AUDIO");
   }
   return pcmBase64ToWavDataUrl(b64);
@@ -249,6 +326,18 @@ function speakFallback(text: string) {
 
 // ── 플레이어 (전역 단일 인스턴스) ───────────────────────────────
 export type TtsState = "idle" | "loading" | "playing" | "paused";
+
+// 문단 단위 재생용. 문단마다 자기 캐시 키를 들고 다니므로,
+// "문단 하나 듣기"와 "전체 듣기"가 같은 오디오를 공유합니다.
+export interface TtsPart {
+  key: string;   // 캐시 키 (음성 이름은 내부에서 덧붙입니다)
+  text: string;  // 읽을 인니어 문단
+}
+
+export interface TtsPartsOptions {
+  models?: string[];                 // 앞에서부터 시도, 실패하면 다음 모델
+  onError?: (msg: string) => void;   // 생성 실패 알림 (무료 폴백은 쓰지 않습니다)
+}
 
 interface PlayerSnapshot {
   state: TtsState;
@@ -302,6 +391,83 @@ class TtsPlayer {
       if (this.snap.state === "paused") { this.resume(); return; }
     }
     await this.play(key, text);
+  }
+
+  // ── 문단 이어 붙이기 재생 (설교문) ───────────────────────────
+  // 기존 toggle/play 와 별개의 진입점입니다. 기존 경로는 건드리지 않습니다.
+  // 전부 만들 때까지 기다리지 않고, 첫 문단이 준비되면 바로 재생하면서
+  // 다음 문단을 미리 준비합니다.
+  async toggleParts(stateKey: string, parts: TtsPart[], opts?: TtsPartsOptions) {
+    if (this.snap.key === stateKey) {
+      if (this.snap.state === "playing") { this.pause(); return; }
+      if (this.snap.state === "paused") { this.resume(); return; }
+    }
+    await this.playParts(stateKey, parts, opts);
+  }
+
+  async playParts(stateKey: string, parts: TtsPart[], opts?: TtsPartsOptions) {
+    this.stop();
+    if (!parts || parts.length === 0) return;
+    const myToken = ++this.token;
+    this.emit({ state: "loading", key: stateKey, usedFallback: false });
+
+    const voiceName = voiceNameOf(getTtsVoice());
+    const models = opts && opts.models && opts.models.length ? opts.models : [TTS_MODEL];
+    const urls: (string | null)[] = parts.map(() => null);
+
+    const ensure = async (i: number): Promise<string> => {
+      const have = urls[i];
+      if (have) return have;
+      const ckey = parts[i].key + "::v=" + voiceName;
+      let url = await getSermonAudio(ckey);
+      if (!url) {
+        let lastErr: any = null;
+        for (const m of models) {
+          try {
+            url = await generateAudioForText(parts[i].text, voiceName, 0, m);
+            lastErr = null;
+            break;
+          } catch (e) {
+            lastErr = e;
+          }
+        }
+        if (!url) throw lastErr || new Error("TTS_FAILED");
+        await saveSermonAudio(ckey, url);
+      }
+      urls[i] = url;
+      return url;
+    };
+
+    const step = async (i: number) => {
+      if (myToken !== this.token) return;
+      if (i >= parts.length) { this.audio = null; this.emit({ state: "idle" }); return; }
+      let url = urls[i];
+      if (!url) {
+        this.emit({ state: "loading" });
+        try {
+          url = await ensure(i);
+        } catch (e) {
+          if (myToken !== this.token) return;
+          this.stop();
+          if (opts && opts.onError) opts.onError(String((e as any) && (e as any).message ? (e as any).message : e));
+          return;
+        }
+      }
+      if (myToken !== this.token) return;
+      const audio = new Audio(url);
+      this.audio = audio;
+      audio.onended = () => { if (myToken === this.token) step(i + 1); };
+      audio.onerror = () => { if (myToken === this.token) step(i + 1); };
+      audio.play()
+        .then(() => {
+          if (myToken !== this.token) return;
+          this.emit({ state: "playing" });
+          if (i + 1 < parts.length && !urls[i + 1]) { ensure(i + 1).catch(() => {}); }
+        })
+        .catch(() => { if (myToken === this.token) this.stop(); });
+    };
+
+    await step(0);
   }
 
   private async play(key: string, text: string) {
