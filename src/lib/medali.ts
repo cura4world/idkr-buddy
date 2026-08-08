@@ -255,6 +255,69 @@ function saveMedaliCache(c: MedaliCache): void {
   }
 }
 
+// ── 다른 기기 몫 (medaliSync가 서버에서 받아 여기에 적어 둔다) ─────
+// 이 파일은 medaliSync를 import 하지 않는다(순환 방지). localStorage 한 칸으로만 주고받는다.
+export const OTHERS_KEY = "medali-others";
+
+export interface OthersDay {
+  points: Partial<Record<ApiCategory, number>>;
+  usageMs: number;
+}
+
+export interface OthersLogs {
+  byDate: Record<string, OthersDay>;
+  confirmedMax: number;
+  savedAt: number;
+}
+
+const EMPTY_OTHERS: OthersLogs = { byDate: {}, confirmedMax: 0, savedAt: 0 };
+
+export function loadOthers(): OthersLogs {
+  try {
+    const raw = localStorage.getItem(OTHERS_KEY);
+    if (!raw) return { ...EMPTY_OTHERS, byDate: {} };
+    const p = JSON.parse(raw) as Partial<OthersLogs>;
+    const byDate = p && p.byDate && typeof p.byDate === "object" ? p.byDate : {};
+    return {
+      byDate: byDate as Record<string, OthersDay>,
+      confirmedMax: num(p ? p.confirmedMax : 0),
+      savedAt: num(p ? p.savedAt : 0),
+    };
+  } catch {
+    return { ...EMPTY_OTHERS, byDate: {} };
+  }
+}
+
+export function saveOthers(o: OthersLogs): void {
+  try {
+    localStorage.setItem(OTHERS_KEY, JSON.stringify(o));
+  } catch {
+    // 저장 실패해도 이번 실행 동안은 화면이 동작한다 (다음 동기화에서 다시 받는다)
+  }
+}
+
+// 내 로그 한 날치와 다른 기기 몫을 합치고 카테고리별 하루 상한을 적용한다.
+// 상한을 "합친 뒤에" 거는 것이 핵심 — 세 기기에 나눠 해도 하루 한도는 그대로다.
+export function mergeDay(mine: DailyLog | null, others: OthersLogs, date: string): DailyLog {
+  const o = others.byDate[date] || null;
+  const mp = (mine && mine.points) || {};
+  const op = (o && o.points) || {};
+
+  const points: Partial<Record<ApiCategory, number>> = {};
+  let total = 0;
+  for (const key of Object.keys(DAILY_CAPS)) {
+    const c = key as ApiCategory;
+    const sum = (mp[c] || 0) + (op[c] || 0);
+    if (sum <= 0) continue;
+    const capped = Math.min(sum, DAILY_CAPS[c]);
+    points[c] = capped;
+    total += capped;
+  }
+
+  const usageMs = ((mine && mine.usageMs) || 0) + ((o && o.usageMs) || 0);
+  return { date, points, total, usageMs };
+}
+
 // ── 엔진 스냅샷 ───────────────────────────────────────────────────
 export interface MedaliSnapshot {
   apiColor: MedaliColor;
@@ -334,17 +397,27 @@ class MedaliEngine {
   // ── Api: 이번 주 점수 + streak 재계산 ───────────────────────────
   private async recomputeApi(): Promise<void> {
     const logs = await getAll<DailyLog>(STORE_DAILY);
+    const others = loadOthers();
     const now = new Date();
     const from = dateKey(mondayOf(now));
     const today = dateKey(now);
 
-    let week = 0;
-    const scored = new Set<string>();
+    // 내 날짜 + 다른 기기 날짜를 한 벌로 모아, 날짜마다 합산 후 상한을 적용한다.
+    const mineByDate: Record<string, DailyLog> = {};
+    const dates = new Set<string>();
     for (const l of logs) {
       if (!l || typeof l.date !== "string") continue;
-      const total = typeof l.total === "number" ? l.total : 0;
-      if (total > 0) scored.add(l.date);
-      if (l.date >= from && l.date <= today) week += total;
+      mineByDate[l.date] = l;
+      dates.add(l.date);
+    }
+    for (const d of Object.keys(others.byDate)) dates.add(d);
+
+    let week = 0;
+    const scored = new Set<string>();
+    for (const date of dates) {
+      const merged = mergeDay(mineByDate[date] || null, others, date);
+      if (merged.total > 0) scored.add(date);
+      if (date >= from && date <= today) week += merged.total;
     }
 
     this.emit({
@@ -364,6 +437,11 @@ class MedaliEngine {
     for (const w of words) {
       if (w && (w.status === "confirmed" || w.status === "recheck" || w.status === "monitoring")) count++;
     }
+    // 별은 아직 기기별로 합치지 않는다(단어 상태가 순서에 의존해서 단순 합산이 불가능하다).
+    // 다른 기기가 올린 확정 수가 더 크면 그 값을 쓴다 — 세컨폰에서 별이 작아 보이지 않게 하는 조치.
+    const othersMax = loadOthers().confirmedMax;
+    if (othersMax > count) count = othersMax;
+
     const b = bintangFor(count);
     this.emit({ confirmedCount: count, bintangColor: b.color, bintangTier: b.tier });
     this.syncCache();
@@ -382,11 +460,16 @@ class MedaliEngine {
         (await getOne<DailyLog>(STORE_DAILY, key)) || { date: key, points: {}, total: 0 };
       if (!log.points) log.points = {};
 
-      const had = log.points[category] || 0;
+      // 상한은 기기 합산 기준이다. 다른 기기 몫은 서버에서 받아 둔 값을 쓴다.
+      // (오프라인이라 못 받은 동안은 잠시 느슨해지고, 다음 동기화 때 합산+상한으로 맞춰진다)
+      const othersToday = loadOthers().byDate[key] || null;
+      const had =
+        (log.points[category] || 0) + ((othersToday && othersToday.points[category]) || 0);
       const gain = Math.min(amount, cap - had);
       if (gain <= 0) return 0;
 
-      log.points[category] = had + gain;
+      // 저장은 "내 기기 몫"만 — had에 섞인 다른 기기 몫을 여기 더하면 다음 업로드 때 부풀어 오른다
+      log.points[category] = (log.points[category] || 0) + gain;
       let total = 0;
       for (const k of Object.keys(log.points)) {
         total += log.points[k as ApiCategory] || 0;
@@ -548,12 +631,57 @@ export async function listWordRecords(): Promise<WordRecord[]> {
 export async function listWeekLogs(): Promise<DailyLog[]> {
   try {
     const from = dateKey(mondayOf(new Date()));
+    const others = loadOthers();
+    const all = await getAll<DailyLog>(STORE_DAILY);
+
+    const mineByDate: Record<string, DailyLog> = {};
+    const dates = new Set<string>();
+    for (const l of all) {
+      if (!l || typeof l.date !== "string" || l.date < from) continue;
+      mineByDate[l.date] = l;
+      dates.add(l.date);
+    }
+    for (const d of Object.keys(others.byDate)) {
+      if (d >= from) dates.add(d);
+    }
+
+    return Array.from(dates)
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+      .map((d) => mergeDay(mineByDate[d] || null, others, d));
+  } catch {
+    return [];
+  }
+}
+
+// 서버에 올릴 "내 기기가 번 점수" 원본. 합산본(listWeekLogs)과 달리 다른 기기 몫이
+// 절대 섞이면 안 된다 — 섞으면 다음 업로드 때 서로 부풀린다.
+export async function listMyRawLogs(days: number): Promise<DailyLog[]> {
+  try {
+    const back = days > 0 ? days : 60;
+    const floor = new Date();
+    floor.setDate(floor.getDate() - back);
+    const from = dateKey(floor);
     const all = await getAll<DailyLog>(STORE_DAILY);
     return all
       .filter((l) => l && typeof l.date === "string" && l.date >= from)
-      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      .sort((a, b) => (a.date < b.date ? 1 : -1));
   } catch {
     return [];
+  }
+}
+
+// 서버에 올릴 "내 기기의 확정 단어 수". 스냅샷(getSummary)의 값은 다른 기기 최댓값이
+// 이미 섞여 있으므로 업로드에 쓰면 낡은 값이 서로를 붙잡는다.
+export async function countMyConfirmed(): Promise<number> {
+  try {
+    const words = await getAll<WordRecord>(STORE_WORDS);
+    let n = 0;
+    for (const w of words) {
+      if (w && (w.status === "confirmed" || w.status === "recheck" || w.status === "monitoring")) n++;
+    }
+    return n;
+  } catch {
+    return 0;
   }
 }
 
