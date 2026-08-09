@@ -221,6 +221,7 @@ jobs:
           import android.os.Build;
           import android.os.Bundle;
           import android.speech.tts.TextToSpeech;
+          import android.view.MotionEvent;
           import android.view.WindowManager;
           import android.webkit.JavascriptInterface;
           import android.webkit.PermissionRequest;
@@ -386,6 +387,44 @@ jobs:
                       webView.loadUrl("https://cura4world.github.io/idkr-buddy/");
                   }
                   setContentView(webView);
+              }
+
+              // ── S펜 옆 버튼 ────────────────────────────────────────
+              // 웹뷰는 옆 버튼 상태를 웹 페이지에 넘기지 않습니다(탭에서 확인).
+              // 네이티브에서 읽어 웹으로 알려 줍니다. 상태가 바뀔 때만 부르므로
+              // 매 터치마다 자바스크립트를 실행하지 않습니다.
+              private boolean penButtonDown = false;
+
+              private void reportPenButton(MotionEvent ev) {
+                  if (ev == null || webView == null) return;
+                  if (ev.getToolType(0) != MotionEvent.TOOL_TYPE_STYLUS) return;
+                  int mask = MotionEvent.BUTTON_STYLUS_PRIMARY
+                          | MotionEvent.BUTTON_STYLUS_SECONDARY
+                          | MotionEvent.BUTTON_SECONDARY;
+                  final boolean down = (ev.getButtonState() & mask) != 0;
+                  if (down == penButtonDown) return;
+                  penButtonDown = down;
+                  final String js = "window.__penBtn && window.__penBtn(" + (down ? "true" : "false") + ")";
+                  runOnUiThread(new Runnable() {
+                      @Override
+                      public void run() {
+                          if (webView != null) {
+                              webView.evaluateJavascript(js, null);
+                          }
+                      }
+                  });
+              }
+
+              @Override
+              public boolean dispatchTouchEvent(MotionEvent ev) {
+                  reportPenButton(ev);
+                  return super.dispatchTouchEvent(ev);
+              }
+
+              @Override
+              public boolean dispatchGenericMotionEvent(MotionEvent ev) {
+                  reportPenButton(ev);
+                  return super.dispatchGenericMotionEvent(ev);
               }
 
               @Override
