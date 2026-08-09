@@ -289,7 +289,12 @@ const HL_ALPHA = 0.45;
 const TOOL_KEY = "sermon-ink-tool";
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-// ── 임시 진단 (S펜 옆 버튼이 어떤 값으로 올라오는지 확인용) ────────
+// ── S펜 옆 버튼 ────────────────────────────────────────────────
+// 삼성 웹뷰는 옆 버튼을 웹 페이지에 전혀 넘기지 않습니다(pointer buttons·호버·키 모두 0,
+// 탭에서 세 판에 걸쳐 확인). 그래서 APK 의 네이티브 쪽에서 읽어 window.__penBtn 으로
+// 알려 주고, 여기서는 그 값을 봅니다.
+const penButton = { down: false, count: 0 };
+
 // 확인이 끝나면 이 상수와 화면 표시 코드를 함께 걷어냅니다.
 const DEBUG_PEN = true;
 
@@ -805,6 +810,21 @@ const SermonRead = () => {
     };
   }, []);
 
+  // 네이티브(APK)가 S펜 옆 버튼 상태를 알려주는 창구입니다.
+  // 웹뷰가 이 신호를 pointer 이벤트에 싣지 않아 네이티브를 거칩니다.
+  useEffect(() => {
+    (window as any).__penBtn = (on: boolean) => {
+      penButton.down = !!on;
+      penButton.count = penButton.count + 1;
+      if (DEBUG_PEN) {
+        setPenDbg("펜버튼 " + (on ? "ON" : "off") + " (" + penButton.count + "회)");
+      }
+    };
+    return () => {
+      (window as any).__penBtn = undefined;
+    };
+  }, []);
+
   const playParts = (stateKey: string, parts: TtsPart[]) => {
     if (!parts || parts.length === 0) return;
     ttsPlayer.toggleParts(stateKey, parts, {
@@ -1183,13 +1203,6 @@ const SermonRead = () => {
     let smoothP = 0.5;
     let strokeTool: "pen" | "hl" = "pen";
     let activeId = -1;
-    // S펜 옆 버튼은 buttons 에 실려 오지 않고 contextmenu 로 옵니다 (탭 진단으로 확인).
-    // 눌린 시각을 적어 두고, 그 직후에 닿은 획은 지우개로 봅니다.
-    let ctxAt = 0;
-    let downAt = 0;
-    // 옆 버튼 신호가 획이 끝난 뒤에 오는 경우를 대비해, 방금 끝난 획을 기억해 둡니다.
-    let lastStroke: { g: SVGGElement | null; pts: number[]; at: number; newGroup: boolean } | null = null;
-    let strokeNewGroup = false;
 
     // pointercancel 로 끊긴 획 이어붙이기용
     let resumeG: SVGGElement | null = null;
@@ -1227,7 +1240,6 @@ const SermonRead = () => {
       const dy = y - resumeY;
       const canResume =
         !!resumeG && now - resumeT < 250 && dx * dx + dy * dy < 900;
-      strokeNewGroup = !canResume;
       if (canResume && resumeG) {
         group = resumeG; // 같은 획으로 이어붙임
       } else {
@@ -1280,10 +1292,6 @@ const SermonRead = () => {
     };
 
     const endStroke = () => {
-      lastStroke =
-        group && pts.length >= 2
-          ? { g: group, pts: pts.slice(), at: Date.now(), newGroup: strokeNewGroup }
-          : null;
       drawing = false;
       group = null;
       chunk = null;
@@ -1293,15 +1301,6 @@ const SermonRead = () => {
       scheduleInkSave();
     };
 
-    // ── 임시 진단 2판 — 옆 버튼 신호가 어디까지 오는지 ──────────
-    // D=펜 닿는 순간 / M=긋는 동안 최대 / H=허공에 띄운 채(호버) 최대
-    // ctx=오른쪽클릭 이벤트 수 / key=키 이벤트로 오는지
-    const dbg = { down: "-", move: 0, hover: 0, ctx: 0, key: "-", when: "-" };
-    const showDbg = () => {
-      if (!DEBUG_PEN) return;
-      setPenDbg("D " + dbg.down + " M:" + dbg.move + " ctx:" + dbg.ctx + " W:" + dbg.when + " key:" + dbg.key);
-    };
-
     const onDown = (e: PointerEvent) => {
       // ④ 손가락은 스크롤 전용
       if (e.pointerType !== "pen") return;
@@ -1309,7 +1308,6 @@ const SermonRead = () => {
       if (hideBarRef.current) hideBarRef.current(); // 펜이 닿으면 도구막대를 접습니다 (ref 경유 — 의존성 그대로)
       e.preventDefault();
       activeId = e.pointerId;
-      downAt = Date.now();
       try {
         surface.setPointerCapture(e.pointerId);
       } catch (err) {}
@@ -1318,15 +1316,9 @@ const SermonRead = () => {
       // 기기·웹뷰에 따라 옆 버튼이 barrel(2) 로도 eraser(32) 로도 올라오므로 둘 다 받습니다.
       const useEraser =
         eraserRef.current ||
+        penButton.down ||
         (e.buttons & 32) !== 0 ||
-        (e.buttons & 2) !== 0 ||
-        Date.now() - ctxAt < 250;
-      ctxAt = 0;
-      if (DEBUG_PEN) {
-        dbg.down = e.button + "/" + e.buttons + (useEraser ? "→지움" : "→펜");
-        dbg.move = 0;
-        showDbg();
-      }
+        (e.buttons & 2) !== 0;
       if (useEraser) {
         erasing = true;
         eraseAt(pt.x, pt.y);
@@ -1338,10 +1330,6 @@ const SermonRead = () => {
 
     const onMove = (e: PointerEvent) => {
       if (e.pointerType === "pen") markPen();
-      if (DEBUG_PEN && e.pointerType === "pen" && e.buttons > dbg.move) {
-        dbg.move = e.buttons;
-        showDbg();
-      }
       if (!drawing && !erasing) return;
       if (e.pointerId !== activeId) return;
       e.preventDefault();
@@ -1441,58 +1429,7 @@ const SermonRead = () => {
         markPen();
         lastPenX = e.clientX;
         lastPenY = e.clientY;
-        if (DEBUG_PEN && e.buttons > dbg.hover) {
-          dbg.hover = e.buttons;
-          showDbg();
-        }
       }
-    };
-
-    // S펜 옆 버튼. 삼성 웹뷰는 이것을 pointer 의 buttons 가 아니라
-    // contextmenu 로 보냅니다. 획이 이미 시작된 뒤에 오므로, 방금 그은 것을
-    // 물리고 지우개로 갈아탑니다.
-    const onPenCtx = (e: Event) => {
-      e.preventDefault();
-      ctxAt = Date.now();
-      if (DEBUG_PEN) {
-        dbg.ctx = dbg.ctx + 1;
-        dbg.when =
-          (drawing ? "그리는중" : erasing ? "지우는중" : "쉼") +
-          "+" + String(Date.now() - downAt) + "ms";
-        showDbg();
-      }
-      if (!drawing) {
-        // 신호가 획이 끝난 뒤에 도착한 경우 — 방금 그은 획을 물리고 그 자리를 지웁니다.
-        if (lastStroke && Date.now() - lastStroke.at < 1500) {
-          const ls = lastStroke;
-          lastStroke = null;
-          if (ls.newGroup && ls.g && ls.g.parentNode) ls.g.parentNode.removeChild(ls.g);
-          for (let i = 0; i + 1 < ls.pts.length; i += 2) eraseAt(ls.pts[i], ls.pts[i + 1]);
-          resumeG = null;
-          inkTouchedRef.current = true;
-          setHasInk(!!layer.firstElementChild);
-          scheduleInkSave();
-        }
-        return;
-      }
-      const lx = pts.length >= 2 ? pts[pts.length - 2] : -1;
-      const ly = pts.length >= 2 ? pts[pts.length - 1] : -1;
-      // 이어붙이던 획이면 그룹째 지우면 안 됩니다 (앞서 쓴 글씨가 딸려 갑니다).
-      if (strokeNewGroup && group && group.parentNode) group.parentNode.removeChild(group);
-      else if (chunk && chunk.parentNode) chunk.parentNode.removeChild(chunk);
-      group = null;
-      chunk = null;
-      pts = [];
-      drawing = false;
-      resumeG = null;
-      erasing = true;
-      if (lx >= 0) eraseAt(lx, ly);
-    };
-
-    const onDbgKey = (e: KeyboardEvent) => {
-      if (!DEBUG_PEN) return;
-      dbg.key = String(e.keyCode) + "/" + (e.key || "?");
-      showDbg();
     };
 
     surface.addEventListener("pointerdown", onDown, { passive: false });
@@ -1503,8 +1440,6 @@ const SermonRead = () => {
     document.addEventListener("touchmove", onTouchMove, { passive: false });
     document.addEventListener("pointermove", onDocPointerMove, { passive: true });
     document.addEventListener("pointerover", onDocPointerMove, { passive: true });
-    document.addEventListener("contextmenu", onPenCtx);
-    window.addEventListener("keydown", onDbgKey);
 
     return () => {
       surface.removeEventListener("pointerdown", onDown);
@@ -1515,8 +1450,6 @@ const SermonRead = () => {
       document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("pointermove", onDocPointerMove);
       document.removeEventListener("pointerover", onDocPointerMove);
-      document.removeEventListener("contextmenu", onPenCtx);
-      window.removeEventListener("keydown", onDbgKey);
       if (penTimer !== null) window.clearTimeout(penTimer);
     };
   }, [inkMode]);
@@ -1639,7 +1572,7 @@ const SermonRead = () => {
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       {DEBUG_PEN && inkMode ? (
         <div className="fixed left-2 bottom-2 z-[60] px-2 py-1 rounded bg-black/70 text-white text-[11px] font-gothic pointer-events-none">
-          {penDbg || "D - M:0 H:0 ctx:0 key:-"}
+          {penDbg || "펜버튼 신호 대기"}
         </div>
       ) : null}
       <header
