@@ -1186,6 +1186,9 @@ const SermonRead = () => {
     // S펜 옆 버튼은 buttons 에 실려 오지 않고 contextmenu 로 옵니다 (탭 진단으로 확인).
     // 눌린 시각을 적어 두고, 그 직후에 닿은 획은 지우개로 봅니다.
     let ctxAt = 0;
+    let downAt = 0;
+    // 옆 버튼 신호가 획이 끝난 뒤에 오는 경우를 대비해, 방금 끝난 획을 기억해 둡니다.
+    let lastStroke: { g: SVGGElement | null; pts: number[]; at: number; newGroup: boolean } | null = null;
     let strokeNewGroup = false;
 
     // pointercancel 로 끊긴 획 이어붙이기용
@@ -1277,6 +1280,10 @@ const SermonRead = () => {
     };
 
     const endStroke = () => {
+      lastStroke =
+        group && pts.length >= 2
+          ? { g: group, pts: pts.slice(), at: Date.now(), newGroup: strokeNewGroup }
+          : null;
       drawing = false;
       group = null;
       chunk = null;
@@ -1289,10 +1296,10 @@ const SermonRead = () => {
     // ── 임시 진단 2판 — 옆 버튼 신호가 어디까지 오는지 ──────────
     // D=펜 닿는 순간 / M=긋는 동안 최대 / H=허공에 띄운 채(호버) 최대
     // ctx=오른쪽클릭 이벤트 수 / key=키 이벤트로 오는지
-    const dbg = { down: "-", move: 0, hover: 0, ctx: 0, key: "-" };
+    const dbg = { down: "-", move: 0, hover: 0, ctx: 0, key: "-", when: "-" };
     const showDbg = () => {
       if (!DEBUG_PEN) return;
-      setPenDbg("D " + dbg.down + " M:" + dbg.move + " H:" + dbg.hover + " ctx:" + dbg.ctx + " key:" + dbg.key);
+      setPenDbg("D " + dbg.down + " M:" + dbg.move + " ctx:" + dbg.ctx + " W:" + dbg.when + " key:" + dbg.key);
     };
 
     const onDown = (e: PointerEvent) => {
@@ -1302,6 +1309,7 @@ const SermonRead = () => {
       if (hideBarRef.current) hideBarRef.current(); // 펜이 닿으면 도구막대를 접습니다 (ref 경유 — 의존성 그대로)
       e.preventDefault();
       activeId = e.pointerId;
+      downAt = Date.now();
       try {
         surface.setPointerCapture(e.pointerId);
       } catch (err) {}
@@ -1448,9 +1456,25 @@ const SermonRead = () => {
       ctxAt = Date.now();
       if (DEBUG_PEN) {
         dbg.ctx = dbg.ctx + 1;
+        dbg.when =
+          (drawing ? "그리는중" : erasing ? "지우는중" : "쉼") +
+          "+" + String(Date.now() - downAt) + "ms";
         showDbg();
       }
-      if (!drawing) return;
+      if (!drawing) {
+        // 신호가 획이 끝난 뒤에 도착한 경우 — 방금 그은 획을 물리고 그 자리를 지웁니다.
+        if (lastStroke && Date.now() - lastStroke.at < 1500) {
+          const ls = lastStroke;
+          lastStroke = null;
+          if (ls.newGroup && ls.g && ls.g.parentNode) ls.g.parentNode.removeChild(ls.g);
+          for (let i = 0; i + 1 < ls.pts.length; i += 2) eraseAt(ls.pts[i], ls.pts[i + 1]);
+          resumeG = null;
+          inkTouchedRef.current = true;
+          setHasInk(!!layer.firstElementChild);
+          scheduleInkSave();
+        }
+        return;
+      }
       const lx = pts.length >= 2 ? pts[pts.length - 2] : -1;
       const ly = pts.length >= 2 ? pts[pts.length - 1] : -1;
       // 이어붙이던 획이면 그룹째 지우면 안 됩니다 (앞서 쓴 글씨가 딸려 갑니다).
