@@ -1281,6 +1281,15 @@ const SermonRead = () => {
       scheduleInkSave();
     };
 
+    // ── 임시 진단 2판 — 옆 버튼 신호가 어디까지 오는지 ──────────
+    // D=펜 닿는 순간 / M=긋는 동안 최대 / H=허공에 띄운 채(호버) 최대
+    // ctx=오른쪽클릭 이벤트 수 / key=키 이벤트로 오는지
+    const dbg = { down: "-", move: 0, hover: 0, ctx: 0, key: "-" };
+    const showDbg = () => {
+      if (!DEBUG_PEN) return;
+      setPenDbg("D " + dbg.down + " M:" + dbg.move + " H:" + dbg.hover + " ctx:" + dbg.ctx + " key:" + dbg.key);
+    };
+
     const onDown = (e: PointerEvent) => {
       // ④ 손가락은 스크롤 전용
       if (e.pointerType !== "pen") return;
@@ -1297,7 +1306,9 @@ const SermonRead = () => {
       const useEraser =
         eraserRef.current || (e.buttons & 32) !== 0 || (e.buttons & 2) !== 0;
       if (DEBUG_PEN) {
-        setPenDbg("btn:" + e.button + " btns:" + e.buttons + (useEraser ? " → 지우개" : " → 펜"));
+        dbg.down = e.button + "/" + e.buttons + (useEraser ? "→지움" : "→펜");
+        dbg.move = 0;
+        showDbg();
       }
       if (useEraser) {
         erasing = true;
@@ -1310,6 +1321,10 @@ const SermonRead = () => {
 
     const onMove = (e: PointerEvent) => {
       if (e.pointerType === "pen") markPen();
+      if (DEBUG_PEN && e.pointerType === "pen" && e.buttons > dbg.move) {
+        dbg.move = e.buttons;
+        showDbg();
+      }
       if (!drawing && !erasing) return;
       if (e.pointerId !== activeId) return;
       e.preventDefault();
@@ -1409,7 +1424,23 @@ const SermonRead = () => {
         markPen();
         lastPenX = e.clientX;
         lastPenY = e.clientY;
+        if (DEBUG_PEN && e.buttons > dbg.hover) {
+          dbg.hover = e.buttons;
+          showDbg();
+        }
       }
+    };
+
+    const onDbgCtx = (e: Event) => {
+      if (!DEBUG_PEN) return;
+      dbg.ctx = dbg.ctx + 1;
+      showDbg();
+    };
+
+    const onDbgKey = (e: KeyboardEvent) => {
+      if (!DEBUG_PEN) return;
+      dbg.key = String(e.keyCode) + "/" + (e.key || "?");
+      showDbg();
     };
 
     surface.addEventListener("pointerdown", onDown, { passive: false });
@@ -1420,6 +1451,8 @@ const SermonRead = () => {
     document.addEventListener("touchmove", onTouchMove, { passive: false });
     document.addEventListener("pointermove", onDocPointerMove, { passive: true });
     document.addEventListener("pointerover", onDocPointerMove, { passive: true });
+    document.addEventListener("contextmenu", onDbgCtx);
+    window.addEventListener("keydown", onDbgKey);
 
     return () => {
       surface.removeEventListener("pointerdown", onDown);
@@ -1430,6 +1463,8 @@ const SermonRead = () => {
       document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("pointermove", onDocPointerMove);
       document.removeEventListener("pointerover", onDocPointerMove);
+      document.removeEventListener("contextmenu", onDbgCtx);
+      window.removeEventListener("keydown", onDbgKey);
       if (penTimer !== null) window.clearTimeout(penTimer);
     };
   }, [inkMode]);
@@ -1552,7 +1587,7 @@ const SermonRead = () => {
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       {DEBUG_PEN && inkMode ? (
         <div className="fixed left-2 bottom-2 z-[60] px-2 py-1 rounded bg-black/70 text-white text-[11px] font-gothic pointer-events-none">
-          {penDbg || "펜을 대고 그어 보세요"}
+          {penDbg || "D - M:0 H:0 ctx:0 key:-"}
         </div>
       ) : null}
       <header
