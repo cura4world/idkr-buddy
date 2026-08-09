@@ -202,6 +202,30 @@ export async function countSermonAudio(): Promise<number> {
   } catch { return 0; }
 }
 
+// 설교문 한 편의 낭독 음성만 지웁니다. 키는 "sermon:{설교문id}:" 로 시작합니다.
+export async function deleteSermonAudioFor(sermonId: string): Promise<number> {
+  const prefix = "sermon:" + String(sermonId) + ":";
+  try {
+    const db = await openSermonDB();
+    return await new Promise((resolve) => {
+      let n = 0;
+      const tx = db.transaction(STORE, "readwrite");
+      const req = tx.objectStore(STORE).openCursor();
+      req.onsuccess = () => {
+        const cur = req.result;
+        if (!cur) return;
+        if (String(cur.key || "").indexOf(prefix) === 0) {
+          cur.delete();
+          n++;
+        }
+        cur.continue();
+      };
+      tx.oncomplete = () => resolve(n);
+      tx.onerror = () => resolve(n);
+    });
+  } catch { return 0; }
+}
+
 // ── PCM(base64) → WAV(base64 data URL) ─────────────────────────
 function pcmBase64ToWavDataUrl(pcmB64: string): string {
   const binary = atob(pcmB64);
