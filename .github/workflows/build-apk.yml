@@ -47,6 +47,30 @@ jobs:
           convert icon-original.png -resize 96x96   app/src/main/res/mipmap-xhdpi/ic_launcher.png
           convert icon-original.png -resize 144x144 app/src/main/res/mipmap-xxhdpi/ic_launcher.png
           convert icon-original.png -resize 192x192 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          # ── 적응형 아이콘 (안드로이드 8 이상) ──────────────────────
+          # 이게 없으면 시스템이 레거시로 처리해 25% 축소 + 흰 배경을 깐다.
+          # 배경은 단색 청록, 전경은 연필만. 전경은 108dp 캔버스 안쪽 72dp 안에 들어가 있다.
+          test -f public/icon-foreground-432.png || { echo "public/icon-foreground-432.png 이 없습니다"; exit 1; }
+          mkdir -p app/src/main/res/mipmap-anydpi-v26
+          mkdir -p app/src/main/res/values
+          convert public/icon-foreground-432.png -resize 108x108 app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
+          convert public/icon-foreground-432.png -resize 162x162 app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png
+          convert public/icon-foreground-432.png -resize 216x216 app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
+          convert public/icon-foreground-432.png -resize 324x324 app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
+          cp public/icon-foreground-432.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
+          cat > app/src/main/res/values/ic_launcher_background.xml << 'ICONXML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_launcher_background">#37C0D2</color>
+          </resources>
+          ICONXML
+          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'ICONXML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ic_launcher_background" />
+              <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+          </adaptive-icon>
+          ICONXML
 
       - name: Create WebView Android project
         run: |
