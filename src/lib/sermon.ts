@@ -5,6 +5,8 @@
 // 서버 주소와 비밀키는 저장소가 공개라 코드에 두지 않고
 // 사용자가 설정 화면에서 직접 넣어 이 기기의 localStorage 에만 보관합니다.
 
+import { deleteSermonAudioFor } from "@/lib/tts";
+
 const BASE_KEY = "sermon-base";
 const SECRET_KEY = "sermon-key";
 const LAST_SYNC_KEY = "sermon-last-sync";
@@ -237,6 +239,13 @@ export async function deleteCachedSermon(id: string): Promise<void> {
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
     });
+  } catch (e) {
+    // 무시
+  }
+  // 설교문이 사라지면 그 편의 낭독 음성도 함께 지웁니다 (한 편이 수십 MB).
+  // 여기에 두면 목록에서 직접 지울 때와 동기화 정리 때가 모두 처리됩니다.
+  try {
+    await deleteSermonAudioFor(id);
   } catch (e) {
     // 무시
   }
