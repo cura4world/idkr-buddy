@@ -1183,6 +1183,10 @@ const SermonRead = () => {
     let smoothP = 0.5;
     let strokeTool: "pen" | "hl" = "pen";
     let activeId = -1;
+    // S펜 옆 버튼은 buttons 에 실려 오지 않고 contextmenu 로 옵니다 (탭 진단으로 확인).
+    // 눌린 시각을 적어 두고, 그 직후에 닿은 획은 지우개로 봅니다.
+    let ctxAt = 0;
+    let strokeNewGroup = false;
 
     // pointercancel 로 끊긴 획 이어붙이기용
     let resumeG: SVGGElement | null = null;
@@ -1220,6 +1224,7 @@ const SermonRead = () => {
       const dy = y - resumeY;
       const canResume =
         !!resumeG && now - resumeT < 250 && dx * dx + dy * dy < 900;
+      strokeNewGroup = !canResume;
       if (canResume && resumeG) {
         group = resumeG; // 같은 획으로 이어붙임
       } else {
@@ -1304,7 +1309,11 @@ const SermonRead = () => {
       // S펜 옆 버튼을 누른 채 문지르면 지우개로 동작.
       // 기기·웹뷰에 따라 옆 버튼이 barrel(2) 로도 eraser(32) 로도 올라오므로 둘 다 받습니다.
       const useEraser =
-        eraserRef.current || (e.buttons & 32) !== 0 || (e.buttons & 2) !== 0;
+        eraserRef.current ||
+        (e.buttons & 32) !== 0 ||
+        (e.buttons & 2) !== 0 ||
+        Date.now() - ctxAt < 250;
+      ctxAt = 0;
       if (DEBUG_PEN) {
         dbg.down = e.button + "/" + e.buttons + (useEraser ? "→지움" : "→펜");
         dbg.move = 0;
@@ -1431,10 +1440,29 @@ const SermonRead = () => {
       }
     };
 
-    const onDbgCtx = (e: Event) => {
-      if (!DEBUG_PEN) return;
-      dbg.ctx = dbg.ctx + 1;
-      showDbg();
+    // S펜 옆 버튼. 삼성 웹뷰는 이것을 pointer 의 buttons 가 아니라
+    // contextmenu 로 보냅니다. 획이 이미 시작된 뒤에 오므로, 방금 그은 것을
+    // 물리고 지우개로 갈아탑니다.
+    const onPenCtx = (e: Event) => {
+      e.preventDefault();
+      ctxAt = Date.now();
+      if (DEBUG_PEN) {
+        dbg.ctx = dbg.ctx + 1;
+        showDbg();
+      }
+      if (!drawing) return;
+      const lx = pts.length >= 2 ? pts[pts.length - 2] : -1;
+      const ly = pts.length >= 2 ? pts[pts.length - 1] : -1;
+      // 이어붙이던 획이면 그룹째 지우면 안 됩니다 (앞서 쓴 글씨가 딸려 갑니다).
+      if (strokeNewGroup && group && group.parentNode) group.parentNode.removeChild(group);
+      else if (chunk && chunk.parentNode) chunk.parentNode.removeChild(chunk);
+      group = null;
+      chunk = null;
+      pts = [];
+      drawing = false;
+      resumeG = null;
+      erasing = true;
+      if (lx >= 0) eraseAt(lx, ly);
     };
 
     const onDbgKey = (e: KeyboardEvent) => {
@@ -1451,7 +1479,7 @@ const SermonRead = () => {
     document.addEventListener("touchmove", onTouchMove, { passive: false });
     document.addEventListener("pointermove", onDocPointerMove, { passive: true });
     document.addEventListener("pointerover", onDocPointerMove, { passive: true });
-    document.addEventListener("contextmenu", onDbgCtx);
+    document.addEventListener("contextmenu", onPenCtx);
     window.addEventListener("keydown", onDbgKey);
 
     return () => {
@@ -1463,7 +1491,7 @@ const SermonRead = () => {
       document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("pointermove", onDocPointerMove);
       document.removeEventListener("pointerover", onDocPointerMove);
-      document.removeEventListener("contextmenu", onDbgCtx);
+      document.removeEventListener("contextmenu", onPenCtx);
       window.removeEventListener("keydown", onDbgKey);
       if (penTimer !== null) window.clearTimeout(penTimer);
     };
