@@ -289,6 +289,10 @@ const HL_ALPHA = 0.45;
 const TOOL_KEY = "sermon-ink-tool";
 const SVG_NS = "http://www.w3.org/2000/svg";
 
+// ── 임시 진단 (S펜 옆 버튼이 어떤 값으로 올라오는지 확인용) ────────
+// 확인이 끝나면 이 상수와 화면 표시 코드를 함께 걷어냅니다.
+const DEBUG_PEN = true;
+
 interface InkToolState {
   tool: "pen" | "hl";
   penColor: string;
@@ -468,6 +472,7 @@ const SermonRead = () => {
   const [hasInk, setHasInk] = useState(false);
   const [inkTool, setInkTool] = useState<InkToolState>(loadInkTool);
   const [eraser, setEraser] = useState(false);
+  const [penDbg, setPenDbg] = useState("");
   const [eraseMenu, setEraseMenu] = useState(false);
   const [inkTick, setInkTick] = useState(0);
   const [inkH, setInkH] = useState(0);
@@ -1287,8 +1292,13 @@ const SermonRead = () => {
         surface.setPointerCapture(e.pointerId);
       } catch (err) {}
       const pt = pos(e);
-      // S펜 옆 버튼을 누른 채 문지르면 지우개로 동작
-      const useEraser = eraserRef.current || (e.buttons & 32) !== 0;
+      // S펜 옆 버튼을 누른 채 문지르면 지우개로 동작.
+      // 기기·웹뷰에 따라 옆 버튼이 barrel(2) 로도 eraser(32) 로도 올라오므로 둘 다 받습니다.
+      const useEraser =
+        eraserRef.current || (e.buttons & 32) !== 0 || (e.buttons & 2) !== 0;
+      if (DEBUG_PEN) {
+        setPenDbg("btn:" + e.button + " btns:" + e.buttons + (useEraser ? " → 지우개" : " → 펜"));
+      }
       if (useEraser) {
         erasing = true;
         eraseAt(pt.x, pt.y);
@@ -1540,6 +1550,11 @@ const SermonRead = () => {
 
   return (
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
+      {DEBUG_PEN && inkMode ? (
+        <div className="fixed left-2 bottom-2 z-[60] px-2 py-1 rounded bg-black/70 text-white text-[11px] font-gothic pointer-events-none">
+          {penDbg || "펜을 대고 그어 보세요"}
+        </div>
+      ) : null}
       <header
         className={
           "sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 items-center gap-3 " +
