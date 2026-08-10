@@ -293,16 +293,7 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 // 삼성 웹뷰는 옆 버튼을 웹 페이지에 전혀 넘기지 않습니다(pointer buttons·호버·키 모두 0,
 // 탭에서 세 판에 걸쳐 확인). 그래서 APK 의 네이티브 쪽에서 읽어 window.__penBtn 으로
 // 알려 주고, 여기서는 그 값을 봅니다.
-const penButton = { down: false, count: 0 };
-// 진단 — 버튼을 누른 채 화면에 댈 때 웹까지 터치가 오는지 봅니다.
-// P=필기면이 받은 pointerdown / G=문서 전체가 받은 pointerdown(종류 무관)
-const penTouch = { p: 0, g: 0, e: 0, last: "-" };
-const fmtPenDbg = () =>
-  "BTN " + (penButton.down ? "ON" : "off") + "(" + penButton.count + ")" +
-  " P:" + penTouch.p + " G:" + penTouch.g + " E:" + penTouch.e + " " + penTouch.last;
-
-// 확인이 끝나면 이 상수와 화면 표시 코드를 함께 걷어냅니다.
-const DEBUG_PEN = true;
+const penButton = { down: false };
 
 interface InkToolState {
   tool: "pen" | "hl";
@@ -483,7 +474,6 @@ const SermonRead = () => {
   const [hasInk, setHasInk] = useState(false);
   const [inkTool, setInkTool] = useState<InkToolState>(loadInkTool);
   const [eraser, setEraser] = useState(false);
-  const [penDbg, setPenDbg] = useState("");
   const [eraseMenu, setEraseMenu] = useState(false);
   const [inkTick, setInkTick] = useState(0);
   const [inkH, setInkH] = useState(0);
@@ -821,10 +811,6 @@ const SermonRead = () => {
   useEffect(() => {
     (window as any).__penBtn = (on: boolean) => {
       penButton.down = !!on;
-      penButton.count = penButton.count + 1;
-      if (DEBUG_PEN) {
-        setPenDbg(fmtPenDbg());
-      }
     };
     return () => {
       (window as any).__penBtn = undefined;
@@ -1308,11 +1294,6 @@ const SermonRead = () => {
     };
 
     const onDown = (e: PointerEvent) => {
-      if (DEBUG_PEN) {
-        penTouch.p = penTouch.p + 1;
-        penTouch.last = e.pointerType + "/" + e.button + "/" + e.buttons;
-        setPenDbg(fmtPenDbg());
-      }
       // ④ 손가락은 스크롤 전용
       if (e.pointerType !== "pen") return;
       markPen();
@@ -1443,14 +1424,6 @@ const SermonRead = () => {
       }
     };
 
-    const onAnyDown = (e: PointerEvent) => {
-      if (!DEBUG_PEN) return;
-      penTouch.g = penTouch.g + 1;
-      penTouch.last = e.pointerType + "/" + e.button + "/" + e.buttons;
-      setPenDbg(fmtPenDbg());
-    };
-    document.addEventListener("pointerdown", onAnyDown, true);
-
     surface.addEventListener("pointerdown", onDown, { passive: false });
     surface.addEventListener("pointermove", onMove, { passive: false });
     surface.addEventListener("pointerup", onUp);
@@ -1466,11 +1439,6 @@ const SermonRead = () => {
     // 좌표는 화면 크기 대비 비율(0~1)로 와서 배율·해상도에 영향받지 않습니다.
     let nativeErasing = false;
     (window as any).__penErase = (phase: string, fx: number, fy: number) => {
-      if (DEBUG_PEN) {
-        penTouch.e = penTouch.e + 1;
-        penTouch.last = "N:" + phase;
-        setPenDbg(fmtPenDbg());
-      }
       if (phase === "up") {
         if (nativeErasing) {
           nativeErasing = false;
@@ -1489,7 +1457,6 @@ const SermonRead = () => {
 
     return () => {
       (window as any).__penErase = undefined;
-      document.removeEventListener("pointerdown", onAnyDown, true);
       surface.removeEventListener("pointerdown", onDown);
       surface.removeEventListener("pointermove", onMove);
       surface.removeEventListener("pointerup", onUp);
@@ -1618,11 +1585,6 @@ const SermonRead = () => {
 
   return (
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
-      {DEBUG_PEN && inkMode ? (
-        <div className="fixed left-2 bottom-2 z-[60] px-2 py-1 rounded bg-black/70 text-white text-[11px] font-gothic pointer-events-none">
-          {penDbg || "BTN off(0) P:0 G:0 E:0 -"}
-        </div>
-      ) : null}
       <header
         className={
           "sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 items-center gap-3 " +
@@ -1672,15 +1634,9 @@ const SermonRead = () => {
             className="flex flex-nowrap items-center gap-1 overflow-x-auto px-1 -mx-1 py-1 -my-1"
             style={{ scrollbarWidth: "none" }}
           >
-            {/* 손잡이 — 수동으로 접기 */}
-            <button
-              type="button"
-              onClick={() => setBarHidden(true)}
-              className="w-5 h-8 flex items-center justify-center text-foreground/40 shrink-0"
-              aria-label="도구막대 숨기기"
-            >
-              <ChevronUp size={14} />
-            </button>
+            {/* 오른손으로 펜을 쥐므로 도구를 오른쪽에 모읍니다.
+                왼쪽은 빈 공간으로 두고 ml-auto 가 전부 오른쪽으로 밉니다. */}
+            <span className="ml-auto shrink-0" />
 
             <button
               type="button"
@@ -1734,8 +1690,6 @@ const SermonRead = () => {
               </button>
             </div>
 
-            <span className="mx-0.5 h-5 w-px bg-border shrink-0" />
-
             {/* 굵기 — 표시선은 PEN_W_VIEW/HL_W_VIEW (실제 획 굵기와 별개) */}
             {(inkTool.tool === "pen" ? PEN_W_VIEW : HL_W_VIEW).map((w, i) => (
               <button
@@ -1761,7 +1715,6 @@ const SermonRead = () => {
             ))}
 
             <span className="mx-0.5 h-5 w-px bg-border shrink-0" />
-            <span className="ml-auto shrink-0" />
 
             <button
               type="button"
@@ -1782,9 +1735,10 @@ const SermonRead = () => {
             <button
               type="button"
               onClick={exitInkMode}
-              className="h-8 px-3.5 rounded-full bg-primary text-white text-[0.6875rem] font-medium shrink-0"
+              className="w-8 h-8 rounded-full border border-border bg-card flex items-center justify-center text-foreground/70 active:bg-muted shrink-0"
+              aria-label="완료"
             >
-              완료
+              <X size={15} />
             </button>
           </div>
 
@@ -1793,7 +1747,7 @@ const SermonRead = () => {
           <div
             className={
               "mt-1.5 flex flex-nowrap items-center overflow-x-auto px-1 -mx-1 py-1 -my-1 " +
-              (inkTool.tool === "pen" ? "justify-between gap-1" : "justify-start gap-2")
+              (inkTool.tool === "pen" ? "justify-between gap-1" : "justify-end gap-1")
             }
             style={{ scrollbarWidth: "none" }}
           >
@@ -1820,10 +1774,10 @@ const SermonRead = () => {
           <button
             type="button"
             onClick={() => setBarHidden((v) => !v)}
-            className="pointer-events-auto absolute right-3 top-full flex h-6 w-10 items-center justify-center rounded-b-lg border border-t-0 border-border bg-card shadow-sm text-foreground/60 active:bg-muted"
+            className="pointer-events-auto absolute right-3 top-full flex h-12 w-20 items-center justify-center rounded-b-lg border border-t-0 border-border bg-card shadow-sm text-foreground/60 active:bg-muted"
             aria-label={barHidden ? "도구막대 펴기" : "도구막대 접기"}
           >
-            {barHidden ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+            {barHidden ? <ChevronDown size={22} /> : <ChevronUp size={22} />}
           </button>
         </div>
       ) : null}
