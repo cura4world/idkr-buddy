@@ -1780,10 +1780,10 @@ const SermonRead = () => {
             type="button"
             onClick={() => setBarHidden((v) => !v)}
             className="pointer-events-auto absolute right-3 top-full box-border flex shrink-0 items-center justify-center rounded-b-lg border border-t-0 border-border bg-card shadow-sm text-foreground/60 active:bg-muted"
-            style={{ height: "38px", width: "64px" }}
+            style={{ height: "29px", width: "32px" }}
             aria-label={barHidden ? "도구막대 펴기" : "도구막대 접기"}
           >
-            {barHidden ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+            {barHidden ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
           </button>
         </div>
       ) : null}
