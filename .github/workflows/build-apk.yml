@@ -61,9 +61,10 @@ jobs:
           cat > app/src/main/res/values/ic_launcher_background.xml << 'ICONXML'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <!-- 투명: 원본 아이콘의 청록 스퀘어클이 그대로 보이고 둘레는 벽지가 비칩니다.
-                   전경(icon-foreground-432.png)이 스퀘어클을 통째로 담고 있습니다. -->
-              <color name="ic_launcher_background">#00000000</color>
+              <!-- 원본 아이콘의 청록. 투명으로 두면 런처가 마스크 모양대로 그리는 그림자가
+                   도형 바깥으로 드러나 밝은 배경화면에서 검은 곡선으로 보입니다(갤럭시탭에서 확인).
+                   배경이 마스크를 채우면 그 그림자가 타일 경계와 겹쳐 보이지 않습니다. -->
+              <color name="ic_launcher_background">#37C0D2</color>
           </resources>
           ICONXML
           cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'ICONXML'
