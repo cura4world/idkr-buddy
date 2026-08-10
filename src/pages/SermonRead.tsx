@@ -1637,6 +1637,30 @@ const SermonRead = () => {
             {/* 오른손으로 펜을 쥐므로 도구를 오른쪽에 모읍니다.
                 왼쪽은 빈 공간으로 두고 ml-auto 가 전부 오른쪽으로 밉니다. */}
             <span className="ml-auto shrink-0" />
+            {/* 굵기 — 표시선은 PEN_W_VIEW/HL_W_VIEW (실제 획 굵기와 별개) */}
+            {(inkTool.tool === "pen" ? PEN_W_VIEW : HL_W_VIEW).map((w, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => selectWidth(i)}
+                className={
+                  "h-7 w-8 rounded-md border border-border bg-card flex items-center justify-center shrink-0 " +
+                  ((inkTool.tool === "pen" ? inkTool.penW : inkTool.hlW) === i ? "ring-2 ring-foreground" : "")
+                }
+                aria-label={"굵기 " + String(i + 1)}
+              >
+                <span
+                  style={{
+                    display: "block",
+                    width: "1rem",
+                    height: String(w) + "px",
+                    borderRadius: "9999px",
+                    background: inkTool.tool === "pen" ? inkTool.penColor : inkTool.hlColor,
+                  }}
+                />
+              </button>
+            ))}
+
 
             <button
               type="button"
@@ -1690,30 +1714,6 @@ const SermonRead = () => {
               </button>
             </div>
 
-            {/* 굵기 — 표시선은 PEN_W_VIEW/HL_W_VIEW (실제 획 굵기와 별개) */}
-            {(inkTool.tool === "pen" ? PEN_W_VIEW : HL_W_VIEW).map((w, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => selectWidth(i)}
-                className={
-                  "h-7 w-8 rounded-md border border-border bg-card flex items-center justify-center shrink-0 " +
-                  ((inkTool.tool === "pen" ? inkTool.penW : inkTool.hlW) === i ? "ring-2 ring-foreground" : "")
-                }
-                aria-label={"굵기 " + String(i + 1)}
-              >
-                <span
-                  style={{
-                    display: "block",
-                    width: "1rem",
-                    height: String(w) + "px",
-                    borderRadius: "9999px",
-                    background: inkTool.tool === "pen" ? inkTool.penColor : inkTool.hlColor,
-                  }}
-                />
-              </button>
-            ))}
-
             <span className="mx-0.5 h-5 w-px bg-border shrink-0" />
 
             <button
@@ -1747,9 +1747,14 @@ const SermonRead = () => {
           <div
             className={
               "mt-1.5 flex flex-nowrap items-center overflow-x-auto px-1 -mx-1 py-1 -my-1 " +
-              (inkTool.tool === "pen" ? "justify-between gap-1" : "justify-end gap-1")
+              (inkTool.tool === "pen" ? "justify-between gap-1" : "justify-end")
             }
-            style={{ scrollbarWidth: "none" }}
+            style={{
+              scrollbarWidth: "none",
+              // 펜은 14개를 justify-between 으로 폭 전체에 퍼뜨립니다. 그때 실제 간격은
+              // (폭 - 14*1.5rem) / 13 입니다. 형광펜(6개)에 같은 값을 직접 줘서 눈에 같아 보이게 합니다.
+              gap: inkTool.tool === "pen" ? undefined : "calc(max(0.25rem, (100% - 21rem) / 13))",
+            }}
           >
             {(inkTool.tool === "pen" ? PEN_COLORS : HL_COLORS).map((c) => (
               <button
@@ -1774,10 +1779,10 @@ const SermonRead = () => {
           <button
             type="button"
             onClick={() => setBarHidden((v) => !v)}
-            className="pointer-events-auto absolute right-3 top-full flex h-12 w-20 items-center justify-center rounded-b-lg border border-t-0 border-border bg-card shadow-sm text-foreground/60 active:bg-muted"
+            className="pointer-events-auto absolute right-3 top-full flex h-6 w-20 items-center justify-center rounded-b-lg border border-t-0 border-border bg-card shadow-sm text-foreground/60 active:bg-muted"
             aria-label={barHidden ? "도구막대 펴기" : "도구막대 접기"}
           >
-            {barHidden ? <ChevronDown size={22} /> : <ChevronUp size={22} />}
+            {barHidden ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
           </button>
         </div>
       ) : null}
