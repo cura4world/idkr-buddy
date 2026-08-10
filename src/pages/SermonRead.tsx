@@ -496,6 +496,8 @@ const SermonRead = () => {
   // 그리기 엔진이 도구막대를 숨길 때 쓰는 통로. 엔진 effect 의 의존성을 늘리지 않으려고 ref 로 둡니다.
   const hideBarRef = useRef<(() => void) | null>(null);
   const eraseAnchorRef = useRef<HTMLDivElement | null>(null);
+  const barRef = useRef<HTMLDivElement | null>(null);
+  const ribbonRef = useRef<HTMLButtonElement | null>(null);
 
   // ---------- 돌아올 자리로 되돌리기 ----------
   // 본문이 그려진 뒤 한 번만 실행합니다. 표가 없으면 아무것도 하지 않습니다.
@@ -855,6 +857,28 @@ const SermonRead = () => {
       </button>
     );
   };
+
+  // 리본을 도구막대 밖으로 빼 fixed 로 띄웁니다. 도구막대 안에 두면 잘리는 전례가 있어
+  // (지우개 드롭다운도 같은 이유로 fixed 입니다) 아예 밖에서 자리만 재어 붙입니다.
+  // 스크롤마다 리렌더하면 무거우므로 상태 대신 ref 로 style 만 직접 고칩니다.
+  useEffect(() => {
+    if (!inkMode) return;
+    const place = () => {
+      const bar = barRef.current;
+      const rib = ribbonRef.current;
+      if (!bar || !rib) return;
+      rib.style.top = String(Math.round(bar.getBoundingClientRect().bottom)) + "px";
+    };
+    place();
+    const id = window.setTimeout(place, 60); // 접기/펴기 직후 높이가 바뀐 뒤 한 번 더
+    window.addEventListener("scroll", place, { passive: true });
+    window.addEventListener("resize", place);
+    return () => {
+      window.clearTimeout(id);
+      window.removeEventListener("scroll", place);
+      window.removeEventListener("resize", place);
+    };
+  }, [inkMode, barHidden, immersive, fontStep, rec]);
 
   const changeFont = (delta: number) => {
     setFontStep((prev) => {
@@ -1621,6 +1645,7 @@ const SermonRead = () => {
           sticky 는 흐름상의 위치에서만 동작하므로 헤더 바로 다음에 두어야 합니다. */}
       {inkMode ? (
         <div
+          ref={barRef}
           className={
             "sticky relative z-20 bg-background border-b border-border px-3 " +
             (immersive ? "top-0 " : "top-[60px] ") +
@@ -1780,20 +1805,24 @@ const SermonRead = () => {
           </>
           )}
 
-          {/* 리본(탭) — 접어도 화면에 남아 다시 펴는 손잡이가 됩니다.
-              컨테이너 아래(top-full)에 매달려 있어, 접혀서 컨테이너가 얇아지면
-              이 리본만 헤더 아래로 삐죽 나와 보입니다.
-              크기는 인라인 px 로 못 박습니다 — rem 임의값은 흔들린 전례가 있습니다. */}
-          <button
-            type="button"
-            onClick={() => setBarHidden((v) => !v)}
-            className="pointer-events-auto absolute right-3 top-full box-border flex shrink-0 items-center justify-center rounded-b-lg border border-t-0 border-border bg-card shadow-sm text-foreground/60 active:bg-muted"
-            style={{ height: "36px", width: "40px" }}
-            aria-label={barHidden ? "도구막대 펴기" : "도구막대 접기"}
-          >
-            {barHidden ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-          </button>
         </div>
+      ) : null}
+
+      {/* 리본(탭) — 접어도 화면에 남아 다시 펴는 손잡이가 됩니다.
+          도구막대 **밖**에 fixed 로 둡니다. 안에 두었을 때는 스크롤 상태에 따라 아래쪽이
+          잘려 크기가 달라졌습니다 (지우개 드롭다운도 같은 이유로 밖에서 fixed 입니다).
+          top 은 도구막대의 아래 모서리를 재어 붙이고, 크기는 인라인 px 로 못 박습니다. */}
+      {inkMode ? (
+        <button
+          ref={ribbonRef}
+          type="button"
+          onClick={() => setBarHidden((v) => !v)}
+          className="fixed right-3 z-30 box-border flex items-center justify-center rounded-b-lg border border-t-0 border-border bg-card shadow-sm text-foreground/60 active:bg-muted"
+          style={{ top: "0px", height: "36px", width: "40px" }}
+          aria-label={barHidden ? "도구막대 펴기" : "도구막대 접기"}
+        >
+          {barHidden ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+        </button>
       ) : null}
 
       {/* 지우개 메뉴 — 도구막대 1줄은 가로 스크롤(overflow-x-auto)이라 그 안의 드롭다운은 세로로 잘려
