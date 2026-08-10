@@ -294,6 +294,12 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 // 탭에서 세 판에 걸쳐 확인). 그래서 APK 의 네이티브 쪽에서 읽어 window.__penBtn 으로
 // 알려 주고, 여기서는 그 값을 봅니다.
 const penButton = { down: false, count: 0 };
+// 진단 — 버튼을 누른 채 화면에 댈 때 웹까지 터치가 오는지 봅니다.
+// P=필기면이 받은 pointerdown / G=문서 전체가 받은 pointerdown(종류 무관)
+const penTouch = { p: 0, g: 0, last: "-" };
+const fmtPenDbg = () =>
+  "BTN " + (penButton.down ? "ON" : "off") + "(" + penButton.count + ")" +
+  " P:" + penTouch.p + " G:" + penTouch.g + " " + penTouch.last;
 
 // 확인이 끝나면 이 상수와 화면 표시 코드를 함께 걷어냅니다.
 const DEBUG_PEN = true;
@@ -817,7 +823,7 @@ const SermonRead = () => {
       penButton.down = !!on;
       penButton.count = penButton.count + 1;
       if (DEBUG_PEN) {
-        setPenDbg("펜버튼 " + (on ? "ON" : "off") + " (" + penButton.count + "회)");
+        setPenDbg(fmtPenDbg());
       }
     };
     return () => {
@@ -1302,6 +1308,11 @@ const SermonRead = () => {
     };
 
     const onDown = (e: PointerEvent) => {
+      if (DEBUG_PEN) {
+        penTouch.p = penTouch.p + 1;
+        penTouch.last = e.pointerType + "/" + e.button + "/" + e.buttons;
+        setPenDbg(fmtPenDbg());
+      }
       // ④ 손가락은 스크롤 전용
       if (e.pointerType !== "pen") return;
       markPen();
@@ -1432,6 +1443,14 @@ const SermonRead = () => {
       }
     };
 
+    const onAnyDown = (e: PointerEvent) => {
+      if (!DEBUG_PEN) return;
+      penTouch.g = penTouch.g + 1;
+      penTouch.last = e.pointerType + "/" + e.button + "/" + e.buttons;
+      setPenDbg(fmtPenDbg());
+    };
+    document.addEventListener("pointerdown", onAnyDown, true);
+
     surface.addEventListener("pointerdown", onDown, { passive: false });
     surface.addEventListener("pointermove", onMove, { passive: false });
     surface.addEventListener("pointerup", onUp);
@@ -1442,6 +1461,7 @@ const SermonRead = () => {
     document.addEventListener("pointerover", onDocPointerMove, { passive: true });
 
     return () => {
+      document.removeEventListener("pointerdown", onAnyDown, true);
       surface.removeEventListener("pointerdown", onDown);
       surface.removeEventListener("pointermove", onMove);
       surface.removeEventListener("pointerup", onUp);
@@ -1572,7 +1592,7 @@ const SermonRead = () => {
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       {DEBUG_PEN && inkMode ? (
         <div className="fixed left-2 bottom-2 z-[60] px-2 py-1 rounded bg-black/70 text-white text-[11px] font-gothic pointer-events-none">
-          {penDbg || "펜버튼 신호 대기"}
+          {penDbg || "BTN off(0) P:0 G:0 -"}
         </div>
       ) : null}
       <header
