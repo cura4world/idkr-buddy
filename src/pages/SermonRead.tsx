@@ -1622,11 +1622,16 @@ const SermonRead = () => {
       {inkMode ? (
         <div
           className={
-            "sticky relative z-20 bg-background border-b border-border px-3 py-1.5 transition-transform duration-200 ease-out " +
+            "sticky relative z-20 bg-background border-b border-border px-3 " +
             (immersive ? "top-0 " : "top-[60px] ") +
-            (barHidden ? "-translate-y-full pointer-events-none" : "translate-y-0")
+            (barHidden ? "py-0" : "py-1.5")
           }
         >
+          {/* 접을 때는 두 줄을 렌더하지 않습니다. 예전에는 컨테이너를 자기 높이만큼 위로
+              밀어냈는데(-translate-y-full), sticky 와 겹치면서 매달린 리본의 크기·자리가
+              스크롤 상태에 따라 달라졌습니다. 밀어내지 않으면 그 상호작용이 사라집니다. */}
+          {barHidden ? null : (
+          <>
           {/* 1줄: 도구 │ 굵기 │ 되돌리기·전체화면·완료
               px-1/py-1 은 선택 표시(ring)가 가로 스크롤 영역에 잘리지 않게 두는 여백입니다.
               같은 크기의 음수 마진으로 상쇄해 실제 자리 차지는 그대로입니다. */}
@@ -1772,15 +1777,18 @@ const SermonRead = () => {
               />
             ))}
           </div>
+          </>
+          )}
 
           {/* 리본(탭) — 접어도 화면에 남아 다시 펴는 손잡이가 됩니다.
-              컨테이너 아래(top-full)에 매달려 있어, 컨테이너가 자기 높이만큼 올라가 숨으면
-              이 리본만 헤더 아래로 삐죽 나와 보입니다. */}
+              컨테이너 아래(top-full)에 매달려 있어, 접혀서 컨테이너가 얇아지면
+              이 리본만 헤더 아래로 삐죽 나와 보입니다.
+              크기는 인라인 px 로 못 박습니다 — rem 임의값은 흔들린 전례가 있습니다. */}
           <button
             type="button"
             onClick={() => setBarHidden((v) => !v)}
             className="pointer-events-auto absolute right-3 top-full box-border flex shrink-0 items-center justify-center rounded-b-lg border border-t-0 border-border bg-card shadow-sm text-foreground/60 active:bg-muted"
-            style={{ height: "29px", width: "32px" }}
+            style={{ height: "36px", width: "40px" }}
             aria-label={barHidden ? "도구막대 펴기" : "도구막대 접기"}
           >
             {barHidden ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
