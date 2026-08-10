@@ -875,9 +875,9 @@ const SermonRead = () => {
       const head = headerRef.current;
       const headBottom = head ? head.getBoundingClientRect().bottom : 0;
       const barH = bar.getBoundingClientRect().height;
-      // 6px 올려 헤더(또는 도구막대) 아래 모서리에 살짝 겹칩니다. 딱 맞추면 접힌 상태에서
-      // 그 사이로 본문 글자 윗부분이 비쳐 보입니다 (탭에서 확인).
-      rib.style.top = String(Math.round(headBottom + barH - 6)) + "px";
+      // 1px 만 올려 헤더(또는 도구막대) 아래 모서리에 붙입니다. 딱 맞추면 접힌 상태에서
+      // 그 사이로 본문 글자 윗부분이 비쳐 보이고, 많이 올리면 헤더를 파고들어 보입니다.
+      rib.style.top = String(Math.round(headBottom + barH - 1)) + "px";
     };
     place();
     const id = window.setTimeout(place, 60); // 접기/펴기 직후 높이가 바뀐 뒤 한 번 더
