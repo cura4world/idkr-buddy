@@ -296,10 +296,10 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 const penButton = { down: false, count: 0 };
 // 진단 — 버튼을 누른 채 화면에 댈 때 웹까지 터치가 오는지 봅니다.
 // P=필기면이 받은 pointerdown / G=문서 전체가 받은 pointerdown(종류 무관)
-const penTouch = { p: 0, g: 0, last: "-" };
+const penTouch = { p: 0, g: 0, e: 0, last: "-" };
 const fmtPenDbg = () =>
   "BTN " + (penButton.down ? "ON" : "off") + "(" + penButton.count + ")" +
-  " P:" + penTouch.p + " G:" + penTouch.g + " " + penTouch.last;
+  " P:" + penTouch.p + " G:" + penTouch.g + " E:" + penTouch.e + " " + penTouch.last;
 
 // 확인이 끝나면 이 상수와 화면 표시 코드를 함께 걷어냅니다.
 const DEBUG_PEN = true;
@@ -1460,7 +1460,35 @@ const SermonRead = () => {
     document.addEventListener("pointermove", onDocPointerMove, { passive: true });
     document.addEventListener("pointerover", onDocPointerMove, { passive: true });
 
+    // ── 네이티브 지우개 ────────────────────────────────────────
+    // 옆 버튼을 누른 펜 터치는 웹뷰가 통째로 삼켜서 pointer 이벤트가 오지 않습니다
+    // (탭에서 P·G 둘 다 0 으로 확인). 그래서 APK 가 좌표를 직접 넘겨 줍니다.
+    // 좌표는 화면 크기 대비 비율(0~1)로 와서 배율·해상도에 영향받지 않습니다.
+    let nativeErasing = false;
+    (window as any).__penErase = (phase: string, fx: number, fy: number) => {
+      if (DEBUG_PEN) {
+        penTouch.e = penTouch.e + 1;
+        penTouch.last = "N:" + phase;
+        setPenDbg(fmtPenDbg());
+      }
+      if (phase === "up") {
+        if (nativeErasing) {
+          nativeErasing = false;
+          inkTouchedRef.current = true;
+          setHasInk(!!layer.firstElementChild);
+          scheduleInkSave();
+        }
+        return;
+      }
+      const r = wrap.getBoundingClientRect();
+      const x = fx * window.innerWidth - r.left;
+      const y = fy * window.innerHeight - r.top;
+      nativeErasing = true;
+      eraseAt(x, y);
+    };
+
     return () => {
+      (window as any).__penErase = undefined;
       document.removeEventListener("pointerdown", onAnyDown, true);
       surface.removeEventListener("pointerdown", onDown);
       surface.removeEventListener("pointermove", onMove);
@@ -1592,7 +1620,7 @@ const SermonRead = () => {
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       {DEBUG_PEN && inkMode ? (
         <div className="fixed left-2 bottom-2 z-[60] px-2 py-1 rounded bg-black/70 text-white text-[11px] font-gothic pointer-events-none">
-          {penDbg || "BTN off(0) P:0 G:0 -"}
+          {penDbg || "BTN off(0) P:0 G:0 E:0 -"}
         </div>
       ) : null}
       <header
