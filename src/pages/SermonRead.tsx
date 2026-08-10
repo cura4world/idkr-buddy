@@ -497,6 +497,7 @@ const SermonRead = () => {
   const hideBarRef = useRef<(() => void) | null>(null);
   const eraseAnchorRef = useRef<HTMLDivElement | null>(null);
   const barRef = useRef<HTMLDivElement | null>(null);
+  const headerRef = useRef<HTMLElement | null>(null);
   const ribbonRef = useRef<HTMLButtonElement | null>(null);
 
   // ---------- 돌아올 자리로 되돌리기 ----------
@@ -867,7 +868,14 @@ const SermonRead = () => {
       const bar = barRef.current;
       const rib = ribbonRef.current;
       if (!bar || !rib) return;
-      rib.style.top = String(Math.round(bar.getBoundingClientRect().bottom)) + "px";
+      // 도구막대의 "아래 모서리"를 따라가면 안 됩니다 — 그 막대는 sticky 라 맨 위에서는
+      // 흐름상의 자리에, 스크롤하면 고정 자리에 놓여 두 자리가 어긋납니다(약 9px).
+      // 헤더는 항상 화면 맨 위에 붙어 있으므로 헤더 아래 + 막대 높이로 잡습니다.
+      // 몰입 모드에서는 헤더가 hidden 이라 rect 가 전부 0 이 되어 자연히 0 이 됩니다.
+      const head = headerRef.current;
+      const headBottom = head ? head.getBoundingClientRect().bottom : 0;
+      const barH = bar.getBoundingClientRect().height;
+      rib.style.top = String(Math.round(headBottom + barH)) + "px";
     };
     place();
     const id = window.setTimeout(place, 60); // 접기/펴기 직후 높이가 바뀐 뒤 한 번 더
@@ -1610,6 +1618,7 @@ const SermonRead = () => {
   return (
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       <header
+        ref={headerRef}
         className={
           "sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 items-center gap-3 " +
           (inkMode && immersive ? "hidden" : "flex")
