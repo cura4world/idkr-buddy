@@ -269,7 +269,53 @@ const KIND_STYLE: Record<string, KindStyle> = {
   },
 };
 
+// 한국어 전용 설교문(인니어 번역 전 초본 · 일반 워드 문서)용 표.
+// 블록에 인니어가 하나도 없으면 한국어를 "번역 보조"가 아니라 본문으로 봅니다.
+// 크기·색·줄간격은 인니어 자리(idClass/idSize)와 같게 두고, 글꼴만
+// font-word(Lora, 한글 글리프 없음) 대신 font-gothic(Pretendard)으로 바꿉니다.
+interface SoloStyle {
+  wrap: string;
+  cls: string;
+  size: string;
+}
+
+const KO_SOLO_BASE = "font-gothic leading-[1.75] break-words";
+
+const KO_SOLO_STYLE: Record<string, SoloStyle> = {
+  title: {
+    wrap: "mb-6",
+    cls: KO_SOLO_BASE + " font-semibold text-foreground",
+    size: "1.25em",
+  },
+  ref: {
+    wrap: "mb-6 -mt-4",
+    cls: KO_SOLO_BASE + " " + BIBLE_COLOR,
+    size: "0.9em",
+  },
+  heading: {
+    wrap: "mt-8 mb-5 scroll-mt-16",
+    cls: KO_SOLO_BASE + " font-semibold text-indigo-600",
+    size: "1.15em",
+  },
+  verse: {
+    wrap: "mb-5 border-l-2 " + BIBLE_BORDER + " pl-3",
+    cls: KO_SOLO_BASE + " " + BIBLE_COLOR,
+    size: "0.95em",
+  },
+  hymn: {
+    wrap: "mb-5",
+    cls: KO_SOLO_BASE + " text-foreground",
+    size: "0.95em",
+  },
+  body: {
+    wrap: "mb-5",
+    cls: KO_SOLO_BASE + " text-foreground",
+    size: "1em",
+  },
+};
+
 const styleFor = (kind: string): KindStyle => KIND_STYLE[kind] || KIND_STYLE.body;
+const soloStyleFor = (kind: string): SoloStyle => KO_SOLO_STYLE[kind] || KO_SOLO_STYLE.body;
 
 // ---------- 필기(S펜) 도구 ----------
 // 아래 수치는 갤럭시 탭 실기기 시험으로 확정된 값입니다. 임의로 바꾸지 마세요.
@@ -1505,6 +1551,13 @@ const SermonRead = () => {
 
   const blocks: SermonBlock[] = (rec && rec.blocks) || [];
 
+  // 한국어 전용 한 편 — 인니어가 실린 블록이 하나도 없고 한국어는 있는 경우.
+  // 서버에 보내는 형식은 그대로이므로(id 가 빈 문자열) 여기서 모양만 갈라 봅니다.
+  const koOnly =
+    blocks.length > 0 &&
+    blocks.every((b) => !b || !b.id) &&
+    blocks.some((b) => !!(b && b.ko));
+
   // 읽기 묶음. 한 줄짜리 묶음의 캐시 키는 예전과 같아서 이미 만든 음성을 그대로 씁니다.
   // (성경 묶음·찬양 묶음만 글이 합쳐지므로 새로 만듭니다)
   const audioGroups = buildAudioGroups(blocks);
@@ -1594,6 +1647,23 @@ const SermonRead = () => {
     // 찬양 중의 빈 줄 — 절·후렴을 구분하는 여백입니다 (업로드 도구가 빈 블록으로 보냅니다).
     if (b.kind === "hymn" && !b.id && !b.ko) {
       return <div key={i} className="h-4" aria-hidden="true" />;
+    }
+    // 한국어 전용은 인니어 자리의 크기·색으로 한 줄만 그립니다.
+    // 단어 탭(renderTokens)과 스피커는 붙이지 않습니다 — 읽을 인니어가 없습니다.
+    if (koOnly) {
+      if (!b.ko) return null;
+      const so = soloStyleFor(b.kind);
+      return (
+        <div
+          key={i}
+          id={b.kind === "heading" ? "sec-" + i : undefined}
+          className={so.wrap}
+        >
+          <p className={so.cls} style={{ fontSize: so.size }}>
+            {b.ko}
+          </p>
+        </div>
+      );
     }
     const st = styleFor(b.kind);
     return (
@@ -2083,10 +2153,15 @@ const SermonRead = () => {
                   onClick={() => goToSection(x.i)}
                   className="flex w-full flex-col items-start gap-0.5 border-b border-border px-4 py-2.5 text-left active:bg-muted/60"
                 >
-                  <span className="w-full truncate font-word text-[0.8125rem] text-foreground">
-                    {x.b.id || "(제목 없음)"}
+                  <span
+                    className={
+                      "w-full truncate text-[0.8125rem] text-foreground " +
+                      (x.b.id ? "font-word" : "font-gothic")
+                    }
+                  >
+                    {x.b.id || x.b.ko || "(제목 없음)"}
                   </span>
-                  {x.b.ko ? (
+                  {x.b.id && x.b.ko ? (
                     <span className="w-full truncate text-[0.6875rem] text-muted-foreground">{x.b.ko}</span>
                   ) : null}
                 </button>
