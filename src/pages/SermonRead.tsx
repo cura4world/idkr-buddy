@@ -543,6 +543,8 @@ const SermonRead = () => {
   const hideBarRef = useRef<(() => void) | null>(null);
   const eraseAnchorRef = useRef<HTMLDivElement | null>(null);
   const barRef = useRef<HTMLDivElement | null>(null);
+  // 도구막대 안쪽(실제 두 줄). 바깥 상자의 목표 높이를 여기서 잽니다.
+  const barInnerRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLElement | null>(null);
   const ribbonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -927,14 +929,41 @@ const SermonRead = () => {
     };
     place();
     const id = window.setTimeout(place, 60); // 접기/펴기 직후 높이가 바뀐 뒤 한 번 더
+    // 도구막대 높이가 transition 으로 변하는 동안(약 0.22초) 리본이 그 아래에 붙어
+    // 함께 내려오도록, 크기가 바뀔 때마다 다시 잽니다.
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(place) : null;
+    if (ro && barRef.current) ro.observe(barRef.current);
     window.addEventListener("scroll", place, { passive: true });
     window.addEventListener("resize", place);
     return () => {
       window.clearTimeout(id);
+      if (ro) ro.disconnect();
       window.removeEventListener("scroll", place);
       window.removeEventListener("resize", place);
     };
   }, [inkMode, barHidden, immersive, fontStep, rec]);
+
+  // 도구막대 높이 애니메이션.
+  // JSX 의 인라인 초기값이 0px 이라 붙는 첫 프레임은 0 으로 그려지고, 그 다음 프레임에
+  // 목표 높이를 넣어야 transition 이 걸립니다. 같은 프레임에 넣으면 브라우저가 최종값만
+  // 그려 순간이동합니다(그래서 rAF 두 겹).
+  useEffect(() => {
+    if (!inkMode) return;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        const bar = barRef.current;
+        const inner = barInnerRef.current;
+        if (!bar || !inner) return;
+        const target = barHidden ? 0 : Math.round(inner.getBoundingClientRect().height);
+        bar.style.height = String(target) + "px";
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [inkMode, barHidden, immersive, fontStep, inkTool.tool, rec]);
 
   const changeFont = (delta: number) => {
     setFontStep((prev) => {
@@ -1728,16 +1757,19 @@ const SermonRead = () => {
         <div
           ref={barRef}
           className={
-            "sticky relative z-20 bg-background border-b border-border px-3 " +
-            (immersive ? "top-0 " : "top-[60px] ") +
-            (barHidden ? "py-0" : "py-1.5")
+            "sticky relative z-20 bg-background border-b border-border px-3 overflow-hidden " +
+            (immersive ? "top-0" : "top-[60px]")
           }
+          style={{ height: "0px", transition: "height 220ms ease-out" }}
         >
-          {/* 접을 때는 두 줄을 렌더하지 않습니다. 예전에는 컨테이너를 자기 높이만큼 위로
-              밀어냈는데(-translate-y-full), sticky 와 겹치면서 매달린 리본의 크기·자리가
-              스크롤 상태에 따라 달라졌습니다. 밀어내지 않으면 그 상호작용이 사라집니다. */}
-          {barHidden ? null : (
-          <>
+          {/* 접기·펴기와 필기모드 진입을 "높이"로 애니메이션합니다.
+              예전에는 접을 때 두 줄을 아예 렌더하지 않았고, 그보다 전에는 컨테이너를 자기
+              높이만큼 위로 밀어냈습니다(-translate-y-full). 미는 방식은 sticky 와 겹쳐
+              매달린 리본의 크기·자리가 스크롤 상태에 따라 달라졌습니다. 높이를 줄이는
+              방식은 흐름상의 상자가 실제로 줄어들 뿐이라 그 상호작용이 없습니다.
+              바깥 상자는 높이만 맡고(위아래 패딩 없음), 여백은 안쪽 상자가 가집니다.
+              높이 실제값은 위 useEffect 가 ref 로 직접 넣습니다(리렌더 없음). */}
+          <div ref={barInnerRef} className="py-1.5">
           {/* 1줄: 도구 │ 굵기 │ 되돌리기·전체화면·완료
               px-1/py-1 은 선택 표시(ring)가 가로 스크롤 영역에 잘리지 않게 두는 여백입니다.
               같은 크기의 음수 마진으로 상쇄해 실제 자리 차지는 그대로입니다. */}
@@ -1883,8 +1915,7 @@ const SermonRead = () => {
               />
             ))}
           </div>
-          </>
-          )}
+          </div>
 
         </div>
       ) : null}
