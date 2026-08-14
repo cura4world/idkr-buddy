@@ -323,7 +323,7 @@ function toDate(yymmdd: string): Date | null {
 export function formatSermonDate(yymmdd: string): string {
   const d = toDate(yymmdd);
   if (!d) return yymmdd;
-  const seq = dateSeq(yymmdd);
+  // 같은 날 두 번째부터라도 날짜만 보여줍니다 — 제목으로 구분됩니다.
   return (
     d.getFullYear() +
     ". " +
@@ -332,8 +332,7 @@ export function formatSermonDate(yymmdd: string): string {
     d.getDate() +
     ". (" +
     DOW[d.getDay()] +
-    ")" +
-    (seq ? " " + seq + "번째" : "")
+    ")"
   );
 }
 
@@ -343,8 +342,5 @@ export function formatSermonDateShort(yymmdd: string): string {
   const seq = dateSeq(yymmdd);
   if (yymmdd.length !== 6 && seq === 0) return yymmdd;
   const b = yymmdd.slice(0, 6);
-  return (
-    b.slice(0, 2) + "." + b.slice(2, 4) + "." + b.slice(4, 6) +
-    (seq ? "-" + seq : "")
-  );
+  return b.slice(0, 2) + "." + b.slice(2, 4) + "." + b.slice(4, 6);
 }
