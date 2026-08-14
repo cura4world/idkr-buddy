@@ -20,6 +20,10 @@ export interface SermonBlock {
   kind: SermonKind;
   id: string; // 인도네시아어
   ko: string; // 한국어 해석 (빈 문자열일 수 있음)
+  // 아래 둘은 보내기 도구(Sermon_Upload.html)가 붙이는 표시입니다.
+  // blocks 는 서버를 손대지 않고 그대로 지나가므로 여기까지 살아서 옵니다.
+  layout?: string; // "interpret" — 통역용 (첫 블록에만 붙습니다)
+  gap?: string;    // "wide" — 워드에서 문단 뒤 여백을 크게 준 자리
 }
 
 export interface SermonMeta {
