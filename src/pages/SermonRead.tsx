@@ -26,6 +26,7 @@ import {
   PenLine,
   Highlighter,
   Eraser,
+  Hand,
   Undo2,
   Trash2,
   Maximize,
@@ -411,6 +412,8 @@ interface InkToolState {
   penW: number;
   hlColor: string;
   hlW: number;
+  // 손가락 필기 — 펜을 쓸 수 없을 때. 켜면 한 손가락이 그리고 두 손가락이 스크롤합니다.
+  finger: boolean;
 }
 
 const DEFAULT_TOOL: InkToolState = {
@@ -419,7 +422,11 @@ const DEFAULT_TOOL: InkToolState = {
   penW: 3,
   hlColor: HL_COLORS[0],
   hlW: 2,
+  finger: false,
 };
+
+// 손가락에는 필압이 없습니다. 굵기가 들쭉날쭉하지 않도록 한 값으로 고정합니다.
+const FINGER_P = 0.5;
 
 const pickIdx = (v: any, len: number, fallback: number): number =>
   typeof v === "number" && isFinite(v) && v >= 0 && v < len ? Math.floor(v) : fallback;
@@ -438,6 +445,7 @@ const loadInkTool = (): InkToolState => {
         penW: pickIdx(o && o.penW, PEN_W.length, DEFAULT_TOOL.penW),
         hlColor: pickColor(o && o.hlColor, HL_COLORS, DEFAULT_TOOL.hlColor),
         hlW: pickIdx(o && o.hlW, HL_W.length, DEFAULT_TOOL.hlW),
+        finger: !!(o && o.finger),
       };
     }
   } catch (e) {}
@@ -1428,6 +1436,7 @@ const SermonRead = () => {
     // S펜 필압 원본 최대치가 1.0 이 아니라 0.55~0.64 부근이라 관측 최대값으로 정규화합니다.
     let PMAX = 0.55;
     const norm = (raw: number): number => {
+      if (fingerStroke) return FINGER_P; // 손가락 획은 필압이 없어 한 값으로 고정
       if (!raw || raw <= 0) return -1; // 압력 0 이벤트가 간헐적으로 섞임 → 직전 값 유지
       if (raw > PMAX) PMAX = Math.min(1, raw);
       return Math.max(0.05, Math.min(1, raw / PMAX));
@@ -1447,6 +1456,9 @@ const SermonRead = () => {
     let smoothP = 0.5;
     let strokeTool: "pen" | "hl" = "pen";
     let activeId = -1;
+    let fingerStroke = false; // 이번 획이 손가락으로 시작됐는가
+    let groupIsNew = false;   // 이번 획이 새 그룹인가 (이어붙인 것이면 지우면 안 됨)
+    let panY = -1;            // 두 손가락 스크롤 중이면 직전 중점 y, 아니면 -1
 
     // pointercancel 로 끊긴 획 이어붙이기용
     let resumeG: SVGGElement | null = null;
@@ -1486,9 +1498,11 @@ const SermonRead = () => {
         !!resumeG && now - resumeT < 250 && dx * dx + dy * dy < 900;
       if (canResume && resumeG) {
         group = resumeG; // 같은 획으로 이어붙임
+        groupIsNew = false;
       } else {
         group = makeInkGroup(t.tool, color);
         layer.appendChild(group);
+        groupIsNew = true;
       }
       smoothP = n >= 0 ? n : 0.5;
       pts = [];
@@ -1535,8 +1549,22 @@ const SermonRead = () => {
       }
     };
 
+    // 두 손가락 스크롤이 시작되면 방금 시작된 획을 없던 일로 만듭니다.
+    // 저장·hasInk 는 건드리지 않습니다 (그린 적이 없는 것으로 칩니다).
+    const abortStroke = () => {
+      if (!drawing) return;
+      drawing = false;
+      fingerStroke = false;
+      if (groupIsNew && group && group.parentNode === layer) layer.removeChild(group);
+      group = null;
+      chunk = null;
+      pts = [];
+      activeId = -1;
+    };
+
     const endStroke = () => {
       drawing = false;
+      fingerStroke = false;
       group = null;
       chunk = null;
       pts = [];
@@ -1546,9 +1574,13 @@ const SermonRead = () => {
     };
 
     const onDown = (e: PointerEvent) => {
-      // ④ 손가락은 스크롤 전용
-      if (e.pointerType !== "pen") return;
-      markPen();
+      // ④ 손가락은 스크롤 전용 — 단 "손가락" 토글을 켜면 손가락도 그립니다.
+      const byFinger = e.pointerType === "touch" && toolRef.current.finger;
+      if (e.pointerType !== "pen" && !byFinger) return;
+      // 두 번째 손가락이 새 획을 시작하지 못하게 막습니다 (두 손가락 = 스크롤).
+      if (drawing || erasing) return;
+      fingerStroke = byFinger;
+      if (!byFinger) markPen();
       if (hideBarRef.current) hideBarRef.current(); // 펜이 닿으면 도구막대를 접습니다 (ref 경유 — 의존성 그대로)
       e.preventDefault();
       activeId = e.pointerId;
@@ -1558,18 +1590,21 @@ const SermonRead = () => {
       const pt = pos(e);
       // S펜 옆 버튼을 누른 채 문지르면 지우개로 동작.
       // 기기·웹뷰에 따라 옆 버튼이 barrel(2) 로도 eraser(32) 로도 올라오므로 둘 다 받습니다.
-      const useEraser =
-        eraserRef.current ||
-        penButton.down ||
-        (e.buttons & 32) !== 0 ||
-        (e.buttons & 2) !== 0;
+      // 손가락에는 옆 버튼이 없습니다. 네이티브가 눌림 상태로 남아 있어도
+      // 손가락 획까지 지우개가 되지 않도록 손가락일 때는 토글만 봅니다.
+      const useEraser = byFinger
+        ? eraserRef.current
+        : eraserRef.current ||
+          penButton.down ||
+          (e.buttons & 32) !== 0 ||
+          (e.buttons & 2) !== 0;
       if (useEraser) {
         erasing = true;
         eraseAt(pt.x, pt.y);
         return;
       }
       drawing = true;
-      startStroke(pt.x, pt.y, norm(e.pressure));
+      startStroke(pt.x, pt.y, byFinger ? FINGER_P : norm(e.pressure));
     };
 
     const onMove = (e: PointerEvent) => {
@@ -1636,6 +1671,14 @@ const SermonRead = () => {
     //    단, 펜을 손에 든 채(호버 중)라도 펜촉에서 멀리 떨어진 손가락 터치는
     //    스크롤로 허용합니다 — 안 그러면 펜을 쥐고 있는 동안 스크롤이 전부 막힙니다.
     const onTouchStart = (e: TouchEvent) => {
+      // 손가락 필기 모드에서 두 손가락은 스크롤입니다.
+      // 첫 손가락이 이미 획을 시작했을 수 있으므로 그 획을 없던 일로 만들고 넘어갑니다.
+      if (toolRef.current.finger && e.touches.length >= 2) {
+        abortStroke();
+        panY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        e.preventDefault();
+        return;
+      }
       if (drawing || erasing) {
         e.preventDefault();
         return;
@@ -1665,7 +1708,22 @@ const SermonRead = () => {
 
     // ③ 그리는 동안에는 스크롤 금지
     const onTouchMove = (e: TouchEvent) => {
+      // 두 손가락 스크롤 — 손가락 모드에서는 필기면의 touchAction 이 none 이라
+      // 브라우저가 스크롤해 주지 않습니다. 중점이 움직인 만큼 직접 굴립니다.
+      if (panY >= 0) {
+        if (e.touches.length >= 2) {
+          const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+          window.scrollBy(0, panY - my);
+          panY = my;
+        }
+        e.preventDefault();
+        return;
+      }
       if (drawing || erasing) e.preventDefault();
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) panY = -1;
     };
 
     const onDocPointerMove = (e: PointerEvent) => {
@@ -1682,6 +1740,8 @@ const SermonRead = () => {
     surface.addEventListener("pointercancel", onCancel);
     document.addEventListener("touchstart", onTouchStart, { passive: false });
     document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onTouchEnd, { passive: true });
+    document.addEventListener("touchcancel", onTouchEnd, { passive: true });
     document.addEventListener("pointermove", onDocPointerMove, { passive: true });
     document.addEventListener("pointerover", onDocPointerMove, { passive: true });
 
@@ -1715,6 +1775,8 @@ const SermonRead = () => {
       surface.removeEventListener("pointercancel", onCancel);
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchcancel", onTouchEnd);
       document.removeEventListener("pointermove", onDocPointerMove);
       document.removeEventListener("pointerover", onDocPointerMove);
       if (penTimer !== null) window.clearTimeout(penTimer);
@@ -2031,6 +2093,24 @@ const SermonRead = () => {
               </button>
             </div>
 
+            {/* 손가락 필기 — 펜을 쓸 수 없을 때. 켜면 한 손가락이 그리고 두 손가락이 스크롤합니다.
+                켠 상태는 localStorage(TOOL_KEY)에 남아 다음에 들어와도 유지됩니다. */}
+            <button
+              type="button"
+              onClick={() => {
+                const on = !inkTool.finger;
+                setInkTool((p) => ({ ...p, finger: on }));
+                if (on) toast("손가락으로 씁니다. 스크롤은 두 손가락으로 밀어 주세요");
+              }}
+              className={
+                "h-8 px-2.5 rounded-full border border-border bg-card flex items-center gap-1 text-[0.6875rem] font-gothic shrink-0 " +
+                (inkTool.finger ? "ring-2 ring-foreground text-foreground" : "text-foreground/70")
+              }
+              aria-pressed={inkTool.finger}
+            >
+              <Hand size={14} /> 손가락
+            </button>
+
             <span className="mx-0.5 h-5 w-px bg-border shrink-0" />
 
             <button
@@ -2288,7 +2368,9 @@ const SermonRead = () => {
                 ref={surfaceRef}
                 className="absolute inset-0"
                 style={{
-                  touchAction: "pan-y",
+                  // 손가락 필기 중에는 브라우저가 세로 끌기를 스크롤로 채가면 획이 끊깁니다.
+                  // none 으로 두고 두 손가락 스크롤을 직접 처리합니다.
+                  touchAction: inkTool.finger ? "none" : "pan-y",
                   height: inkH > 0 ? String(inkH) + "px" : undefined,
                 }}
               />
