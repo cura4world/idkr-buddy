@@ -314,8 +314,68 @@ const KO_SOLO_STYLE: Record<string, SoloStyle> = {
   },
 };
 
+// 통역용 — 통역자와 함께 보는 설교문.
+// 워드 문서의 비율(인니어 17pt : 한국어 15pt = 1 : 0.88)을 그대로 옮기고,
+// 워드처럼 한국어를 위에 둡니다. 한국어는 회색(muted)이 아니라 본문색입니다.
+// 아래 여백은 여기에 넣지 않고 blocks 의 gap 값에 따라 renderBlock 에서 붙입니다.
+interface ItpStyle {
+  wrap: string;
+  koClass: string;
+  koSize: string;
+  idClass: string;
+  idSize: string;
+}
+
+const ITP_KO_BASE = "font-gothic leading-[1.75] break-words";
+
+const ITP_STYLE: Record<string, ItpStyle> = {
+  title: {
+    wrap: "",
+    koClass: ITP_KO_BASE + " font-semibold text-foreground",
+    koSize: "1.1em",
+    idClass: ID_BASE + " font-semibold text-foreground",
+    idSize: "1.25em",
+  },
+  ref: {
+    wrap: "-mt-4",
+    koClass: ITP_KO_BASE + " " + BIBLE_COLOR,
+    koSize: "0.8em",
+    idClass: ID_BASE + " " + BIBLE_COLOR,
+    idSize: "0.9em",
+  },
+  heading: {
+    wrap: "mt-8 scroll-mt-16",
+    koClass: ITP_KO_BASE + " font-semibold text-indigo-600",
+    koSize: "1.02em",
+    idClass: ID_BASE + " font-semibold text-indigo-600",
+    idSize: "1.15em",
+  },
+  verse: {
+    wrap: "border-l-2 " + BIBLE_BORDER + " pl-3",
+    koClass: ITP_KO_BASE + " " + BIBLE_COLOR,
+    koSize: "0.84em",
+    idClass: ID_BASE + " " + BIBLE_COLOR,
+    idSize: "0.95em",
+  },
+  hymn: {
+    wrap: "",
+    koClass: ITP_KO_BASE + " text-foreground",
+    koSize: "0.84em",
+    idClass: ID_BASE + " text-foreground",
+    idSize: "0.95em",
+  },
+  body: {
+    wrap: "",
+    koClass: ITP_KO_BASE + " text-foreground",
+    koSize: "0.88em",
+    idClass: ID_BASE + " text-foreground",
+    idSize: "1em",
+  },
+};
+
 const styleFor = (kind: string): KindStyle => KIND_STYLE[kind] || KIND_STYLE.body;
 const soloStyleFor = (kind: string): SoloStyle => KO_SOLO_STYLE[kind] || KO_SOLO_STYLE.body;
+const itpStyleFor = (kind: string): ItpStyle => ITP_STYLE[kind] || ITP_STYLE.body;
 
 // ---------- 필기(S펜) 도구 ----------
 // 아래 수치는 갤럭시 탭 실기기 시험으로 확정된 값입니다. 임의로 바꾸지 마세요.
@@ -1587,6 +1647,9 @@ const SermonRead = () => {
     blocks.every((b) => !b || !b.id) &&
     blocks.some((b) => !!(b && b.ko));
 
+  // 통역용 — 보내기 도구가 첫 블록에 표시를 심어 보냅니다.
+  const interpret = !koOnly && blocks.some((b) => !!(b && b.layout === "interpret"));
+
   // 읽기 묶음. 한 줄짜리 묶음의 캐시 키는 예전과 같아서 이미 만든 음성을 그대로 씁니다.
   // (성경 묶음·찬양 묶음만 글이 합쳐지므로 새로 만듭니다)
   const audioGroups = buildAudioGroups(blocks);
@@ -1691,6 +1754,34 @@ const SermonRead = () => {
           <p className={so.cls} style={{ fontSize: so.size }}>
             {b.ko}
           </p>
+        </div>
+      );
+    }
+    // 통역용 — 한국어를 위에, 두 언어를 비슷한 크기로.
+    // 아래 여백은 워드의 문단 뒤 여백을 옮긴 것입니다 (gap="wide" 면 더 벌립니다).
+    if (interpret) {
+      const it = itpStyleFor(b.kind);
+      const gapCls = b.gap === "wide" ? " mb-10" : " mb-5";
+      return (
+        <div
+          key={i}
+          id={b.kind === "heading" ? "sec-" + i : undefined}
+          className={it.wrap + gapCls}
+        >
+          {b.ko ? (
+            <p className={it.koClass} style={{ fontSize: it.koSize }}>
+              {b.ko}
+            </p>
+          ) : null}
+          {b.id ? (
+            <p
+              className={it.idClass + (b.ko ? " mt-0.5" : "")}
+              style={{ fontSize: it.idSize }}
+            >
+              {renderTokens(b.id, "w" + i + "-")}
+              {speakerAt[i] ? renderSpeaker(speakerAt[i].key, [speakerAt[i]]) : null}
+            </p>
+          ) : null}
         </div>
       );
     }
