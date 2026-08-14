@@ -20,10 +20,8 @@ export interface SermonBlock {
   kind: SermonKind;
   id: string; // 인도네시아어
   ko: string; // 한국어 해석 (빈 문자열일 수 있음)
-  // 아래 둘은 보내기 도구(Sermon_Upload.html)가 붙이는 표시입니다.
-  // blocks 는 서버를 손대지 않고 그대로 지나가므로 여기까지 살아서 옵니다.
-  layout?: string; // "interpret" — 통역용 (첫 블록에만 붙습니다)
-  gap?: string;    // "wide" — 워드에서 문단 뒤 여백을 크게 준 자리
+  layout?: string;
+  gap?: string;
 }
 
 export interface SermonMeta {
@@ -301,8 +299,18 @@ const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 
 // 문자열 파싱(new Date("2026-08-02"))은 UTC 로 읽혀 하루 밀릴 수 있어
 // 숫자 인자 생성자로 만듭니다.
+// 같은 날 두 번째부터는 뒤에 순번이 붙습니다 ("260815-2").
+// 앞 6자리가 날짜이고, 나머지는 몇 번째인지만 알려줍니다.
+function dateSeq(id: string): number {
+  if (typeof id !== "string") return 0;
+  const m = id.slice(6).match(new RegExp("^-([0-9]{1,2})$"));
+  return m ? Number(m[1]) : 0;
+}
+
 function toDate(yymmdd: string): Date | null {
-  if (typeof yymmdd !== "string" || yymmdd.length !== 6) return null;
+  if (typeof yymmdd !== "string") return null;
+  if (yymmdd.length !== 6 && dateSeq(yymmdd) === 0) return null;
+  yymmdd = yymmdd.slice(0, 6);
   const yy = Number(yymmdd.slice(0, 2));
   const mm = Number(yymmdd.slice(2, 4));
   const dd = Number(yymmdd.slice(4, 6));
@@ -315,6 +323,7 @@ function toDate(yymmdd: string): Date | null {
 export function formatSermonDate(yymmdd: string): string {
   const d = toDate(yymmdd);
   if (!d) return yymmdd;
+  const seq = dateSeq(yymmdd);
   return (
     d.getFullYear() +
     ". " +
@@ -323,12 +332,19 @@ export function formatSermonDate(yymmdd: string): string {
     d.getDate() +
     ". (" +
     DOW[d.getDay()] +
-    ")"
+    ")" +
+    (seq ? " " + seq + "번째" : "")
   );
 }
 
 // "260802" → "26.08.02"
 export function formatSermonDateShort(yymmdd: string): string {
-  if (typeof yymmdd !== "string" || yymmdd.length !== 6) return yymmdd;
-  return yymmdd.slice(0, 2) + "." + yymmdd.slice(2, 4) + "." + yymmdd.slice(4, 6);
+  if (typeof yymmdd !== "string") return yymmdd;
+  const seq = dateSeq(yymmdd);
+  if (yymmdd.length !== 6 && seq === 0) return yymmdd;
+  const b = yymmdd.slice(0, 6);
+  return (
+    b.slice(0, 2) + "." + b.slice(2, 4) + "." + b.slice(4, 6) +
+    (seq ? "-" + seq : "")
+  );
 }
