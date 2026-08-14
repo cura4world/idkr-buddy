@@ -391,6 +391,10 @@ const HL_W = [9, 13, 17, 25];                     // 기본 index 2
 const PEN_W_VIEW = [2, 3, 4, 5.5, 8];
 const HL_W_VIEW = [4, 6, 9, 13];
 
+// 필기 모드에 들어간 뒤 도구막대가 스스로 접히기까지의 시간(ms).
+// 어떤 도구를 쥐고 있는지 보여 주고 리본 자리도 알려 준 다음 화면을 넓혀 줍니다.
+const BAR_AUTO_HIDE_MS = 1500;
+
 const HL_ALPHA = 0.45;
 const TOOL_KEY = "sermon-ink-tool";
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -599,6 +603,10 @@ const SermonRead = () => {
   const saveTimerRef = useRef<number | null>(null);
   const saveNowRef = useRef<() => void>(() => {});
   const wasInkRef = useRef(false);
+  // 필기 모드에 들어간 직후 도구막대를 스스로 접는 타이머
+  const autoHideRef = useRef<number | null>(null);
+  // 필기 모드에 있는 동안 "본문 위쪽에서 얼마나 내려와 있는지"(px). 읽기 모드로 돌아갈 때 쓰고 비웁니다.
+  const inkScrollRef = useRef<number | null>(null);
   // 그리기 엔진이 도구막대를 숨길 때 쓰는 통로. 엔진 effect 의 의존성을 늘리지 않으려고 ref 로 둡니다.
   const hideBarRef = useRef<(() => void) | null>(null);
   const eraseAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -720,12 +728,48 @@ const SermonRead = () => {
     }
   };
 
+  // 도구막대 자동 접기 취소 — 사용자가 도구막대나 리본을 건드리면 그 시점에 멈춥니다.
+  // 손을 대는 중에 접히면 엉뚱한 버튼을 누르게 됩니다.
+  const cancelAutoHide = () => {
+    if (autoHideRef.current !== null) {
+      window.clearTimeout(autoHideRef.current);
+      autoHideRef.current = null;
+    }
+  };
+
+  // 필기 모드를 나갈 때 읽던 자리를 지킵니다.
+  // 브라우저는 뒤로가기를 처리하면서 히스토리 항목에 적어 둔 스크롤 위치를 되돌리는데,
+  // 그 값은 "필기 모드로 들어가기 전"의 것이라 필기 중에 옮겨 간 자리가 사라집니다.
+  // 게다가 도구막대·헤더·전체화면 때문에 본문 위쪽 높이가 달라져 절대 위치(scrollY)로는
+  // 맞출 수 없습니다. 그래서 본문 상자를 기준으로 다시 계산합니다.
+  // 전체화면 해제로 뷰포트 높이가 늦게 정리되므로 몇 번 더 덮어씁니다.
+  const restoreInkScroll = () => {
+    const d = inkScrollRef.current;
+    inkScrollRef.current = null;
+    if (d === null) return;
+    const apply = () => {
+      const c = contentRef.current;
+      if (!c) return;
+      const top = c.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top: Math.max(0, Math.round(top + d)) });
+    };
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        apply();
+        window.setTimeout(apply, 80);
+        window.setTimeout(apply, 200);
+        window.setTimeout(apply, 420);
+      });
+    });
+  };
+
   const resetSub = () => {
     // 팝업이 닫히는 순간을 적어 둡니다 (그 자리에 빠른 이동 버튼이 다시 나타나므로)
     if (popupOpenRef.current) popupClosedAtRef.current = Date.now();
     setPopupWord(null);
     setTocOpen(false);
     setInkMode(false); // 폰 뒤로가기 → 필기 모드만 종료
+    restoreInkScroll(); // 필기 중이었다면 그때 보던 자리로 되돌립니다 (아니면 아무것도 하지 않음)
     // 목차에서 고른 소제목이 있으면 여기서 옮깁니다.
     // 브라우저는 뒤로가기를 처리하면서 그 히스토리 항목에 저장해 둔 스크롤 위치를
     // 되돌리므로(scrollRestoration 기본값 auto), 시트를 닫자마자 스크롤하면 곧바로
@@ -1234,6 +1278,45 @@ const SermonRead = () => {
     } catch (e) {}
     saveNowRef.current();
   }, [inkMode]);
+
+  // 필기 모드에 들어가면 도구막대를 잠깐 보여 준 뒤 스스로 접습니다.
+  // 접기 자체는 barHidden 을 바꾸는 것뿐이라 기존 높이 애니메이션을 그대로 탑니다.
+  useEffect(() => {
+    if (!inkMode) return;
+    autoHideRef.current = window.setTimeout(() => {
+      autoHideRef.current = null;
+      setBarHidden(true);
+    }, BAR_AUTO_HIDE_MS);
+    return () => {
+      if (autoHideRef.current !== null) {
+        window.clearTimeout(autoHideRef.current);
+        autoHideRef.current = null;
+      }
+    };
+  }, [inkMode]);
+
+  // 필기 모드에 있는 동안 "지금 보고 있는 자리"를 계속 적어 둡니다.
+  // 화면 절대 위치(scrollY)가 아니라 본문 상자를 기준으로 재기 때문에, 도구막대가
+  // 접히거나 헤더가 사라져 위쪽 높이가 달라져도 같은 문장이 같은 자리에 남습니다.
+  useEffect(() => {
+    if (!inkMode) return;
+    const mark = () => {
+      const c = contentRef.current;
+      if (!c) return;
+      inkScrollRef.current = Math.round(-c.getBoundingClientRect().top);
+    };
+    mark();
+    window.addEventListener("scroll", mark, { passive: true });
+    // 도구막대가 접히고 펴지는 동안에도 본문이 위아래로 밀리므로 그때마다 다시 잽니다.
+    // (높이 애니메이션 중에는 스크롤 이벤트가 오지 않습니다)
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(mark) : null;
+    if (ro && barRef.current) ro.observe(barRef.current);
+    // 여기서 inkScrollRef 를 비우지 않습니다 — 읽기 모드로 돌아간 뒤에 써야 하는 값입니다.
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener("scroll", mark);
+    };
+  }, [inkMode, immersive, fontStep, rec]);
 
   // ---------- 필기: 도구막대 동작 ----------
   const selectTool = (t: "pen" | "hl") => {
@@ -1860,7 +1943,7 @@ const SermonRead = () => {
               방식은 흐름상의 상자가 실제로 줄어들 뿐이라 그 상호작용이 없습니다.
               바깥 상자는 높이만 맡고(위아래 패딩 없음), 여백은 안쪽 상자가 가집니다.
               높이 실제값은 위 useEffect 가 ref 로 직접 넣습니다(리렌더 없음). */}
-          <div ref={barInnerRef} className="py-1.5">
+          <div ref={barInnerRef} className="py-1.5" onPointerDown={cancelAutoHide}>
           {/* 1줄: 도구 │ 굵기 │ 되돌리기·전체화면·완료
               px-1/py-1 은 선택 표시(ring)가 가로 스크롤 영역에 잘리지 않게 두는 여백입니다.
               같은 크기의 음수 마진으로 상쇄해 실제 자리 차지는 그대로입니다. */}
@@ -2019,7 +2102,10 @@ const SermonRead = () => {
         <button
           ref={ribbonRef}
           type="button"
-          onClick={() => setBarHidden((v) => !v)}
+          onClick={() => {
+            cancelAutoHide();
+            setBarHidden((v) => !v);
+          }}
           className="fixed right-3 z-30 box-border flex items-center justify-center rounded-b-lg border border-t-0 border-border bg-card shadow-sm text-foreground/60 active:bg-muted"
           style={{ top: "0px", height: "36px", width: "40px" }}
           aria-label={barHidden ? "도구막대 펴기" : "도구막대 접기"}
