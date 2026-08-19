@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, ImageIcon, Plus, Check, Loader2, Mic, ChevronDown } from "lucide-react";
+import { ArrowLeft, Search, Volume2, Plus, Check, Loader2, Mic, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
-  generateWordImage,
   detectInputKind,
   analyzeIdSentence,
   lookupKoWord,
@@ -20,7 +19,6 @@ import { hasGeminiApiKey } from "@/lib/gemini";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
-import { getStoredImage, saveStoredImage } from "@/lib/imageStore";
 import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
 import { dropReturnTicket } from "@/lib/readReturn";
 import { medaliEngine } from "@/lib/medali";
@@ -94,9 +92,6 @@ const RelatedSection = ({ title, items }: { title: string; items: DictRelatedIte
     </>
   );
 };
-
-// 세션 메모리 캐시(빠른 재조회용). 영구 저장은 IndexedDB(imageStore).
-const imageCache = new Map<string, string>();
 
 // 검색 히스토리 (localStorage, 최신순, 최대 30개)
 const HISTORY_KEY = "dict-search-history";
@@ -182,10 +177,6 @@ const Dictionary = () => {
   // "다시 검색"이 무엇을 다시 찾을지 알 수 있습니다.
   const [lastTerm, setLastTerm] = useState("");
 
-  const [imgUrl, setImgUrl] = useState("");
-  const [imgLoading, setImgLoading] = useState(false);
-  const [imgError, setImgError] = useState("");
-
   const [saved, setSaved] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -226,21 +217,6 @@ const Dictionary = () => {
     return "검색에 실패했습니다. 잠시 후 다시 시도해주세요.";
   };
 
-  // 이미 본 단어면 저장된 이미지를 자동 표시. 안 본 단어면 버튼이 뜸(비용 절감).
-  const showStoredImageFor = async (word: string) => {
-    const key = word.toLowerCase();
-    const mem = imageCache.get(key);
-    if (mem) {
-      setImgUrl(mem);
-      return;
-    }
-    const stored = await getStoredImage(word);
-    if (stored) {
-      imageCache.set(key, stored);
-      setImgUrl(stored);
-    }
-  };
-
   // backTerm: 한국어 단어 결과의 인니어 표제어를 눌러 들어온 경우, 돌아갈 한국어 단어
   // forceRefresh: 캐시를 무시하고 새로 받아 캐시를 덮어씀 ("다시 검색" 버튼)
   const handleSearch = async (term?: string, backTerm?: string, forceRefresh?: boolean) => {
@@ -264,8 +240,6 @@ const Dictionary = () => {
       setIdSentence(null);
       setKoWord(null);
       setKoSentence(null);
-      setImgUrl("");
-      setImgError("");
       setSaved(false);
       setKind(detected);
       setKoBackTerm(backTerm ? backTerm.trim() : null);
@@ -287,7 +261,6 @@ const Dictionary = () => {
           setResult(r);
           // 지금 고른 대상 단어장 기준으로 판정합니다.
           if (saveTargetId && hasWordInCategory(saveTargetId, r.word)) setSaved(true);
-          await showStoredImageFor(r.word);
         } else if (detected === "id_sentence") {
           setIdSentence(cached as IdSentenceResult);
         } else if (detected === "ko_word") {
@@ -308,7 +281,6 @@ const Dictionary = () => {
         setResult(r);
         // 이미 대상 단어장에 있는 단어면 "저장됨"으로 표시
         if (saveTargetId && hasWordInCategory(saveTargetId, r.word)) setSaved(true);
-        await showStoredImageFor(r.word);
         await saveCachedResult(cacheKey, detected, w, r);
       } else if (detected === "id_sentence") {
         const r = await analyzeIdSentence(w);
@@ -343,8 +315,6 @@ const Dictionary = () => {
     setKoWord(null);
     setKoSentence(null);
     setError("");
-    setImgUrl("");
-    setImgError("");
     setKind(null);
     setQuery("");
     setKoBackTerm(null);
@@ -548,54 +518,6 @@ const Dictionary = () => {
     } catch (e) {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const imgReqId = useRef(0);
-
-  const imgErrorMessage = (code: string): string => {
-    if (code === "RATE_LIMIT") return "요청이 많습니다. 잠시 후 다시 시도해주세요.";
-    if (code === "NO_IMAGE") return "모델이 이미지를 만들지 못했어요.";
-    if (code === "IMAGE_TIMEOUT") return "이미지 생성이 오래 걸려 중단했어요. 잠시 후 다시 시도해주세요.";
-    if (code === "IMAGE_FAILED_-1") return "네트워크 오류로 이미지를 불러오지 못했어요.";
-    if (code.indexOf("IMAGE_FAILED_") === 0) return "이미지 생성에 실패했습니다 (오류 " + code.replace("IMAGE_FAILED_", "") + ")";
-    return "이미지 생성에 실패했습니다.";
-  };
-
-  // "이미지 보기" 버튼/재시도에서 호출. 저장소에 있으면 재사용, 없을 때만 생성 후 영구 저장.
-  const loadImage = async (word: string, meaning: string) => {
-    const key = word.toLowerCase();
-
-    // 1) 세션 메모리
-    const mem = imageCache.get(key);
-    if (mem) { setImgUrl(mem); setImgError(""); return; }
-
-    // 2) 영구 저장(IndexedDB)
-    const stored = await getStoredImage(word);
-    if (stored) {
-      imageCache.set(key, stored);
-      setImgUrl(stored);
-      setImgError("");
-      return;
-    }
-
-    // 3) 새로 생성
-    const reqId = ++imgReqId.current;
-    setImgLoading(true);
-    setImgUrl("");
-    setImgError("");
-    try {
-      const url = await generateWordImage(word, meaning);
-      imageCache.set(key, url);
-      const { overflowed } = await saveStoredImage(word, url);
-      if (imgReqId.current === reqId) setImgUrl(url);
-      if (overflowed) {
-        toast("저장된 사전 이미지가 5,000장을 넘어, 오래된 이미지부터 자동 정리됩니다.");
-      }
-    } catch (e: any) {
-      if (imgReqId.current === reqId) setImgError(imgErrorMessage(e?.message || ""));
-    } finally {
-      if (imgReqId.current === reqId) setImgLoading(false);
-    }
-  };
 
   // 대상이 바뀌거나 결과가 바뀌면 그 단어장 기준으로 '저장됨'을 다시 판정합니다.
   // (내 단어장에 있는 단어라도 설교 단어장에는 없으면 다시 담을 수 있어야 합니다)

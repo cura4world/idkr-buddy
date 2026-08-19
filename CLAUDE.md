@@ -163,7 +163,7 @@ src/
     sermonInk.ts    S펜 필기 저장 (IndexedDB)
     map.ts          지도 지점 설명 Gemini 생성 + IndexedDB 캐시
     mapData.ts      지도 좌표·핀 (대용량 124KB)
-    imageStore.ts / wordStore.ts
+    wordStore.ts
     saveTarget.ts   담을 단어장 설정 (앱 전체에 하나)
     readingTimer.ts 화면에 보이지 않는 읽기 타이머
     useSwipeFlip.ts 장문 화면 좌우 스와이프로 앞/뒤 넘기기
@@ -189,7 +189,7 @@ data/WORDLIST-PLAN.md       단어장 목표 개수·형식·분류 원칙
 | 저장소 | 내용 |
 |---|---|
 | localStorage | 단어장/단어, `geminiApiKey`, `app-font-scale-step`, `dict-search-history`(50개), 개인 폴더명, 난이도, TTS 음성, 설교문 서버 설정 |
-| IndexedDB | `kata-dict-images`(5,000 FIFO) · `kata-dict-results`(5,000 FIFO) · `kata-lookup-words` · `kata-stories` · `kata-qt-*` · `kata-sermon` · `kata-sermon-ink` · `kata-tts-audio`(공용 TTS 캐시, 5,000 FIFO) · `kata-sermon-audio`(설교문 낭독, **개수 제한 없음** — 한 편이 수십 MB 라 공용 TTS 캐시와 분리했다) |
+| IndexedDB | `kata-dict-results`(5,000 FIFO) · `kata-lookup-words` · `kata-stories` · `kata-qt-*` · `kata-sermon` · `kata-sermon-ink` · `kata-tts-audio`(공용 TTS 캐시, 5,000 FIFO) · `kata-sermon-audio`(설교문 낭독, **개수 제한 없음** — 한 편이 수십 MB 라 공용 TTS 캐시와 분리했다) |
 | GitHub CSV | `data/categories/*.csv` → 빌드 시 seed.json → 모든 기기 기본 단어장 |
 | Cloudflare R2 | 성경 낭독 mp3 1,189장 |
 | Cloudflare KV | 설교문 (Worker 경유) |

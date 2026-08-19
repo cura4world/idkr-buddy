@@ -91,7 +91,11 @@ Cloud TTS는 PCM→WAV 변환(ArrayBuffer/DataView) 후 문단 단위로 청크�
 - 설정의 "저장된 사전 이미지·단어 비우기"는 이미지 + 찾아본 단어 + 검색 결과 캐시를 **함께** 지웁니다.
 
 429가 나면 ① 지출 한도 확인 ② 모델 순서 변경 ③ 백오프 재시도 순으로 봅니다.
-이미지 모델은 `gemini-3.1-flash-image` → `gemini-2.5-flash-image` 폴백, 텍스트는 `gemini-flash-lite-latest`입니다.
+텍스트는 `gemini-flash-lite-latest`입니다.
+
+사전 이미지 생성 기능은 2026-08 에 제거했습니다. 한 장에 55~95원으로 단건 최고가인데
+학습 효과가 그만큼 크지 않다고 판단했습니다. 관련 코드(`generateWordImage`, `imageStore.ts`)와
+저장소 `kata-dict-images` 를 모두 걷어냈습니다.
 
 R2는 위험 요소가 사실상 없습니다: 저장 3.82GB(한도 10GB), 이그레스 무료, 읽기 1,000만/월 한도인데 사용자 2명 기준 월 200~600MB 수준입니다.
 

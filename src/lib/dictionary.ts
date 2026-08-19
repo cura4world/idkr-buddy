@@ -2,24 +2,9 @@
 // 인도네시아어 → 한국어 학습용 사전.
 // 기존 gemini.ts의 API 키(localStorage "geminiApiKey")를 그대로 재사용합니다.
 // 텍스트: 풍성한 사전 정보(JSON)를 생성.
-// 이미지: 단어를 설명하는 그림을 실시간 생성(on-demand, 저장하지 않음).
 
 // 텍스트 호출은 공통 모듈(geminiText.ts)이 담당합니다. 모델·타임아웃·재시도는 거기서 관리합니다.
-// getGeminiApiKey 는 아래 이미지 생성 경로에서만 씁니다.
-import { getGeminiApiKey } from "@/lib/gemini";
 import { callGeminiJSON } from "@/lib/geminiText";
-
-// 이미지 생성 모델 후보 (순서대로 시도, 실패하면 다음 후보로 폴백).
-// 참고: https://ai.google.dev/gemini-api/docs/image-generation
-const IMAGE_MODEL_CANDIDATES = [
-  "gemini-3.1-flash-image", // Nano Banana 2 (최신 범용)
-  "gemini-2.5-flash-image", // 구형 폴백 (무료 티어 지원)
-];
-
-// 이미지 생성은 텍스트보다 오래 걸립니다 (보통 10~30초).
-// 그래도 응답이 영영 안 오면 "이미지 보기"가 끝나지 않으므로 반드시 끊어 줍니다.
-const IMAGE_TIMEOUT_MS = 45000;   // 한 모델당
-const IMAGE_DEADLINE_MS = 75000;  // 후보를 다 돌아도 이 시간을 넘기지 않습니다
 
 export interface DictExample {
   id: string;      // 인도네시아어 예문
@@ -186,86 +171,6 @@ export async function lookupWord(word: string): Promise<DictResult> {
     frequency: num(parsed.frequency, 3),
     difficulty: num(parsed.difficulty, 3),
   };
-}
-
-// 단어를 설명하는 이미지를 실시간 생성합니다. 결과는 data URL(base64).
-// 저장하지 않고 화면 표시용으로만 사용합니다.
-// 모델 후보를 순서대로 시도해, 하나가 실패(모델명 변경/권한/한도)해도 다음 후보로 넘어갑니다.
-export async function generateWordImage(word: string, meaning: string): Promise<string> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
-
-  const trimmed = word.trim();
-  if (!trimmed) throw new Error("EMPTY_WORD");
-
-  const imgPrompt =
-    "A simple, clean, friendly illustration that visually explains the meaning of the " +
-    'Indonesian word "' + trimmed + '"' +
-    (meaning ? " (meaning: " + meaning + ")" : "") +
-    ". Minimal flat style, soft colors, no text or letters in the image, easy to understand at a glance.";
-
-  let lastStatus = 0;
-  const startedAt = Date.now();
-
-  for (const model of IMAGE_MODEL_CANDIDATES) {
-    // 앞 후보에서 이미 오래 끌었으면 남은 후보는 시도하지 않습니다
-    if (Date.now() - startedAt >= IMAGE_DEADLINE_MS) break;
-    const endpoint =
-      "https://generativelanguage.googleapis.com/v1beta/models/" +
-      model +
-      ":generateContent?key=" +
-      encodeURIComponent(apiKey);
-
-    // 남은 마감 시간과 한 모델 몫 중 짧은 쪽으로 끊습니다
-    const left = IMAGE_DEADLINE_MS - (Date.now() - startedAt);
-    const budget = Math.min(IMAGE_TIMEOUT_MS, left);
-    const controller = new AbortController();
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      try {
-        controller.abort();
-      } catch (e) {}
-    }, budget);
-
-    let res: Response;
-    try {
-      res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: imgPrompt }] }],
-        }),
-        signal: controller.signal,
-      });
-    } catch (e) {
-      clearTimeout(timer);
-      lastStatus = timedOut ? -2 : -1; // -2 시간 초과 / -1 네트워크 오류
-      continue;
-    }
-    clearTimeout(timer);
-
-    if (!res.ok) {
-      lastStatus = res.status;
-      continue; // 다음 후보 모델로
-    }
-
-    const data = await res.json();
-    const parts = data?.candidates?.[0]?.content?.parts ?? [];
-    for (const p of parts) {
-      const inline = p?.inlineData || p?.inline_data;
-      if (inline?.data) {
-        const mime = inline.mimeType || inline.mime_type || "image/png";
-        return "data:" + mime + ";base64," + inline.data;
-      }
-    }
-    lastStatus = 200; // 응답은 왔지만 이미지가 없음 → 다음 후보 시도
-  }
-
-  if (lastStatus === 429) throw new Error("RATE_LIMIT");
-  if (lastStatus === 200) throw new Error("NO_IMAGE");
-  if (lastStatus === -2) throw new Error("IMAGE_TIMEOUT");
-  throw new Error("IMAGE_FAILED_" + lastStatus);
 }
 
 // ============================================================
