@@ -17,6 +17,8 @@ export interface BibleBook {
 export interface BibleVerse {
   verse: number;
   text: string;
+  // 1절 앞에 붙어 오는 머리말(시편 표제). 본문과 분리해 절번호 없이 따로 보여줍니다.
+  intro?: string;
 }
 
 // 66권 정경 순서. chapters는 실제 데이터에서 실측한 값.
@@ -135,10 +137,15 @@ export async function fetchChapter(bookId: string, chapter: number): Promise<Bib
 
   const verses = chapters[String(chapter)];
   if (!Array.isArray(verses) || verses.length === 0) throw new Error("CHAPTER_NOT_FOUND");
-  return repairVerses(
-    [...verses]
-      .filter((v) => v && typeof v.verse === "number" && typeof v.text === "string")
-      .map((v) => ({ verse: v.verse, text: stripTbMarks(v.text) }))
+  return stripHebrewMarks(
+    splitSuperscription(
+      repairVerses(
+        [...verses]
+          .filter((v) => v && typeof v.verse === "number" && typeof v.text === "string")
+          .map((v) => ({ verse: v.verse, text: stripTbMarks(v.text) }))
+      ),
+      chapter
+    )
   );
 }
 
@@ -255,6 +262,130 @@ export function isUsableVerseText(text: string): boolean {
   if (t.length < 20) return false;
   if (startsWithIntroHead(t)) return false;
   return true;
+}
+
+// ── 표제(superscription) 분리 ─────────────────────────────────
+// TB 원본은 시편 표제를 1절 본문 앞에 그대로 이어 붙여 보냅니다.
+//   시편 23:1 = "Mazmur Daud. TUHAN adalah gembalaku, takkan kekurangan aku."
+// 표제는 그 편이 누구의 어떤 노래인지 알려주는 머리말이라 본문 문장이 아닙니다.
+// 절번호 없이 1절 위에 따로 얹기 위해 불러오는 자리에서 미리 갈라 둡니다.
+//
+// 66권 1,189장 전수 점검(2026-09) — 표제가 있는 곳은 117장뿐입니다.
+//   시편 116장 + 하박국 3장.
+//   시편 1·2·10·33·43·71·91·93~97·99·104~107·111~119·135~137·146~150 (34편)은
+//   원래 표제가 없는 편이라 걸리지 않아야 정상입니다.
+//
+// 가르는 방법 두 가지
+//   1) 히브리어 절번호 표시가 있으면 그 앞까지가 표제입니다.
+//      "Untuk pemimpin biduan. ... Mazmur Daud. (4-2) Apabila aku berseru, ..."
+//      표시 앞이 마침표로 끝나는 것만 경계로 봅니다. 표제가 두 절에 걸친 편
+//      (시편 51·52·54·60편)은 첫 표시 앞이 쉼표라 지나가고 다음 표시에서 갈립니다.
+//      시편 18:1 한 곳만 표시가 "(18:2)" 처럼 콜론이라 두 형태를 모두 봅니다.
+//   2) 표시가 없으면 머리단어로 시작하는 문장을 차례로 떼어냅니다.
+//      "Dari Daud. Nyanyian pengajaran. Berbahagialah ..." → 앞 두 문장이 표제
+//
+// 하박국 3:1은 절 전체가 표제라 본문이 빈 문자열이 됩니다.
+// 읽기 화면은 이때 절 문단을 그리지 않고 표제 줄만 보여줍니다.
+
+// 표제의 둘째 문장 이후에만 나타나는 머리단어입니다.
+// VERSE_INTRO_HEADS 는 절 하나를 문장처럼 보여줘도 되는지 가리는 데에도 쓰이므로
+// (peribahasa.ts) 건드리지 않고 여기에 따로 둡니다.
+const INTRO_CONT_HEADS = [
+  "Dengan permainan",
+  "Dengan lagu",
+  "Menurut:",
+  "Kesaksian",
+  "Dari bani Korah",
+  "Dari hamba TUHAN",
+  "Untuk Yedutun",
+];
+
+const HEBREW_MARK_G = new RegExp("\\((\\d+)[-:](\\d+)\\)", "g");
+const INTRO_SENTENCE = new RegExp("^([\\s\\S]{1,260}?[.])\\s+([\\s\\S]+)$");
+const CLOSING_QUOTES = "\"\u201d\u2019\u00bb";
+
+function continuesIntro(text: string): boolean {
+  if (startsWithIntroHead(text)) return true;
+  return INTRO_CONT_HEADS.some((h) => text.startsWith(h));
+}
+
+// 표제의 경계로 쓸 수 있는 자리인지 — 닫는 따옴표를 걷어낸 뒤 마침표로 끝나는가
+function endsSentence(text: string): boolean {
+  let s = text.trim();
+  while (s.length > 0 && CLOSING_QUOTES.indexOf(s.charAt(s.length - 1)) >= 0) {
+    s = s.slice(0, s.length - 1).trim();
+  }
+  return s.endsWith(".");
+}
+
+// ── 히브리어 절번호 표시 제거 ────────────────────────────────
+// TB 인쇄본은 히브리어 원문과 절번호가 어긋나는 곳에 "(51-4)" 같은 대조 표시를 답니다.
+// 원문 대조용 군더더기라 읽는 화면에서는 걷어냅니다.
+// 66권 전수 점검(2026-09) — 16권 1,327곳입니다. 시편이 990곳으로 가장 많고
+// 욥기 91 · 호세아 48 · 출애굽기 30 · 다니엘 29 · 학개 23 · 사무엘상 24 ·
+// 이사야 22 · 전도서 20 · 느헤미야 19 · 미가 15 · 열왕기상 11 순입니다.
+// 시편 18:1 한 곳만 "(18:2)" 처럼 콜론이라 두 형태를 모두 봅니다.
+//
+// 순서가 중요합니다. repairVerses 가 끊어진 절을 이어붙일 때 "(5-" 라는 반쪽 표시를
+// 단서로 쓰므로, 표시 제거는 반드시 이어붙이기와 표제 분리가 끝난 뒤에 합니다.
+
+function stripHebrewMarks(verses: BibleVerse[]): BibleVerse[] {
+  return verses.map((v) => {
+    const text = v.text.replace(HEBREW_MARK_G, " ").replace(new RegExp("\\s{2,}", "g"), " ").trim();
+    if (v.intro === undefined) return { verse: v.verse, text };
+    const intro = v.intro.replace(HEBREW_MARK_G, " ").replace(new RegExp("\\s{2,}", "g"), " ").trim();
+    return { verse: v.verse, text, intro };
+  });
+}
+
+function splitSuperscription(verses: BibleVerse[], chapter: number): BibleVerse[] {
+  if (verses.length === 0 || verses[0].verse !== 1) return verses;
+  const t = verses[0].text.trim();
+  if (!startsWithIntroHead(t)) return verses;
+
+  let intro = "";
+  let body = "";
+
+  // 1) 히브리어 절번호 표시를 경계로
+  HEBREW_MARK_G.lastIndex = 0;
+  let m = HEBREW_MARK_G.exec(t);
+  while (m) {
+    if (parseInt(m[1], 10) === chapter) {
+      const before = t.slice(0, m.index).trim();
+      if (endsSentence(before)) {
+        intro = before;
+        body = t.slice(m.index + m[0].length).trim();
+        break;
+      }
+    }
+    m = HEBREW_MARK_G.exec(t);
+  }
+  HEBREW_MARK_G.lastIndex = 0;
+
+  // 2) 표시가 없으면 머리단어로 시작하는 문장을 차례로 떼어낸다
+  if (!intro) {
+    let rest = t;
+    for (let i = 0; i < 8; i += 1) {
+      if (!continuesIntro(rest)) break;
+      const s = rest.match(INTRO_SENTENCE);
+      if (!s) {
+        // 남은 것이 짧은 머리말 한 문장뿐이면 (하박국 3:1) 통째로 표제로 본다
+        if (intro && rest.length <= 60) {
+          intro = (intro + " " + rest).trim();
+          rest = "";
+        }
+        break;
+      }
+      intro = (intro + " " + s[1]).trim();
+      rest = s[2].trim();
+    }
+    if (!intro) return verses;
+    body = rest;
+  }
+
+  const out = verses.slice();
+  out[0] = { verse: 1, text: body, intro };
+  return out;
 }
 
 // bolls.life 응답의 text는 HTML 문자열(예: <i>...</i>)일 수 있어 태그를 제거합니다.
