@@ -3,7 +3,7 @@
 // 책/장 선택은 아래에서 올라오는 시트. 단어 탭 팝업은 묵상과 동일한 3단 캐시.
 // 마지막 읽던 위치는 localStorage("bible-last-pos")에 기억.
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import {
@@ -532,15 +532,25 @@ const BibleRead = () => {
       </span>
     ));
 
+  // 표제(시편 머리말)는 절번호 없이 1절 위에 한 줄로 얹습니다.
+  // 하박국 3:1처럼 절 전체가 표제인 곳은 본문이 비어 절 문단을 그리지 않습니다.
   const renderTbVerse = (v: BibleVerse) => (
-    <p
-      key={v.verse}
-      ref={(el) => { verseRefs.current["id-" + v.verse] = el; }}
-      className="mb-2 text-[1em] leading-relaxed font-word text-gray-900"
-    >
-      <span className="text-sky-500/70 text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
-      {renderTokens(v.text, "b" + v.verse + "-")}
-    </p>
+    <Fragment key={v.verse}>
+      {v.intro ? (
+        <p className="mb-2 text-[0.82em] leading-snug font-word italic text-gray-500">
+          {renderTokens(v.intro, "bs" + v.verse + "-")}
+        </p>
+      ) : null}
+      {v.text ? (
+        <p
+          ref={(el) => { verseRefs.current["id-" + v.verse] = el; }}
+          className="mb-2 text-[1em] leading-relaxed font-word text-gray-900"
+        >
+          <span className="text-sky-500/70 text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
+          {renderTokens(v.text, "b" + v.verse + "-")}
+        </p>
+      ) : null}
+    </Fragment>
   );
 
   const renderKoVerse = (v: BibleVerse) => (
