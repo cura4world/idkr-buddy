@@ -193,3 +193,13 @@
 [data-sonner-toaster] {
   font-family: 'Pretendard', 'Gowun Dodum', sans-serif;
 }
+
+/* 성경 선택 다이얼 — 스크롤바 숨김.
+   전역 ::-webkit-scrollbar 가 4px 막대를 그리므로 여기서만 끕니다. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
