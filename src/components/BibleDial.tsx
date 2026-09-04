@@ -1,7 +1,7 @@
 // src/components/BibleDial.tsx
 // 성경 읽기 화면 전용 책/장 선택 다이얼 (앞면에서만 사용).
 // 위치 필(MAZMUR / 23) 바로 아래에 왼쪽을 맞춰 열리는 좁은 흰 카드입니다.
-// 굴려서 찾고(관성 스크롤 그대로) 탭해서 확정합니다.
+// 굴려서 찾고(안드로이드 기본 관성 스크롤) 탭해서 확정합니다.
 //
 // 묵상 화면이 쓰는 BiblePicker.tsx 는 그대로 두었습니다. 이 파일은 별도입니다.
 //
@@ -14,7 +14,7 @@ import { BIBLE_BOOKS, getBook } from "@/lib/bible";
 // 한 줄 높이(px). 열릴 때 "선택된 항목을 맨 위로" 맞추는 계산에 그대로 쓰이므로
 // 아래 행의 h-9 와 반드시 같아야 합니다.
 const ROW_H = 36;
-const MAX_H = 300;
+const MAX_H = 372;
 
 export interface DialAnchor {
   left: number; // 필의 왼쪽 변 (화면 좌표)
@@ -86,7 +86,13 @@ const BibleDial = ({
           className="no-scrollbar overflow-y-auto"
           style={{
             maxHeight,
-            scrollSnapType: "y proximity",
+            // 스냅은 쓰지 않습니다. 관성으로 돌아가는 도중에 가장 가까운 줄로 끌어당겨
+            // 세워버려서 "부드럽게 감속하다 멈춤"이 죽습니다. 기본 플링에 맡깁니다.
+            touchAction: "pan-y",
+            overscrollBehavior: "contain",
+            // 아래쪽 페이드가 스크롤 영역 위에 겹쳐 있어, 레이어를 올려 매 프레임
+            // 다시 그리는 것을 막습니다.
+            transform: "translateZ(0)",
             WebkitOverflowScrolling: "touch" as any,
           }}
         >
@@ -100,7 +106,6 @@ const BibleDial = ({
                     className={`w-full h-9 flex items-baseline gap-1.5 text-left px-3.5 whitespace-nowrap active:bg-black/5 ${
                       on ? "bg-sky-500/10" : ""
                     }`}
-                    style={{ scrollSnapAlign: "start" }}
                   >
                     <span
                       className={`font-word font-semibold ${
@@ -126,7 +131,6 @@ const BibleDial = ({
                     className={`w-full h-9 flex items-center text-left px-3.5 whitespace-nowrap active:bg-black/5 ${
                       on ? "bg-sky-500/10" : ""
                     }`}
-                    style={{ scrollSnapAlign: "start" }}
                   >
                     <span
                       className={`font-gothic ${
