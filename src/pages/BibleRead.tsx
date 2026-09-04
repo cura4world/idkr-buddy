@@ -23,6 +23,7 @@ import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import { ttsPlayer } from "@/lib/tts";
 import { bibleAudioPlayer } from "@/lib/bibleAudio";
 import BiblePicker from "@/components/BiblePicker";
+import BibleDial from "@/components/BibleDial";
 import BibleAudioButton from "@/components/BibleAudioButton";
 import BibleAudioSeekBar from "@/components/BibleAudioSeekBar";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
@@ -217,6 +218,14 @@ const BibleRead = () => {
   // ---------- 책/장 선택 피커 ----------
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  // ---------- 책/장 선택 다이얼 (앞면 전용) ----------
+  // 위치 필은 overflow-hidden 컨테이너 안에 있어 안쪽에 두면 잘립니다.
+  // 그래서 다이얼은 fixed 로 띄우고, 열 때 필의 화면 좌표를 재서 넘깁니다.
+  const bookPillRef = useRef<HTMLButtonElement | null>(null);
+  const chapPillRef = useRef<HTMLButtonElement | null>(null);
+  const [dialKind, setDialKind] = useState<"book" | "chapter" | null>(null);
+  const [dialAnchor, setDialAnchor] = useState<{ left: number; top: number } | null>(null);
+
   // ---------- 뒤로가기 (시트/팝업만 한 단계 닫기) ----------
   const subOpenRef = useRef(false);
   // 히스토리를 실제로 쌓았는지 (사전으로 나갈 때 그 칸을 덮어쓸지 판단하는 데 씁니다)
@@ -234,11 +243,21 @@ const BibleRead = () => {
   };
   const resetSub = () => {
     setPickerOpen(false);
+    setDialKind(null);
     setPopupWord(null);
   };
   const closeSub = () => {
     if (subOpenRef.current) window.history.back();
     else resetSub();
+  };
+  // 다이얼 열기 — 필의 화면 좌표를 한 번 재서 넘깁니다.
+  // 열려 있는 동안은 막이 화면을 덮어 본문이 스크롤되지 않으므로 다시 잴 필요가 없습니다.
+  const openDial = (kind: "book" | "chapter", el: HTMLButtonElement | null) => {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setDialAnchor({ left: r.left, top: r.bottom });
+    setDialKind(kind);
+    pushSub();
   };
   useEffect(() => {
     const onPop = () => {
@@ -602,13 +621,32 @@ const BibleRead = () => {
         <div {...swipeHandlers} className="-mx-4 bg-card border-y border-border/60 overflow-hidden px-4 py-5">
               {/* 위치 필 (탭 → 책 선택 시트) */}
               <div className="flex items-center gap-2 mb-4 min-w-0">
-                <button
-                  onClick={() => { setPickerOpen(true); pushSub(); }}
-                  className="inline-flex items-center gap-1 min-w-0 font-bold text-sky-600 bg-sky-500/10 rounded-full px-3 py-1 text-sm"
-                >
-                  <span className="truncate">{posLabel}</span>
-                  <ChevronDown size={13} className="shrink-0" />
-                </button>
+                {flipped ? (
+                  <button
+                    onClick={() => { setPickerOpen(true); pushSub(); }}
+                    className="inline-flex items-center gap-1 min-w-0 font-bold text-sky-600 bg-sky-500/10 rounded-full px-3 py-1 text-sm"
+                  >
+                    <span className="truncate">{posLabel}</span>
+                    <ChevronDown size={13} className="shrink-0" />
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      ref={bookPillRef}
+                      onClick={() => openDial("book", bookPillRef.current)}
+                      className="inline-flex items-center min-w-0 font-bold text-sky-600 bg-sky-500/10 rounded-full px-[18px] py-1 text-sm"
+                    >
+                      <span className="truncate">{book ? book.idName.toUpperCase() : ""}</span>
+                    </button>
+                    <button
+                      ref={chapPillRef}
+                      onClick={() => openDial("chapter", chapPillRef.current)}
+                      className="shrink-0 font-bold text-sky-600 bg-sky-500/10 rounded-full px-[18px] py-1 text-sm"
+                    >
+                      {pos.chapter}
+                    </button>
+                  </>
+                )}
                 {!flipped && !loading && !error && verses && verses.length > 0 && (
                   <span
                     className="ml-auto shrink-0 flex items-center gap-1.5"
@@ -721,6 +759,21 @@ const BibleRead = () => {
       {/* 책/장 선택 피커 */}
       <BiblePicker
         open={pickerOpen}
+        currentBookId={pos.bookId}
+        currentChapter={pos.chapter}
+        onClose={closeSub}
+        onSelect={(bookId, chapter) => {
+          setPos({ bookId, chapter });
+          closeSub();
+          scrollTopRef.current?.scrollIntoView?.();
+        }}
+      />
+
+      {/* 책/장 선택 다이얼 — 앞면에서만 열립니다 */}
+      <BibleDial
+        open={dialKind !== null}
+        kind={dialKind === "chapter" ? "chapter" : "book"}
+        anchor={dialAnchor}
         currentBookId={pos.bookId}
         currentChapter={pos.chapter}
         onClose={closeSub}
