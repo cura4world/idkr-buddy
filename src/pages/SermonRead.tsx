@@ -240,7 +240,7 @@ const KIND_STYLE: Record<string, KindStyle> = {
   },
   heading: {
     wrap: "mt-8 mb-5 scroll-mt-16",
-    idClass: ID_BASE + " font-semibold text-indigo-600",
+    idClass: ID_BASE + " font-semibold text-blue-800",
     idSize: "1.15em",
     koClass: KO_BASE + " font-semibold text-foreground",
     koSize: "0.71em",
@@ -295,7 +295,7 @@ const KO_SOLO_STYLE: Record<string, SoloStyle> = {
   },
   heading: {
     wrap: "mt-8 mb-5 scroll-mt-16",
-    cls: KO_SOLO_BASE + " font-semibold text-indigo-600",
+    cls: KO_SOLO_BASE + " font-semibold text-blue-800",
     size: "1.15em",
   },
   verse: {
@@ -346,9 +346,9 @@ const ITP_STYLE: Record<string, ItpStyle> = {
   },
   heading: {
     wrap: "mt-8 scroll-mt-16",
-    koClass: ITP_KO_BASE + " font-semibold text-indigo-600",
+    koClass: ITP_KO_BASE + " font-semibold text-blue-800",
     koSize: "1.02em",
-    idClass: ID_BASE + " font-semibold text-indigo-600",
+    idClass: ID_BASE + " font-semibold text-blue-800",
     idSize: "1.15em",
   },
   verse: {
@@ -950,7 +950,7 @@ const SermonRead = () => {
       <span key={keyPrefix + ti} data-idw="1">
         <span
           onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
-          className="cursor-pointer rounded active:bg-indigo-500/20"
+          className="cursor-pointer rounded active:bg-blue-800/20"
         >
           {tok}
         </span>{" "}
@@ -1002,7 +1002,7 @@ const SermonRead = () => {
         }}
         className={
           "select-none align-middle ml-1 inline-flex items-center justify-center w-6 h-6 rounded-full shrink-0 " +
-          (mine ? "bg-indigo-500 text-white" : "text-indigo-500/70 active:bg-indigo-500/10")
+          (mine ? "bg-blue-800 text-white" : "text-blue-800/70 active:bg-blue-800/10")
         }
         style={{ fontSize: "1rem" }}
         aria-label="이 문단 듣기"
@@ -1968,7 +1968,7 @@ const SermonRead = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <span className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shrink-0">
+        <span className="w-8 h-8 rounded-lg bg-blue-800 flex items-center justify-center shrink-0">
           <BookMarked size={16} className="text-white" />
         </span>
         <h1 className="min-w-0 flex-1 text-lg font-semibold leading-none truncate">
@@ -2228,7 +2228,7 @@ const SermonRead = () => {
       <div className="px-4 py-4 pb-24">
         {/* 날짜 + 글자 크기 (성경 읽기의 '위치 필 + 듣기' 자리와 같은 배치) */}
         <div className="flex items-center gap-2 mb-4 min-w-0">
-          <span className="inline-flex items-center min-w-0 font-gothic text-indigo-600 bg-indigo-500/10 rounded-full px-3 py-1 text-sm">
+          <span className="inline-flex items-center min-w-0 font-gothic text-blue-800 bg-blue-800/10 rounded-full px-3 py-1 text-sm">
             <span className="truncate">{formatSermonDate(id)}</span>
           </span>
           <span className="ml-auto mr-14 shrink-0 flex items-center gap-2">
@@ -2267,7 +2267,7 @@ const SermonRead = () => {
               type="button"
               onClick={() => playParts(allKey, audioParts)}
               disabled={audioParts.length === 0}
-              className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-indigo-600 active:bg-muted disabled:opacity-30"
+              className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-blue-800 active:bg-muted disabled:opacity-30"
               aria-label="전체 듣기"
               title="전체 듣기"
             >
@@ -2305,7 +2305,7 @@ const SermonRead = () => {
             <button
               type="button"
               onClick={() => setReloadTick((n) => n + 1)}
-              className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium bg-indigo-500 text-white"
+              className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium bg-blue-800 text-white"
             >
               <RotateCcw size={13} /> 다시 시도
             </button>
