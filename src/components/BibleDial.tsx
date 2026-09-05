@@ -90,8 +90,7 @@ const BibleDial = ({
             // 세워버려서 "부드럽게 감속하다 멈춤"이 죽습니다. 기본 플링에 맡깁니다.
             touchAction: "pan-y",
             overscrollBehavior: "contain",
-            // 아래쪽 페이드가 스크롤 영역 위에 겹쳐 있어, 레이어를 올려 매 프레임
-            // 다시 그리는 것을 막습니다.
+            // 스크롤 영역을 별도 레이어로 올려 카드 그림자와 함께 다시 그려지지 않게 합니다.
             transform: "translateZ(0)",
             WebkitOverflowScrolling: "touch" as any,
           }}
@@ -143,16 +142,6 @@ const BibleDial = ({
                 );
               })}
         </div>
-
-        {/* 아래쪽 페이드 — 카드를 투명하게 만들지 않고 흰색으로 덮어 글자만 사라지게 합니다.
-            (투명하게 하면 뒤의 본문 글자와 섞여 지저분해집니다) */}
-        <div
-          className="absolute left-0 right-0 bottom-0 h-16 pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(to top, hsl(var(--card)) 14%, hsl(var(--card) / 0) 100%)",
-          }}
-        />
       </div>
     </div>
   );
