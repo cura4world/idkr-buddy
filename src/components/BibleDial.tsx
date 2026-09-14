@@ -61,14 +61,15 @@ const BibleDial = ({
   if (!open || !anchor) return null;
 
   const top = anchor.top + 6;
-  // 가로 자리는 필을 따라가지 않고 **항상 화면 오른쪽에 붙입니다.**
-  // 필의 왼쪽에 맞추면 RUT 처럼 책이름이 짧을 때 필이 오른쪽으로 가서
-  // 상자가 화면 밖으로 밀려나 오른쪽 글자가 잘렸습니다.
-  // (anchor.left 는 더 이상 쓰지 않지만, 호출하는 쪽을 고치지 않으려고 받기는 합니다)
+  // 가로 자리는 누른 필의 왼쪽 변에 맞춥니다.
+  // 다만 그대로 두면 필이 오른쪽에 있을 때 상자가 화면 밖으로 밀려 글자가 잘리므로,
+  // 오른쪽 끝을 넘지 않도록 한 번 잡아 둡니다.
   const RIGHT_GAP = 12;
+  const width = kind === "book" ? 232 : 62;   // 책: 글자 오른쪽 여백 / 장: 숫자만 들어가면 됩니다
+  const maxLeft = window.innerWidth - width - RIGHT_GAP;
+  const left = Math.max(8, Math.min(anchor.left, maxLeft));
   // 화면 아래로 넘치지 않게 자릅니다 (아래 여백 16px 확보).
   const maxHeight = Math.max(ROW_H * 3, Math.min(MAX_H, window.innerHeight - top - 16));
-  const width = kind === "book" ? 232 : 62;   // 책: 글자 오른쪽 여백 / 장: 숫자만 들어가면 됩니다
 
   const chapters = book ? book.chapters : 1;
 
@@ -87,7 +88,7 @@ const BibleDial = ({
 
       <div
         className="absolute rounded-2xl bg-card shadow-xl overflow-hidden"
-        style={{ right: RIGHT_GAP, top, width }}
+        style={{ left, top, width }}
         onClick={(e) => e.stopPropagation()}
       >
         <div
