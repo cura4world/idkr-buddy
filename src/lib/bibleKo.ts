@@ -281,8 +281,18 @@ export async function clearKoBible(): Promise<void> {
 const SRV_BASE_KEY = "bible-base";
 const SRV_SECRET_KEY = "bible-key";
 
+// 기본 주소 — 기기마다 주소를 옮겨 적는 게 번거로워 미리 채워 둡니다.
+// 주소는 비밀이 아닙니다. 실제로 막는 것은 열쇠(BIBLE_KEY) 하나뿐이고,
+// 열쇠 없이 이 주소를 열면 unauthorized 만 돌아옵니다.
+// 나중에 커스텀 도메인으로 옮기면 설정에서 주소만 바꿔 넣으면 됩니다.
+const DEFAULT_BASE = "https://kata-sermon.cura4world.workers.dev";
+
 export function getBibleBase(): string {
-  try { return localStorage.getItem(SRV_BASE_KEY) || ""; } catch (e) { return ""; }
+  try {
+    const v = localStorage.getItem(SRV_BASE_KEY);
+    if (v !== null) return v;   // 사용자가 지운 경우(빈 문자열)는 그대로 존중합니다
+  } catch (e) {}
+  return DEFAULT_BASE;
 }
 
 export function setBibleBase(v: string): void {
