@@ -834,7 +834,7 @@ const BibleRead = () => {
         ref={stickyRef}
         className="sticky top-0 z-30 bg-background text-foreground border-b border-border"
       >
-        {/* 제목 줄 — 책·장 선택은 오른쪽 끝에 붙입니다 */}
+        {/* 제목 줄 — 보기 방식 단추는 오른쪽 끝에 붙입니다 */}
         <div className="px-4 pt-3.5 pb-3 flex items-center gap-2">
           <button
             onClick={() => goBackOr(navigate, location.key, "/devotion")}
@@ -844,20 +844,16 @@ const BibleRead = () => {
             <ArrowLeft size={20} />
           </button>
           <h1 className="shrink-0 font-gothic text-base font-semibold uppercase tracking-[0.08em]">ALKITAB</h1>
-          <span className="ml-auto min-w-0 flex items-center gap-1.5">
+          <span className="ml-auto shrink-0 flex items-center">
             <button
-              ref={bookPillRef}
-              onClick={() => openDial("book", bookPillRef.current)}
-              className="inline-flex items-center min-w-0 font-bold text-white bg-sky-500 rounded-full px-3.5 py-1 text-[0.8125rem]"
+              ref={modePillRef}
+              type="button"
+              onClick={openModeMenu}
+              className="h-7 min-w-[108px] pl-3.5 pr-2.5 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-600 font-gothic text-[0.6875rem] inline-flex items-center justify-between gap-1"
+              title="보기 방식 고르기"
             >
-              <span className="truncate">{bookLabel}</span>
-            </button>
-            <button
-              ref={chapPillRef}
-              onClick={() => openDial("chapter", chapPillRef.current)}
-              className="shrink-0 inline-flex items-center justify-center min-w-[44px] font-bold text-white bg-sky-500 rounded-full px-2.5 py-1 text-[0.8125rem]"
-            >
-              {pos.chapter}
+              {(VIEW_MODES.find((m) => m.id === mode) || VIEW_MODES[0]).label}
+              <ChevronDown size={12} className="shrink-0" />
             </button>
           </span>
           {canWide ? (
@@ -873,18 +869,22 @@ const BibleRead = () => {
           ) : null}
         </div>
 
-        {/* 도구 줄 — 보기 방식 · 형광펜 · 지우기 · 글자 크기 · 듣기 */}
+        {/* 도구 줄 — 책·장 · 형광펜 · 지우기 · 글자 크기 · 듣기 */}
         {/* 재생 중에는 낭독 조작이 넓어지므로 줄을 넘기지 않고 옆으로 밀리게 둡니다 */}
         <div className="px-4 pb-2 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
-            ref={modePillRef}
-            type="button"
-            onClick={openModeMenu}
-            className="shrink-0 h-7 min-w-[108px] pl-3.5 pr-2.5 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-600 font-bold font-gothic text-[0.6875rem] inline-flex items-center justify-between gap-1"
-            title="보기 방식 고르기"
+            ref={bookPillRef}
+            onClick={() => openDial("book", bookPillRef.current)}
+            className="shrink-0 inline-flex items-center min-w-0 max-w-[42vw] font-bold text-white bg-sky-500 rounded-full px-3.5 py-1 text-[0.8125rem]"
           >
-            {(VIEW_MODES.find((m) => m.id === mode) || VIEW_MODES[0]).label}
-            <ChevronDown size={12} className="shrink-0" />
+            <span className="truncate">{bookLabel}</span>
+          </button>
+          <button
+            ref={chapPillRef}
+            onClick={() => openDial("chapter", chapPillRef.current)}
+            className="shrink-0 inline-flex items-center justify-center min-w-[44px] font-bold text-white bg-sky-500 rounded-full px-2.5 py-1 text-[0.8125rem]"
+          >
+            {pos.chapter}
           </button>
 
           <span className="ml-auto shrink-0 flex items-center gap-2.5">
