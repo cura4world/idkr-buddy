@@ -285,7 +285,9 @@ const BibleRead = () => {
   // 도구 줄은 overflow-x-auto 라 그 안에 absolute 로 두면 잘립니다.
   // 그래서 다이얼과 같은 방법으로 fixed 로 띄우고 열 때 단추 좌표를 한 번 잽니다.
   const modePillRef = useRef<HTMLButtonElement | null>(null);
-  const [modeMenu, setModeMenu] = useState<{ left: number; top: number } | null>(null);
+  // 단추가 화면 오른쪽 끝에 있으므로 왼쪽 변이 아니라 **오른쪽 변**에 맞춥니다.
+  // 왼쪽에 맞추면 메뉴가 단추보다 넓을 때 화면 밖으로 나가 글자가 잘립니다.
+  const [modeMenu, setModeMenu] = useState<{ right: number; top: number } | null>(null);
 
   // ---------- 뒤로가기 (시트/팝업만 한 단계 닫기) ----------
   const subOpenRef = useRef(false);
@@ -324,7 +326,7 @@ const BibleRead = () => {
     const el = modePillRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    setModeMenu({ left: r.left, top: r.bottom });
+    setModeMenu({ right: Math.max(8, window.innerWidth - r.right), top: r.bottom });
     pushSub();
   };
 
@@ -1038,7 +1040,7 @@ const BibleRead = () => {
         <div className="fixed inset-0 z-40" onClick={closeSub}>
           <div
             className="absolute bg-card rounded-xl border border-border shadow-lg overflow-hidden py-1"
-            style={{ left: modeMenu.left, top: modeMenu.top + 6, minWidth: 152 }}
+            style={{ right: modeMenu.right, top: modeMenu.top + 6, minWidth: 108 }}
             onClick={(e) => e.stopPropagation()}
           >
             {VIEW_MODES.map((m) => (
@@ -1047,11 +1049,11 @@ const BibleRead = () => {
                 type="button"
                 onClick={() => pickMode(m.id)}
                 className={
-                  "w-full text-left px-3.5 h-9 flex items-center gap-2 font-gothic text-sm " +
+                  "w-full text-right px-3 h-8 flex items-center justify-end gap-1.5 whitespace-nowrap font-gothic text-[0.6875rem] " +
                   (mode === m.id ? "text-sky-600 font-bold" : "text-gray-700 active:bg-muted")
                 }
               >
-                <Check size={14} className={mode === m.id ? "shrink-0" : "shrink-0 opacity-0"} />
+                <Check size={12} className={mode === m.id ? "shrink-0" : "shrink-0 opacity-0"} />
                 {m.label}
               </button>
             ))}
