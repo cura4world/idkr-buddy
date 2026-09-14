@@ -33,6 +33,7 @@ import BibleAudioSeekBar from "@/components/BibleAudioSeekBar";
 import {
   HlColor, ChapterHl, HL_RGB, HL_ORDER, hlStyle, loadChapterHl, saveChapterHl,
 } from "@/lib/bibleHighlight";
+import { koMetaSync } from "@/lib/bibleKo";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import PointFloat from "@/components/PointFloat";
@@ -786,7 +787,18 @@ const BibleRead = () => {
     </Fragment>
   );
 
-  const renderKoVerse = (v: BibleVerse) => (
+  // 소제목 — 인니어 본문에는 없고 직접 불러온 한국어 성경에만 있습니다.
+  // IN·한국어 에서는 절 묶음의 **맨 위**에 둡니다. 한국어 절 바로 위에 두면
+  // 같은 절의 원문과 번역 사이를 소제목이 갈라 버립니다.
+  const renderTitle = (text: string, key: string) => (
+    <p key={key} className="mt-4 mb-2 text-[0.8125em] font-gothic font-semibold text-gray-500">
+      {text}
+    </p>
+  );
+
+  const renderKoVerse = (v: BibleVerse, withTitle?: boolean) => (
+    <Fragment key={"kw" + v.verse}>
+      {withTitle && v.title ? renderTitle(v.title, "kt" + v.verse) : null}
     <p
       key={"k" + v.verse}
       data-hlp="1"
@@ -799,6 +811,7 @@ const BibleRead = () => {
       <span className="text-sky-500/70 text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
       {renderTokens(v.text, "k" + v.verse + "-", "ko", v.verse, false)}
     </p>
+    </Fragment>
   );
 
   // IN·한 은 절 번호를 열쇠로 짝을 맞춥니다. 번역마다 절 나눔이 조금 달라
@@ -818,6 +831,7 @@ const BibleRead = () => {
     nums.sort((a, b) => a - b);
     return nums.map((n) => (
       <Fragment key={"p" + n}>
+        {koMap[n] && koMap[n].title ? renderTitle(koMap[n].title as string, "pt" + n) : null}
         {tbMap[n] ? renderTbVerse(tbMap[n]) : null}
         {koMap[n] ? renderKoVerse(koMap[n]) : null}
       </Fragment>
@@ -826,6 +840,10 @@ const BibleRead = () => {
 
   // 위치 필 라벨: 한국어만 볼 때는 한국어 책이름("룻기"), 그 밖에는 인니어("RUT")
   const bookLabel = book ? (mode === "ko" ? book.ko : book.idName.toUpperCase()) : "";
+
+  // 한국어 본문 출처 — 설정에서 불러온 성경이 있으면 그 역본을 적습니다
+  const koMeta = koMetaSync();
+  const koCredit = koMeta ? koMeta.credit : "성경전서 개역한글 · 대한성서공회";
 
   // ---------- 화면 ----------
   return (
@@ -891,29 +909,27 @@ const BibleRead = () => {
 
           <span className="ml-auto shrink-0 flex items-center gap-2.5">
             <span className="flex items-center gap-1">
-            {/* 형광펜 — 고른 곳이 없으면 흐리게 두어 "먼저 고르라"는 뜻을 보입니다 */}
+            {/* 형광펜 — 테두리와 색은 늘 같은 모양으로 둡니다.
+                고른 곳이 없을 때 흐리게 했더니 눌러도 되는 단추인지 헷갈렸습니다.
+                고르지 않고 누르면 안내가 뜨므로 보기는 그대로 두는 편이 낫습니다. */}
             {HL_ORDER.map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => applyHl(c)}
-                className={
-                  "w-6 h-6 rounded-full border transition-opacity " +
-                  (hasSel ? "border-gray-400" : "border-gray-200 opacity-40")
-                }
+                className="w-6 h-6 rounded-full border border-gray-400"
                 style={{ backgroundColor: "rgb(" + HL_RGB[c] + ")" }}
                 aria-label="형광펜"
+                aria-disabled={!hasSel}
                 title="고른 부분 칠하기 (같은 색을 다시 누르면 지워집니다)"
               />
             ))}
             <button
               type="button"
               onClick={eraseHl}
-              className={
-                "w-6 h-6 rounded-full border flex items-center justify-center transition-opacity " +
-                (hasSel ? "border-gray-400 text-gray-600" : "border-gray-200 text-gray-400 opacity-40")
-              }
+              className="w-6 h-6 rounded-full border border-gray-400 flex items-center justify-center text-gray-600"
               aria-label="형광펜 지우기"
+              aria-disabled={!hasSel}
               title="고른 부분의 형광펜 모두 지우기"
             >
               <Trash2 size={13} />
@@ -973,7 +989,7 @@ const BibleRead = () => {
                 <div ref={bodyRef} style={{ fontSize: bodyFontSize }}>
                   {mode === "id" ? (verses || []).map(renderTbVerse) : null}
                   {mode === "both" ? renderBoth() : null}
-                  {mode === "ko" && versesKo ? versesKo.map(renderKoVerse) : null}
+                  {mode === "ko" && versesKo ? versesKo.map((v) => renderKoVerse(v, true)) : null}
 
                   {/* 한국어가 필요한 보기인데 아직 못 받은 경우 */}
                   {showKo && !versesKo ? (
@@ -1003,7 +1019,7 @@ const BibleRead = () => {
                       </>
                     ) : null}
                     {showId && showKo ? <br /> : null}
-                    {showKo ? "성경전서 새번역 · 대한성서공회" : null}
+                    {showKo ? koCredit : null}
                   </p>
                 </div>
               )}
