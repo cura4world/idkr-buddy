@@ -1,8 +1,11 @@
 // src/lib/bible.ts
-// 인도네시아어 성경(TB, Terjemahan Baru) + 한국어 성경(새번역, RNKSV) 본문을 불러옵니다.
+// 인도네시아어 성경(TB, Terjemahan Baru) + 한국어 성경 본문을 불러옵니다.
 // 인니어 소스: tobiasagyasta/alkitab-api (raw.githubusercontent.com, CORS 허용)
-// 한국어 소스: bolls.life (대한성서공회 허락을 받아 배포되는 새번역, CORS 허용)
+// 한국어 소스: ① 설정에서 직접 불러온 파일이 있으면 그것(기기 안, bibleKo.ts)
+//             ② 없으면 bolls.life 원격 API
 // 본문은 저장하지 않고 필요할 때마다 불러오며, 앱 실행 중에만 메모리에 캐시합니다.
+
+import { loadKoChapter } from "@/lib/bibleKo";
 
 export interface BibleBook {
   id: string;        // JSON 파일명 (확장자 제외)
@@ -17,6 +20,8 @@ export interface BibleBook {
 export interface BibleVerse {
   verse: number;
   text: string;
+  // 이 절 위에 걸리는 소제목. 직접 불러온 한국어 성경에만 들어 있습니다.
+  title?: string;
   // 1절 앞에 붙어 오는 머리말(시편 표제). 본문과 분리해 절번호 없이 따로 보여줍니다.
   intro?: string;
 }
@@ -191,6 +196,11 @@ function repairVerses(raw: BibleVerse[]): BibleVerse[] {
 // 대한성서공회의 허락을 받아 배포되는 번역이며, 본문은 저장하지 않고 세션 메모리에만 캐시합니다.
 
 const koChapterCache = new Map<string, BibleVerse[]>();
+
+// 설정에서 불러온 성경으로 갈아끼울 때, 앞서 받아 둔 원격 본문을 버립니다
+export function clearKoMemoryCache(): void {
+  koChapterCache.clear();
+}
 
 // TB 본문에는 예수님의 말씀을 감싸는 마커(시작 "/", 끝 "*")가 들어 있어 표시 전에 제거합니다.
 function stripTbMarks(text: string): string {
@@ -397,6 +407,13 @@ export async function fetchChapterKo(bookId: string, chapter: number): Promise<B
   const cacheKey = bookId + "-" + chapter;
   const cached = koChapterCache.get(cacheKey);
   if (cached) return cached;
+
+  // 기기에 불러온 성경이 있으면 그것을 씁니다 (네트워크를 타지 않습니다)
+  const local = await loadKoChapter(bookId, chapter);
+  if (local) {
+    koChapterCache.set(cacheKey, local);
+    return local;
+  }
 
   const bookNum = bollsBookNumber(bookId);
   if (!bookNum) throw new Error("UNKNOWN_BOOK");
