@@ -47,9 +47,9 @@ const LAST_POS_KEY = "bible-last-pos";
 type ViewMode = "id" | "ko" | "both";
 const VIEW_KEY = "bible-view-mode";
 const VIEW_MODES: { id: ViewMode; label: string }[] = [
-  { id: "id", label: "TB" },
-  { id: "ko", label: "새번역" },
-  { id: "both", label: "TB-새번역" },
+  { id: "id", label: "INDONESIA" },
+  { id: "ko", label: "한국어" },
+  { id: "both", label: "IN·한국어" },
 ];
 
 const loadViewMode = (): ViewMode => {
@@ -835,7 +835,7 @@ const BibleRead = () => {
         className="sticky top-0 z-30 bg-background text-foreground border-b border-border"
       >
         {/* 제목 줄 — 책·장 선택은 오른쪽 끝에 붙입니다 */}
-        <div className="px-4 pt-2.5 pb-2 flex items-center gap-2">
+        <div className="px-4 pt-3.5 pb-3 flex items-center gap-2">
           <button
             onClick={() => goBackOr(navigate, location.key, "/devotion")}
             className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
@@ -1005,8 +1005,8 @@ const BibleRead = () => {
         </div>
         <p className="text-center text-muted-foreground text-xs mt-3">
           {showId
-            ? "단어를 탭하면 뜻, 본문을 끌어 고른 뒤 색을 누르면 형광펜"
-            : "본문을 끌어 고른 뒤 색을 누르면 형광펜 (단어 뜻·듣기는 IN 보기에서)"}
+            ? "단어를 탭하면 뜻, 블럭 지정 후 색을 고르면 형광펜"
+            : "블럭 지정 후 색을 고르면 형광펜"}
         </p>
 
         {/* 이전 장 / 다음 장 */}
@@ -1035,7 +1035,7 @@ const BibleRead = () => {
         <div className="fixed inset-0 z-40" onClick={closeSub}>
           <div
             className="absolute bg-card rounded-xl border border-border shadow-lg overflow-hidden py-1"
-            style={{ left: modeMenu.left, top: modeMenu.top + 6, minWidth: 132 }}
+            style={{ left: modeMenu.left, top: modeMenu.top + 6, minWidth: 152 }}
             onClick={(e) => e.stopPropagation()}
           >
             {VIEW_MODES.map((m) => (
