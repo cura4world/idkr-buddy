@@ -68,7 +68,7 @@ const BibleDial = ({
   const RIGHT_GAP = 12;
   // 화면 아래로 넘치지 않게 자릅니다 (아래 여백 16px 확보).
   const maxHeight = Math.max(ROW_H * 3, Math.min(MAX_H, window.innerHeight - top - 16));
-  const width = kind === "book" ? 232 : 124;   // 글자 오른쪽에 여백을 둡니다
+  const width = kind === "book" ? 232 : 62;   // 책: 글자 오른쪽 여백 / 장: 숫자만 들어가면 됩니다
 
   const chapters = book ? book.chapters : 1;
 
@@ -111,7 +111,7 @@ const BibleDial = ({
                   <button
                     key={b.id}
                     onClick={() => onSelect(b.id, 1)}
-                    className={`w-full h-9 flex items-baseline gap-1.5 text-left pl-3.5 pr-5 whitespace-nowrap active:bg-black/5 ${
+                    className={`w-full h-9 flex items-baseline justify-end gap-1.5 text-right pl-3.5 pr-5 whitespace-nowrap active:bg-black/5 ${
                       on ? "bg-sky-500/10" : ""
                     }`}
                   >
@@ -137,7 +137,7 @@ const BibleDial = ({
                   <button
                     key={ch}
                     onClick={() => onSelect(currentBookId, ch)}
-                    className={`w-full h-9 flex items-center text-left pl-3.5 pr-5 whitespace-nowrap active:bg-black/5 ${
+                    className={`w-full h-9 flex items-center justify-center text-center px-2 whitespace-nowrap active:bg-black/5 ${
                       on ? "bg-sky-500/10" : ""
                     }`}
                   >
