@@ -17,6 +17,9 @@ import { getTtsVoice, setTtsVoice, TTS_VOICES, TtsVoiceId, clearTtsCache } from 
 import { getSermonBase, setSermonBase, getSermonKey, setSermonKey } from "@/lib/sermon";
 import { getPercakapanBase, setPercakapanBase, getPercakapanKey, setPercakapanKey, hasPercakapanConfig, pushBackup } from "@/lib/percakapan";
 import { getMyMedaliId, setMyMedaliId, optOutMedali, isValidMedaliId, fetchRegisteredIds, syncMedali } from "@/lib/medaliSync";
+import { parseKoBible, saveKoBible, clearKoBible, koMetaSync, guessLabel, KoMeta } from "@/lib/bibleKo";
+import { clearKoMemoryCache } from "@/lib/bible";
+import { useRef } from "react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -29,6 +32,10 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const [importOpen, setImportOpen] = useState(false);
   const [confirmClearData, setConfirmClearData] = useState(false);
   const [confirmClearTts, setConfirmClearTts] = useState(false);
+  // 한국어 성경 파일 불러오기
+  const koFileRef = useRef<HTMLInputElement | null>(null);
+  const [koMeta, setKoMeta] = useState<KoMeta | null>(null);
+  const [koBusy, setKoBusy] = useState(false);
   const [privateFolder, setPrivateFolder] = useState("");
   const [fontStep, setFontStepState] = useState(3);
   const [voice, setVoice] = useState<TtsVoiceId>("male");
@@ -56,6 +63,8 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
       setPercakapanBaseState(getPercakapanBase());
       setPercakapanKeyState(getPercakapanKey());
       setPcConfirmErase(0);
+      setKoMeta(koMetaSync());
+      setKoBusy(false);
       const cur = getMyMedaliId();
       setMedaliIdState(cur === "-" ? "" : cur);
       fetchRegisteredIds()
@@ -63,6 +72,37 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
         .catch(() => {});
     }
   }, [open]);
+
+  // 고른 txt 를 그 자리에서 읽어 파싱하고 이 기기에만 담습니다 (서버로 보내지 않습니다).
+  const handleKoFile = async (file: File | null) => {
+    if (!file) return;
+    setKoBusy(true);
+    try {
+      const raw = await file.text();
+      const { chapters, stats } = parseKoBible(raw);
+      if (stats.verses === 0) {
+        toast("성경 본문을 찾지 못했습니다. 파일 형식을 확인해 주세요");
+        return;
+      }
+      const meta = await saveKoBible(chapters, guessLabel(file.name), stats);
+      clearKoMemoryCache();
+      setKoMeta(meta);
+      const extra = stats.unknown.length > 0 ? " · 못 찾은 책 " + stats.unknown.length + "개" : "";
+      toast(meta.label + " " + stats.books + "권 · " + stats.chapters + "장 · " + stats.verses + "절을 불러왔습니다" + extra);
+    } catch (e) {
+      toast("파일을 읽지 못했습니다");
+    } finally {
+      setKoBusy(false);
+      if (koFileRef.current) koFileRef.current.value = "";
+    }
+  };
+
+  const handleKoClear = async () => {
+    await clearKoBible();
+    clearKoMemoryCache();
+    setKoMeta(null);
+    toast("불러온 한국어 성경을 비웠습니다");
+  };
 
   const changeFont = (delta: number) => {
     setFontStepState(stepFont(delta));
@@ -402,6 +442,51 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 적용
               </Button>
             </div>
+          </div>
+          <div className="pt-3 border-t border-border/60">
+            <Label className="font-body text-sm text-gray-900">한국어 성경 파일</Label>
+            <p className="mt-1 text-xs text-muted-foreground font-gothic">
+              한 줄에 한 절씩 적힌 txt 파일을 고르면 이 기기에만 담아 성경 읽기에서 씁니다.
+              서버로 올라가지 않으므로 기기마다 한 번씩 불러와야 합니다.
+            </p>
+            {koMeta ? (
+              <p className="mt-2 text-xs font-gothic text-sky-600">
+                {koMeta.label} · {koMeta.books}권 {koMeta.chapters}장 {koMeta.verses}절
+              </p>
+            ) : (
+              <p className="mt-2 text-xs font-gothic text-muted-foreground">
+                불러온 파일이 없습니다. 지금은 인터넷에서 받아옵니다.
+              </p>
+            )}
+            <input
+              ref={koFileRef}
+              type="file"
+              accept=".txt,text/plain"
+              className="hidden"
+              onChange={(e) => handleKoFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
+              disabled={koBusy}
+              onClick={() => koFileRef.current?.click()}
+            >
+              <Upload className="w-4 h-4 mr-1.5" />
+              {koBusy ? "불러오는 중..." : koMeta ? "다른 파일로 바꾸기" : "성경 파일 불러오기"}
+            </Button>
+            {koMeta ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
+                disabled={koBusy}
+                onClick={handleKoClear}
+              >
+                <Trash2 className="w-4 h-4 mr-1.5" />
+                불러온 성경 비우기
+              </Button>
+            ) : null}
           </div>
           <div className="pt-3 border-t border-border/60">
             <Label className="font-body text-sm text-gray-900">데이터 백업</Label>
