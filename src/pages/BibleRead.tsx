@@ -848,14 +848,14 @@ const BibleRead = () => {
             <button
               ref={bookPillRef}
               onClick={() => openDial("book", bookPillRef.current)}
-              className="inline-flex items-center min-w-0 font-bold text-white bg-sky-500 rounded-full px-3.5 py-1 text-sm"
+              className="inline-flex items-center min-w-0 font-bold text-white bg-sky-500 rounded-full px-3.5 py-1 text-[0.8125rem]"
             >
               <span className="truncate">{bookLabel}</span>
             </button>
             <button
               ref={chapPillRef}
               onClick={() => openDial("chapter", chapPillRef.current)}
-              className="shrink-0 font-bold text-white bg-sky-500 rounded-full px-3.5 py-1 text-sm"
+              className="shrink-0 inline-flex items-center justify-center min-w-[44px] font-bold text-white bg-sky-500 rounded-full px-2.5 py-1 text-[0.8125rem]"
             >
               {pos.chapter}
             </button>
@@ -880,14 +880,15 @@ const BibleRead = () => {
             ref={modePillRef}
             type="button"
             onClick={openModeMenu}
-            className="shrink-0 h-7 pl-3.5 pr-2.5 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-600 font-bold font-gothic text-[0.6875rem] inline-flex items-center gap-1"
+            className="shrink-0 h-7 min-w-[108px] pl-3.5 pr-2.5 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-600 font-bold font-gothic text-[0.6875rem] inline-flex items-center justify-between gap-1"
             title="보기 방식 고르기"
           >
             {(VIEW_MODES.find((m) => m.id === mode) || VIEW_MODES[0]).label}
             <ChevronDown size={12} className="shrink-0" />
           </button>
 
-          <span className="ml-auto shrink-0 flex items-center gap-1">
+          <span className="ml-auto shrink-0 flex items-center gap-2.5">
+            <span className="flex items-center gap-1">
             {/* 형광펜 — 고른 곳이 없으면 흐리게 두어 "먼저 고르라"는 뜻을 보입니다 */}
             {HL_ORDER.map((c) => (
               <button
@@ -915,7 +916,8 @@ const BibleRead = () => {
             >
               <Trash2 size={13} />
             </button>
-            <span className="w-1" />
+            </span>
+            <span className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => changeFont(-1)}
@@ -936,6 +938,7 @@ const BibleRead = () => {
             >
               <Plus size={13} />
             </button>
+            </span>
             {/* 낭독은 인도네시아어 본문에만 있습니다 (새번역만 볼 때는 숨깁니다) */}
             {showId && !loading && !error && verses && verses.length > 0 ? (
               <BibleAudioButton bookId={pos.bookId} chapter={pos.chapter} label="" />
