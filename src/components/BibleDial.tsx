@@ -128,7 +128,10 @@ const BibleDial = ({
                     >
                       {b.idName}
                     </span>
-                    {!on && <span className="text-xs font-gothic text-gray-600">{b.ko}</span>}
+                    {/* 고른 책도 한국어 이름을 같이 보입니다 (골라 놓고 무슨 책인지 안 보이면 곤란) */}
+                    <span className={`font-gothic ${on ? "text-[13px] text-sky-600" : "text-xs text-gray-600"}`}>
+                      {b.ko}
+                    </span>
                   </button>
                 );
               })
