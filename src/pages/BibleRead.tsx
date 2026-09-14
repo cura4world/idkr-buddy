@@ -13,7 +13,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, ChevronDown,
-  Loader2, RotateCcw, Volume2, X, Check, Plus, Minus,
+  Loader2, RotateCcw, Volume2, X, Check, Plus, Minus, Trash2,
   Maximize2,
   Minimize2,
 } from "lucide-react";
@@ -47,9 +47,9 @@ const LAST_POS_KEY = "bible-last-pos";
 type ViewMode = "id" | "ko" | "both";
 const VIEW_KEY = "bible-view-mode";
 const VIEW_MODES: { id: ViewMode; label: string }[] = [
-  { id: "id", label: "IN" },
-  { id: "ko", label: "한" },
-  { id: "both", label: "IN·한" },
+  { id: "id", label: "TB" },
+  { id: "ko", label: "새번역" },
+  { id: "both", label: "TB-새번역" },
 ];
 
 const loadViewMode = (): ViewMode => {
@@ -57,7 +57,7 @@ const loadViewMode = (): ViewMode => {
     const v = localStorage.getItem(VIEW_KEY);
     if (v === "id" || v === "ko" || v === "both") return v;
   } catch (e) {}
-  return "id";
+  return "both";   // 처음 여는 사람은 두 본문이 함께 보이는 쪽이 기본입니다
 };
 
 const saveViewMode = (m: ViewMode) => {
@@ -195,14 +195,17 @@ const BibleRead = () => {
   // 적어 두었다가, 바뀐 화면에서 같은 절을 같은 높이에 놓습니다.
   // 인니어·한국어 모두 절 번호를 그리므로 절 번호를 열쇠로 쓸 수 있습니다.
 
-  const HEADER_H = 61; // sticky 헤더 높이 (py-3 24 + 버튼 36 + 테두리 1)
+  // 머리글(제목 줄 + 도구 줄)이 화면에 계속 붙어 있으므로, 그 아래가 "화면 맨 위"입니다.
+  // 높이를 숫자로 박아 두면 도구 줄이 바뀔 때마다 어긋나므로 실제 높이를 잽니다.
+  const stickyRef = useRef<HTMLDivElement | null>(null);
+  const anchorLine = () => (stickyRef.current ? stickyRef.current.offsetHeight : 96) + 8;
 
   const verseRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
   const pendingAnchor = useRef<{ verse: number; offset: number; side: "id" | "ko" } | null>(null);
 
   // 화면 맨 위(헤더 바로 아래)에 걸려 있는 절을 찾습니다
   const anchorOf = (side: "id" | "ko") => {
-    const line = HEADER_H + 8;
+    const line = anchorLine();
     let best: { verse: number; offset: number } | null = null;
     let firstTop: { verse: number; offset: number } | null = null;
     Object.keys(verseRefs.current).forEach((k) => {
@@ -553,19 +556,18 @@ const BibleRead = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 색을 누르면 칠합니다. 고른 곳이 이미 전부 그 색이면 지웁니다(지우개 겸용).
-  const applyHl = (c: HlColor) => {
+  // 색 단추·쓰레기통이 함께 쓰는 문지기.
+  // 고른 것이 없거나 너무 오래됐으면 안내만 하고 null 을 돌려줍니다.
+  const takeSelKeys = (): string[] | null => {
     const keys = selKeysRef.current;
     if (keys.length === 0 || Date.now() - selAtRef.current > 4000) {
-      toast("본문을 끌어 고른 뒤 색을 눌러 주세요");
-      return;
+      toast("본문을 끌어 고른 뒤 눌러 주세요");
+      return null;
     }
-    const erase = keys.every((k) => hl[k] === c);
-    const next: ChapterHl = { ...hl };
-    keys.forEach((k) => {
-      if (erase) delete next[k];
-      else next[k] = c;
-    });
+    return keys;
+  };
+
+  const finishHl = (next: ChapterHl) => {
     setHl(next);
     saveChapterHl(chapterKey, next).catch(() => {});
     trackerRef.current?.touch();
@@ -576,6 +578,33 @@ const BibleRead = () => {
     selKeysRef.current = [];
     selAtRef.current = 0;
     setHasSel(false);
+  };
+
+  // 색을 누르면 칠합니다. 고른 곳이 이미 전부 그 색이면 지웁니다(같은 색 다시 누르기).
+  const applyHl = (c: HlColor) => {
+    const keys = takeSelKeys();
+    if (!keys) return;
+    const erase = keys.every((k) => hl[k] === c);
+    const next: ChapterHl = { ...hl };
+    keys.forEach((k) => {
+      if (erase) delete next[k];
+      else next[k] = c;
+    });
+    finishHl(next);
+  };
+
+  // 쓰레기통 — 고른 범위 안의 형광펜을 색에 상관없이 모두 지웁니다.
+  const eraseHl = () => {
+    const keys = takeSelKeys();
+    if (!keys) return;
+    const hit = keys.filter((k) => hl[k]);
+    if (hit.length === 0) {
+      toast("고른 곳에는 형광펜이 없어요");
+      return;
+    }
+    const next: ChapterHl = { ...hl };
+    hit.forEach((k) => { delete next[k]; });
+    finishHl(next);
   };
 
   const openPhrasePopup = () => {
@@ -781,118 +810,127 @@ const BibleRead = () => {
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
       <div ref={scrollTopRef} />
       <PointFloat value={floatVal} seq={floatSeq} />
-      <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
-        <button
-          onClick={() => goBackOr(navigate, location.key, "/devotion")}
-          className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
-          title="뒤로"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">ALKITAB</h1>
-        {canWide ? (
+      <div
+        ref={stickyRef}
+        className="sticky top-0 z-30 bg-background text-foreground border-b border-border"
+      >
+        {/* 제목 줄 — 책·장 선택은 오른쪽 끝에 붙입니다 */}
+        <div className="px-4 pt-1.5 pb-1 flex items-center gap-2">
           <button
-            type="button"
-            onClick={toggle}
-            className="shrink-0 w-9 h-9 flex items-center justify-center text-muted-foreground active:text-foreground"
-            title={wide ? "원래 크기로" : "넓게 보기"}
-            aria-label={wide ? "원래 크기로" : "넓게 보기"}
+            onClick={() => goBackOr(navigate, location.key, "/devotion")}
+            className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+            title="뒤로"
           >
-            {wide ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            <ArrowLeft size={20} />
           </button>
-        ) : null}
-      </header>
+          <h1 className="shrink-0 font-gothic text-base font-semibold uppercase tracking-[0.08em]">ALKITAB</h1>
+          <span className="ml-auto min-w-0 flex items-center gap-1.5">
+            <button
+              ref={bookPillRef}
+              onClick={() => openDial("book", bookPillRef.current)}
+              className="inline-flex items-center min-w-0 font-bold text-sky-600 bg-sky-500/10 rounded-full px-3.5 py-1 text-sm"
+            >
+              <span className="truncate">{bookLabel}</span>
+            </button>
+            <button
+              ref={chapPillRef}
+              onClick={() => openDial("chapter", chapPillRef.current)}
+              className="shrink-0 font-bold text-sky-600 bg-sky-500/10 rounded-full px-3.5 py-1 text-sm"
+            >
+              {pos.chapter}
+            </button>
+          </span>
+          {canWide ? (
+            <button
+              type="button"
+              onClick={toggle}
+              className="shrink-0 w-8 h-8 flex items-center justify-center text-muted-foreground active:text-foreground"
+              title={wide ? "원래 크기로" : "넓게 보기"}
+              aria-label={wide ? "원래 크기로" : "넓게 보기"}
+            >
+              {wide ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            </button>
+          ) : null}
+        </div>
 
-      <div className="px-4 py-4">
-        <div className="-mx-4 bg-card border-y border-border/60 overflow-hidden px-4 py-5">
-              {/* 첫 줄 — 보기 방식 · 형광펜 · 글자 크기 · 듣기 */}
-              {/* 재생 중에는 낭독 조작이 넓어지므로 줄을 넘기지 않고 옆으로 밀리게 둡니다 */}
-              <div
-                className="flex items-center gap-1.5 mb-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="shrink-0 inline-flex items-center rounded-full border border-border overflow-hidden font-gothic text-[0.6875rem]">
-                  {VIEW_MODES.map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => changeMode(m.id)}
-                      className={
-                        "h-7 px-2.5 " +
-                        (mode === m.id
-                          ? "bg-sky-500 text-white font-bold"
-                          : "text-gray-600 active:bg-muted")
-                      }
-                    >
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
+        {/* 도구 줄 — 보기 방식 · 형광펜 · 지우기 · 글자 크기 · 듣기 */}
+        {/* 재생 중에는 낭독 조작이 넓어지므로 줄을 넘기지 않고 옆으로 밀리게 둡니다 */}
+        <div className="px-4 pb-2 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {VIEW_MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => changeMode(m.id)}
+              className={
+                "shrink-0 h-7 px-3 rounded-full border font-gothic text-[0.6875rem] " +
+                (mode === m.id
+                  ? "bg-sky-500 border-sky-500 text-white font-bold"
+                  : "border-border text-gray-600 active:bg-muted")
+              }
+            >
+              {m.label}
+            </button>
+          ))}
 
-                {/* 형광펜 — 고른 곳이 없으면 흐리게 두어 "먼저 고르라"는 뜻을 보입니다 */}
-                <span className="shrink-0 flex items-center gap-1.5 pl-0.5">
-                  {HL_ORDER.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => applyHl(c)}
-                      className={
-                        "w-6 h-6 rounded-full border transition-opacity " +
-                        (hasSel ? "border-gray-400" : "border-gray-200 opacity-40")
-                      }
-                      style={{ backgroundColor: "rgb(" + HL_RGB[c] + ")" }}
-                      aria-label="형광펜"
-                      title="고른 부분 칠하기 (같은 색을 다시 누르면 지워집니다)"
-                    />
-                  ))}
-                </span>
+          <span className="ml-auto shrink-0 flex items-center gap-1">
+            {/* 형광펜 — 고른 곳이 없으면 흐리게 두어 "먼저 고르라"는 뜻을 보입니다 */}
+            {HL_ORDER.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => applyHl(c)}
+                className={
+                  "w-6 h-6 rounded-full border transition-opacity " +
+                  (hasSel ? "border-gray-400" : "border-gray-200 opacity-40")
+                }
+                style={{ backgroundColor: "rgb(" + HL_RGB[c] + ")" }}
+                aria-label="형광펜"
+                title="고른 부분 칠하기 (같은 색을 다시 누르면 지워집니다)"
+              />
+            ))}
+            <button
+              type="button"
+              onClick={eraseHl}
+              className={
+                "w-6 h-6 rounded-full border flex items-center justify-center transition-opacity " +
+                (hasSel ? "border-gray-400 text-gray-600" : "border-gray-200 text-gray-400 opacity-40")
+              }
+              aria-label="형광펜 지우기"
+              title="고른 부분의 형광펜 모두 지우기"
+            >
+              <Trash2 size={13} />
+            </button>
+            <span className="w-1" />
+            <button
+              type="button"
+              onClick={() => changeFont(-1)}
+              disabled={fontStep <= 0}
+              className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-foreground/80 active:bg-muted disabled:opacity-30"
+              aria-label="글자 작게"
+              title="글자 작게"
+            >
+              <Minus size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={() => changeFont(1)}
+              disabled={fontStep >= SCALE.length - 1}
+              className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-foreground/80 active:bg-muted disabled:opacity-30"
+              aria-label="글자 크게"
+              title="글자 크게"
+            >
+              <Plus size={13} />
+            </button>
+            {/* 낭독은 인도네시아어 본문에만 있습니다 (새번역만 볼 때는 숨깁니다) */}
+            {showId && !loading && !error && verses && verses.length > 0 ? (
+              <BibleAudioButton bookId={pos.bookId} chapter={pos.chapter} label="" />
+            ) : null}
+          </span>
+        </div>
+      </div>
 
-                <span className="ml-auto shrink-0 flex items-center gap-1.5 pl-1">
-                  <button
-                    type="button"
-                    onClick={() => changeFont(-1)}
-                    disabled={fontStep <= 0}
-                    className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-foreground/80 active:bg-muted disabled:opacity-30"
-                    aria-label="글자 작게"
-                    title="글자 작게"
-                  >
-                    <Minus size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => changeFont(1)}
-                    disabled={fontStep >= SCALE.length - 1}
-                    className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-foreground/80 active:bg-muted disabled:opacity-30"
-                    aria-label="글자 크게"
-                    title="글자 크게"
-                  >
-                    <Plus size={13} />
-                  </button>
-                  {/* 낭독은 인도네시아어 본문에만 있습니다 (한국어만 볼 때는 숨깁니다) */}
-                  {showId && !loading && !error && verses && verses.length > 0 ? (
-                    <BibleAudioButton bookId={pos.bookId} chapter={pos.chapter} label="" />
-                  ) : null}
-                </span>
-              </div>
-
-              {/* 둘째 줄 — 성경 장절 선택 */}
-              <div className="flex items-center gap-2 mb-4 min-w-0">
-                <button
-                  ref={bookPillRef}
-                  onClick={() => openDial("book", bookPillRef.current)}
-                  className="inline-flex items-center min-w-0 font-bold text-sky-600 bg-sky-500/10 rounded-full px-[18px] py-1 text-sm"
-                >
-                  <span className="truncate">{bookLabel}</span>
-                </button>
-                <button
-                  ref={chapPillRef}
-                  onClick={() => openDial("chapter", chapPillRef.current)}
-                  className="shrink-0 font-bold text-sky-600 bg-sky-500/10 rounded-full px-[18px] py-1 text-sm"
-                >
-                  {pos.chapter}
-                </button>
-              </div>
-
+      <div className="px-4 pt-3 pb-4">
+        <div className="-mx-4 bg-card border-y border-border/60 overflow-hidden px-4 py-4">
               {/* 낭독 시크바 — 재생 중이 아니면 컴포넌트가 null을 반환합니다 */}
               {showId && <BibleAudioSeekBar bookId={pos.bookId} chapter={pos.chapter} />}
 
