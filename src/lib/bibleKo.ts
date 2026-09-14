@@ -262,3 +262,164 @@ export async function clearKoBible(): Promise<void> {
     // 무시
   }
 }
+
+// ── 서버(Cloudflare Worker) 주고받기 ────────────────────────────
+//
+// 기기가 여럿이라 파일을 하나하나 옮기는 게 번거로워, 설교문이 쓰는 Worker 에
+// 성경 경로를 붙였습니다. 다만 **열쇠는 설교문과 따로 둡니다** —
+// 성경은 온 가족이 보고 설교문은 본인만 보므로 권한이 원래 다릅니다.
+// 같은 열쇠를 쓰면 성경을 받으려고 넣은 키로 아내 폰에 설교문까지 열립니다.
+//
+//   PC 등 한 대에서: 파일 불러오기 → "서버에 올리기"  (딱 한 번)
+//   나머지 기기에서: "서버에서 받기"                    (기기마다 한 번)
+//
+// 받은 뒤에는 IndexedDB 에 담기므로 읽을 때 네트워크를 타지 않습니다.
+// 본문은 저장소에 커밋하지 않고 KV 에만 둡니다. 키도 코드에 넣지 않습니다.
+
+// ---------- 성경 서버 설정 (기기별 localStorage) ----------
+
+const SRV_BASE_KEY = "bible-base";
+const SRV_SECRET_KEY = "bible-key";
+
+export function getBibleBase(): string {
+  try { return localStorage.getItem(SRV_BASE_KEY) || ""; } catch (e) { return ""; }
+}
+
+export function setBibleBase(v: string): void {
+  // 끝에 붙은 슬래시는 떼어 둡니다 (경로를 붙일 때 "//" 가 되지 않도록)
+  const clean = (v || "").trim().replace(new RegExp("/+$"), "");
+  try { localStorage.setItem(SRV_BASE_KEY, clean); } catch (e) {}
+}
+
+export function getBibleKey(): string {
+  try { return localStorage.getItem(SRV_SECRET_KEY) || ""; } catch (e) { return ""; }
+}
+
+export function setBibleKey(v: string): void {
+  try { localStorage.setItem(SRV_SECRET_KEY, (v || "").trim()); } catch (e) {}
+}
+
+interface BookPayload {
+  id: string;
+  chapters: Record<string, KoVerse[]>;
+}
+
+interface IndexPayload {
+  label: string;
+  books: string[];
+  verses: number;
+  savedAt: number;
+}
+
+async function srv(
+  base: string, key: string, path: string, method: string, body?: unknown,
+): Promise<Response> {
+  if (!base || !key) throw new Error("NO_CONFIG");
+  const controller = new AbortController();
+  const timer = setTimeout(() => { controller.abort(); }, 20000);
+  let res: Response;
+  try {
+    res = await fetch(base + path, {
+      method,
+      headers: body
+        ? { "x-kata-key": key, "content-type": "application/json" }
+        : { "x-kata-key": key },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (e) {
+    throw new Error("FETCH_FAILED");
+  } finally {
+    clearTimeout(timer);
+  }
+  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  if (!res.ok) throw new Error("FETCH_FAILED");
+  return res;
+}
+
+/** 이 기기에 담긴 성경을 책 단위로 모읍니다 */
+async function readAllLocal(): Promise<Record<string, Record<string, KoVerse[]>>> {
+  const db = await openDB();
+  const rows: { key: string; verses: KoVerse[] }[] = await new Promise((resolve) => {
+    const tx = db.transaction(STORE, "readonly");
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => resolve((req.result as { key: string; verses: KoVerse[] }[]) || []);
+    req.onerror = () => resolve([]);
+  });
+  const byBook: Record<string, Record<string, KoVerse[]>> = {};
+  rows.forEach((r) => {
+    const cut = r.key.lastIndexOf(":");
+    if (cut < 0) return;
+    const bookId = r.key.slice(0, cut);
+    const chapter = r.key.slice(cut + 1);
+    if (!byBook[bookId]) byBook[bookId] = {};
+    byBook[bookId][chapter] = r.verses;
+  });
+  return byBook;
+}
+
+/** 이 기기의 성경을 서버로 올립니다. 한 대에서 한 번만 하면 됩니다. */
+export async function pushKoToServer(
+  base: string, key: string, onProgress?: (done: number, total: number) => void,
+): Promise<number> {
+  const meta = koMetaSync();
+  if (!meta) throw new Error("NO_LOCAL");
+  const byBook = await readAllLocal();
+  const ids = Object.keys(byBook);
+  if (ids.length === 0) throw new Error("NO_LOCAL");
+  for (let i = 0; i < ids.length; i++) {
+    const payload: BookPayload = { id: ids[i], chapters: byBook[ids[i]] };
+    await srv(base, key, "/bible/book?id=" + encodeURIComponent(ids[i]), "PUT", payload);
+    if (onProgress) onProgress(i + 1, ids.length + 1);
+  }
+  const index: IndexPayload = {
+    label: meta.label, books: ids, verses: meta.verses, savedAt: Date.now(),
+  };
+  await srv(base, key, "/bible/index", "PUT", index);
+  if (onProgress) onProgress(ids.length + 1, ids.length + 1);
+  return ids.length;
+}
+
+/** 서버에 올려둔 성경을 이 기기로 받습니다. */
+export async function pullKoFromServer(
+  base: string, key: string, onProgress?: (done: number, total: number) => void,
+): Promise<KoMeta> {
+  const idxRes = await srv(base, key, "/bible/index", "GET");
+  let index: IndexPayload;
+  try {
+    index = await idxRes.json();
+  } catch (e) {
+    throw new Error("FETCH_FAILED");
+  }
+  if (!index || !Array.isArray(index.books) || index.books.length === 0) {
+    throw new Error("EMPTY");
+  }
+  const chapters: Record<string, KoVerse[]> = {};
+  const stats: KoStats = {
+    books: 0, chapters: 0, verses: 0, titles: 0,
+    merged: 0, ranges: 0, notes: 0, unknown: [],
+  };
+  for (let i = 0; i < index.books.length; i++) {
+    const id = index.books[i];
+    const res = await srv(base, key, "/bible/book?id=" + encodeURIComponent(id), "GET");
+    let payload: BookPayload;
+    try {
+      payload = await res.json();
+    } catch (e) {
+      throw new Error("FETCH_FAILED");
+    }
+    if (!payload || !payload.chapters) continue;
+    stats.books++;
+    Object.keys(payload.chapters).forEach((ch) => {
+      const verses = payload.chapters[ch];
+      if (!Array.isArray(verses) || verses.length === 0) return;
+      chapters[id + ":" + ch] = verses;
+      stats.chapters++;
+      stats.verses += verses.length;
+      verses.forEach((v) => { if (v.title) stats.titles++; });
+    });
+    if (onProgress) onProgress(i + 1, index.books.length);
+  }
+  if (stats.verses === 0) throw new Error("EMPTY");
+  return await saveKoBible(chapters, index.label || "한국어 성경", stats);
+}
