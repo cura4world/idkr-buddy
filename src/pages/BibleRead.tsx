@@ -251,6 +251,11 @@ const BibleRead = () => {
     saveViewMode(m);
   };
 
+  const pickMode = (m: ViewMode) => {
+    closeSub();
+    changeMode(m);
+  };
+
   // 보기를 바꾼 뒤(또는 한국어 본문이 늦게 도착한 뒤) 적어둔 자리로 맞춥니다
   useEffect(() => {
     const a = pendingAnchor.current;
@@ -276,6 +281,12 @@ const BibleRead = () => {
   const [dialKind, setDialKind] = useState<"book" | "chapter" | null>(null);
   const [dialAnchor, setDialAnchor] = useState<{ left: number; top: number } | null>(null);
 
+  // ---------- 보기 방식 고르는 작은 메뉴 ----------
+  // 도구 줄은 overflow-x-auto 라 그 안에 absolute 로 두면 잘립니다.
+  // 그래서 다이얼과 같은 방법으로 fixed 로 띄우고 열 때 단추 좌표를 한 번 잽니다.
+  const modePillRef = useRef<HTMLButtonElement | null>(null);
+  const [modeMenu, setModeMenu] = useState<{ left: number; top: number } | null>(null);
+
   // ---------- 뒤로가기 (시트/팝업만 한 단계 닫기) ----------
   const subOpenRef = useRef(false);
   // 히스토리를 실제로 쌓았는지 (사전으로 나갈 때 그 칸을 덮어쓸지 판단하는 데 씁니다)
@@ -293,6 +304,7 @@ const BibleRead = () => {
   };
   const resetSub = () => {
     setDialKind(null);
+    setModeMenu(null);
     setPopupWord(null);
   };
   const closeSub = () => {
@@ -308,6 +320,14 @@ const BibleRead = () => {
     setDialKind(kind);
     pushSub();
   };
+  const openModeMenu = () => {
+    const el = modePillRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setModeMenu({ left: r.left, top: r.bottom });
+    pushSub();
+  };
+
   useEffect(() => {
     const onPop = () => {
       // 시트가 팝업 위에 떠 있으면 시트만 닫습니다 (팝업은 그대로).
@@ -815,7 +835,7 @@ const BibleRead = () => {
         className="sticky top-0 z-30 bg-background text-foreground border-b border-border"
       >
         {/* 제목 줄 — 책·장 선택은 오른쪽 끝에 붙입니다 */}
-        <div className="px-4 pt-1.5 pb-1 flex items-center gap-2">
+        <div className="px-4 pt-2.5 pb-2 flex items-center gap-2">
           <button
             onClick={() => goBackOr(navigate, location.key, "/devotion")}
             className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
@@ -856,21 +876,16 @@ const BibleRead = () => {
         {/* 도구 줄 — 보기 방식 · 형광펜 · 지우기 · 글자 크기 · 듣기 */}
         {/* 재생 중에는 낭독 조작이 넓어지므로 줄을 넘기지 않고 옆으로 밀리게 둡니다 */}
         <div className="px-4 pb-2 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {VIEW_MODES.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => changeMode(m.id)}
-              className={
-                "shrink-0 h-7 px-3 rounded-full border font-gothic text-[0.6875rem] " +
-                (mode === m.id
-                  ? "bg-sky-500 border-sky-500 text-white font-bold"
-                  : "border-border text-gray-600 active:bg-muted")
-              }
-            >
-              {m.label}
-            </button>
-          ))}
+          <button
+            ref={modePillRef}
+            type="button"
+            onClick={openModeMenu}
+            className="shrink-0 h-7 pl-3.5 pr-2.5 rounded-full border border-sky-500 bg-sky-500 text-white font-bold font-gothic text-[0.6875rem] inline-flex items-center gap-1"
+            title="보기 방식 고르기"
+          >
+            {(VIEW_MODES.find((m) => m.id === mode) || VIEW_MODES[0]).label}
+            <ChevronDown size={12} className="shrink-0" />
+          </button>
 
           <span className="ml-auto shrink-0 flex items-center gap-1">
             {/* 형광펜 — 고른 곳이 없으면 흐리게 두어 "먼저 고르라"는 뜻을 보입니다 */}
@@ -929,8 +944,8 @@ const BibleRead = () => {
         </div>
       </div>
 
-      <div className="px-4 pt-3 pb-4">
-        <div className="-mx-4 bg-card border-y border-border/60 overflow-hidden px-4 py-4">
+      <div className="px-4 pb-4">
+        <div className="-mx-4 bg-card border-b border-border/60 overflow-hidden px-4 py-4">
               {/* 낭독 시크바 — 재생 중이 아니면 컴포넌트가 null을 반환합니다 */}
               {showId && <BibleAudioSeekBar bookId={pos.bookId} chapter={pos.chapter} />}
 
@@ -1014,6 +1029,32 @@ const BibleRead = () => {
           </div>
         )}
       </div>
+
+      {/* 보기 방식 메뉴 — 도구 줄 밖에 fixed 로 띄웁니다 */}
+      {modeMenu && (
+        <div className="fixed inset-0 z-40" onClick={closeSub}>
+          <div
+            className="absolute bg-card rounded-xl border border-border shadow-lg overflow-hidden py-1"
+            style={{ left: modeMenu.left, top: modeMenu.top + 6, minWidth: 132 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {VIEW_MODES.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => pickMode(m.id)}
+                className={
+                  "w-full text-left px-3.5 h-9 flex items-center gap-2 font-gothic text-sm " +
+                  (mode === m.id ? "text-sky-600 font-bold" : "text-gray-700 active:bg-muted")
+                }
+              >
+                <Check size={14} className={mode === m.id ? "shrink-0" : "shrink-0 opacity-0"} />
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 책/장 선택 다이얼 */}
       <BibleDial
