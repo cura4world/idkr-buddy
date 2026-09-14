@@ -14,6 +14,10 @@ import { BIBLE_BOOKS, getBook } from "@/lib/bible";
 // 한 줄 높이(px). 열릴 때 "선택된 항목을 맨 위로" 맞추는 계산에 그대로 쓰이므로
 // 아래 행의 h-9 와 반드시 같아야 합니다.
 const ROW_H = 36;
+
+// 신약 책이름 색 — 어두운 벽돌빛 주홍.
+// 임의값 클래스는 주입 과정에서 빠질 수 있어 인라인 style 로 줍니다.
+const NT_COLOR = "#8E2626";
 const MAX_H = 444;   // 12줄 + 여유 (한 줄 36px)
 
 export interface DialAnchor {
@@ -57,6 +61,11 @@ const BibleDial = ({
   if (!open || !anchor) return null;
 
   const top = anchor.top + 6;
+  // 가로 자리는 필을 따라가지 않고 **항상 화면 오른쪽에 붙입니다.**
+  // 필의 왼쪽에 맞추면 RUT 처럼 책이름이 짧을 때 필이 오른쪽으로 가서
+  // 상자가 화면 밖으로 밀려나 오른쪽 글자가 잘렸습니다.
+  // (anchor.left 는 더 이상 쓰지 않지만, 호출하는 쪽을 고치지 않으려고 받기는 합니다)
+  const RIGHT_GAP = 12;
   // 화면 아래로 넘치지 않게 자릅니다 (아래 여백 16px 확보).
   const maxHeight = Math.max(ROW_H * 3, Math.min(MAX_H, window.innerHeight - top - 16));
   const width = kind === "book" ? 232 : 124;   // 글자 오른쪽에 여백을 둡니다
@@ -78,7 +87,7 @@ const BibleDial = ({
 
       <div
         className="absolute rounded-2xl bg-card shadow-xl overflow-hidden"
-        style={{ left: anchor.left, top, width }}
+        style={{ right: RIGHT_GAP, top, width }}
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -102,7 +111,7 @@ const BibleDial = ({
                   <button
                     key={b.id}
                     onClick={() => onSelect(b.id, 1)}
-                    className={`w-full h-9 flex items-baseline gap-1.5 text-left px-3.5 whitespace-nowrap active:bg-black/5 ${
+                    className={`w-full h-9 flex items-baseline gap-1.5 text-left pl-3.5 pr-5 whitespace-nowrap active:bg-black/5 ${
                       on ? "bg-sky-500/10" : ""
                     }`}
                   >
@@ -111,9 +120,10 @@ const BibleDial = ({
                         on
                           ? "text-[15px] text-sky-600"
                           : b.folder === "pb"
-                          ? "text-sm text-rose-600"
+                          ? "text-sm"
                           : "text-sm text-teal-700"
                       }`}
+                      style={!on && b.folder === "pb" ? { color: NT_COLOR } : undefined}
                     >
                       {b.idName}
                     </span>
@@ -127,7 +137,7 @@ const BibleDial = ({
                   <button
                     key={ch}
                     onClick={() => onSelect(currentBookId, ch)}
-                    className={`w-full h-9 flex items-center text-left px-3.5 whitespace-nowrap active:bg-black/5 ${
+                    className={`w-full h-9 flex items-center text-left pl-3.5 pr-5 whitespace-nowrap active:bg-black/5 ${
                       on ? "bg-sky-500/10" : ""
                     }`}
                   >
