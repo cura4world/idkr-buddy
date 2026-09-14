@@ -14,7 +14,7 @@ import { BIBLE_BOOKS, getBook } from "@/lib/bible";
 // 한 줄 높이(px). 열릴 때 "선택된 항목을 맨 위로" 맞추는 계산에 그대로 쓰이므로
 // 아래 행의 h-9 와 반드시 같아야 합니다.
 const ROW_H = 36;
-const MAX_H = 372;
+const MAX_H = 444;   // 12줄 + 여유 (한 줄 36px)
 
 export interface DialAnchor {
   left: number; // 필의 왼쪽 변 (화면 좌표)
@@ -59,7 +59,7 @@ const BibleDial = ({
   const top = anchor.top + 6;
   // 화면 아래로 넘치지 않게 자릅니다 (아래 여백 16px 확보).
   const maxHeight = Math.max(ROW_H * 3, Math.min(MAX_H, window.innerHeight - top - 16));
-  const width = kind === "book" ? 212 : 104;
+  const width = kind === "book" ? 232 : 124;   // 글자 오른쪽에 여백을 둡니다
 
   const chapters = book ? book.chapters : 1;
 
@@ -111,7 +111,7 @@ const BibleDial = ({
                         on
                           ? "text-[15px] text-sky-600"
                           : b.folder === "pb"
-                          ? "text-sm text-blue-700"
+                          ? "text-sm text-rose-600"
                           : "text-sm text-teal-700"
                       }`}
                     >
