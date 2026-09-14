@@ -119,7 +119,7 @@ const BibleDial = ({
                     <span
                       className={`font-word font-semibold ${
                         on
-                          ? "text-[15px] text-sky-600"
+                          ? "text-sm text-sky-600"
                           : b.folder === "pb"
                           ? "text-sm"
                           : "text-sm text-teal-700"
@@ -129,7 +129,7 @@ const BibleDial = ({
                       {b.idName}
                     </span>
                     {/* 고른 책도 한국어 이름을 같이 보입니다 (골라 놓고 무슨 책인지 안 보이면 곤란) */}
-                    <span className={`font-gothic ${on ? "text-[13px] text-sky-600" : "text-xs text-gray-600"}`}>
+                    <span className={`font-gothic text-xs ${on ? "text-sky-600" : "text-gray-600"}`}>
                       {b.ko}
                     </span>
                   </button>
@@ -147,7 +147,7 @@ const BibleDial = ({
                   >
                     <span
                       className={`font-gothic ${
-                        on ? "text-[15px] font-semibold text-sky-600" : "text-sm text-gray-800"
+                        on ? "text-sm font-semibold text-sky-600" : "text-sm text-gray-800"
                       }`}
                     >
                       {ch}
