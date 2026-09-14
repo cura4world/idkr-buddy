@@ -111,7 +111,7 @@ const BibleDial = ({
                   <button
                     key={b.id}
                     onClick={() => onSelect(b.id, 1)}
-                    className={`w-full h-9 flex items-baseline justify-end gap-1.5 text-right pl-3.5 pr-5 whitespace-nowrap active:bg-black/5 ${
+                    className={`w-full h-9 flex items-baseline gap-1.5 text-left pl-3.5 pr-5 whitespace-nowrap active:bg-black/5 ${
                       on ? "bg-sky-500/10" : ""
                     }`}
                   >
