@@ -760,12 +760,19 @@ const Index = () => {
               meta={oneToOnePos || undefined}
               onClick={() => navigate("/one-to-one")}
             />
-            <Row icon={Heart} title="기도문" sub="Doa" onClick={() => navigate("/prayer")} last={!sermonOn} />
-            {sermonOn ? (
-              <Row icon={BookMarked} title="설교문" sub="Khotbah" onClick={() => navigate("/sermon")} last />
-            ) : null}
+            <Row icon={Heart} title="기도문" sub="Doa" onClick={() => navigate("/prayer")} last />
           </div>
         </section>
+
+        {/* ── 설교 ── 설교문 서버 주소·키가 설정된 기기에서만 구역째 보입니다 */}
+        {sermonOn ? (
+          <section className="mt-6">
+            <SectionLabel>설교</SectionLabel>
+            <div className="overflow-hidden rounded-2xl border border-border bg-card">
+              <Row icon={BookMarked} title="설교문" sub="Khotbah" onClick={() => navigate("/sermon")} last />
+            </div>
+          </section>
+        ) : null}
 
         {/* ── 인도네시아 ── */}
         <section className="mt-6">
@@ -777,9 +784,9 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 게임 ── */}
+        {/* ── 단어게임 ── */}
         <section className="mt-6">
-          <SectionLabel>게임</SectionLabel>
+          <SectionLabel>단어게임</SectionLabel>
           <div className="overflow-hidden rounded-2xl border border-border bg-card">
             <Row icon={Gamepad2} title="게임방" sub="Permainan" onClick={() => navigate("/permainan")} last />
           </div>
