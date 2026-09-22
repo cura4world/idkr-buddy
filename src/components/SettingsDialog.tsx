@@ -34,6 +34,27 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// 회원키 입력 자동 서식 — "KK-" 고정 접두어, 대문자 변환, 4글자마다 하이픈 자동.
+// 하이픈을 백스페이스로 지우면 앞 글자까지 지워 하이픈에 걸려 멈추지 않게 하고,
+// 카톡에서 받은 키를 통째로 붙여넣어도(소문자·공백·하이픈 섞임) 알아서 정리합니다.
+function formatMemberInput(raw: string, prev: string): string {
+  const up = (raw || "").toUpperCase();
+  const deleting = up.length < prev.length;
+  // 고정 접두어 "KK-" 를 지우려 하면 그대로 둡니다
+  if (deleting && "KK-".indexOf(up) === 0) return "KK-";
+  let rest = up.indexOf("KK-") === 0 ? up.slice(3) : up;
+  let body = rest.replace(new RegExp("[^A-Z0-9]", "g"), "");
+  if (body.length > 12 && body.indexOf("KK") === 0) body = body.slice(2);
+  if (deleting && prev.charAt(prev.length - 1) === "-" && up === prev.slice(0, -1).toUpperCase()) {
+    body = body.slice(0, -1);
+  }
+  body = body.slice(0, 12);
+  const groups = [body.slice(0, 4), body.slice(4, 8), body.slice(8, 12)].filter((g) => g.length > 0);
+  let out = "KK-" + groups.join("-");
+  if (!deleting && (body.length === 4 || body.length === 8)) out += "-";
+  return out;
+}
+
 export default function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const navigate = useNavigate();
   const [apiKey, setApiKey] = useState("");
@@ -535,13 +556,17 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 <div className="flex gap-2 mt-2">
                   <Input
                     value={memberInput}
-                    onChange={(e) => setMemberInput(e.target.value)}
+                    onFocus={() => { if (!memberInput) setMemberInput("KK-"); }}
+                    onBlur={() => { if (memberInput === "KK-") setMemberInput(""); }}
+                    onChange={(e) => setMemberInput(formatMemberInput(e.target.value, memberInput))}
                     placeholder="KK-XXXX-XXXX-XXXX"
                     autoComplete="off"
+                    autoCorrect="off"
                     autoCapitalize="characters"
-                    className="text-sm"
+                    spellCheck={false}
+                    className="text-sm font-mono tracking-wide"
                   />
-                  <Button type="button" className="text-xs shrink-0" disabled={memberBusy || !memberInput.trim()} onClick={handleMemberActivate}>
+                  <Button type="button" className="text-xs shrink-0" disabled={memberBusy || memberInput.length !== 17} onClick={handleMemberActivate}>
                     활성화
                   </Button>
                 </div>
