@@ -22,7 +22,7 @@ import MedaliNudge from "@/components/MedaliNudge";
 import MedaliSheet from "@/components/MedaliSheet";
 import MedaliIdDialog from "@/components/MedaliIdDialog";
 import { needsMedaliId, syncMedali } from "@/lib/medaliSync";
-import { hasSermonConfig } from "@/lib/sermon";
+import { getEdition, takeRevokedNotice } from "@/lib/access";
 import {
   RotateCcw,
   SlidersHorizontal,
@@ -389,10 +389,13 @@ const Index = () => {
     toast("뜻이 없던 단어를 정리했습니다: " + head + more);
   }, []);
 
-  // 설교문: 이 기기 설정에 서버 주소와 비밀키가 다 들어 있을 때만 메뉴를 보여줍니다.
-  const [sermonOn, setSermonOn] = useState(false);
+  // 판(관리자·회원·공개)에 따라 보이는 구역이 다릅니다.
+  //   말씀과 기도 — 관리자판·회원판 / 설교 — 관리자판만
+  const [edition] = useState(getEdition);
+  const wordOn = edition !== "public";
+  const sermonOn = edition === "admin";
   useEffect(() => {
-    setSermonOn(hasSermonConfig());
+    if (takeRevokedNotice()) toast("회원키가 해제되어 받아 둔 성경·교재를 이 기기에서 지웠습니다");
   }, []);
 
   // 성경 마지막 읽은 위치
@@ -741,7 +744,8 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ── 말씀과 기도 ── */}
+        {/* ── 말씀과 기도 ── 공개판에서는 구역째 보이지 않습니다 */}
+        {wordOn ? (
         <section className="mt-6">
           <SectionLabel>말씀과 기도</SectionLabel>
           <div className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -763,6 +767,7 @@ const Index = () => {
             <Row icon={Heart} title="기도문" sub="Doa" onClick={() => navigate("/prayer")} last />
           </div>
         </section>
+        ) : null}
 
         {/* ── 설교 ── 설교문 서버 주소·키가 설정된 기기에서만 구역째 보입니다 */}
         {sermonOn ? (
