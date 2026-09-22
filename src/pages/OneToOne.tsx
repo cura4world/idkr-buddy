@@ -11,7 +11,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Loader2, RotateCcw,
-  X, Check, Plus, Minus, ChevronDown,
+  X, Check, Plus, Minus, ChevronDown, List,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { PDFDocumentProxy } from "pdfjs-dist";
@@ -68,7 +68,8 @@ const OneToOne = () => {
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [pageNum, setPageNum] = useState(loadLastPage);
-  const [pageInput, setPageInput] = useState("");
+  // 목차 쪽 — PDF 책갈피(outline)에서 "Daftar Isi"를 찾아 정합니다. 못 찾으면 3쪽.
+  const [tocPage, setTocPage] = useState(3);
   const [rendering, setRendering] = useState(false);
   const [zoomStep, setZoomStep] = useState(loadZoomStep);
   // 화면 폭이 바뀌면(폴드 펼침·회전·넓게 보기) 다시 재서 그립니다.
@@ -77,6 +78,13 @@ const OneToOne = () => {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const textLayerRef = useRef<HTMLDivElement | null>(null);
+  // 링크 층 — PDF 안의 내부 링크(목차 → 해당 쪽)를 탭 영역으로 얹습니다. 글자 층보다 위.
+  const linkLayerRef = useRef<HTMLDivElement | null>(null);
+  // 좌우 스와이프 — 성경·이야기와 같은 기준(가로 60px 이상, 세로의 1.4배 이상)
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const tapSuppressUntilRef = useRef(0);
+  // 링크 층의 DOM 핸들러가 최신 goToPage 를 부르도록 ref 로 둡니다(오래된 numPages 방지)
+  const goToPageRef = useRef<(n: number) => void>(() => {});
   const stageRef = useRef<HTMLDivElement | null>(null);
   const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
   const scrollTopRef = useRef<HTMLDivElement | null>(null);
@@ -96,6 +104,17 @@ const OneToOne = () => {
         if (!alive) return;
         setPdf(doc);
         setNumPages(doc.numPages);
+        try {
+          const outline = await doc.getOutline();
+          const hit = (outline || []).find((o) => new RegExp("daftar\\s+isi", "i").test(o.title || ""));
+          if (hit && hit.dest) {
+            const dest = typeof hit.dest === "string" ? await doc.getDestination(hit.dest) : hit.dest;
+            if (dest && dest[0]) {
+              const idx = await doc.getPageIndex(dest[0]);
+              if (alive && idx >= 0) setTocPage(idx + 1);
+            }
+          }
+        } catch (e) {}
         setPageNum((p) => Math.min(Math.max(1, p), doc.numPages));
       })
       .catch((e) => {
@@ -193,6 +212,48 @@ const OneToOne = () => {
         splitIntoTappableWords(textLayerDiv);
       }
 
+      // ---- 링크 층: PDF 내부 링크(목차 항목 → 쪽)를 그 자리에 투명 탭 영역으로 얹습니다 ----
+      const linkLayerDiv = linkLayerRef.current;
+      if (linkLayerDiv) {
+        linkLayerDiv.innerHTML = "";
+        const cssScale2 = scale / (window.devicePixelRatio || 1);
+        const cssViewport2 = page.getViewport({ scale: cssScale2 });
+        try {
+          const annots = await page.getAnnotations();
+          if (cancelled) return;
+          for (const a of annots) {
+            if (!a || a.subtype !== "Link" || !a.rect || !a.dest) continue;
+            // pdf.js 6.x 에는 사각형 변환이 없어 두 꼭짓점을 따로 바꿉니다.
+            const p1 = cssViewport2.convertToViewportPoint(a.rect[0], a.rect[1]);
+            const p2 = cssViewport2.convertToViewportPoint(a.rect[2], a.rect[3]);
+            const x1 = Math.min(p1[0], p2[0]), y1 = Math.min(p1[1], p2[1]);
+            const x2 = Math.max(p1[0], p2[0]), y2 = Math.max(p1[1], p2[1]);
+            const box = document.createElement("div");
+            box.style.position = "absolute";
+            box.style.left = x1 + "px";
+            box.style.top = y1 + "px";
+            box.style.width = (x2 - x1) + "px";
+            box.style.height = (y2 - y1) + "px";
+            box.style.pointerEvents = "auto";
+            box.style.cursor = "pointer";
+            const dest = a.dest;
+            box.addEventListener("click", async (e) => {
+              e.stopPropagation();
+              if (Date.now() < tapSuppressUntilRef.current) return;
+              try {
+                const d = typeof dest === "string" ? await pdf.getDestination(dest) : dest;
+                if (!d || !d[0]) return;
+                const idx = await pdf.getPageIndex(d[0]);
+                if (idx >= 0) goToPageRef.current(idx + 1);
+              } catch (err) {
+                toast("이 링크는 열 수 없습니다");
+              }
+            });
+            linkLayerDiv.appendChild(box);
+          }
+        } catch (e) {}
+      }
+
       setRendering(false);
     })().catch(() => { if (!cancelled) setRendering(false); });
 
@@ -241,16 +302,34 @@ const OneToOne = () => {
     scrollTopRef.current?.scrollIntoView?.();
   };
 
-  const jumpToPage = () => {
-    const n = parseInt(pageInput, 10);
-    if (isFinite(n) && n >= 1 && n <= numPages) {
-      setPageNum(n);
-      setPageInput("");
-      scrollTopRef.current?.scrollIntoView?.();
-    } else {
-      toast("1~" + numPages + " 사이 쪽 번호를 넣어 주세요");
-    }
+  const goToPage = (n: number) => {
+    if (!isFinite(n)) return;
+    setPageNum(Math.max(1, Math.min(numPages || n, n)));
+    scrollTopRef.current?.scrollIntoView?.();
   };
+  goToPageRef.current = goToPage;
+
+  // 좌우 스와이프로 쪽 넘김. 확대해서 옆으로 스크롤되는 상태면 스크롤에 양보합니다.
+  const onStageTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) { swipeStartRef.current = null; return; }
+    const t = e.touches[0];
+    swipeStartRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onStageTouchEnd = (e: React.TouchEvent) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start || e.changedTouches.length === 0) return;
+    const el = stageRef.current;
+    if (el && el.scrollWidth > el.clientWidth + 2) return; // 확대 상태
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < 60) return;
+    if (Math.abs(dx) < Math.abs(dy) * 1.4) return;
+    tapSuppressUntilRef.current = Date.now() + 450;
+    goPage(dx < 0 ? 1 : -1);
+  };
+  const onStageTouchCancel = () => { swipeStartRef.current = null; };
 
   const changeZoom = (delta: number) => {
     setZoomStep((prev) => {
@@ -348,6 +427,7 @@ const OneToOne = () => {
   }, []);
 
   const openWordPopup = async (rawToken: string, sentence: string) => {
+    if (Date.now() < tapSuppressUntilRef.current) return;
     const liveSel = window.getSelection();
     if (liveSel && !liveSel.isCollapsed) return;
     const word = cleanToken(rawToken);
@@ -487,7 +567,13 @@ const OneToOne = () => {
             </button>
           </div>
         ) : (
-          <div ref={stageRef} className="relative mt-3 w-full overflow-x-auto">
+          <div
+            ref={stageRef}
+            className="relative mt-3 w-full overflow-x-auto"
+            onTouchStart={onStageTouchStart}
+            onTouchEnd={onStageTouchEnd}
+            onTouchCancel={onStageTouchCancel}
+          >
             {rendering ? (
               <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
                 <Loader2 size={20} className="animate-spin text-muted-foreground" />
@@ -499,6 +585,7 @@ const OneToOne = () => {
             <div className="relative inline-block shadow-sm">
               <canvas ref={canvasRef} className="block" />
               <div ref={textLayerRef} className="textLayer select-none" />
+              <div ref={linkLayerRef} className="absolute inset-0 z-[2] pointer-events-none" />
             </div>
           </div>
         )}
@@ -527,14 +614,14 @@ const OneToOne = () => {
             >
               <ChevronRight size={18} />
             </button>
-            <input
-              value={pageInput}
-              onChange={(e) => setPageInput(e.target.value.replace(new RegExp("[^0-9]", "g"), ""))}
-              onKeyDown={(e) => { if (e.key === "Enter") jumpToPage(); }}
-              placeholder="쪽 이동"
-              inputMode="numeric"
-              className="ml-2 w-16 h-9 rounded-full border border-border px-3 text-xs text-center"
-            />
+            <button
+              type="button"
+              onClick={() => goToPage(tocPage)}
+              className="ml-3 h-9 px-3.5 rounded-full border border-border font-gothic text-xs text-foreground/80 flex items-center gap-1 active:bg-muted"
+              aria-label="목차로"
+            >
+              <List size={14} /> 목차
+            </button>
           </div>
         ) : null}
       </div>
