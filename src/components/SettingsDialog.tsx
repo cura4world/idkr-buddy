@@ -23,6 +23,7 @@ import {
   KoMeta, BibleVersion, BIBLE_VERSIONS,
 } from "@/lib/bibleKo";
 import { clearKoMemoryCache } from "@/lib/bible";
+import { pushMaterial, clearCachedMaterial } from "@/lib/materials";
 import { useRef } from "react";
 
 interface SettingsDialogProps {
@@ -42,6 +43,9 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const [koBusyVersion, setKoBusyVersion] = useState<BibleVersion | "all" | null>(null);
   const [koProgress, setKoProgress] = useState("");
   const koBusy = koBusyVersion !== null;
+  // 일대일 교재 PDF — 성경 서버 주소·키를 그대로 씁니다
+  const otoFileRef = useRef<HTMLInputElement | null>(null);
+  const [otoBusy, setOtoBusy] = useState(false);
   // 성경 서버는 설교문과 열쇠를 나눠 씁니다 (아내 폰에 설교문이 보이지 않도록)
   const [bibleBase, setBibleBaseState] = useState("");
   const [bibleKey, setBibleKeyState] = useState("");
@@ -207,6 +211,31 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     setKoMetaState((prev) => ({ ...prev, [version]: null }));
     const slotLabel = BIBLE_VERSIONS.find((v) => v.id === version)?.label || "";
     toast(slotLabel + "을 비웠습니다");
+  };
+
+  // 일대일 교재를 성경 서버에 올립니다(같은 주소·키). PC 등 원본 파일이 있는
+  // 기기에서 한 번만 하면 됩니다 — 폰에서는 일대일 화면을 열 때 자동으로 받아 옵니다.
+  const handleOtoFile = async (file: File | null) => {
+    if (!file) return;
+    if ((bibleBase || "").trim() === "" || (bibleKey || "").trim() === "") {
+      toast("성경 서버 주소와 키를 먼저 넣어 주세요");
+      return;
+    }
+    setOtoBusy(true);
+    try {
+      const bytes = await pushMaterial("onetoone", file);
+      toast("일대일 교재를 서버에 올렸습니다 (" + Math.round(bytes / 1024) + "KB)");
+    } catch (e) {
+      toast(koErrorText(e));
+    } finally {
+      setOtoBusy(false);
+      if (otoFileRef.current) otoFileRef.current.value = "";
+    }
+  };
+
+  const handleOtoClearCache = async () => {
+    await clearCachedMaterial("onetoone");
+    toast("이 기기에 담아 둔 일대일 교재를 지웠습니다 (다음에 열면 다시 받습니다)");
   };
 
   const changeFont = (delta: number) => {
@@ -631,6 +660,41 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             {koBusy && koProgress ? (
               <p className="mt-1.5 text-xs font-gothic text-muted-foreground">{koProgress}</p>
             ) : null}
+          </div>
+          <div className="pt-3 border-t border-border/60">
+            <Label className="font-body text-sm text-gray-900">일대일 교재</Label>
+            <p className="mt-1 text-xs text-muted-foreground font-gothic">
+              PDF 파일 그대로 올립니다. 성경 서버 주소·키를 그대로 씁니다(위 칸에 이미
+              들어 있으면 따로 입력할 것 없습니다). 원본 파일이 있는 이 기기에서
+              한 번만 올리면, 다른 기기는 일대일 화면을 열 때 자동으로 받아 옵니다.
+            </p>
+            <input
+              ref={otoFileRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              className="hidden"
+              onChange={(e) => handleOtoFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
+              disabled={otoBusy}
+              onClick={() => otoFileRef.current?.click()}
+            >
+              <Upload className="w-4 h-4 mr-1.5" />
+              {otoBusy ? "올리는 중..." : "일대일 PDF 올리기"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
+              disabled={otoBusy}
+              onClick={handleOtoClearCache}
+            >
+              <Trash2 className="w-4 h-4 mr-1.5" />
+              이 기기에 담아 둔 것 비우기
+            </Button>
           </div>
           <div className="pt-3 border-t border-border/60">
             <Label className="font-body text-sm text-gray-900">데이터 백업</Label>
