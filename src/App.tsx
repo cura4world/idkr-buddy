@@ -11,6 +11,7 @@ import News from "./pages/News";
 import Devotion from "./pages/Devotion";
 import BibleRead from "./pages/BibleRead";
 import OneToOne from "./pages/OneToOne";
+import MemberAdmin from "./pages/MemberAdmin";
 import { refreshMembershipOnStart } from "@/lib/access";
 import Prayer from "./pages/Prayer";
 import Sermons from "./pages/Sermons";
@@ -62,6 +63,7 @@ const App = () => (
           <Route path="/devotion" element={<Devotion />} />
           <Route path="/bible" element={<BibleRead />} />
           <Route path="/one-to-one" element={<OneToOne />} />
+          <Route path="/members" element={<MemberAdmin />} />
           <Route path="/prayer" element={<Prayer />} />
           <Route path="/sermon" element={<Sermons />} />
           <Route path="/sermon/:id" element={<SermonRead />} />
