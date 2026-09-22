@@ -567,9 +567,58 @@ const OneToOne = () => {
             </button>
           </div>
         ) : (
-          <>
-          {/* 책 위 오른쪽 끝 — 홈(첫 쪽) · 목차 */}
-          <div className="mt-2.5 flex items-center justify-end gap-1.5">
+          <div
+            ref={stageRef}
+            className="relative mt-3 w-full overflow-x-auto"
+            onTouchStart={onStageTouchStart}
+            onTouchEnd={onStageTouchEnd}
+            onTouchCancel={onStageTouchCancel}
+          >
+            {rendering ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
+                <Loader2 size={20} className="animate-spin text-muted-foreground" />
+              </div>
+            ) : null}
+            {/* 캔버스는 계산된 CSS 크기를 그대로 씁니다(max-width 로 줄이지 않음).
+                줄이면 글자 층의 글자 크기(px 절대값)와 어긋나므로, 확대 시에는
+                옆으로 스크롤하게 둡니다. */}
+            <div className="relative inline-block shadow-sm">
+              <canvas ref={canvasRef} className="block" />
+              <div ref={textLayerRef} className="textLayer select-none" />
+              <div ref={linkLayerRef} className="absolute inset-0 z-[2] pointer-events-none" />
+            </div>
+          </div>
+        )}
+
+        {/* 쪽 넘김 — 책 아래. 3칸으로 나눠 가운데 칸(‹ 쪽 ›)이 화면 정중앙에 오게 하고,
+            홈·목차는 오른쪽 칸 끝에 둡니다. */}
+        {!loading && !errorMsg && numPages > 0 ? (
+          <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center">
+          <span />
+          <div className="flex items-center justify-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => goPage(-1)}
+              disabled={pageNum <= 1}
+              className="w-10 h-10 rounded-full bg-sky-500 text-white flex items-center justify-center disabled:opacity-30"
+              aria-label="이전 쪽"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <span className="font-gothic text-sm text-foreground/80 shrink-0 min-w-[4.5rem] text-center">
+              {pageNum} / {numPages}쪽
+            </span>
+            <button
+              type="button"
+              onClick={() => goPage(1)}
+              disabled={pageNum >= numPages}
+              className="w-10 h-10 rounded-full bg-sky-500 text-white flex items-center justify-center disabled:opacity-30"
+              aria-label="다음 쪽"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+          <div className="flex items-center justify-end gap-1.5">
             <button
               type="button"
               onClick={() => goToPage(1)}
@@ -589,54 +638,6 @@ const OneToOne = () => {
               <List size={16} />
             </button>
           </div>
-          <div
-            ref={stageRef}
-            className="relative mt-2 w-full overflow-x-auto"
-            onTouchStart={onStageTouchStart}
-            onTouchEnd={onStageTouchEnd}
-            onTouchCancel={onStageTouchCancel}
-          >
-            {rendering ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
-                <Loader2 size={20} className="animate-spin text-muted-foreground" />
-              </div>
-            ) : null}
-            {/* 캔버스는 계산된 CSS 크기를 그대로 씁니다(max-width 로 줄이지 않음).
-                줄이면 글자 층의 글자 크기(px 절대값)와 어긋나므로, 확대 시에는
-                옆으로 스크롤하게 둡니다. */}
-            <div className="relative inline-block shadow-sm">
-              <canvas ref={canvasRef} className="block" />
-              <div ref={textLayerRef} className="textLayer select-none" />
-              <div ref={linkLayerRef} className="absolute inset-0 z-[2] pointer-events-none" />
-            </div>
-          </div>
-          </>
-        )}
-
-        {/* 쪽 넘김 — 책 아래에 둡니다(읽던 자리에서 손이 가는 곳) */}
-        {!loading && !errorMsg && numPages > 0 ? (
-          <div className="mt-3 flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={() => goPage(-1)}
-              disabled={pageNum <= 1}
-              className="w-10 h-10 rounded-full bg-sky-500 text-white flex items-center justify-center disabled:opacity-30"
-              aria-label="이전 쪽"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <span className="font-gothic text-sm text-foreground/80 shrink-0 min-w-[5.5rem] text-center">
-              {pageNum} / {numPages}쪽
-            </span>
-            <button
-              type="button"
-              onClick={() => goPage(1)}
-              disabled={pageNum >= numPages}
-              className="w-10 h-10 rounded-full bg-sky-500 text-white flex items-center justify-center disabled:opacity-30"
-              aria-label="다음 쪽"
-            >
-              <ChevronRight size={18} />
-            </button>
           </div>
         ) : null}
       </div>
