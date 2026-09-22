@@ -5,6 +5,7 @@
 // 서버 주소와 비밀키는 저장소가 공개라 코드에 두지 않고
 // 사용자가 설정 화면에서 직접 넣어 이 기기의 localStorage 에만 보관합니다.
 
+import { pickServerAuth, isAdminMember } from "@/lib/member";
 import { deleteSermonAudioFor } from "@/lib/tts";
 
 const BASE_KEY = "sermon-base";
@@ -67,7 +68,13 @@ export function setSermonKey(v: string): void {
   } catch (e) {}
 }
 
+// 기존 비밀키 또는 관리자 회원키. 일반 회원키로는 설교문이 보이지 않습니다.
 export function hasSermonConfig(): boolean {
+  return (getSermonBase() !== "" && getSermonKey() !== "") || isAdminMember();
+}
+
+/** 기존 비밀키가 들어 있는 기기인지(회원키와 무관). 판 판정에 씁니다. */
+export function hasLegacySermonConfig(): boolean {
   return getSermonBase() !== "" && getSermonKey() !== "";
 }
 
@@ -90,9 +97,8 @@ function setLastSync(ms: number): void {
 
 // 요청 공통부 — 주소·비밀키·타임아웃·에러 코드. 응답 해석은 부르는 쪽이 합니다.
 async function request(path: string, method: string): Promise<Response> {
-  const base = getSermonBase();
-  const key = getSermonKey();
-  if (!base || !key) throw new Error("NO_CONFIG");
+  const auth = pickServerAuth(getSermonBase(), getSermonKey());
+  if (!auth) throw new Error("NO_CONFIG");
 
   // 응답이 오지 않으면 화면이 로딩 상태로 멈추므로 15초 타임아웃을 겁니다.
   // (타임아웃도 기존 화면 처리와 호환되도록 FETCH_FAILED로 통일)
@@ -103,9 +109,9 @@ async function request(path: string, method: string): Promise<Response> {
 
   let res: Response;
   try {
-    res = await fetch(base + path, {
+    res = await fetch(auth.base + path, {
       method,
-      headers: { "x-kata-key": key },
+      headers: auth.headers,
       signal: controller.signal,
     });
   } catch (e) {
@@ -113,7 +119,7 @@ async function request(path: string, method: string): Promise<Response> {
   } finally {
     clearTimeout(timer);
   }
-  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  if (res.status === 401 || res.status === 403 || res.status === 409) throw new Error("UNAUTHORIZED");
   if (!res.ok) throw new Error("FETCH_FAILED");
   return res;
 }
