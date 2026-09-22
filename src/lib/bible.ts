@@ -1,11 +1,11 @@
 // src/lib/bible.ts
 // 인도네시아어 성경(TB, Terjemahan Baru) + 한국어 성경 본문을 불러옵니다.
 // 인니어 소스: tobiasagyasta/alkitab-api (raw.githubusercontent.com, CORS 허용)
-// 한국어 소스: ① 설정에서 직접 불러온 파일이 있으면 그것(기기 안, bibleKo.ts)
-//             ② 없으면 bolls.life 원격 API
+// 한국어 소스: 설정에서 직접 불러온 파일(기기 안, bibleKo.ts). 역본(개역개정/우리말)마다
+// 따로 불러와야 하며, 원격 자동 대체는 없습니다 — 두 역본 다 공개 API가 없기 때문입니다.
 // 본문은 저장하지 않고 필요할 때마다 불러오며, 앱 실행 중에만 메모리에 캐시합니다.
 
-import { loadKoChapter } from "@/lib/bibleKo";
+import { loadKoChapter, BibleVersion } from "@/lib/bibleKo";
 
 export interface BibleBook {
   id: string;        // JSON 파일명 (확장자 제외)
@@ -102,13 +102,6 @@ export function getBook(id: string): BibleBook | undefined {
   return BIBLE_BOOKS.find((b) => b.id === id);
 }
 
-// bolls.life는 책을 1~66 숫자로 구분합니다(창세기=1 ... 요한계시록=66).
-// BIBLE_BOOKS 배열이 정경 순서 그대로라 인덱스+1이 곧 bolls.life 책 번호입니다.
-function bollsBookNumber(bookId: string): number {
-  const idx = BIBLE_BOOKS.findIndex((b) => b.id === bookId);
-  return idx + 1;
-}
-
 // Bible.com(TB, versionId 306)에서 해당 장을 여는 링크. 앱이 깔려 있으면 앱으로 열립니다.
 export function bibleComUrl(bookId: string, chapter: number): string {
   const book = getBook(bookId);
@@ -191,15 +184,19 @@ function repairVerses(raw: BibleVerse[]): BibleVerse[] {
   return out.sort((a, b) => a.verse - b.verse);
 }
 
-// ── 한국어(새번역, RNKSV) ──────────────────────────────────────
-// bolls.life는 정적 파일이 아니라 실시간 API라 절 단위로 그때그때 불러옵니다.
-// 대한성서공회의 허락을 받아 배포되는 번역이며, 본문은 저장하지 않고 세션 메모리에만 캐시합니다.
+// ── 한국어(개역개정 · 우리말성경) ────────────────────────────────
+// 둘 다 공개 API가 없어 기기에 직접 불러온 파일에서만 가져옵니다(bibleKo.ts).
+// 본문은 저장하지 않고 세션 메모리에만 캐시합니다.
 
 const koChapterCache = new Map<string, BibleVerse[]>();
 
-// 설정에서 불러온 성경으로 갈아끼울 때, 앞서 받아 둔 원격 본문을 버립니다
-export function clearKoMemoryCache(): void {
-  koChapterCache.clear();
+// 설정에서 새 파일로 갈아끼울 때 그 역본만(또는 인자 없이 전부) 버립니다
+export function clearKoMemoryCache(version?: BibleVersion): void {
+  if (!version) { koChapterCache.clear(); return; }
+  const prefix = version + "-";
+  Array.from(koChapterCache.keys()).forEach((k) => {
+    if (k.indexOf(prefix) === 0) koChapterCache.delete(k);
+  });
 }
 
 // TB 본문에는 예수님의 말씀을 감싸는 마커(시작 "/", 끝 "*")가 들어 있어 표시 전에 제거합니다.
@@ -398,52 +395,19 @@ function splitSuperscription(verses: BibleVerse[], chapter: number): BibleVerse[
   return out;
 }
 
-// bolls.life 응답의 text는 HTML 문자열(예: <i>...</i>)일 수 있어 태그를 제거합니다.
-function stripHtml(html: string): string {
-  return html.replace(new RegExp("<[^>]*>", "g"), "").trim();
-}
-
-export async function fetchChapterKo(bookId: string, chapter: number): Promise<BibleVerse[]> {
-  const cacheKey = bookId + "-" + chapter;
+// 그 역본으로 이 기기에 불러온 것이 없으면 KO_NOT_LOADED 로 실패합니다.
+// (개역개정·우리말성경 둘 다 공개 API가 없어 원격으로 대신 받아올 수 없습니다)
+export async function fetchChapterKo(
+  bookId: string, chapter: number, version: BibleVersion = "gr",
+): Promise<BibleVerse[]> {
+  const cacheKey = version + "-" + bookId + "-" + chapter;
   const cached = koChapterCache.get(cacheKey);
   if (cached) return cached;
 
-  // 기기에 불러온 성경이 있으면 그것을 씁니다 (네트워크를 타지 않습니다)
-  const local = await loadKoChapter(bookId, chapter);
-  if (local) {
-    koChapterCache.set(cacheKey, local);
-    return local;
-  }
-
-  const bookNum = bollsBookNumber(bookId);
-  if (!bookNum) throw new Error("UNKNOWN_BOOK");
-
-  let res: Response;
-  try {
-    res = await fetch("https://bolls.life/get-text/RNKSV/" + bookNum + "/" + chapter + "/");
-  } catch {
-    throw new Error("BIBLE_FETCH_FAILED");
-  }
-  if (!res.ok) throw new Error("BIBLE_FETCH_FAILED");
-
-  const data = await res.json();
-  if (!Array.isArray(data) || data.length === 0) throw new Error("CHAPTER_NOT_FOUND");
-
-  // 같은 절번호가 두 번 오면 화면 key가 겹쳐 문단이 쌓이므로 첫 것만 남깁니다
-  const seenVerse = new Set<number>();
-  const verses: BibleVerse[] = data
-    .filter((v: any) => v && typeof v.verse === "number" && typeof v.text === "string")
-    .map((v: any) => ({ verse: v.verse, text: stripHtml(v.text) }))
-    .filter((v: BibleVerse) => {
-      if (seenVerse.has(v.verse)) return false;
-      seenVerse.add(v.verse);
-      return true;
-    })
-    .sort((a: BibleVerse, b: BibleVerse) => a.verse - b.verse);
-
-  if (verses.length === 0) throw new Error("CHAPTER_NOT_FOUND");
-  koChapterCache.set(cacheKey, verses);
-  return verses;
+  const local = await loadKoChapter(bookId, chapter, version);
+  if (!local) throw new Error("KO_NOT_LOADED");
+  koChapterCache.set(cacheKey, local);
+  return local;
 }
 
 // ── QT(오늘의 묵상) 지원 헬퍼 ────────────────────────────────────
