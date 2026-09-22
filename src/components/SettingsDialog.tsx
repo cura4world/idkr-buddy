@@ -42,7 +42,22 @@ function formatMemberInput(raw: string, prev: string): string {
   const deleting = up.length < prev.length;
   // 고정 접두어 "KK-" 를 지우려 하면 그대로 둡니다
   if (deleting && "KK-".indexOf(up) === 0) return "KK-";
-  let rest = up.indexOf("KK-") === 0 ? up.slice(3) : up;
+  const prevU = (prev || "").toUpperCase();
+  let rest: string;
+  if (up.indexOf("KK-") === 0) {
+    rest = up.slice(3);
+  } else if (!deleting && prevU.indexOf("KK-") === 0) {
+    // 커서가 "KK-" 안쪽이나 앞에 있어서 글자가 접두어 사이에 끼어든 경우 —
+    // 이전 값과 비교해 새로 들어온 글자만 골라 본문 끝에 붙입니다.
+    let a = 0;
+    while (a < prevU.length && a < up.length && prevU.charAt(a) === up.charAt(a)) a++;
+    let b = 0;
+    while (b < prevU.length - a && b < up.length - a &&
+      prevU.charAt(prevU.length - 1 - b) === up.charAt(up.length - 1 - b)) b++;
+    rest = prevU.slice(3) + up.slice(a, up.length - b);
+  } else {
+    rest = up;
+  }
   let body = rest.replace(new RegExp("[^A-Z0-9]", "g"), "");
   if (body.length > 12 && body.indexOf("KK") === 0) body = body.slice(2);
   if (deleting && prev.charAt(prev.length - 1) === "-" && up === prev.slice(0, -1).toUpperCase()) {
@@ -126,6 +141,20 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const [memberBusy, setMemberBusy] = useState(false);
   const [memberMsg, setMemberMsg] = useState("");
   const [memberLeaveConfirm, setMemberLeaveConfirm] = useState(false);
+  // 회원키 칸의 커서는 항상 맨 끝(입력 자리)에 둡니다 — "KK-" 부분을 눌러도 앞에 서지 않게.
+  const memberInputRef = useRef<HTMLInputElement | null>(null);
+  const memberCaretToEnd = () => {
+    const el = memberInputRef.current;
+    if (!el || document.activeElement !== el) return;
+    const n = el.value.length;
+    try {
+      if (el.selectionStart !== n || el.selectionEnd !== n) el.setSelectionRange(n, n);
+    } catch (e) {}
+  };
+  useEffect(() => {
+    memberCaretToEnd();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberInput]);
   const isAdminUI = edition === "admin";
 
   const handleMemberActivate = async () => {
@@ -555,8 +584,11 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 </p>
                 <div className="flex gap-2 mt-2">
                   <Input
+                    ref={memberInputRef}
                     value={memberInput}
-                    onFocus={() => { if (!memberInput) setMemberInput("KK-"); }}
+                    onFocus={() => { if (!memberInput) setMemberInput("KK-"); setTimeout(memberCaretToEnd, 0); }}
+                    onClick={() => { setTimeout(memberCaretToEnd, 0); }}
+                    onSelect={memberCaretToEnd}
                     onBlur={() => { if (memberInput === "KK-") setMemberInput(""); }}
                     onChange={(e) => setMemberInput(formatMemberInput(e.target.value, memberInput))}
                     placeholder="KK-XXXX-XXXX-XXXX"
