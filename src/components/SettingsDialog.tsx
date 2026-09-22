@@ -155,6 +155,27 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     memberCaretToEnd();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberInput]);
+
+  // 키보드가 올라오면 설정 창이 그만큼 줄어드는데, 창 안 스크롤은 그대로라 회원키 칸이
+  // 창 아래 가장자리에 걸려 잘립니다. 키보드가 다 올라온 뒤(약 0.35초) 칸을 창 가운데로
+  // 스크롤하고, 키보드 높이가 바뀔 때(추천 단어 줄 등)도 다시 맞춥니다.
+  const memberScrollIntoView = () => {
+    const el = memberInputRef.current;
+    if (!el || document.activeElement !== el) return;
+    try {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+    } catch (e) {
+      el.scrollIntoView();
+    }
+  };
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!vv) return;
+    const onResize = () => { memberScrollIntoView(); };
+    vv.addEventListener("resize", onResize);
+    return () => { vv.removeEventListener("resize", onResize); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const isAdminUI = edition === "admin";
 
   const handleMemberActivate = async () => {
@@ -586,7 +607,11 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                   <Input
                     ref={memberInputRef}
                     value={memberInput}
-                    onFocus={() => { if (!memberInput) setMemberInput("KK-"); setTimeout(memberCaretToEnd, 0); }}
+                    onFocus={() => {
+                      if (!memberInput) setMemberInput("KK-");
+                      setTimeout(memberCaretToEnd, 0);
+                      setTimeout(memberScrollIntoView, 350);
+                    }}
                     onClick={() => { setTimeout(memberCaretToEnd, 0); }}
                     onSelect={memberCaretToEnd}
                     onBlur={() => { if (memberInput === "KK-") setMemberInput(""); }}
