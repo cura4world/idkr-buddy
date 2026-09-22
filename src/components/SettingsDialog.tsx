@@ -17,7 +17,11 @@ import { getTtsVoice, setTtsVoice, TTS_VOICES, TtsVoiceId, clearTtsCache } from 
 import { getSermonBase, setSermonBase, getSermonKey, setSermonKey } from "@/lib/sermon";
 import { getPercakapanBase, setPercakapanBase, getPercakapanKey, setPercakapanKey, hasPercakapanConfig, pushBackup } from "@/lib/percakapan";
 import { getMyMedaliId, setMyMedaliId, optOutMedali, isValidMedaliId, fetchRegisteredIds, syncMedali } from "@/lib/medaliSync";
-import { parseKoBible, saveKoBible, clearKoBible, koMetaSync, guessLabel, pushKoToServer, pullKoFromServer, getBibleBase, setBibleBase, getBibleKey, setBibleKey, KoMeta } from "@/lib/bibleKo";
+import {
+  parseKoBible, saveKoBible, clearKoBible, koMetaSync, guessLabel, guessVersion,
+  pushKoToServer, pullKoFromServer, getBibleBase, setBibleBase, getBibleKey, setBibleKey,
+  KoMeta, BibleVersion, BIBLE_VERSIONS,
+} from "@/lib/bibleKo";
 import { clearKoMemoryCache } from "@/lib/bible";
 import { useRef } from "react";
 
@@ -32,11 +36,15 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const [importOpen, setImportOpen] = useState(false);
   const [confirmClearData, setConfirmClearData] = useState(false);
   const [confirmClearTts, setConfirmClearTts] = useState(false);
-  // 한국어 성경 파일 불러오기
-  const koFileRef = useRef<HTMLInputElement | null>(null);
-  const [koMeta, setKoMeta] = useState<KoMeta | null>(null);
-  const [koBusy, setKoBusy] = useState(false);
+  // 한국어 성경 파일 불러오기 — 역본(개역개정/우리말)마다 자리가 따로입니다.
+  const koFileRefGr = useRef<HTMLInputElement | null>(null);
+  const koFileRefWm = useRef<HTMLInputElement | null>(null);
+  const koFileRefNiv = useRef<HTMLInputElement | null>(null);
+  const koFileRefs: Record<BibleVersion, React.RefObject<HTMLInputElement>> = { gr: koFileRefGr, wm: koFileRefWm, niv: koFileRefNiv };
+  const [koMeta, setKoMetaState] = useState<Record<BibleVersion, KoMeta | null>>({ gr: null, wm: null, niv: null });
+  const [koBusyVersion, setKoBusyVersion] = useState<BibleVersion | "all" | null>(null);
   const [koProgress, setKoProgress] = useState("");
+  const koBusy = koBusyVersion !== null;
   // 성경 서버는 설교문과 열쇠를 나눠 씁니다 (아내 폰에 설교문이 보이지 않도록)
   const [bibleBase, setBibleBaseState] = useState("");
   const [bibleKey, setBibleKeyState] = useState("");
@@ -67,8 +75,8 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
       setPercakapanBaseState(getPercakapanBase());
       setPercakapanKeyState(getPercakapanKey());
       setPcConfirmErase(0);
-      setKoMeta(koMetaSync());
-      setKoBusy(false);
+      setKoMetaState({ gr: koMetaSync("gr"), wm: koMetaSync("wm"), niv: koMetaSync("niv") });
+      setKoBusyVersion(null);
       setBibleBaseState(getBibleBase());
       setBibleKeyState(getBibleKey());
       const cur = getMyMedaliId();
@@ -79,10 +87,11 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     }
   }, [open]);
 
-  // 고른 txt 를 그 자리에서 읽어 파싱하고 이 기기에만 담습니다 (서버로 보내지 않습니다).
-  const handleKoFile = async (file: File | null) => {
+  // 고른 txt 를 그 자리에서 읽어 파싱하고, 누른 버튼에 해당하는 역본 자리에만 담습니다
+  // (서버로는 "서버에 올리기"를 눌러야 나갑니다).
+  const handleKoFile = async (version: BibleVersion, file: File | null) => {
     if (!file) return;
-    setKoBusy(true);
+    setKoBusyVersion(version);
     try {
       const raw = await file.text();
       const { chapters, stats } = parseKoBible(raw);
@@ -90,16 +99,23 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
         toast("성경 본문을 찾지 못했습니다. 파일 형식을 확인해 주세요");
         return;
       }
-      const meta = await saveKoBible(chapters, guessLabel(file.name), stats);
-      clearKoMemoryCache();
-      setKoMeta(meta);
+      const slotLabel = BIBLE_VERSIONS.find((v) => v.id === version)?.label || "한국어 성경";
+      const guessed = guessLabel(file.name);
+      const label = guessed !== "한국어 성경" ? guessed : slotLabel;
+      const meta = await saveKoBible(chapters, label, stats, version);
+      clearKoMemoryCache(version);
+      setKoMetaState((prev) => ({ ...prev, [version]: meta }));
       const extra = stats.unknown.length > 0 ? " · 못 찾은 책 " + stats.unknown.length + "개" : "";
       toast(meta.label + " " + stats.books + "권 · " + stats.chapters + "장 · " + stats.verses + "절을 불러왔습니다" + extra);
+      if (guessVersion(file.name) !== version && guessed !== "한국어 성경") {
+        toast("확인: 파일 이름은 " + guessed + "처럼 보이는데 " + slotLabel + " 자리에 넣었습니다");
+      }
     } catch (e) {
       toast("파일을 읽지 못했습니다");
     } finally {
-      setKoBusy(false);
-      if (koFileRef.current) koFileRef.current.value = "";
+      setKoBusyVersion(null);
+      const ref = koFileRefs[version].current;
+      if (ref) ref.value = "";
     }
   };
 
@@ -125,47 +141,63 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     return "서버와 연결하지 못했습니다";
   };
 
-  const handleKoPush = async () => {
+  const handleKoPush = async (version: BibleVersion) => {
     const cfg = koServerReady();
     if (!cfg) return;
-    setKoBusy(true);
+    setKoBusyVersion(version);
     try {
-      const n = await pushKoToServer(cfg.base, cfg.key, (done, total) => {
+      const n = await pushKoToServer(cfg.base, cfg.key, version, (done, total) => {
         setKoProgress(done + "/" + total);
       });
       toast(n + "권을 서버에 올렸습니다. 다른 기기에서는 '서버에서 받기'만 누르면 됩니다");
     } catch (e) {
       toast(koErrorText(e));
     } finally {
-      setKoBusy(false);
+      setKoBusyVersion(null);
       setKoProgress("");
     }
   };
 
-  const handleKoPull = async () => {
+  // 서버에 있는 역본을 전부(있는 만큼) 받습니다. 한쪽만 올라가 있어도 됩니다.
+  const handleKoPullAll = async () => {
     const cfg = koServerReady();
     if (!cfg) return;
-    setKoBusy(true);
-    try {
-      const meta = await pullKoFromServer(cfg.base, cfg.key, (done, total) => {
-        setKoProgress(done + "/" + total);
-      });
-      clearKoMemoryCache();
-      setKoMeta(meta);
-      toast(meta.label + " " + meta.books + "권 · " + meta.verses + "절을 받았습니다");
-    } catch (e) {
-      toast(koErrorText(e));
-    } finally {
-      setKoBusy(false);
-      setKoProgress("");
+    setKoBusyVersion("all");
+    const got: string[] = [];
+    const missing: string[] = [];
+    let hadRealError = false;
+    for (let i = 0; i < BIBLE_VERSIONS.length; i++) {
+      const v = BIBLE_VERSIONS[i];
+      try {
+        const meta = await pullKoFromServer(cfg.base, cfg.key, v.id, (done, total) => {
+          setKoProgress(v.label + " " + done + "/" + total);
+        });
+        clearKoMemoryCache(v.id);
+        setKoMetaState((prev) => ({ ...prev, [v.id]: meta }));
+        got.push(meta.label);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "";
+        if (msg === "EMPTY") { missing.push(v.label); continue; }
+        hadRealError = true;
+        toast(v.label + ": " + koErrorText(e));
+      }
+    }
+    setKoBusyVersion(null);
+    setKoProgress("");
+    if (got.length > 0) {
+      const extra = missing.length > 0 ? " (" + missing.join("·") + "은 서버에 없음)" : "";
+      toast(got.join(" · ") + " 받았습니다" + extra);
+    } else if (!hadRealError) {
+      toast("서버에 올려둔 성경이 아직 없습니다");
     }
   };
 
-  const handleKoClear = async () => {
-    await clearKoBible();
-    clearKoMemoryCache();
-    setKoMeta(null);
-    toast("불러온 한국어 성경을 비웠습니다");
+  const handleKoClear = async (version: BibleVersion) => {
+    await clearKoBible(version);
+    clearKoMemoryCache(version);
+    setKoMetaState((prev) => ({ ...prev, [version]: null }));
+    const slotLabel = BIBLE_VERSIONS.find((v) => v.id === version)?.label || "";
+    toast(slotLabel + "을 비웠습니다");
   };
 
   const changeFont = (delta: number) => {
@@ -510,18 +542,9 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
           <div className="pt-3 border-t border-border/60">
             <Label className="font-body text-sm text-gray-900">한국어 성경 파일</Label>
             <p className="mt-1 text-xs text-muted-foreground font-gothic">
-              한 줄에 한 절씩 적힌 txt 파일을 고르면 이 기기에만 담아 성경 읽기에서 씁니다.
-              서버로 올라가지 않으므로 기기마다 한 번씩 불러와야 합니다.
+              한 줄에 한 절씩 적힌 txt 파일을 역본별로 고르면 이 기기에만 담아 성경 읽기에서 씁니다.
+              서버로는 아래 "서버에 올리기"를 눌러야 나갑니다.
             </p>
-            {koMeta ? (
-              <p className="mt-2 text-xs font-gothic text-sky-600">
-                {koMeta.label} · {koMeta.books}권 {koMeta.chapters}장 {koMeta.verses}절
-              </p>
-            ) : (
-              <p className="mt-2 text-xs font-gothic text-muted-foreground">
-                불러온 파일이 없습니다. 지금은 인터넷에서 받아옵니다.
-              </p>
-            )}
             <div className="mt-2 space-y-2">
               <Input
                 value={bibleBase}
@@ -538,59 +561,79 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 className="text-sm"
               />
             </div>
-            <input
-              ref={koFileRef}
-              type="file"
-              accept=".txt,text/plain"
-              className="hidden"
-              onChange={(e) => handleKoFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
-            />
+
+            {BIBLE_VERSIONS.map((v) => {
+              const meta = koMeta[v.id];
+              const busyThis = koBusyVersion === v.id;
+              return (
+                <div key={v.id} className="mt-3 rounded-lg border border-border/60 p-2.5">
+                  <p className="text-xs font-gothic font-semibold text-gray-800">{v.label}</p>
+                  {meta ? (
+                    <p className="mt-1 text-xs font-gothic text-sky-600">
+                      {meta.label} · {meta.books}권 {meta.chapters}장 {meta.verses}절
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs font-gothic text-muted-foreground">불러온 파일이 없습니다</p>
+                  )}
+                  <input
+                    ref={koFileRefs[v.id]}
+                    type="file"
+                    accept=".txt,text/plain"
+                    className="hidden"
+                    onChange={(e) => handleKoFile(v.id, e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+                  />
+                  <div className="mt-2 flex gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 whitespace-normal h-auto py-2 leading-snug text-[0.6875rem]"
+                      disabled={koBusy}
+                      onClick={() => koFileRefs[v.id].current?.click()}
+                    >
+                      <Upload className="w-3.5 h-3.5 mr-1" />
+                      {busyThis ? "처리 중..." : meta ? "다른 파일로" : "파일 불러오기"}
+                    </Button>
+                    {meta ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1 whitespace-normal h-auto py-2 leading-snug text-[0.6875rem]"
+                        disabled={koBusy}
+                        onClick={() => handleKoPush(v.id)}
+                      >
+                        <Upload className="w-3.5 h-3.5 mr-1" />
+                        서버에 올리기
+                      </Button>
+                    ) : null}
+                  </div>
+                  {meta ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full mt-1.5 whitespace-normal h-auto py-2 leading-snug text-[0.6875rem]"
+                      disabled={koBusy}
+                      onClick={() => handleKoClear(v.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1" />
+                      이 역본 비우기
+                    </Button>
+                  ) : null}
+                </div>
+              );
+            })}
+
             <Button
               type="button"
               variant="outline"
-              className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
+              className="w-full mt-3 whitespace-normal h-auto py-2.5 leading-snug text-xs"
               disabled={koBusy}
-              onClick={() => koFileRef.current?.click()}
-            >
-              <Upload className="w-4 h-4 mr-1.5" />
-              {koBusy ? "처리 중..." : koMeta ? "다른 파일로 바꾸기" : "성경 파일 불러오기"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
-              disabled={koBusy}
-              onClick={handleKoPull}
+              onClick={handleKoPullAll}
             >
               <Download className="w-4 h-4 mr-1.5" />
-              서버에서 받기
+              서버에서 받기 (있는 역본 전부)
             </Button>
-            {koMeta ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
-                disabled={koBusy}
-                onClick={handleKoPush}
-              >
-                <Upload className="w-4 h-4 mr-1.5" />
-                서버에 올리기 (한 대에서 한 번만)
-              </Button>
-            ) : null}
             {koBusy && koProgress ? (
               <p className="mt-1.5 text-xs font-gothic text-muted-foreground">{koProgress}</p>
-            ) : null}
-            {koMeta ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
-                disabled={koBusy}
-                onClick={handleKoClear}
-              >
-                <Trash2 className="w-4 h-4 mr-1.5" />
-                불러온 성경 비우기
-              </Button>
             ) : null}
           </div>
           <div className="pt-3 border-t border-border/60">
