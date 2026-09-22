@@ -203,3 +203,52 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* 일대일 교재 — pdf.js 글자 층(TextLayer).
+   pdf.js는 각 글자 조각에 위치(left/top)·크기(--font-height)·가로 늘림(--scale-x)
+   값만 넣어 주고, 그 값을 실제로 적용하는 규칙은 이 CSS에 기댑니다.
+   (원본은 pdfjs-dist/web/pdf_viewer.css 의 .textLayer 블록 — 그중 이 앱에 필요한
+   것만 옮겼습니다. 뷰어 UI·주석 편집기 부분은 쓰지 않으므로 빼습니다.)
+   --total-scale-factor 는 OneToOne.tsx 가 화면 배율에 맞춰 인라인으로 넣어 줍니다. */
+.textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  text-align: initial;
+  line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  z-index: 1;
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.textLayer span,
+.textLayer br {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  transform-origin: 0% 0%;
+}
+.textLayer > span {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+/* 우리가 낱말 단위로 쪼개 넣은 안쪽 span 은 바깥 줄 span 의 흐름을 그대로 따릅니다
+   (절대 위치·변형을 다시 걸지 않아야 자리가 맞습니다). */
+.textLayer > span > span {
+  position: static;
+  transform: none;
+  font-size: inherit;
+  color: transparent;
+}
