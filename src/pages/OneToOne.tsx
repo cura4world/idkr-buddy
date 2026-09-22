@@ -71,6 +71,9 @@ const OneToOne = () => {
   const [pageInput, setPageInput] = useState("");
   const [rendering, setRendering] = useState(false);
   const [zoomStep, setZoomStep] = useState(loadZoomStep);
+  // 화면 폭이 바뀌면(폴드 펼침·회전·넓게 보기) 다시 재서 그립니다.
+  // 처음 한 번만 재면 폴드를 펼쳐도 책이 작은 채로 남습니다.
+  const [stageWidthKey, setStageWidthKey] = useState(0);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const textLayerRef = useRef<HTMLDivElement | null>(null);
@@ -110,6 +113,27 @@ const OneToOne = () => {
   useEffect(() => {
     try { localStorage.setItem(LAST_PAGE_KEY, String(pageNum)); } catch (e) {}
   }, [pageNum]);
+
+  // 스테이지 폭 감시 — 폭이 실제로 달라졌을 때만 다시 그립니다(스크롤로는 안 움직임).
+  useEffect(() => {
+    if (loading || errorMsg) return;
+    const el = stageRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    let last = el.clientWidth;
+    let timer: number | null = null;
+    const ro = new ResizeObserver(() => {
+      const w = el.clientWidth;
+      if (Math.abs(w - last) < 2) return;
+      last = w;
+      if (timer !== null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => { setStageWidthKey((k) => k + 1); }, 120);
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [loading, errorMsg]);
 
   // ---------- 쪽 그리기 ----------
   // loading 이 끝나야 캔버스가 화면에 붙습니다. pdf 가 먼저 준비되고 loading 이
@@ -178,7 +202,7 @@ const OneToOne = () => {
         try { renderTaskRef.current.cancel(); } catch (e) {}
       }
     };
-  }, [pdf, pageNum, zoomStep, loading]);
+  }, [pdf, pageNum, zoomStep, loading, stageWidthKey]);
 
   // pdf.js가 그려 넣은 한 줄짜리 span들을, 낱말 단위로 다시 쪼갭니다.
   // 위치·크기는 이미 pdf.js가 정확히 맞춰 뒀으므로 우리는 안의 글자만 바꿉니다.
@@ -445,38 +469,6 @@ const OneToOne = () => {
           </span>
         </div>
 
-        {!loading && !errorMsg && numPages > 0 ? (
-          <div className="px-4 pb-2.5 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => goPage(-1)}
-              disabled={pageNum <= 1}
-              className="w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center disabled:opacity-30"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="font-gothic text-xs text-muted-foreground shrink-0">
-              {pageNum} / {numPages}쪽
-            </span>
-            <button
-              type="button"
-              onClick={() => goPage(1)}
-              disabled={pageNum >= numPages}
-              className="w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center disabled:opacity-30"
-            >
-              <ChevronRight size={16} />
-            </button>
-            <span className="flex-1" />
-            <input
-              value={pageInput}
-              onChange={(e) => setPageInput(e.target.value.replace(new RegExp("[^0-9]", "g"), ""))}
-              onKeyDown={(e) => { if (e.key === "Enter") jumpToPage(); }}
-              placeholder="쪽 이동"
-              inputMode="numeric"
-              className="w-16 h-8 rounded-full border border-border px-3 text-xs text-center"
-            />
-          </div>
-        ) : null}
       </div>
 
       <div className="px-4 pb-6">
@@ -510,9 +502,41 @@ const OneToOne = () => {
             </div>
           </div>
         )}
-        <p className="text-center text-muted-foreground text-xs mt-3">
-          단어를 탭하면 뜻이 나옵니다
-        </p>
+
+        {/* 쪽 넘김 — 책 아래에 둡니다(읽던 자리에서 손이 가는 곳) */}
+        {!loading && !errorMsg && numPages > 0 ? (
+          <div className="mt-3 flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => goPage(-1)}
+              disabled={pageNum <= 1}
+              className="w-10 h-10 rounded-full bg-sky-500 text-white flex items-center justify-center disabled:opacity-30"
+              aria-label="이전 쪽"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <span className="font-gothic text-sm text-foreground/80 shrink-0 min-w-[5.5rem] text-center">
+              {pageNum} / {numPages}쪽
+            </span>
+            <button
+              type="button"
+              onClick={() => goPage(1)}
+              disabled={pageNum >= numPages}
+              className="w-10 h-10 rounded-full bg-sky-500 text-white flex items-center justify-center disabled:opacity-30"
+              aria-label="다음 쪽"
+            >
+              <ChevronRight size={18} />
+            </button>
+            <input
+              value={pageInput}
+              onChange={(e) => setPageInput(e.target.value.replace(new RegExp("[^0-9]", "g"), ""))}
+              onKeyDown={(e) => { if (e.key === "Enter") jumpToPage(); }}
+              placeholder="쪽 이동"
+              inputMode="numeric"
+              className="ml-2 w-16 h-9 rounded-full border border-border px-3 text-xs text-center"
+            />
+          </div>
+        ) : null}
       </div>
 
       {/* 단어 미니 팝업 */}
