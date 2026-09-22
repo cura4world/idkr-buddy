@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getGeminiApiKey, setGeminiApiKey } from "@/lib/gemini";
 import { getClaudeApiKey, setClaudeApiKey } from "@/lib/claude";
 import { exportWordsToCSV, getPrivateFolderName, setPrivateFolderName } from "@/lib/store";
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import CSVImportDialog from "@/components/CSVImportDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Copy, Download, Upload, Trash2, Minus, Plus, Type, Volume2 } from "lucide-react";
+import { Copy, Download, Upload, Trash2, Minus, Plus, Type, Volume2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { clearLookupWords, countLookupWords } from "@/lib/wordStore";
 import { clearCachedResults, countCachedResults } from "@/lib/dictStore";
@@ -34,6 +35,7 @@ interface SettingsDialogProps {
 }
 
 export default function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+  const navigate = useNavigate();
   const [apiKey, setApiKey] = useState("");
   const [claudeKey, setClaudeKey] = useState("");
   const [importOpen, setImportOpen] = useState(false);
@@ -546,6 +548,17 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               </>
             )}
             {memberMsg ? <p className="mt-1.5 text-xs font-gothic text-muted-foreground">{memberMsg}</p> : null}
+            {isAdminUI ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
+                onClick={() => { onOpenChange(false); navigate("/members"); }}
+              >
+                <KeyRound className="w-4 h-4 mr-1.5" />
+                회원키 관리 (발급·기기 풀어주기·끊기)
+              </Button>
+            ) : null}
           </div>
           {isAdminUI ? (
           <>
