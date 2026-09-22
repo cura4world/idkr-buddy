@@ -40,6 +40,9 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       workbox: {
         globPatterns: ["**/*.{js,mjs,css,html,ico,png,svg,woff2,json}"],
+        // 메인 번들이 기본 한도(2MiB)에 닿아 넘으면 캐시에서 빠지고 빌드가 실패합니다.
+        // 오프라인에서도 앱이 열리도록 메인 번들은 반드시 캐시돼야 하므로 한도를 올립니다.
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         navigateFallbackDenylist: [/^\/~oauth/, /^\/.well-known\//],
       },
       manifest: {
