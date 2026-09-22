@@ -870,8 +870,9 @@ const BibleRead = () => {
     .map((v) => koMetaSync(v)?.credit)
     .filter((c): c is string => !!c);
 
+  // 필 자리가 좁아도 줄여 쓰지 않습니다 — 메뉴 항목과 똑같은 이름으로 보여줍니다.
   const pillLabel = SHOW_ORDER.filter((k) => showSet.has(k))
-    .map((k) => (k === "id" ? "IN" : SHOW_LABELS[k]))
+    .map((k) => SHOW_LABELS[k])
     .join("·");
 
   // ---------- 화면 ----------
