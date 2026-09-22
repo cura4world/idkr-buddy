@@ -7,6 +7,7 @@
 // 본다"는 요구사항과 맞고, 따로 설정을 만들 이유가 없습니다.
 
 import { getBibleBase, getBibleKey } from "@/lib/bibleKo";
+import { pickServerAuth } from "@/lib/member";
 
 const DB_NAME = "kata-materials";
 const STORE = "files"; // key = 자료 id, value = { blob, savedAt }
@@ -73,11 +74,9 @@ export async function clearCachedMaterial(id: string): Promise<void> {
   }
 }
 
-function serverConfig(): { base: string; key: string } | null {
-  const base = getBibleBase().trim();
-  const key = getBibleKey().trim();
-  if (!base || !key) return null;
-  return { base: base.replace(new RegExp("/+$"), ""), key };
+// 기존 성경 비밀키가 있으면 그것을, 없으면 회원키를 씁니다.
+function serverConfig(): { base: string; headers: Record<string, string> } | null {
+  return pickServerAuth(getBibleBase(), getBibleKey());
 }
 
 /** 기기에 캐시된 게 있으면 그것을, 없으면 서버에서 받아 캐시해 둔 뒤 돌려줍니다. */
@@ -93,7 +92,7 @@ export async function fetchMaterial(id: string): Promise<Blob> {
   let res: Response;
   try {
     res = await fetch(cfg.base + "/materials/" + id, {
-      headers: { "x-kata-key": cfg.key },
+      headers: cfg.headers,
       signal: controller.signal,
     });
   } catch (e) {
@@ -101,7 +100,7 @@ export async function fetchMaterial(id: string): Promise<Blob> {
   } finally {
     clearTimeout(timer);
   }
-  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  if (res.status === 401 || res.status === 403 || res.status === 409) throw new Error("UNAUTHORIZED");
   if (res.status === 404) throw new Error("NOT_FOUND");
   if (!res.ok) throw new Error("FETCH_FAILED");
 
@@ -122,7 +121,7 @@ export async function pushMaterial(id: string, file: File): Promise<number> {
   try {
     res = await fetch(cfg.base + "/materials/" + id, {
       method: "PUT",
-      headers: { "x-kata-key": cfg.key },
+      headers: cfg.headers,
       body: buf,
       signal: controller.signal,
     });
