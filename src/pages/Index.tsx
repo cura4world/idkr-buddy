@@ -42,6 +42,7 @@ import {
   BookMarked,
   MessagesSquare,
   Gamepad2,
+  Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -408,6 +409,15 @@ const Index = () => {
     } catch (e) {}
   }, []);
 
+  // 일대일 마지막 본 쪽
+  const [oneToOnePos, setOneToOnePos] = useState("");
+  useEffect(() => {
+    try {
+      const n = localStorage.getItem("onetoone-last-page");
+      if (n) setOneToOnePos(n + "쪽");
+    } catch (e) {}
+  }, []);
+
   // 음성 인식 정리
   useEffect(() => {
     return () => {
@@ -742,6 +752,13 @@ const Index = () => {
               sub="Alkitab"
               meta={biblePos || undefined}
               onClick={() => navigate("/bible")}
+            />
+            <Row
+              icon={Users}
+              title="일대일"
+              sub="Pemuridan"
+              meta={oneToOnePos || undefined}
+              onClick={() => navigate("/one-to-one")}
             />
             <Row icon={Heart} title="기도문" sub="Doa" onClick={() => navigate("/prayer")} last={!sermonOn} />
             {sermonOn ? (
