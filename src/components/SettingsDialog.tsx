@@ -25,6 +25,8 @@ import {
 import { clearKoMemoryCache } from "@/lib/bible";
 import { pushMaterial, clearCachedMaterial } from "@/lib/materials";
 import { useRef } from "react";
+import { getEdition, Edition, EDITION_LABEL, activateAndSync, syncMemberContent, leaveMembership } from "@/lib/access";
+import { getMemberProfile, MemberProfile } from "@/lib/member";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -85,8 +87,66 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
       fetchRegisteredIds()
         .then((ids) => setMedaliTaken(ids))
         .catch(() => {});
+      setEdition(getEdition());
+      setMemberProfileState(getMemberProfile());
+      setMemberInput("");
+      setMemberMsg("");
+      setMemberLeaveConfirm(false);
     }
   }, [open]);
+
+  // ---------- 회원키 ----------
+  // 관리자판이 아니면 아래의 서버·키·파일 칸을 모두 가리고, 회원키 하나로 끝냅니다.
+  const [edition, setEdition] = useState<Edition>("public");
+  const [memberProfile, setMemberProfileState] = useState<MemberProfile | null>(null);
+  const [memberInput, setMemberInput] = useState("");
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [memberMsg, setMemberMsg] = useState("");
+  const [memberLeaveConfirm, setMemberLeaveConfirm] = useState(false);
+  const isAdminUI = edition === "admin";
+
+  const handleMemberActivate = async () => {
+    if (memberBusy) return;
+    setMemberBusy(true);
+    setMemberMsg("확인 중...");
+    try {
+      const r = await activateAndSync(memberInput, (m) => setMemberMsg("받는 중 · " + m));
+      const parts: string[] = [];
+      if (r.bibles.length > 0) parts.push("성경 " + r.bibles.join("·"));
+      if (r.scenes > 0) parts.push("회화집 " + r.scenes + "개");
+      toast((r.profile.name || "회원") + "님, 활성화되었습니다" + (parts.length > 0 ? " — " + parts.join(", ") + " 받음" : ""));
+      // 판·개인 단어장이 바뀌므로 앱을 새로 그립니다
+      setTimeout(() => { window.location.reload(); }, 1500);
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "";
+      if (m === "BAD_FORMAT") setMemberMsg("회원키 형식이 맞지 않습니다 (KK-XXXX-XXXX-XXXX)");
+      else if (m === "UNKNOWN") setMemberMsg("없는 회원키입니다. 다시 확인해 주세요");
+      else if (m === "DEVICE_TAKEN") setMemberMsg("이미 다른 기기에서 쓰고 있는 회원키입니다. 관리자에게 기기 풀어주기를 요청해 주세요");
+      else setMemberMsg("서버와 연결하지 못했습니다. 인터넷을 확인해 주세요");
+      setMemberBusy(false);
+    }
+  };
+
+  const handleMemberResync = async () => {
+    if (memberBusy) return;
+    setMemberBusy(true);
+    try {
+      const r = await syncMemberContent((m) => setMemberMsg("받는 중 · " + m));
+      setMemberMsg("");
+      toast(r.bibles.length > 0 ? "성경 " + r.bibles.join("·") + (r.scenes > 0 ? ", 회화집 " + r.scenes + "개" : "") + " 받았습니다" : "받을 내용이 없거나 연결하지 못했습니다");
+      setKoMetaState({ gr: koMetaSync("gr"), wm: koMetaSync("wm"), niv: koMetaSync("niv") });
+    } finally {
+      setMemberBusy(false);
+    }
+  };
+
+  const handleMemberLeave = async () => {
+    if (!memberLeaveConfirm) { setMemberLeaveConfirm(true); return; }
+    setMemberBusy(true);
+    await leaveMembership();
+    toast("이 기기에서 회원키를 뺐습니다");
+    setTimeout(() => { window.location.reload(); }, 1000);
+  };
 
   // 설교문과 같은 Worker 지만 열쇠는 따로입니다 (BIBLE_KEY). 여기서는 토스트 없이
   // 조용히 준비 여부만 돌려줍니다 — 여러 파일을 한 번에 처리할 때 경고가 파일마다
@@ -436,6 +496,59 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               묵상·이야기·뉴스·기도의 "전체 듣기"에 쓰이는 목소리입니다. 이 기기에만 적용됩니다.
             </p>
           </div>
+          {/* 회원키 — 모든 판에 보입니다 */}
+          <div className="pt-3 border-t border-border/60">
+            <Label className="font-body text-sm text-gray-900">회원키</Label>
+            {memberProfile ? (
+              <>
+                <p className="mt-1 text-xs font-gothic text-sky-600">
+                  {memberProfile.name ? memberProfile.name + " · " : ""}{EDITION_LABEL[edition]} · {memberProfile.key}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
+                  disabled={memberBusy}
+                  onClick={handleMemberResync}
+                >
+                  <Download className="w-4 h-4 mr-1.5" />
+                  성경·회화집 다시 받기
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={"w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" + (memberLeaveConfirm ? " text-red-600 border-red-300" : "")}
+                  disabled={memberBusy}
+                  onClick={handleMemberLeave}
+                >
+                  {memberLeaveConfirm ? "한 번 더 누르면 빼고, 받은 성경·교재도 지웁니다" : "이 기기에서 회원키 빼기"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-xs text-muted-foreground font-gothic">
+                  받은 회원키를 한 번만 넣으면 성경·교재·회화집이 모두 활성화됩니다.
+                  회원키는 처음 넣은 기기 하나에서만 쓸 수 있습니다.
+                </p>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    value={memberInput}
+                    onChange={(e) => setMemberInput(e.target.value)}
+                    placeholder="KK-XXXX-XXXX-XXXX"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    className="text-sm"
+                  />
+                  <Button type="button" className="text-xs shrink-0" disabled={memberBusy || !memberInput.trim()} onClick={handleMemberActivate}>
+                    활성화
+                  </Button>
+                </div>
+              </>
+            )}
+            {memberMsg ? <p className="mt-1.5 text-xs font-gothic text-muted-foreground">{memberMsg}</p> : null}
+          </div>
+          {isAdminUI ? (
+          <>
           <div>
             <Label className="font-body text-sm text-gray-900">설교문 서버</Label>
             <Input
@@ -696,10 +809,12 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               이 기기에 담아 둔 것 비우기
             </Button>
           </div>
+          </>
+          ) : null}
           <div className="pt-3 border-t border-border/60">
             <Label className="font-body text-sm text-gray-900">데이터 백업</Label>
             <p className="mt-1 text-xs text-muted-foreground font-gothic">
-              모든 단어장을 CSV로 백업하고 복원합니다. 앱에서는 파일 저장이 되지 않으니 '복사'를 눌러 메모장이나 메신저에 붙여넣어 보관하세요.
+              {isAdminUI ? "모든 단어장을 CSV로 백업하고 복원합니다." : "모든 단어장을 CSV로 백업합니다."} 앱에서는 파일 저장이 되지 않으니 '복사'를 눌러 메모장이나 메신저에 붙여넣어 보관하세요.
             </p>
             <div className="flex gap-2 mt-2">
               <Button type="button" variant="outline" className="flex-1 text-xs" onClick={handleExportCopy}>
@@ -711,6 +826,8 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 파일 저장
               </Button>
             </div>
+            {isAdminUI ? (
+            <>
             <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={() => setImportOpen(true)}>
               <Upload className="w-4 h-4 mr-1.5" />
               CSV 가져오기 (복원)
@@ -742,6 +859,8 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                   </p>
                 ) : null}
               </>
+            ) : null}
+            </>
             ) : null}
           </div>
           <div className="border-t border-gray-200 pt-3">
