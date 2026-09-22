@@ -11,7 +11,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Loader2, RotateCcw,
-  X, Check, Plus, Minus, ChevronDown, List,
+  X, Check, Plus, Minus, ChevronDown, List, Home,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { PDFDocumentProxy } from "pdfjs-dist";
@@ -526,7 +526,7 @@ const OneToOne = () => {
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="shrink-0 font-gothic text-base font-semibold uppercase tracking-[0.08em]">일대일</h1>
+          <h1 className="shrink-0 font-gothic text-base font-semibold tracking-[0.04em]">One to One</h1>
           <span className="ml-auto shrink-0 flex items-center gap-1">
             <button
               type="button"
@@ -567,9 +567,31 @@ const OneToOne = () => {
             </button>
           </div>
         ) : (
+          <>
+          {/* 책 위 오른쪽 끝 — 홈(첫 쪽) · 목차 */}
+          <div className="mt-2.5 flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => goToPage(1)}
+              className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-foreground/80 active:bg-muted"
+              aria-label="첫 쪽으로"
+              title="첫 쪽으로"
+            >
+              <Home size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => goToPage(tocPage)}
+              className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-foreground/80 active:bg-muted"
+              aria-label="목차로"
+              title="목차로"
+            >
+              <List size={16} />
+            </button>
+          </div>
           <div
             ref={stageRef}
-            className="relative mt-3 w-full overflow-x-auto"
+            className="relative mt-2 w-full overflow-x-auto"
             onTouchStart={onStageTouchStart}
             onTouchEnd={onStageTouchEnd}
             onTouchCancel={onStageTouchCancel}
@@ -588,6 +610,7 @@ const OneToOne = () => {
               <div ref={linkLayerRef} className="absolute inset-0 z-[2] pointer-events-none" />
             </div>
           </div>
+          </>
         )}
 
         {/* 쪽 넘김 — 책 아래에 둡니다(읽던 자리에서 손이 가는 곳) */}
@@ -613,14 +636,6 @@ const OneToOne = () => {
               aria-label="다음 쪽"
             >
               <ChevronRight size={18} />
-            </button>
-            <button
-              type="button"
-              onClick={() => goToPage(tocPage)}
-              className="ml-3 h-9 px-3.5 rounded-full border border-border font-gothic text-xs text-foreground/80 flex items-center gap-1 active:bg-muted"
-              aria-label="목차로"
-            >
-              <List size={14} /> 목차
             </button>
           </div>
         ) : null}
