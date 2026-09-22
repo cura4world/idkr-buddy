@@ -10,6 +10,7 @@ import Story from "./pages/Story";
 import News from "./pages/News";
 import Devotion from "./pages/Devotion";
 import BibleRead from "./pages/BibleRead";
+import OneToOne from "./pages/OneToOne";
 import Prayer from "./pages/Prayer";
 import Sermons from "./pages/Sermons";
 import SermonRead from "./pages/SermonRead";
@@ -55,6 +56,7 @@ const App = () => (
           <Route path="/news" element={<News />} />
           <Route path="/devotion" element={<Devotion />} />
           <Route path="/bible" element={<BibleRead />} />
+          <Route path="/one-to-one" element={<OneToOne />} />
           <Route path="/prayer" element={<Prayer />} />
           <Route path="/sermon" element={<Sermons />} />
           <Route path="/sermon/:id" element={<SermonRead />} />
