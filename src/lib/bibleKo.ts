@@ -17,6 +17,7 @@
 // ---------- 역본 ----------
 // 세 자리를 씁니다(개역개정·우리말성경·NIV). 더 늘리려면 이 배열에 한 줄 추가하고
 // IndexedDB 키·서버 KV 키가 자동으로 그 이름을 따라갑니다.
+import { pickServerAuth } from "@/lib/member";
 export type BibleVersion = "gr" | "wm" | "niv";
 export const BIBLE_VERSIONS: { id: BibleVersion; label: string }[] = [
   { id: "gr", label: "개역개정" },
@@ -463,16 +464,18 @@ interface IndexPayload {
 async function srv(
   base: string, key: string, path: string, method: string, body?: unknown,
 ): Promise<Response> {
-  if (!base || !key) throw new Error("NO_CONFIG");
+  // 기존 비밀키가 있으면 그것을, 없으면 회원키(서버 주소 고정)를 씁니다.
+  const auth = pickServerAuth(base, key);
+  if (!auth) throw new Error("NO_CONFIG");
   const controller = new AbortController();
   const timer = setTimeout(() => { controller.abort(); }, 20000);
   let res: Response;
   try {
-    res = await fetch(base + path, {
+    res = await fetch(auth.base + path, {
       method,
       headers: body
-        ? { "x-kata-key": key, "content-type": "application/json" }
-        : { "x-kata-key": key },
+        ? Object.assign({ "content-type": "application/json" }, auth.headers)
+        : auth.headers,
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
     });
@@ -481,7 +484,7 @@ async function srv(
   } finally {
     clearTimeout(timer);
   }
-  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  if (res.status === 401 || res.status === 403 || res.status === 409) throw new Error("UNAUTHORIZED");
   if (!res.ok) throw new Error("FETCH_FAILED");
   return res;
 }
