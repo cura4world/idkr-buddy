@@ -11,6 +11,7 @@ import News from "./pages/News";
 import Devotion from "./pages/Devotion";
 import BibleRead from "./pages/BibleRead";
 import OneToOne from "./pages/OneToOne";
+import { refreshMembershipOnStart } from "@/lib/access";
 import Prayer from "./pages/Prayer";
 import Sermons from "./pages/Sermons";
 import SermonRead from "./pages/SermonRead";
@@ -41,6 +42,10 @@ import GameTangkap from "./pages/GameTangkap";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// 앱이 켜질 때 한 번: 회원키가 끊겼거나 다른 기기로 넘어갔으면 이 기기의
+// 회원 상태를 풀고 받아 둔 보호 내용을 지웁니다(인터넷이 안 되면 그대로 둠).
+refreshMembershipOnStart().catch(() => {});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
