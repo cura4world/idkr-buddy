@@ -1,5 +1,6 @@
 // src/lib/bibleKo.ts
-// 기기에 직접 불러온 한국어 성경(txt)을 파싱해 IndexedDB 에 담아 둡니다.
+// 기기에 직접 불러온 성경(txt)을 파싱해 IndexedDB 에 담아 둡니다.
+// 역본을 세 자리(개역개정 / 우리말성경 / NIV)로 나눠 동시에 담을 수 있습니다.
 //
 // 왜 기기 안에만 두는가 — 본문을 서버에 올리면 그건 전송(배포)이 됩니다.
 // 파일을 고른 기기에서만 읽히도록, 네트워크를 타지 않는 자리에 둡니다.
@@ -12,6 +13,16 @@
 //
 // 소제목(<...>)은 본문에서 떼어 title 로 따로 담습니다. 본문에 섞어 두면
 // 형광펜이 쓰는 어절 번호가 밀려서 이미 칠해 둔 자리가 어긋납니다.
+
+// ---------- 역본 ----------
+// 세 자리를 씁니다(개역개정·우리말성경·NIV). 더 늘리려면 이 배열에 한 줄 추가하고
+// IndexedDB 키·서버 KV 키가 자동으로 그 이름을 따라갑니다.
+export type BibleVersion = "gr" | "wm" | "niv";
+export const BIBLE_VERSIONS: { id: BibleVersion; label: string }[] = [
+  { id: "gr", label: "개역개정" },
+  { id: "wm", label: "우리말성경" },
+  { id: "niv", label: "NIV" },
+];
 
 export interface KoVerse {
   verse: number;
@@ -40,9 +51,9 @@ export interface KoMeta {
 }
 
 const DB_NAME = "kata-bible-ko";
-const STORE = "chapters";
-const META = "meta";
-const META_MIRROR = "bible-ko-meta"; // 화면이 즉시 읽어야 해서 localStorage 에도 복사해 둡니다
+const STORE = "chapters"; // 키 형식: "<버전>:<bookId>:<장>"
+const META = "meta";      // 키(id) = 버전 문자열
+const metaMirrorKey = (v: BibleVersion) => "bible-ko-meta:" + v; // 화면이 즉시 읽어야 해서 localStorage 에도 복사
 
 // 정경 순서 그대로. [책 약자, 앱의 책 id]
 // bible.ts 를 불러오지 않는 이유는 bible.ts 가 이 파일을 불러오기 때문입니다(순환 방지).
@@ -64,10 +75,34 @@ const BOOKS: [string, string][] = [
   ["몬", "filemon"], ["히", "ibrani"], ["약", "yakobus"], ["벧전", "1_petrus"],
   ["벧후", "2_petrus"], ["요일", "1_yohanes"], ["요이", "2_yohanes"], ["요삼", "3_yohanes"],
   ["유", "yudas"], ["계", "wahyu"],
+
+  // NIV(영문) 파일은 책 id를 통째로 쓰지 않습니다 — "1_samuel"처럼 숫자로 시작하는
+  // id가 있으면 위 정규식(약자엔 숫자 금지)과 부딪힙니다. 그래서 숫자 없는 영문
+  // 이름을 새 약자로 둡니다. 정경 순서는 위와 동일합니다.
+  ["genesis", "kejadian"], ["exodus", "keluaran"], ["leviticus", "imamat"], ["numbers", "bilangan"],
+  ["deuteronomy", "ulangan"], ["joshua", "yosua"], ["judges", "hakim_hakim"], ["ruth", "rut"],
+  ["firstsamuel", "1_samuel"], ["secondsamuel", "2_samuel"], ["firstkings", "1_raja_raja"], ["secondkings", "2_raja_raja"],
+  ["firstchronicles", "1_tawarikh"], ["secondchronicles", "2_tawarikh"], ["ezra", "ezra"], ["nehemiah", "nehemia"],
+  ["esther", "ester"], ["job", "ayub"], ["psalms", "mazmur"], ["proverbs", "amsal"],
+  ["ecclesiastes", "pengkotbah"], ["songofsongs", "kidung_agung"], ["isaiah", "yesaya"], ["jeremiah", "yeremia"],
+  ["lamentations", "ratapan"], ["ezekiel", "yehezkiel"], ["daniel", "daniel"], ["hosea", "hosea"],
+  ["joel", "yoel"], ["amos", "amos"], ["obadiah", "obaja"], ["jonah", "yunus"],
+  ["micah", "mikha"], ["nahum", "nahum"], ["habakkuk", "habakuk"], ["zephaniah", "zefanya"],
+  ["haggai", "hagai"], ["zechariah", "zakaria"], ["malachi", "maleakhi"], ["matthew", "matius"],
+  ["mark", "markus"], ["luke", "lukas"], ["john", "yohanes"], ["acts", "kisah_para_rasul"],
+  ["romans", "roma"], ["firstcorinthians", "1_korintus"], ["secondcorinthians", "2_korintus"], ["galatians", "galatia"],
+  ["ephesians", "efesus"], ["philippians", "filipi"], ["colossians", "kolose"], ["firstthessalonians", "1_tesalonika"],
+  ["secondthessalonians", "2_tesalonika"], ["firsttimothy", "1_timotius"], ["secondtimothy", "2_timotius"], ["titus", "titus"],
+  ["philemon", "filemon"], ["hebrews", "ibrani"], ["james", "yakobus"], ["firstpeter", "1_petrus"],
+  ["secondpeter", "2_petrus"], ["firstjohn", "1_yohanes"], ["secondjohn", "2_yohanes"], ["thirdjohn", "3_yohanes"],
+  ["jude", "yudas"], ["revelation", "wahyu"],
 ];
 
 // 정규식 리터럴은 주입 과정에서 깨진 전례가 있어 전부 new RegExp 로 만듭니다.
-const RE_VERSE = new RegExp("^([^0-9\\s]+)(\\d+):(\\d+)(?:-\\d+)?\\s+(.*)$");
+// 절 뒤 공백은 원래 필수(\s+)였지만, NIV처럼 절이 통째로 비어 있는 경우
+// (사본에 없어 생략된 절 — 절 번호만 있고 뒤에 아무것도 없음) 줄 앞뒤를 trim한 뒤라
+// 공백 자체가 남지 않습니다. 그래서 \s*로 두어 "번호만 있고 본문 없음"도 절로 잡습니다.
+const RE_VERSE = new RegExp("^([^0-9\\s]+)(\\d+):(\\d+)(?:-\\d+)?\\s*(.*)$");
 const RE_TAIL = new RegExp("^([^0-9\\s]+)(\\d+):([^0-9].*)$"); // 절번호 없는 뒷조각
 const RE_TITLE = new RegExp("<([^>]*)>", "g");
 const RE_NOTE = new RegExp("([가-힣])\\d\\)", "g");           // 정의로 재판1)하리니
@@ -158,7 +193,16 @@ export function guessLabel(fileName: string): string {
   if (n.indexOf("krv") >= 0 || fileName.indexOf("개역한글") >= 0) return "개역한글";
   if (fileName.indexOf("새번역") >= 0) return "새번역";
   if (fileName.indexOf("우리말") >= 0) return "우리말성경";
+  if (n.indexOf("niv") >= 0) return "NIV";
   return "한국어 성경";
+}
+
+/** 파일 이름에서 세 자리(개역개정/우리말/NIV) 중 어디에 넣을지 짐작합니다. */
+export function guessVersion(fileName: string): BibleVersion {
+  const n = fileName.toLowerCase();
+  if (fileName.indexOf("우리말") >= 0) return "wm";
+  if (n.indexOf("niv") >= 0) return "niv";
+  return "gr";
 }
 
 function creditOf(label: string): string {
@@ -166,6 +210,7 @@ function creditOf(label: string): string {
     return "성경전서 " + label + " · 대한성서공회";
   }
   if (label === "우리말성경") return "우리말성경 · 두란노";
+  if (label === "NIV") return "Holy Bible, New International Version® (NIV®) · Biblica";
   return label;
 }
 
@@ -187,13 +232,102 @@ function openDB(): Promise<IDBDatabase> {
   return dbPromise;
 }
 
-/** 파싱 결과를 통째로 저장합니다. 이전에 불러온 것은 지웁니다. */
+function clearVersionRows(store: IDBObjectStore, version: BibleVersion): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const range = IDBKeyRange.bound(version + ":", version + ":\uffff");
+    const req = store.openCursor(range);
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) { cursor.delete(); cursor.continue(); } else resolve();
+    };
+    req.onerror = () => reject(req.error || new Error("CLEAR_FAILED"));
+  });
+}
+
+// ── 예전(역본 구분 없이 한 자리였던 시절) 자료 이관 ──────────────
+// 처음 이 코드가 실행되면, 그 한 자리를 "개역개정" 쪽으로 그대로 옮깁니다
+// (파일 이름에 "우리말"이 있었다면 "우리말" 쪽으로). 이관은 한 번만 일어납니다.
+const LEGACY_META_KEY = "bible-ko-meta";
+const LEGACY_MIGRATE_PENDING_KEY = "bible-ko-migrate-pending";
+
+// localStorage 쪽은 화면이 첫 렌더에서 곧바로 koMetaSync() 를 부르므로 동기로 처리합니다.
+function migrateLegacyMirrorSync(): void {
+  try {
+    const legacy = localStorage.getItem(LEGACY_META_KEY);
+    if (!legacy) return;
+    const meta = JSON.parse(legacy);
+    if (!meta || typeof meta.label !== "string") {
+      localStorage.removeItem(LEGACY_META_KEY);
+      return;
+    }
+    const version: BibleVersion = meta.label.indexOf("우리말") >= 0 ? "wm" : "gr";
+    if (!localStorage.getItem(metaMirrorKey(version))) {
+      localStorage.setItem(metaMirrorKey(version), legacy);
+    }
+    localStorage.setItem(LEGACY_MIGRATE_PENDING_KEY, version);
+    localStorage.removeItem(LEGACY_META_KEY);
+  } catch (e) {}
+}
+migrateLegacyMirrorSync();
+
+let legacyRowsMigrating = false;
+async function migrateLegacyRowsOnce(): Promise<void> {
+  if (legacyRowsMigrating) return;
+  legacyRowsMigrating = true;
+  let version: BibleVersion | null = null;
+  try {
+    const v = localStorage.getItem(LEGACY_MIGRATE_PENDING_KEY);
+    if (v === "gr" || v === "wm") version = v;
+  } catch (e) {}
+  if (!version) { legacyRowsMigrating = false; return; }
+  try {
+    const db = await openDB();
+    const rows: { key: string; verses: KoVerse[] }[] = await new Promise((resolve) => {
+      const tx = db.transaction(STORE, "readonly");
+      const req = tx.objectStore(STORE).getAll();
+      req.onsuccess = () => resolve((req.result as { key: string; verses: KoVerse[] }[]) || []);
+      req.onerror = () => resolve([]);
+    });
+    // 예전 키는 "bookId:장" (콜론 1개). 새 키는 "버전:bookId:장" (콜론 2개)라서 구분됩니다.
+    const legacyRows = rows.filter((r) => r.key.split(":").length === 2);
+    if (legacyRows.length > 0) {
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        const store = tx.objectStore(STORE);
+        legacyRows.forEach((r) => {
+          store.put({ key: version + ":" + r.key, verses: r.verses });
+          store.delete(r.key);
+        });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error("MIGRATE_FAILED"));
+      });
+    }
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(META, "readwrite");
+      tx.objectStore(META).delete("current"); // 예전 메타 자리
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+    try { localStorage.removeItem(LEGACY_MIGRATE_PENDING_KEY); } catch (e) {}
+  } catch (e) {
+    legacyRowsMigrating = false; // 실패하면 다음 기회에 다시 시도
+    return;
+  }
+}
+migrateLegacyRowsOnce();
+
+/** 파싱 결과를 통째로 저장합니다(그 버전 자리만). 이전에 그 버전으로 불러온 것은 지웁니다. */
 export async function saveKoBible(
   chapters: Record<string, KoVerse[]>,
   label: string,
   stats: KoStats,
+  version: BibleVersion,
 ): Promise<KoMeta> {
   const db = await openDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    clearVersionRows(tx.objectStore(STORE), version).then(resolve, reject);
+  });
   const meta: KoMeta = {
     label,
     credit: creditOf(label),
@@ -205,25 +339,24 @@ export async function saveKoBible(
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction([STORE, META], "readwrite");
     const store = tx.objectStore(STORE);
-    store.clear();
-    Object.keys(chapters).forEach((key) => store.put({ key, verses: chapters[key] }));
-    tx.objectStore(META).put({ id: "current", ...meta });
+    Object.keys(chapters).forEach((key) => store.put({ key: version + ":" + key, verses: chapters[key] }));
+    tx.objectStore(META).put({ id: version, ...meta });
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error || new Error("SAVE_FAILED"));
     tx.onabort = () => reject(tx.error || new Error("SAVE_ABORTED"));
   });
-  try { localStorage.setItem(META_MIRROR, JSON.stringify(meta)); } catch (e) {}
+  try { localStorage.setItem(metaMirrorKey(version), JSON.stringify(meta)); } catch (e) {}
   return meta;
 }
 
-/** 불러온 성경이 있으면 그 장을, 없으면 null 을 돌려줍니다. */
-export async function loadKoChapter(bookId: string, chapter: number): Promise<KoVerse[] | null> {
-  if (!koMetaSync()) return null; // 불러온 적이 없으면 DB 를 열지도 않습니다
+/** 그 버전으로 불러온 성경이 있으면 그 장을, 없으면 null 을 돌려줍니다. */
+export async function loadKoChapter(bookId: string, chapter: number, version: BibleVersion): Promise<KoVerse[] | null> {
+  if (!koMetaSync(version)) return null; // 불러온 적이 없으면 DB 를 열지도 않습니다
   try {
     const db = await openDB();
     return await new Promise((resolve) => {
       const tx = db.transaction(STORE, "readonly");
-      const req = tx.objectStore(STORE).get(bookId + ":" + chapter);
+      const req = tx.objectStore(STORE).get(version + ":" + bookId + ":" + chapter);
       req.onsuccess = () => {
         const rec = req.result as { verses?: KoVerse[] } | undefined;
         resolve(rec && rec.verses && rec.verses.length > 0 ? rec.verses : null);
@@ -235,10 +368,10 @@ export async function loadKoChapter(bookId: string, chapter: number): Promise<Ko
   }
 }
 
-/** 화면이 즉시 읽어야 하는 메타(출처 표기 등) */
-export function koMetaSync(): KoMeta | null {
+/** 화면이 즉시 읽어야 하는 메타(출처 표기 등), 버전별. */
+export function koMetaSync(version: BibleVersion): KoMeta | null {
   try {
-    const s = localStorage.getItem(META_MIRROR);
+    const s = localStorage.getItem(metaMirrorKey(version));
     if (!s) return null;
     const m = JSON.parse(s);
     return m && typeof m.label === "string" ? (m as KoMeta) : null;
@@ -247,16 +380,18 @@ export function koMetaSync(): KoMeta | null {
   }
 }
 
-export async function clearKoBible(): Promise<void> {
-  try { localStorage.removeItem(META_MIRROR); } catch (e) {}
+/** 그 버전 자리만 비웁니다. 다른 버전은 그대로 남습니다. */
+export async function clearKoBible(version: BibleVersion): Promise<void> {
+  try { localStorage.removeItem(metaMirrorKey(version)); } catch (e) {}
   try {
     const db = await openDB();
     await new Promise<void>((resolve) => {
       const tx = db.transaction([STORE, META], "readwrite");
-      tx.objectStore(STORE).clear();
-      tx.objectStore(META).clear();
+      clearVersionRows(tx.objectStore(STORE), version).catch(() => {});
+      tx.objectStore(META).delete(version);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 무시
@@ -270,8 +405,12 @@ export async function clearKoBible(): Promise<void> {
 // 성경은 온 가족이 보고 설교문은 본인만 보므로 권한이 원래 다릅니다.
 // 같은 열쇠를 쓰면 성경을 받으려고 넣은 키로 아내 폰에 설교문까지 열립니다.
 //
-//   PC 등 한 대에서: 파일 불러오기 → "서버에 올리기"  (딱 한 번)
-//   나머지 기기에서: "서버에서 받기"                    (기기마다 한 번)
+// 역본마다 KV 에 별도 자리를 씁니다(?v=gr / ?v=wm). gr 자리는 예전부터 쓰던
+// 경로(bible:index, bible:book:*)를 그대로 가리키므로, 이미 올려둔 개역개정은
+// 다시 올릴 필요가 없습니다.
+//
+//   PC 등 한 대에서: 파일 불러오기 → "서버에 올리기"  (버전마다 한 번)
+//   나머지 기기에서: "서버에서 받기"                    (기기마다 한 번, 있는 버전은 전부)
 //
 // 받은 뒤에는 IndexedDB 에 담기므로 읽을 때 네트워크를 타지 않습니다.
 // 본문은 저장소에 커밋하지 않고 KV 에만 둡니다. 키도 코드에 넣지 않습니다.
@@ -347,54 +486,59 @@ async function srv(
   return res;
 }
 
-/** 이 기기에 담긴 성경을 책 단위로 모읍니다 */
-async function readAllLocal(): Promise<Record<string, Record<string, KoVerse[]>>> {
+/** 이 기기에 담긴, 그 버전의 성경을 책 단위로 모읍니다 */
+async function readAllLocal(version: BibleVersion): Promise<Record<string, Record<string, KoVerse[]>>> {
   const db = await openDB();
+  const prefix = version + ":";
   const rows: { key: string; verses: KoVerse[] }[] = await new Promise((resolve) => {
     const tx = db.transaction(STORE, "readonly");
-    const req = tx.objectStore(STORE).getAll();
+    const range = IDBKeyRange.bound(prefix, prefix + "\uffff");
+    const req = tx.objectStore(STORE).getAll(range);
     req.onsuccess = () => resolve((req.result as { key: string; verses: KoVerse[] }[]) || []);
     req.onerror = () => resolve([]);
   });
   const byBook: Record<string, Record<string, KoVerse[]>> = {};
   rows.forEach((r) => {
-    const cut = r.key.lastIndexOf(":");
+    const rest = r.key.slice(prefix.length); // "bookId:장"
+    const cut = rest.lastIndexOf(":");
     if (cut < 0) return;
-    const bookId = r.key.slice(0, cut);
-    const chapter = r.key.slice(cut + 1);
+    const bookId = rest.slice(0, cut);
+    const chapter = rest.slice(cut + 1);
     if (!byBook[bookId]) byBook[bookId] = {};
     byBook[bookId][chapter] = r.verses;
   });
   return byBook;
 }
 
-/** 이 기기의 성경을 서버로 올립니다. 한 대에서 한 번만 하면 됩니다. */
+/** 이 기기의 그 버전 성경을 서버로 올립니다. 버전마다 한 대에서 한 번만 하면 됩니다. */
 export async function pushKoToServer(
-  base: string, key: string, onProgress?: (done: number, total: number) => void,
+  base: string, key: string, version: BibleVersion, onProgress?: (done: number, total: number) => void,
 ): Promise<number> {
-  const meta = koMetaSync();
+  const meta = koMetaSync(version);
   if (!meta) throw new Error("NO_LOCAL");
-  const byBook = await readAllLocal();
+  const byBook = await readAllLocal(version);
   const ids = Object.keys(byBook);
   if (ids.length === 0) throw new Error("NO_LOCAL");
+  const vq = "v=" + version;
   for (let i = 0; i < ids.length; i++) {
     const payload: BookPayload = { id: ids[i], chapters: byBook[ids[i]] };
-    await srv(base, key, "/bible/book?id=" + encodeURIComponent(ids[i]), "PUT", payload);
+    await srv(base, key, "/bible/book?" + vq + "&id=" + encodeURIComponent(ids[i]), "PUT", payload);
     if (onProgress) onProgress(i + 1, ids.length + 1);
   }
   const index: IndexPayload = {
     label: meta.label, books: ids, verses: meta.verses, savedAt: Date.now(),
   };
-  await srv(base, key, "/bible/index", "PUT", index);
+  await srv(base, key, "/bible/index?" + vq, "PUT", index);
   if (onProgress) onProgress(ids.length + 1, ids.length + 1);
   return ids.length;
 }
 
-/** 서버에 올려둔 성경을 이 기기로 받습니다. */
+/** 서버에 올려둔 그 버전의 성경을 이 기기로 받습니다. 서버에 그 버전이 없으면 EMPTY 로 실패합니다. */
 export async function pullKoFromServer(
-  base: string, key: string, onProgress?: (done: number, total: number) => void,
+  base: string, key: string, version: BibleVersion, onProgress?: (done: number, total: number) => void,
 ): Promise<KoMeta> {
-  const idxRes = await srv(base, key, "/bible/index", "GET");
+  const vq = "v=" + version;
+  const idxRes = await srv(base, key, "/bible/index?" + vq, "GET");
   let index: IndexPayload;
   try {
     index = await idxRes.json();
@@ -411,7 +555,7 @@ export async function pullKoFromServer(
   };
   for (let i = 0; i < index.books.length; i++) {
     const id = index.books[i];
-    const res = await srv(base, key, "/bible/book?id=" + encodeURIComponent(id), "GET");
+    const res = await srv(base, key, "/bible/book?" + vq + "&id=" + encodeURIComponent(id), "GET");
     let payload: BookPayload;
     try {
       payload = await res.json();
@@ -431,5 +575,6 @@ export async function pullKoFromServer(
     if (onProgress) onProgress(i + 1, index.books.length);
   }
   if (stats.verses === 0) throw new Error("EMPTY");
-  return await saveKoBible(chapters, index.label || "한국어 성경", stats);
+  const fallbackLabel = BIBLE_VERSIONS.find((x) => x.id === version)?.label || "한국어 성경";
+  return await saveKoBible(chapters, index.label || fallbackLabel, stats, version);
 }
