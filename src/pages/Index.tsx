@@ -755,7 +755,7 @@ const Index = () => {
             />
             <Row
               icon={Users}
-              title="일대일"
+              title="일대일 성경공부"
               sub="Pemuridan"
               meta={oneToOnePos || undefined}
               onClick={() => navigate("/one-to-one")}
