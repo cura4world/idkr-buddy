@@ -621,21 +621,21 @@ const OneToOne = () => {
           <div className="flex items-center justify-end gap-1.5">
             <button
               type="button"
-              onClick={() => goToPage(1)}
-              className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-foreground/80 active:bg-muted"
-              aria-label="첫 쪽으로"
-              title="첫 쪽으로"
-            >
-              <Home size={16} />
-            </button>
-            <button
-              type="button"
               onClick={() => goToPage(tocPage)}
               className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-foreground/80 active:bg-muted"
               aria-label="목차로"
               title="목차로"
             >
               <List size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => goToPage(1)}
+              className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-foreground/80 active:bg-muted"
+              aria-label="첫 쪽으로"
+              title="첫 쪽으로"
+            >
+              <Home size={16} />
             </button>
           </div>
           </div>
