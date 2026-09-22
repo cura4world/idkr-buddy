@@ -33,7 +33,7 @@ import BibleAudioSeekBar from "@/components/BibleAudioSeekBar";
 import {
   HlColor, ChapterHl, HL_RGB, HL_ORDER, hlStyle, loadChapterHl, saveChapterHl,
 } from "@/lib/bibleHighlight";
-import { koMetaSync } from "@/lib/bibleKo";
+import { koMetaSync, BIBLE_VERSIONS, BibleVersion } from "@/lib/bibleKo";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import PointFloat from "@/components/PointFloat";
@@ -43,26 +43,39 @@ import PhraseFindBar from "@/components/PhraseFindBar";
 const LAST_POS_KEY = "bible-last-pos";
 
 // ---------- 보기 방식 ----------
-// 예전에는 앞뒤로 뒤집는 카드였습니다. 뒤집기를 없앤 것은 한 페이지 안에서 셋 중
-// 하나를 고르게 하기 위해서이고, 고른 방식은 기기에 남아 다음에도 그대로 열립니다.
-type ViewMode = "id" | "ko" | "both";
-const VIEW_KEY = "bible-view-mode";
-const VIEW_MODES: { id: ViewMode; label: string }[] = [
-  { id: "id", label: "INDONESIA" },
-  { id: "ko", label: "한국어" },
-  { id: "both", label: "IN·한국어" },
-];
+// 인도네시아어·우리말·개역개정 세 가지를 독립적으로 켜고 끕니다(체크리스트).
+// 항상 인도네시아어 → 우리말 → 개역개정 순서로 보여주고, 고른 조합은 기기에 남습니다.
+type ShowKey = "id" | "wm" | "gr" | "niv";
+const SHOW_ORDER: ShowKey[] = ["id", "wm", "gr", "niv"];
+const SHOW_LABELS: Record<ShowKey, string> = { id: "INDONESIA", wm: "우리말", gr: "개역개정", niv: "NIV" };
+const VIEW_KEY = "bible-view-set";
+const LEGACY_VIEW_KEY = "bible-view-mode"; // 예전(단일 선택) 값 — 있으면 한 번 옮겨옵니다
 
-const loadViewMode = (): ViewMode => {
+const loadViewSet = (): Set<ShowKey> => {
   try {
-    const v = localStorage.getItem(VIEW_KEY);
-    if (v === "id" || v === "ko" || v === "both") return v;
+    const raw = localStorage.getItem(VIEW_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        const cleaned = arr.filter((x) => x === "id" || x === "wm" || x === "gr") as ShowKey[];
+        if (cleaned.length > 0) return new Set(cleaned);
+      }
+    }
   } catch (e) {}
-  return "both";   // 처음 여는 사람은 두 본문이 함께 보이는 쪽이 기본입니다
+  try {
+    const old = localStorage.getItem(LEGACY_VIEW_KEY);
+    if (old) {
+      localStorage.removeItem(LEGACY_VIEW_KEY);
+      if (old === "id") return new Set(["id"]);
+      if (old === "ko") return new Set(["gr"]);
+      if (old === "both") return new Set(["id", "gr"]);
+    }
+  } catch (e) {}
+  return new Set(["id"]); // 처음 여는 사람은 인도네시아어만 기본입니다
 };
 
-const saveViewMode = (m: ViewMode) => {
-  try { localStorage.setItem(VIEW_KEY, m); } catch (e) {}
+const saveViewSet = (s: Set<ShowKey>) => {
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify(Array.from(s))); } catch (e) {}
 };
 
 // ---------- 글자 크기 (이 화면 전용) ----------
@@ -128,15 +141,22 @@ const BibleRead = () => {
 
   // ---------- 위치 / 본문 ----------
   const [pos, setPos] = useState<BiblePos>(loadLastPos);
-  const [verses, setVerses] = useState<BibleVerse[] | null>(null);     // 앞면 TB
-  const [versesKo, setVersesKo] = useState<BibleVerse[] | null>(null); // 뒷면 새번역
+  const [verses, setVerses] = useState<BibleVerse[] | null>(null); // 인도네시아어(TB)
+  // 한국어는 역본별로 따로 담습니다. 켜져 있지 않아도 배경에서 둘 다 불러 둬서
+  // 체크박스를 눌렀을 때 다시 불러오지 않고 바로 보입니다.
+  const [versesKo, setVersesKo] = useState<Record<BibleVersion, BibleVerse[] | null>>({ gr: null, wm: null, niv: null });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
-  const [koError, setKoError] = useState(false);
-  const [mode, setMode] = useState<ViewMode>(loadViewMode);
+  const [koError, setKoError] = useState<Record<BibleVersion, boolean>>({ gr: false, wm: false, niv: false });
+  const [showSet, setShowSet] = useState<Set<ShowKey>>(loadViewSet);
 
-  const showId = mode !== "ko";
-  const showKo = mode !== "id";
+  const showId = showSet.has("id");
+  // 항상 "인니어 → 우리말 → 개역개정" 고정 순서로 보여줍니다(고른 순서가 아니라).
+  const koVersionsShown: BibleVersion[] = SHOW_ORDER.filter(
+    (k): k is BibleVersion => k !== "id" && showSet.has(k)
+  );
+  const showKo = koVersionsShown.length > 0;
+  const koPending = koVersionsShown.some((v) => !versesKo[v] && !koError[v]);
   const chapterKey = pos.bookId + ":" + pos.chapter;
 
   // ---------- 형광펜 ----------
@@ -174,7 +194,7 @@ const BibleRead = () => {
     if (!t) return;
     t.setSide(showId);
     if (showKo) t.koreanOpened();
-  }, [mode, showId, showKo]);
+  }, [showSet, showId, showKo]);
 
   // ---------- 본문 글자 크기 ----------
   const [fontStep, setFontStep] = useState(loadFontStep);
@@ -201,20 +221,20 @@ const BibleRead = () => {
   const stickyRef = useRef<HTMLDivElement | null>(null);
   const anchorLine = () => (stickyRef.current ? stickyRef.current.offsetHeight : 96) + 8;
 
-  const verseRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
-  const pendingAnchor = useRef<{ verse: number; offset: number; side: "id" | "ko" } | null>(null);
+  // 절마다 묶음 하나(그 절의 인니어·우리말·개역개정 줄을 전부 담은 칸)에 ref 를 둡니다.
+  // 켜고 끄는 조합이 바뀌어도 "절 번호"라는 열쇠 하나로 자리를 다시 찾을 수 있습니다.
+  const verseRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const pendingAnchor = useRef<{ verse: number; offset: number } | null>(null);
 
   // 화면 맨 위(헤더 바로 아래)에 걸려 있는 절을 찾습니다
-  const anchorOf = (side: "id" | "ko") => {
+  const anchorOf = () => {
     const line = anchorLine();
     let best: { verse: number; offset: number } | null = null;
     let firstTop: { verse: number; offset: number } | null = null;
     Object.keys(verseRefs.current).forEach((k) => {
-      if (!k.startsWith(side + "-")) return;
-      const el = verseRefs.current[k];
-      if (!el) return;
-      const n = Number(k.slice(side.length + 1));
-      if (!n) return;
+      const n = Number(k);
+      const el = verseRefs.current[n];
+      if (!el || !n) return;
       const top = el.getBoundingClientRect().top;
       // 기준선을 지난 절 중 가장 아래에 있는 것 = 지금 맨 위에 보이는 절
       if (top <= line && (!best || top > best.offset)) best = { verse: n, offset: top };
@@ -224,50 +244,48 @@ const BibleRead = () => {
     return best || firstTop;
   };
 
-  // 반대쪽에서 같은 절을 찾습니다. 번역마다 절 나눔이 조금 다를 수 있어
-  // 같은 번호가 없으면 그 위의 가장 가까운 절로 갑니다.
-  const findVerseEl = (side: "id" | "ko", verse: number) => {
-    const exact = verseRefs.current[side + "-" + verse];
+  const findVerseEl = (verse: number) => {
+    const exact = verseRefs.current[verse];
     if (exact) return exact;
     let bestN = 0;
     Object.keys(verseRefs.current).forEach((k) => {
-      if (!k.startsWith(side + "-")) return;
-      if (!verseRefs.current[k]) return;
-      const n = Number(k.slice(side.length + 1));
+      const n = Number(k);
+      if (!verseRefs.current[n]) return;
       if (n && n <= verse && n > bestN) bestN = n;
     });
-    return bestN ? verseRefs.current[side + "-" + bestN] : null;
+    return bestN ? verseRefs.current[bestN] : null;
   };
 
   // 좌우 스와이프 뒤집기는 쓰지 않습니다 —
   // 형광펜 때문에 본문을 옆으로 끌어 고르는 동작이 늘어나 서로 부딪힙니다.
-  const changeMode = (m: ViewMode) => {
-    if (m === mode) return;
-    const from: "id" | "ko" = showId ? "id" : "ko";
-    const to: "id" | "ko" = m !== "ko" ? "id" : "ko";
-    // anchorOf 안의 대입이 콜백에서 일어나 추론 타입이 좁아지므로 여기서 명시합니다
-    const a = anchorOf(from) as { verse: number; offset: number } | null;
-    pendingAnchor.current = a ? { verse: a.verse, offset: a.offset, side: to } : null;
-    setMode(m);
-    saveViewMode(m);
+  // 체크를 하나 바꿀 때마다, 지금 맨 위에 걸린 절을 적어 뒀다가 다시 그 자리로 맞춥니다.
+  const toggleShow = (k: ShowKey) => {
+    const next = new Set(showSet);
+    if (next.has(k)) {
+      if (next.size <= 1) {
+        toast("최소 하나는 보여야 합니다");
+        return;
+      }
+      next.delete(k);
+    } else {
+      next.add(k);
+    }
+    pendingAnchor.current = anchorOf();
+    setShowSet(next);
+    saveViewSet(next);
   };
 
-  const pickMode = (m: ViewMode) => {
-    closeSub();
-    changeMode(m);
-  };
-
-  // 보기를 바꾼 뒤(또는 한국어 본문이 늦게 도착한 뒤) 적어둔 자리로 맞춥니다
+  // 켜고 끈 뒤(또는 한국어 본문이 늦게 도착한 뒤) 적어둔 자리로 맞춥니다
   useEffect(() => {
     const a = pendingAnchor.current;
     if (!a) return;
-    const el = findVerseEl(a.side, a.verse);
+    const el = findVerseEl(a.verse);
     if (!el) return; // 아직 안 그려졌으면 다음 렌더에서 다시 시도합니다
     pendingAnchor.current = null;
     const top = window.scrollY + el.getBoundingClientRect().top - a.offset;
     window.scrollTo({ top: Math.max(0, top) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, verses, versesKo]);
+  }, [showSet, verses, versesKo]);
 
   const loadToken = useRef(0);
   const scrollTopRef = useRef<HTMLDivElement | null>(null);
@@ -373,32 +391,32 @@ const BibleRead = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 지금 보기 방식이 쓰는 본문이 모두 도착한 뒤에 자리를 되돌립니다.
-  // (IN·한 에서 한국어가 늦게 오면 높이가 늘어나 자리가 어긋납니다)
+  // 지금 켜진 역본이 모두 도착(또는 실패 확정)한 뒤에 자리를 되돌립니다.
+  // (한국어가 늦게 오면 높이가 늘어나 자리가 어긋납니다)
   useEffect(() => {
     const p = pendingReturnRef.current;
     if (!p || loading) return;
     if (showId && !verses) return;
-    if (showKo && !versesKo && !koError) return;
+    if (koPending) return;
     pendingReturnRef.current = null;
     cancelRestoreRef.current = restoreScrollTo(p.y);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, verses, versesKo, koError, mode]);
+  }, [loading, verses, versesKo, koError, showSet]);
 
   // ---------- 장 로드 ----------
   const loadChapter = async (p: BiblePos) => {
     const token = ++loadToken.current;
     setLoading(true);
     setError(false);
-    setKoError(false);
+    setKoError({ gr: false, wm: false, niv: false });
     setVerses(null);
-    setVersesKo(null);
+    setVersesKo({ gr: null, wm: null, niv: null });
     // 보기 방식은 장을 옮겨도 그대로 둡니다 (예전 뒤집기와 다른 점)
     const key = p.bookId + ":" + p.chapter;
     trackerRef.current?.setUnit(key);
     // setUnit 이 해금을 되돌리므로 지금 보기 방식을 다시 알려 줍니다
-    trackerRef.current?.setSide(mode !== "ko");
-    if (mode !== "id") trackerRef.current?.koreanOpened();
+    trackerRef.current?.setSide(showId);
+    if (showKo) trackerRef.current?.koreanOpened();
     // 장을 옮기면 맨 위부터 읽으므로 이전 장의 절 위치는 버립니다
     verseRefs.current = {};
     pendingAnchor.current = null;
@@ -423,10 +441,13 @@ const BibleRead = () => {
       return;
     }
     setLoading(false);
-    // 한국어(새번역)는 뒷면용으로 백그라운드 로드 (실패해도 앞면은 정상)
-    fetchChapterKo(p.bookId, p.chapter)
-      .then((ko) => { if (loadToken.current === token) setVersesKo(ko); })
-      .catch(() => { if (loadToken.current === token) setKoError(true); });
+    // 한국어는 켜져 있지 않아도 둘 다 배경에서 불러 둡니다 (체크박스가 바로 반응하도록).
+    // 실패는 "아직 이 기기에 없다"는 뜻일 뿐이라 인니어 본문에는 영향이 없습니다.
+    BIBLE_VERSIONS.forEach((v) => {
+      fetchChapterKo(p.bookId, p.chapter, v.id)
+        .then((ko) => { if (loadToken.current === token) setVersesKo((prev) => ({ ...prev, [v.id]: ko })); })
+        .catch(() => { if (loadToken.current === token) setKoError((prev) => ({ ...prev, [v.id]: true })); });
+    });
   };
 
   useEffect(() => {
@@ -704,8 +725,8 @@ const BibleRead = () => {
 
   const openInDictionary = () => {
     if (!popupWord) return;
-    // 돌아올 자리를 표로 한 장 적어 둡니다 (스크롤 + 보고 있던 면)
-    writeReturnTicket("bible", chapterKey, currentScrollY(), mode === "ko");
+    // 돌아올 자리를 표로 한 장 적어 둡니다 (스크롤 + 인니어가 보이고 있었는지)
+    writeReturnTicket("bible", chapterKey, currentScrollY(), !showId);
     // 단어 팝업이 쌓아 둔 히스토리 한 칸을 사전 화면으로 덮어씁니다.
     // 그래야 사전에서 뒤로가기 한 번에 성경 읽기로 돌아옵니다.
     // (pushState 가 실패해 쌓인 칸이 없으면 덮어쓰면 안 됩니다 — 성경 칸 자체가 사라집니다)
@@ -775,11 +796,7 @@ const BibleRead = () => {
         </p>
       ) : null}
       {v.text ? (
-        <p
-          data-hlp="1"
-          ref={(el) => { verseRefs.current["id-" + v.verse] = el; }}
-          className="mb-2 text-[1em] leading-relaxed font-word text-gray-900"
-        >
+        <p data-hlp="1" className="mb-2 text-[1em] leading-relaxed font-word text-gray-900">
           <span className="text-sky-500/70 text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
           {renderTokens(v.text, "b" + v.verse + "-", "id", v.verse, true)}
         </p>
@@ -788,7 +805,7 @@ const BibleRead = () => {
   );
 
   // 소제목 — 인니어 본문에는 없고 직접 불러온 한국어 성경에만 있습니다.
-  // IN·한국어 에서는 절 묶음의 **맨 위**에 둡니다. 한국어 절 바로 위에 두면
+  // 절 묶음의 **맨 위**에 둡니다. 한국어 절 바로 위에 두면
   // 같은 절의 원문과 번역 사이를 소제목이 갈라 버립니다.
   const renderTitle = (text: string, key: string) => (
     <p key={key} className="mt-4 mb-2 text-[0.8125em] font-gothic font-semibold text-gray-500">
@@ -796,54 +813,66 @@ const BibleRead = () => {
     </p>
   );
 
-  const renderKoVerse = (v: BibleVerse, withTitle?: boolean) => (
-    <Fragment key={"kw" + v.verse}>
-      {withTitle && v.title ? renderTitle(v.title, "kt" + v.verse) : null}
-    <p
-      key={"k" + v.verse}
-      data-hlp="1"
-      ref={(el) => { verseRefs.current["ko-" + v.verse] = el; }}
-      className={
-        "text-[0.875em] leading-relaxed font-gothic " +
-        (mode === "both" ? "mb-4 text-gray-600" : "mb-2 text-gray-800")
-      }
-    >
+  const koLabelOf = (v: BibleVersion) => BIBLE_VERSIONS.find((x) => x.id === v)?.label || "";
+
+  // 역본이 둘 다 켜져 있을 때는 어느 쪽인지 헷갈리므로 절 앞에 작게 이름을 붙입니다.
+  // 하나만 켜져 있으면(인니어와 짝이거나 그것 하나뿐이거나) 이름 없이 절번호만 둡니다.
+  const renderKoVerse = (v: BibleVerse, version: BibleVersion, withLabel: boolean) => (
+    <p key={"k" + version + v.verse} data-hlp="1" className="mb-2 text-[0.875em] leading-relaxed font-gothic text-gray-600">
+      {withLabel ? (
+        <span className="mr-1.5 text-[0.625em] align-middle font-gothic font-semibold text-sky-500/80">
+          {koLabelOf(version)}
+        </span>
+      ) : null}
       <span className="text-sky-500/70 text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
-      {renderTokens(v.text, "k" + v.verse + "-", "ko", v.verse, false)}
+      {renderTokens(v.text, "k" + version + v.verse + "-", "ko" + version, v.verse, false)}
     </p>
-    </Fragment>
   );
 
-  // IN·한 은 절 번호를 열쇠로 짝을 맞춥니다. 번역마다 절 나눔이 조금 달라
-  // 한쪽에만 있는 번호가 생길 수 있으므로 두 목록의 합집합을 순서대로 돕니다.
-  const renderBoth = () => {
+  // 켜진 것들을 절 번호 하나를 열쇠 삼아 한 묶음으로 묶어 그립니다.
+  // 번역마다 절 나눔이 조금 달라 한쪽에만 있는 번호가 생길 수 있으므로
+  // 인니어·우리말·개역개정 목록의 합집합을 순서대로 돕니다.
+  const renderCombined = () => {
     const tbMap: Record<number, BibleVerse> = {};
-    const koMap: Record<number, BibleVerse> = {};
+    const koMaps: Record<BibleVersion, Record<number, BibleVerse>> = { gr: {}, wm: {}, niv: {} };
     const nums: number[] = [];
     (verses || []).forEach((v) => {
       tbMap[v.verse] = v;
       if (nums.indexOf(v.verse) < 0) nums.push(v.verse);
     });
-    (versesKo || []).forEach((v) => {
-      koMap[v.verse] = v;
-      if (nums.indexOf(v.verse) < 0) nums.push(v.verse);
+    BIBLE_VERSIONS.forEach((kv) => {
+      (versesKo[kv.id] || []).forEach((v) => {
+        koMaps[kv.id][v.verse] = v;
+        if (nums.indexOf(v.verse) < 0) nums.push(v.verse);
+      });
     });
     nums.sort((a, b) => a - b);
-    return nums.map((n) => (
-      <Fragment key={"p" + n}>
-        {koMap[n] && koMap[n].title ? renderTitle(koMap[n].title as string, "pt" + n) : null}
-        {tbMap[n] ? renderTbVerse(tbMap[n]) : null}
-        {koMap[n] ? renderKoVerse(koMap[n]) : null}
-      </Fragment>
-    ));
+    const multiKo = koVersionsShown.length > 1;
+    return nums.map((n) => {
+      const title = koVersionsShown.map((vid) => koMaps[vid][n]?.title).find((t) => !!t) || null;
+      return (
+        <div key={"v" + n} ref={(el) => { verseRefs.current[n] = el; }}>
+          {title ? renderTitle(title, "t" + n) : null}
+          {showId && tbMap[n] ? renderTbVerse(tbMap[n]) : null}
+          {koVersionsShown.map((vid) =>
+            koMaps[vid][n] ? renderKoVerse(koMaps[vid][n], vid, multiKo) : null
+          )}
+        </div>
+      );
+    });
   };
 
-  // 위치 필 라벨: 한국어만 볼 때는 한국어 책이름("룻기"), 그 밖에는 인니어("RUT")
-  const bookLabel = book ? (mode === "ko" ? book.ko : book.idName.toUpperCase()) : "";
+  // 위치 필 라벨: 인니어가 안 보이고 한국어만 보일 때는 한국어 책이름("룻기"), 그 밖에는 인니어("RUT")
+  const bookLabel = book ? (!showId && showKo ? book.ko : book.idName.toUpperCase()) : "";
 
-  // 한국어 본문 출처 — 설정에서 불러온 성경이 있으면 그 역본을 적습니다
-  const koMeta = koMetaSync();
-  const koCredit = koMeta ? koMeta.credit : "성경전서 개역한글 · 대한성서공회";
+  // 한국어 본문 출처 — 켜진 역본마다 한 줄씩
+  const koCredits = koVersionsShown
+    .map((v) => koMetaSync(v)?.credit)
+    .filter((c): c is string => !!c);
+
+  const pillLabel = SHOW_ORDER.filter((k) => showSet.has(k))
+    .map((k) => (k === "id" ? "IN" : SHOW_LABELS[k]))
+    .join("·");
 
   // ---------- 화면 ----------
   return (
@@ -872,7 +901,7 @@ const BibleRead = () => {
               className="h-7 min-w-[108px] pl-3.5 pr-2.5 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-600 font-gothic text-[0.6875rem] inline-flex items-center justify-between gap-1"
               title="보기 방식 고르기"
             >
-              {(VIEW_MODES.find((m) => m.id === mode) || VIEW_MODES[0]).label}
+              {pillLabel}
               <ChevronDown size={12} className="shrink-0" />
             </button>
           </span>
@@ -987,28 +1016,24 @@ const BibleRead = () => {
                 </div>
               ) : (
                 <div ref={bodyRef} style={{ fontSize: bodyFontSize }}>
-                  {mode === "id" ? (verses || []).map(renderTbVerse) : null}
-                  {mode === "both" ? renderBoth() : null}
-                  {mode === "ko" && versesKo ? versesKo.map((v) => renderKoVerse(v, true)) : null}
+                  {renderCombined()}
 
-                  {/* 한국어가 필요한 보기인데 아직 못 받은 경우 */}
-                  {showKo && !versesKo ? (
-                    koError ? (
-                      <div className="text-center py-8">
-                        <p className="text-sm text-gray-600 font-gothic mb-3">한국어 본문을 불러오지 못했어요</p>
-                        <button
-                          onClick={() => loadChapter(pos)}
-                          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium bg-sky-500 text-white"
-                        >
-                          <RotateCcw size={13} /> 다시 시도
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-gray-400 text-sm py-8 justify-center">
-                        <Loader2 size={16} className="animate-spin" /> 한국어 본문을 불러오는 중...
+                  {/* 켜져 있는데 이 기기에 아직 없는(또는 확인 중인) 역본 */}
+                  {koVersionsShown.map((v) =>
+                    versesKo[v] ? null : (
+                      <div key={v} className="text-center py-6">
+                        {koError[v] ? (
+                          <p className="text-sm text-gray-600 font-gothic">
+                            {koLabelOf(v)}을 아직 이 기기에 받지 않았습니다. 설정에서 받아 주세요
+                          </p>
+                        ) : (
+                          <div className="flex items-center gap-2 text-gray-400 text-sm justify-center">
+                            <Loader2 size={16} className="animate-spin" /> {koLabelOf(v)} 확인 중...
+                          </div>
+                        )}
                       </div>
                     )
-                  ) : null}
+                  )}
 
                   <p className="mt-5 text-[0.625rem] text-gray-400 font-gothic text-right leading-relaxed">
                     {showId ? (
@@ -1018,8 +1043,13 @@ const BibleRead = () => {
                         Lembaga Alkitab Indonesia
                       </>
                     ) : null}
-                    {showId && showKo ? <br /> : null}
-                    {showKo ? koCredit : null}
+                    {showId && koCredits.length > 0 ? <br /> : null}
+                    {koCredits.map((c, i) => (
+                      <Fragment key={i}>
+                        {i > 0 ? <br /> : null}
+                        {c}
+                      </Fragment>
+                    ))}
                   </p>
                 </div>
               )}
@@ -1051,28 +1081,31 @@ const BibleRead = () => {
         )}
       </div>
 
-      {/* 보기 방식 메뉴 — 도구 줄 밖에 fixed 로 띄웁니다 */}
+      {/* 보기 방식 메뉴 — 체크리스트(여러 개 동시 선택). 도구 줄 밖에 fixed 로 띄웁니다 */}
       {modeMenu && (
         <div className="fixed inset-0 z-40" onClick={closeSub}>
           <div
             className="absolute bg-card rounded-xl border border-border shadow-lg overflow-hidden py-1"
-            style={{ right: modeMenu.right, top: modeMenu.top + 6, minWidth: 108 }}
+            style={{ right: modeMenu.right, top: modeMenu.top + 6, minWidth: 132 }}
             onClick={(e) => e.stopPropagation()}
           >
-            {VIEW_MODES.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => pickMode(m.id)}
-                className={
-                  "w-full text-right px-3 h-8 flex items-center justify-end gap-1.5 whitespace-nowrap font-gothic text-[0.6875rem] " +
-                  (mode === m.id ? "text-sky-600 font-bold" : "text-gray-700 active:bg-muted")
-                }
-              >
-                <Check size={12} className={mode === m.id ? "shrink-0" : "shrink-0 opacity-0"} />
-                {m.label}
-              </button>
-            ))}
+            {SHOW_ORDER.map((k) => {
+              const on = showSet.has(k);
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => toggleShow(k)}
+                  className={
+                    "w-full text-right px-3 h-8 flex items-center justify-end gap-1.5 whitespace-nowrap font-gothic text-[0.6875rem] " +
+                    (on ? "text-sky-600 font-bold" : "text-gray-700 active:bg-muted")
+                  }
+                >
+                  <Check size={12} className={on ? "shrink-0" : "shrink-0 opacity-0"} />
+                  {SHOW_LABELS[k]}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
