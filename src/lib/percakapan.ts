@@ -6,6 +6,7 @@
 //   서버 주소와 비밀키는 저장소가 공개라 코드에 두지 않고 설정 화면에서 받아
 //   이 기기의 localStorage 에만 보관합니다 (설교문 서버와 같은 방식).
 
+import { pickServerAuth, isMemberActive } from "@/lib/member";
 import { getGeminiApiKey } from "@/lib/gemini";
 import { callGeminiText } from "@/lib/geminiText";
 import {
@@ -65,8 +66,10 @@ export function setPercakapanKey(v: string): void {
   } catch (e) {}
 }
 
+// 기존 비밀키가 없어도 회원키가 활성화돼 있으면 받기(복원)는 됩니다.
+// 백업 올리기는 서버가 관리자만 허용합니다.
 export function hasPercakapanConfig(): boolean {
-  return getPercakapanBase() !== "" && getPercakapanKey() !== "";
+  return (getPercakapanBase() !== "" && getPercakapanKey() !== "") || isMemberActive();
 }
 
 // ---------- 폰 저장 (IndexedDB) ----------
@@ -259,17 +262,16 @@ export interface BackupPayload {
 
 /** 서버에 저장해 둔 백업을 읽어옵니다. 없으면 savedAt 이 0 으로 옵니다. */
 export async function fetchBackup(): Promise<BackupPayload> {
-  const base = getPercakapanBase();
-  const key = getPercakapanKey();
-  if (!base || !key) throw new Error("NO_CONFIG");
+  const auth = pickServerAuth(getPercakapanBase(), getPercakapanKey());
+  if (!auth) throw new Error("NO_CONFIG");
 
   let res: Response;
   try {
-    res = await fetch(base + "/percakapan", { headers: { "x-kata-key": key } });
+    res = await fetch(auth.base + "/percakapan", { headers: auth.headers });
   } catch (e) {
     throw new Error("FETCH_FAILED");
   }
-  if (res.status === 401) throw new Error("UNAUTHORIZED");
+  if (res.status === 401 || res.status === 403 || res.status === 409) throw new Error("UNAUTHORIZED");
   if (!res.ok) throw new Error("FETCH_FAILED");
 
   let data: any;
@@ -530,3 +532,11 @@ export type {
   PercakapanSpeaker,
   PercakapanGender,
 };
+
+/** 이 기기의 사용자 회화집·카테고리를 모두 지웁니다(회원키가 끊겼을 때). 내장 회화집은 남습니다. */
+export async function clearCustomPercakapan(): Promise<void> {
+  const scenes = await getCustomScenes();
+  for (const sc of scenes) await deleteCustomScene(sc.id);
+  const cats = await getCustomCats();
+  for (const c of cats) await deleteCustomCat(c.id);
+}
