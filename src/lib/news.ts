@@ -3,6 +3,7 @@
 // 학습용 인도네시아어 기사로 다시 써서 신문(에디션)을 만듭니다.
 // 하루 1회만 호출되며(같은 날짜는 IndexedDB 캐시 사용) 기존 API 키를 재사용합니다.
 
+import { geminiTarget, handleQuotaResponse } from "@/lib/aiProxy";
 import { getGeminiApiKey } from "@/lib/gemini";
 
 // 검색 그라운딩(google_search 도구)은 상위 flash 모델이 필요합니다.
@@ -54,17 +55,14 @@ export function indoDateLabel(d: Date = new Date()): string {
 // 주의: 검색 도구와 responseMimeType(JSON 모드)은 함께 쓸 수 없어
 // 프롬프트로 "순수 JSON만" 요구하고 응답에서 JSON을 추출합니다.
 async function callGeminiWithSearch(prompt: string): Promise<string> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
+  const apiKey = getGeminiApiKey(); // 비어 있으면 회원키로 Worker 를 거칩니다
 
   let lastError: Error = new Error("REQUEST_FAILED");
 
   for (const model of NEWS_MODELS) {
-    const endpoint =
-      "https://generativelanguage.googleapis.com/v1beta/models/" +
-      model +
-      ":generateContent?key=" +
-      encodeURIComponent(apiKey);
+    // 내 키가 있으면 직접, 없고 회원키가 있으면 Worker 를 거칩니다.
+    const target = geminiTarget(model, apiKey, "news");
+    if (!target) throw new Error("NO_API_KEY");
 
     // 응답이 오지 않으면 화면이 영원히 로딩 상태로 멈추므로 타임아웃을 겁니다.
     // 뉴스는 검색 그라운딩 + 긴 출력이라 짧게 잡으면 정상 생성도 끊겨 120초로 둡니다.
@@ -74,9 +72,9 @@ async function callGeminiWithSearch(prompt: string): Promise<string> {
     }, 120000);
 
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetch(target.url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: target.headers,
         signal: controller.signal,
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
@@ -92,6 +90,7 @@ async function callGeminiWithSearch(prompt: string): Promise<string> {
         }),
       });
 
+      if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA_NEWS");
       if (!res.ok) {
         if (res.status === 429) {
           lastError = new Error("RATE_LIMIT");
