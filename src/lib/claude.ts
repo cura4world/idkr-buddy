@@ -3,6 +3,7 @@
 // API 키는 localStorage("claudeApiKey")에 저장됩니다.
 // 주의: claude-sonnet-5는 temperature 등 샘플링 값을 보내면 400 에러 → 보내지 않습니다.
 
+import { isMemberActive } from "@/lib/member";
 import { claudeTarget, handleQuotaResponse } from "@/lib/aiProxy";
 const CLAUDE_KEY_STORAGE = "claudeApiKey";
 const CLAUDE_MODEL = "claude-sonnet-5";
@@ -27,8 +28,10 @@ export function setClaudeApiKey(key: string): void {
   }
 }
 
+// 화면들이 "묵상·기도 생성을 쓸 수 있는가"를 이 함수로 판단합니다.
+// 회원키 기기는 내 키가 없어도 Worker 대리 호출로 쓸 수 있으므로 함께 봅니다.
 export function hasClaudeApiKey(): boolean {
-  return getClaudeApiKey().length > 0;
+  return getClaudeApiKey().length > 0 || isMemberActive();
 }
 
 // system + user 프롬프트로 Claude를 호출해 JSON 객체를 받습니다.
