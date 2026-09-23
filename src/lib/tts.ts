@@ -5,6 +5,7 @@
 // - 긴 글은 문단으로 쪼개 생성하되(품질 드리프트 방지), 재생은 이어서 하나처럼.
 // - 재생/일시정지/정지 컨트롤 + 상태 구독(subscribe) 제공.
 
+import { geminiTarget, handleQuotaResponse } from "@/lib/aiProxy";
 import { getGeminiApiKey } from "@/lib/gemini";
 
 const TTS_MODEL = "gemini-3.1-flash-tts-preview";
@@ -267,23 +268,20 @@ function pcmBase64ToWavDataUrl(pcmB64: string): string {
 
 // ── Gemini TTS 호출 (문단 1개) ─────────────────────────────────
 async function generateAudioForText(text: string, voiceName: string, attempt = 0, model: string = TTS_MODEL): Promise<string> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
+  // 내 키가 있으면 직접, 없고 회원키가 있으면 Worker 를 거칩니다(키는 서버에만).
+  const target = geminiTarget(model, getGeminiApiKey(), "tts");
+  if (!target) throw new Error("NO_API_KEY");
 
   // 지시문을 소리내어 읽어버리는 문제 방지: 명확한 preamble + 낭독 대상 라벨.
   const prompt =
     "Read the following Indonesian text aloud clearly and naturally, in a calm reading voice. " +
     "Read only the text after the colon, do not read these instructions.\n\n: " + text;
 
-  const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/" + model +
-    ":generateContent?key=" + encodeURIComponent(apiKey);
-
   let res: Response;
   try {
-    res = await fetch(endpoint, {
+    res = await fetch(target.url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: target.headers,
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
@@ -297,6 +295,9 @@ async function generateAudioForText(text: string, voiceName: string, attempt = 0
   } catch {
     throw new Error("NETWORK_FAILED");
   }
+
+  // 하루 음성 한도를 넘으면 안내를 띄우고 재시도하지 않습니다.
+  if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA_TTS");
 
   if (!res.ok) {
     // 500은 가끔 오디오 대신 텍스트 토큰을 반환하는 알려진 이슈 → 1회 재시도
