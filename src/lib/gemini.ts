@@ -2,6 +2,7 @@
 // Gemini API를 사용해 인도네시아어 단어의 한국어 뜻/예문/예문뜻을 자동 생성합니다.
 // API 키는 localStorage("geminiApiKey")에 저장되며, 없으면 자동 채우기 기능이 비활성화됩니다.
 
+import { isMemberActive } from "@/lib/member";
 import { callGeminiJSON } from "@/lib/geminiText";
 
 const GEMINI_KEY_STORAGE = "geminiApiKey";
@@ -26,8 +27,10 @@ export function setGeminiApiKey(key: string): void {
   }
 }
 
+// 화면들이 "AI 기능을 쓸 수 있는가"를 이 함수로 판단합니다.
+// 회원키 기기는 내 키가 없어도 Worker 대리 호출로 쓸 수 있으므로 함께 봅니다.
 export function hasGeminiApiKey(): boolean {
-  return getGeminiApiKey().length > 0;
+  return getGeminiApiKey().length > 0 || isMemberActive();
 }
 
 export interface WordFillResult {
@@ -38,8 +41,7 @@ export interface WordFillResult {
 
 // 인도네시아어 단어 하나를 받아 한국어 뜻/예문/예문뜻을 생성합니다.
 export async function fillWordWithGemini(word: string): Promise<WordFillResult> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
+  if (!hasGeminiApiKey()) {
     throw new Error("NO_API_KEY");
   }
 
