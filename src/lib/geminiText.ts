@@ -5,6 +5,7 @@
 // 주의: gemini.ts 를 import 하지 않습니다. gemini.ts 가 이 파일을 import 하므로
 // 순환 참조를 피하기 위해 API 키는 localStorage 에서 직접 읽습니다.
 
+import { geminiTarget, handleQuotaResponse } from "@/lib/aiProxy";
 const KEY_STORAGE = "geminiApiKey";
 
 function readApiKey(): string {
@@ -66,11 +67,9 @@ async function callOnce(
   timeoutMs: number,
   maxOutputTokens: number,
 ): Promise<string> {
-  const endpoint =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    model +
-    ":generateContent?key=" +
-    encodeURIComponent(apiKey);
+  // 내 키가 있으면 직접, 없고 회원키가 있으면 Worker 를 거칩니다.
+  const target = geminiTarget(model, apiKey, "text");
+  if (!target) throw new Error("NO_API_KEY");
 
   const controller = new AbortController();
   let timedOut = false;
@@ -83,9 +82,9 @@ async function callOnce(
 
   let res: Response;
   try {
-    res = await fetch(endpoint, {
+    res = await fetch(target.url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: target.headers,
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         // Gemini 3.x 부터 temperature / topP / topK 는 폐기 예정이라 보내지 않습니다.
@@ -103,6 +102,7 @@ async function callOnce(
     clearTimeout(timer);
   }
 
+  if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA");
   if (!res.ok) {
     if (res.status === 403) throw new Error("INVALID_API_KEY");
     if (res.status === 400) throw new Error("BAD_REQUEST");
@@ -123,8 +123,7 @@ export async function callGeminiText(
   prompt: string,
   opts: GeminiCallOptions = {},
 ): Promise<string> {
-  const apiKey = readApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
+  const apiKey = readApiKey(); // 비어 있으면 회원키로 Worker 를 거칩니다
 
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxOutputTokens = opts.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
