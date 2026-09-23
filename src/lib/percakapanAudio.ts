@@ -6,6 +6,7 @@
 //   회화집 오디오가 커서 기존 캐시를 밀어내 버립니다.
 // - tts.ts / PlayButton.tsx 는 여러 화면이 함께 쓰므로 손대지 않고, 여기에 독립된 재생기를 둡니다.
 
+import { geminiTarget, handleQuotaResponse } from "@/lib/aiProxy";
 import { getGeminiApiKey } from "@/lib/gemini";
 import { ttsPlayer } from "@/lib/tts";
 import { bibleAudioPlayer } from "@/lib/bibleAudio";
@@ -174,26 +175,24 @@ function pcmBase64ToWavDataUrl(pcmB64: string): string {
 
 // ── Gemini TTS 호출 ───────────────────────────────────────────
 
-function endpointOf(apiKey: string): string {
-  return (
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    TTS_MODEL +
-    ":generateContent?key=" +
-    encodeURIComponent(apiKey)
-  );
-}
-
 async function postTts(apiKey: string, body: any, attempt = 0): Promise<string> {
+  // 내 키가 있으면 직접, 없고 회원키가 있으면 Worker 를 거칩니다(키는 서버에만).
+  const target = geminiTarget(TTS_MODEL, apiKey, "tts");
+  if (!target) throw new Error("NO_API_KEY");
+
   let res: Response;
   try {
-    res = await fetch(endpointOf(apiKey), {
+    res = await fetch(target.url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: target.headers,
       body: JSON.stringify(body),
     });
   } catch (e) {
     throw new Error("NETWORK_FAILED");
   }
+
+  // 하루 음성 한도를 넘으면 안내를 띄우고 재시도하지 않습니다.
+  if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA_TTS");
 
   if (!res.ok) {
     // 500은 가끔 오디오 대신 텍스트 토큰을 반환하는 알려진 이슈 → 1회 재시도
@@ -214,8 +213,7 @@ async function postTts(apiKey: string, body: any, attempt = 0): Promise<string> 
 
 // 대화 전체 — 다화자
 async function generateSceneAudio(scene: PercakapanScene): Promise<string> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
+  const apiKey = getGeminiApiKey(); // 비어 있으면 회원키로 Worker 를 거칩니다
 
   // 지시문을 소리내어 읽어버리지 않도록 tts.ts 와 같은 방식의 preamble 을 둡니다.
   const preamble =
@@ -250,8 +248,7 @@ async function generateSceneAudio(scene: PercakapanScene): Promise<string> {
 
 // 문장 하나 — 단일 화자
 async function generateLineAudio(text: string, speakerName: string): Promise<string> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
+  const apiKey = getGeminiApiKey(); // 비어 있으면 회원키로 Worker 를 거칩니다
 
   const prompt =
     "Read the following Indonesian line aloud naturally, as in a real conversation. " +
