@@ -3,6 +3,7 @@
 // API 키는 localStorage("claudeApiKey")에 저장됩니다.
 // 주의: claude-sonnet-5는 temperature 등 샘플링 값을 보내면 400 에러 → 보내지 않습니다.
 
+import { claudeTarget, handleQuotaResponse } from "@/lib/aiProxy";
 const CLAUDE_KEY_STORAGE = "claudeApiKey";
 const CLAUDE_MODEL = "claude-sonnet-5";
 
@@ -36,19 +37,14 @@ export async function callClaudeJSON(
   user: string,
   maxTokens = 8000
 ): Promise<Record<string, unknown>> {
-  const apiKey = getClaudeApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
+  // 내 키가 있으면 직접, 없고 회원키가 있으면 Worker 를 거칩니다(키는 서버에만).
+  const target = claudeTarget(getClaudeApiKey());
+  if (!target) throw new Error("NO_API_KEY");
 
   const doFetch = () =>
-    fetch("https://api.anthropic.com/v1/messages", {
+    fetch(target.url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        // 브라우저(WebView)에서 직접 호출을 허용하는 공식 헤더
-        "anthropic-dangerous-direct-browser-access": "true",
-      },
+      headers: target.headers,
       body: JSON.stringify({
         model: CLAUDE_MODEL,
         max_tokens: maxTokens,
@@ -63,6 +59,9 @@ export async function callClaudeJSON(
   } catch {
     throw new Error("NETWORK_FAILED");
   }
+
+  // 하루 사용량 한도(대리 호출)면 재시도하지 않습니다.
+  if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA");
 
   // 일시적 혼잡(429/529)은 한 번 재시도
   if (res.status === 429 || res.status === 529) {
