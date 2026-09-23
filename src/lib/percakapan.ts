@@ -7,7 +7,7 @@
 //   이 기기의 localStorage 에만 보관합니다 (설교문 서버와 같은 방식).
 
 import { pickServerAuth, isMemberActive } from "@/lib/member";
-import { getGeminiApiKey } from "@/lib/gemini";
+import { hasGeminiApiKey } from "@/lib/gemini";
 import { callGeminiText } from "@/lib/geminiText";
 import {
   BUILTIN_CATEGORIES,
@@ -473,8 +473,7 @@ export async function generateScene(opts: {
   situation?: string;
   level: PercakapanLevel;
 }): Promise<PercakapanScene> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) throw new Error("NO_API_KEY");
+  if (!hasGeminiApiKey()) throw new Error("NO_API_KEY");
 
   const name = (opts.name || "").trim();
   if (!name) throw new Error("EMPTY_NAME");
