@@ -63,7 +63,7 @@ API 토큰은 단일 버킷 스코프라 `rclone lsd r2:`가 403인 것이 정�
 
 | | 엔진 | 사용처 | 컴포넌트 |
 |---|---|---|---|
-| Gemini Cloud TTS | `gemini-3.1-flash-tts-preview` | 묵상 / 이야기 / 기도 / 사전 등 | `PlayButton` + `ttsPlayer` |
+| Gemini Cloud TTS | `gemini-3.8-flash-lite-tts` (거절 시 `3.1-flash-tts-preview`) — 회화 다화자는 아직 3.1 | 묵상 / 이야기 / 기도 / 사전 / 설교문 등 | `PlayButton` + `ttsPlayer` |
 | 실제 낭독 스트리밍 | R2 mp3 | 성경 읽기(`/bible`)만 | `BibleAudioButton` + `bibleAudioPlayer` |
 
 묵상은 **절 단위**라 장 전체 mp3를 붙이는 게 부적합해 Cloud TTS를 유지했습니다.
@@ -91,7 +91,9 @@ Cloud TTS는 PCM→WAV 변환(ArrayBuffer/DataView) 후 문단 단위로 청크�
 - 설정의 "저장된 사전 이미지·단어 비우기"는 이미지 + 찾아본 단어 + 검색 결과 캐시를 **함께** 지웁니다.
 
 429가 나면 ① 지출 한도 확인 ② 모델 순서 변경 ③ 백오프 재시도 순으로 봅니다.
-텍스트는 `gemini-flash-lite-latest`입니다.
+모델은 **별칭(`-latest`)이 아니라 명시 버전**을 씁니다. 모델 이름은 `geminiText.ts`(텍스트)·`news.ts`(뉴스)·`tts.ts`(음성)·`percakapanAudio.ts`(회화 음성, 따로 둠)에 있습니다.
+2026-09 에 가성비 기준으로 다시 골랐습니다: 텍스트 `gemini-3.1-flash-lite`(2027-05-07 종료 예정), 뉴스 `gemini-3.8-flash`, 음성 `gemini-3.8-flash-lite-tts`.
+**3.8 TTS 는 원고를 그대로 읽는다** — 지시문을 원고에 섞지 말고 `speech_metadata.style` 로 준다. 응답도 헤더가 붙은 WAV 라 PCM 헤더를 또 씌우면 안 된다.
 
 사전 이미지 생성 기능은 2026-08 에 제거했습니다. 한 장에 55~95원으로 단건 최고가인데
 학습 효과가 그만큼 크지 않다고 판단했습니다. 관련 코드(`generateWordImage`, `imageStore.ts`)와
