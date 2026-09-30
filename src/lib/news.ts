@@ -8,9 +8,10 @@ import { getGeminiApiKey } from "@/lib/gemini";
 
 // 검색 그라운딩(google_search 도구)은 상위 flash 모델이 필요합니다.
 // lite 모델은 그라운딩을 지원하지 않아 사용하지 않습니다.
-// gemini-2.5-flash는 2026-10 종료 예정으로 신규 결제 계정에서는 이미 404 →
-// 현행 모델(gemini-3.5-flash)을 1순위로, 별칭과 구모델을 폴백으로 둡니다.
-const NEWS_MODELS = ["gemini-3.5-flash", "gemini-flash-latest", "gemini-2.5-flash"];
+// 2026-09 기준: 3.8 Flash 가 3.5 Flash 보다 싸고(입력·출력 모두) 새 모델이라 1순위.
+// 2.5 계열은 폐기는 아니지만 예전부터 쓰던 계정에만 열려 있어 마지막 폴백으로만 둡니다.
+// -latest 별칭은 구글이 예고 없이 갈아끼우므로 넣지 않습니다.
+const NEWS_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-2.5-flash"];
 
 export interface NewsArticle {
   category: string; // 한국어 카테고리 (핫뉴스/정치/경제/사회/문화/스포츠 등)
