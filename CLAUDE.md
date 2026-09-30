@@ -43,9 +43,12 @@
 - **setState 여러 개 + `navigate()` 동시 호출 금지** — 언마운트 중 setState로 WebView가 크래시함. setState 없는 `cancelOperations()` / `teardown()` 패턴을 쓸 것
 - **성경 약어에 `toLowerCase()` 금지** — R2 키는 대소문자를 구분하고 66권 중 룻기만 `RUT`(대문자)라 404가 남
 - **`src/components/PlayButton.tsx` 수정 금지** — 여러 페이지 공용
-- **`src/lib/tts.ts` 의 기존 함수·메서드 동작 변경 금지** — 묵상·이야기·기도·회화·사전이
-  모두 이 하나를 쓴다. 새 기능이 필요하면 **추가 전용**으로만 넣는다 (새 메서드, 또는
-  기본값이 있는 선택 매개변수). 설교문 문단 듣기의 `toggleParts` 가 그 예다
+- **`src/lib/tts.ts` 의 기존 함수·메서드 사용법 변경 금지** — 묵상·이야기·기도·회화·사전이
+  모두 이 하나를 쓴다. 이름·매개변수·반환 형식은 바꾸지 않고, 새 기능은 **추가 전용**으로만
+  넣는다 (새 메서드, 또는 기본값이 있는 선택 매개변수). 설교문 문단 듣기의 `toggleParts` 가 그 예다.
+  **예외: 쓰는 모델과 그 모델에 맞춘 요청 본문은 바꿀 수 있다** — 구글 TTS 모델은 프리뷰가
+  계속 교체된다. 바꿀 때는 먼저 새 모델에 직접 요청해 상태·응답 형식을 숫자로 확인한다
+  (2026-09 3.8 전환 때 3.8 은 지시문을 소리 내어 읽고 WAV 헤더를 붙여 줘서, 이름만 바꾸면 깨졌다)
 - **`src/lib/bibleAudio.ts`의 `AUDIO_BASE` 변경 금지**
 - **이미지를 localStorage에 저장 금지** — 5~10MB 한도라 단어장 데이터까지 깨짐. IndexedDB를 쓸 것
 - **YAML 안 Java 코드에서 큰따옴표 이스케이프(`\"`) 금지**
@@ -168,7 +171,7 @@ src/
     readingTimer.ts 화면에 보이지 않는 읽기 타이머
     useSwipeFlip.ts 장문 화면 좌우 스와이프로 앞/뒤 넘기기
     wideMode.ts     넓게 보기 (폴더블용 좌우 폭 확장)
-    tts.ts          Gemini Cloud TTS 싱글톤. 기존 동작 변경 금지, 추가만 허용
+    tts.ts          Gemini Cloud TTS 싱글톤. 사용법 변경 금지·추가만 허용 (모델 교체는 예외, 금지 사항 참고)
                     (toggleParts = 문단 여러 개를 이어 붙여 재생, 설교문 듣기용)
     nav.ts          goBackOr / wordbookFallback
     fontScale.ts / utils.ts
