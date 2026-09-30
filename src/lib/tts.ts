@@ -1,6 +1,6 @@
 // src/lib/tts.ts
 // 인도네시아어 "글 전체"를 자연스러운 목소리로 읽어주는 클라우드 TTS.
-// - Gemini TTS(gemini-3.1-flash-tts-preview)로 오디오 생성 → IndexedDB에 캐시(5,000개 FIFO)
+// - Gemini TTS(gemini-3.8-flash-lite-tts, 거절되면 3.1 preview)로 오디오 생성 → IndexedDB에 캐시(5,000개 FIFO)
 // - 같은 글은 재과금 0. 실패 시 기존 무료 TTS(speechSynthesis/AndroidTTS)로 자동 폴백.
 // - 긴 글은 문단으로 쪼개 생성하되(품질 드리프트 방지), 재생은 이어서 하나처럼.
 // - 재생/일시정지/정지 컨트롤 + 상태 구독(subscribe) 제공.
@@ -8,10 +8,20 @@
 import { geminiTarget, handleQuotaResponse } from "@/lib/aiProxy";
 import { getGeminiApiKey } from "@/lib/gemini";
 
-const TTS_MODEL = "gemini-3.1-flash-tts-preview";
-// 설교문 전용 — 값싼 모델을 먼저 시도하고, 실패하면 기본 모델로 넘어갑니다.
-// (2.5 Flash Preview TTS 는 출력 단가가 3.1 의 절반입니다)
-const SERMON_TTS_MODELS = ["gemini-2.5-flash-preview-tts", TTS_MODEL];
+const TTS_MODEL = "gemini-3.8-flash-lite-tts";
+// 3.8 이 요청을 거절하면(400·404) 한 번만 이 모델로 다시 만듭니다.
+const LEGACY_TTS_MODEL = "gemini-3.1-flash-tts-preview";
+// 3.8 TTS 는 입력을 "읽을 원고 그대로"로 취급합니다. 읽는 방식은 원고가 아니라 이 값으로 줍니다.
+const TTS_READ_STYLE = "Read aloud clearly and naturally, in a calm reading voice.";
+function isVerbatimTtsModel(model: string): boolean {
+  return model.indexOf("gemini-3.8-") === 0;
+}
+// 설교문 전용 — 싼 순서로 시도합니다 (오디오 출력 100만 토큰당, 2026-09 기준).
+// 3.8 Flash-Lite $6(2027-01부터 $12) → 2.5 Flash Preview $10 → 3.1 Flash Preview $20
+// 이 순서를 지키려고 playParts 는 레거시 재시도를 끄고 부릅니다(legacyRetry=false).
+const SERMON_TTS_MODELS = [TTS_MODEL, "gemini-2.5-flash-preview-tts", LEGACY_TTS_MODEL];
+// TTS 요청 하나의 마감. 설교문 묶음은 길어 넉넉히 잡습니다.
+const TTS_TIMEOUT_MS = 90000;
 export function sermonTtsModels(): string[] { return SERMON_TTS_MODELS.slice(); }
 
 // 설교문 오디오는 한 편이 수십 MB 라 기존 캐시(개수 5,000 FIFO)와 섞으면
@@ -267,7 +277,13 @@ function pcmBase64ToWavDataUrl(pcmB64: string): string {
 }
 
 // ── Gemini TTS 호출 (문단 1개) ─────────────────────────────────
-async function generateAudioForText(text: string, voiceName: string, attempt = 0, model: string = TTS_MODEL): Promise<string> {
+async function generateAudioForText(
+  text: string,
+  voiceName: string,
+  attempt = 0,
+  model: string = TTS_MODEL,
+  legacyRetry = true, // false 면 3.8 이 거절돼도 예전 모델로 넘어가지 않고 오류를 그대로 던집니다
+): Promise<string> {
   // 내 키가 있으면 직접, 없고 회원키가 있으면 Worker 를 거칩니다(키는 서버에만).
   const target = geminiTarget(model, getGeminiApiKey(), "tts");
   if (!target) throw new Error("NO_API_KEY");
@@ -276,44 +292,72 @@ async function generateAudioForText(text: string, voiceName: string, attempt = 0
   const prompt =
     "Read the following Indonesian text aloud clearly and naturally, in a calm reading voice. " +
     "Read only the text after the colon, do not read these instructions.\n\n: " + text;
+  // 3.8 은 원고만 보내고 읽는 방식은 speech_metadata 로 따로 줍니다(원고에 섞으면 소리 내어 읽음).
+  const verbatim = isVerbatimTtsModel(model);
+  const part = verbatim
+    ? { text, speech_metadata: { style: TTS_READ_STYLE } }
+    : { text: prompt };
 
-  let res: Response;
+  // 응답이 안 오면 로딩이 끝나지 않으므로 마감을 겁니다. 본문(res.json)을 다 읽을 때까지 유지합니다.
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; controller.abort(); }, TTS_TIMEOUT_MS);
   try {
-    res = await fetch(target.url, {
-      method: "POST",
-      headers: target.headers,
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseModalities: ["AUDIO"],
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName } },
+    let res: Response;
+    try {
+      res = await fetch(target.url, {
+        method: "POST",
+        headers: target.headers,
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [{ parts: [part] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+              voiceConfig: { prebuiltVoiceConfig: { voiceName } },
+            },
           },
-        },
-      }),
-    });
-  } catch {
-    throw new Error("NETWORK_FAILED");
-  }
+        }),
+      });
+    } catch {
+      throw new Error(timedOut ? "TIMEOUT" : "NETWORK_FAILED");
+    }
 
-  // 하루 음성 한도를 넘으면 안내를 띄우고 재시도하지 않습니다.
-  if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA_TTS");
+    // 하루 음성 한도를 넘으면 안내를 띄우고 재시도하지 않습니다.
+    if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA_TTS");
 
-  if (!res.ok) {
-    // 500은 가끔 오디오 대신 텍스트 토큰을 반환하는 알려진 이슈 → 1회 재시도
-    if (res.status === 500 && attempt < 1) return generateAudioForText(text, voiceName, attempt + 1, model);
-    if (res.status === 400 || res.status === 403) throw new Error("INVALID_API_KEY");
-    if (res.status === 429) throw new Error("RATE_LIMIT");
-    throw new Error("REQUEST_FAILED_" + res.status);
-  }
+    if (!res.ok) {
+      // 3.8 이 거절하면(모델 없음·형식 오류) 예전 모델로 한 번만 다시 만듭니다.
+      if (legacyRetry && verbatim && (res.status === 400 || res.status === 404)) {
+        return generateAudioForText(text, voiceName, 0, LEGACY_TTS_MODEL, false);
+      }
+      // 500은 가끔 오디오 대신 텍스트 토큰을 반환하는 알려진 이슈 → 1회 재시도
+      if (res.status === 500 && attempt < 1) return generateAudioForText(text, voiceName, attempt + 1, model, legacyRetry);
+      if (res.status === 400 || res.status === 403) throw new Error("INVALID_API_KEY");
+      if (res.status === 429) throw new Error("RATE_LIMIT");
+      throw new Error("REQUEST_FAILED_" + res.status);
+    }
 
-  const data = await res.json();
-  const b64: string = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ?? "";
-  if (!b64) {
-    if (attempt < 1) return generateAudioForText(text, voiceName, attempt + 1, model);
-    throw new Error("EMPTY_AUDIO");
+    let data: any;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error(timedOut ? "TIMEOUT" : "NETWORK_FAILED");
+    }
+    const inline = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+    const b64: string = inline?.data ?? "";
+    if (!b64) {
+      if (attempt < 1) return generateAudioForText(text, voiceName, attempt + 1, model, legacyRetry);
+      throw new Error("EMPTY_AUDIO");
+    }
+    // 3.8 TTS 는 헤더가 붙은 WAV 를 줍니다. 헤더를 또 씌우면 소리가 깨집니다.
+    // ("UklGR" = base64 로 쓴 "RIFF", WAV 파일의 첫 네 글자)
+    const mime = String(inline?.mimeType ?? "").toLowerCase();
+    if (mime.indexOf("wav") >= 0 || b64.slice(0, 5) === "UklGR") return "data:audio/wav;base64," + b64;
+    return pcmBase64ToWavDataUrl(b64);
+  } finally {
+    clearTimeout(timer);
   }
-  return pcmBase64ToWavDataUrl(b64);
 }
 
 // 긴 글은 문단(빈 줄) 단위로 쪼갬. 문단이 너무 길면 문장 경계로 추가 분할.
@@ -449,7 +493,7 @@ class TtsPlayer {
         let lastErr: any = null;
         for (const m of models) {
           try {
-            url = await generateAudioForText(parts[i].text, voiceName, 0, m);
+            url = await generateAudioForText(parts[i].text, voiceName, 0, m, false);
             lastErr = null;
             break;
           } catch (e) {
