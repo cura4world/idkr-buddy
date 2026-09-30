@@ -20,9 +20,9 @@ function readApiKey(): string {
 // -latest 별칭은 구글이 새 버전으로 조용히 갈아끼우기 때문에(프리뷰가 물릴 수도 있음)
 // 매일 쓰는 기능에는 "안정판 명시 버전"을 고정합니다.
 export const TEXT_MODEL_CANDIDATES = [
-  "gemini-3.1-flash-lite", // 구글이 저비용·고빈도 용도로 권하는 안정 장기 모델
-  "gemini-3.5-flash-lite", // 3.5 계열 안정판 폴백
-  "gemini-2.5-flash-lite", // 구형 폴백 (2026-10 종료 예정)
+  "gemini-3.1-flash-lite", // 현행 lite 중 가장 쌈. 2027-05-07 종료 예정 → 그 전에 3.5-flash-lite 를 1순위로
+  "gemini-3.5-flash-lite", // 3.1 의 공식 후속 (3.1 보다 비쌈)
+  "gemini-2.5-flash-lite", // 구형 폴백 (폐기 아님, 예전부터 쓰던 계정에만 제공)
 ];
 
 // 호출 하나당 기본 타임아웃.
