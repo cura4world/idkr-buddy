@@ -34,6 +34,7 @@ import {
   HlColor, ChapterHl, HL_RGB, HL_ORDER, hlStyle, loadChapterHl, saveChapterHl,
 } from "@/lib/bibleHighlight";
 import { koMetaSync, BIBLE_VERSIONS, BibleVersion } from "@/lib/bibleKo";
+import { canPullBible, pullMissingBibles, BIBLE_KO_UPDATED_EVENT } from "@/lib/bibleAutoSync";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import PointFloat from "@/components/PointFloat";
@@ -149,6 +150,7 @@ const BibleRead = () => {
   const [error, setError] = useState(false);
   const [koError, setKoError] = useState<Record<BibleVersion, boolean>>({ gr: false, wm: false, niv: false });
   const [showSet, setShowSet] = useState<Set<ShowKey>>(loadViewSet);
+  const [koPulling, setKoPulling] = useState(false); // "지금 받기" 진행 중
 
   const showId = showSet.has("id");
   // 항상 "인니어 → 우리말 → 개역개정" 고정 순서로 보여줍니다(고른 순서가 아니라).
@@ -454,6 +456,39 @@ const BibleRead = () => {
     loadChapter(pos);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pos.bookId, pos.chapter]);
+
+  // 빠진 역본을 배경(앱 시작 시 자동 받기)이나 "지금 받기"로 새로 받으면
+  // 지금 보고 있는 장의 그 역본만 다시 읽어 옵니다. 다른 역본·인니어는 건드리지 않습니다.
+  useEffect(() => {
+    const onUpdated = (e: Event) => {
+      const v = (e as CustomEvent<{ version?: BibleVersion }>).detail?.version;
+      if (!v) return;
+      const token = loadToken.current;
+      fetchChapterKo(pos.bookId, pos.chapter, v)
+        .then((ko) => {
+          if (loadToken.current !== token) return;
+          setVersesKo((prev) => ({ ...prev, [v]: ko }));
+          setKoError((prev) => ({ ...prev, [v]: false }));
+        })
+        .catch(() => {});
+    };
+    window.addEventListener(BIBLE_KO_UPDATED_EVENT, onUpdated);
+    return () => window.removeEventListener(BIBLE_KO_UPDATED_EVENT, onUpdated);
+  }, [pos.bookId, pos.chapter]);
+
+  // 이 기기에 빠진 역본을 지금 받습니다(와이파이가 아니어도 사용자가 눌렀으므로 받음).
+  const handlePullKo = async () => {
+    if (koPulling) return;
+    setKoPulling(true);
+    try {
+      const r = await pullMissingBibles(true);
+      if (r.got.length > 0) toast("받았습니다 — " + r.got.join(" · "));
+      else if (r.missing.length > 0) toast(r.missing.join(" · ") + "은 서버에 아직 없습니다");
+      else if (r.failed.length > 0) toast("받지 못했습니다. 인터넷 연결을 확인해 주세요");
+    } finally {
+      setKoPulling(false);
+    }
+  };
 
   const goChapter = (delta: number) => {
     if (!book) return;
@@ -1024,9 +1059,24 @@ const BibleRead = () => {
                     versesKo[v] ? null : (
                       <div key={v} className="text-center py-6">
                         {koError[v] ? (
-                          <p className="text-sm text-gray-600 font-gothic">
-                            {koLabelOf(v)}을 아직 이 기기에 받지 않았습니다. 설정에서 받아 주세요
-                          </p>
+                          <div className="flex flex-col items-center gap-2.5">
+                            <p className="text-sm text-gray-600 font-gothic">
+                              {koLabelOf(v)}을 아직 이 기기에 받지 않았습니다
+                            </p>
+                            {canPullBible() ? (
+                              <button
+                                type="button"
+                                onClick={handlePullKo}
+                                disabled={koPulling}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-teal-700 text-white text-sm font-gothic active:bg-teal-800 disabled:opacity-60"
+                              >
+                                {koPulling ? <Loader2 size={14} className="animate-spin" /> : null}
+                                {koPulling ? "받는 중..." : "지금 받기"}
+                              </button>
+                            ) : (
+                              <p className="text-xs text-gray-500 font-gothic">설정에서 받아 주세요</p>
+                            )}
+                          </div>
                         ) : (
                           <div className="flex items-center gap-2 text-gray-400 text-sm justify-center">
                             <Loader2 size={16} className="animate-spin" /> {koLabelOf(v)} 확인 중...
