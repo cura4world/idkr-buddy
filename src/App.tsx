@@ -13,6 +13,8 @@ import BibleRead from "./pages/BibleRead";
 import OneToOne from "./pages/OneToOne";
 import MemberAdmin from "./pages/MemberAdmin";
 import { refreshMembershipOnStart } from "@/lib/access";
+import { autoSyncBibleOnStart } from "@/lib/bibleAutoSync";
+import { toast } from "sonner";
 import Prayer from "./pages/Prayer";
 import Sermons from "./pages/Sermons";
 import SermonRead from "./pages/SermonRead";
@@ -46,7 +48,13 @@ const queryClient = new QueryClient();
 
 // 앱이 켜질 때 한 번: 회원키가 끊겼거나 다른 기기로 넘어갔으면 이 기기의
 // 회원 상태를 풀고 받아 둔 보호 내용을 지웁니다(인터넷이 안 되면 그대로 둠).
-refreshMembershipOnStart().catch(() => {});
+// 그 확인이 끝난 뒤, 이 기기에 빠진 성경 역본이 있고 와이파이면 배경에서 받습니다
+// (회원 확인보다 먼저 받으면, 끊긴 기기에 받았다가 곧바로 지우는 일이 생깁니다).
+refreshMembershipOnStart()
+  .catch(() => {})
+  .then(() => autoSyncBibleOnStart())
+  .then((got) => { if (got.length > 0) toast("성경을 이 기기에 받았습니다 — " + got.join(" · ")); })
+  .catch(() => {});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
