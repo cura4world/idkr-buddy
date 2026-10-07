@@ -58,7 +58,9 @@ const loadViewSet = (): Set<ShowKey> => {
     if (raw) {
       const arr = JSON.parse(raw);
       if (Array.isArray(arr)) {
-        const cleaned = arr.filter((x) => x === "id" || x === "wm" || x === "gr") as ShowKey[];
+        // SHOW_ORDER 에 있는 것은 전부 살립니다. 예전에는 id·wm·gr 만 남겨서
+        // NIV 를 켜 둬도 화면을 다시 열면 꺼져 있었습니다(2026-09 NIV 추가 때 빠뜨림).
+        const cleaned = arr.filter((x) => SHOW_ORDER.indexOf(x) >= 0) as ShowKey[];
         if (cleaned.length > 0) return new Set(cleaned);
       }
     }
