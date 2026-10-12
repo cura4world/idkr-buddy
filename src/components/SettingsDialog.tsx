@@ -2,14 +2,19 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getGeminiApiKey, setGeminiApiKey } from "@/lib/gemini";
 import { getClaudeApiKey, setClaudeApiKey } from "@/lib/claude";
-import { exportWordsToCSV, getPrivateFolderName, setPrivateFolderName } from "@/lib/store";
+import { exportPersonalWordsToCSV, getPrivateFolderName, setPrivateFolderName } from "@/lib/store";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import CSVImportDialog from "@/components/CSVImportDialog";
+import BackupRestoreDialog from "@/components/BackupRestoreDialog";
+import {
+  TransferInfo, getTransferInfo, sendToNewPhone, receiveFromOldPhone, cancelTransfer,
+  buildBackupFile, describeSummary, formatBytes,
+} from "@/lib/transfer";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Copy, Download, Upload, Trash2, Minus, Plus, Type, Volume2, KeyRound } from "lucide-react";
+import { Copy, Download, Upload, Trash2, Minus, Plus, Type, Volume2, KeyRound, Smartphone, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { clearLookupWords, countLookupWords } from "@/lib/wordStore";
 import { clearCachedResults, countCachedResults } from "@/lib/dictStore";
@@ -75,6 +80,13 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const [apiKey, setApiKey] = useState("");
   const [claudeKey, setClaudeKey] = useState("");
   const [importOpen, setImportOpen] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  // 새 폰으로 옮기기 (회원키) — 서버 보관함 상태. null = 아직 모름(또는 연결 안 됨)
+  const [transferInfo, setTransferInfo] = useState<TransferInfo | null>(null);
+  const [transferBusy, setTransferBusy] = useState(false);
+  const [transferConfirm, setTransferConfirm] = useState(false);
+  const [transferMsg, setTransferMsg] = useState("");
+  const [backupBusy, setBackupBusy] = useState(false);
   const [confirmClearData, setConfirmClearData] = useState(false);
   const [confirmClearTts, setConfirmClearTts] = useState(false);
   // 성경 파일 불러오기 — 여러 파일을 한 번에 고르면 이름으로 역본을 알아서 판별합니다.
@@ -130,6 +142,15 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
       setMemberInput("");
       setMemberMsg("");
       setMemberLeaveConfirm(false);
+      setTransferInfo(null);
+      setTransferConfirm(false);
+      setTransferMsg("");
+      setTransferBusy(false);
+      if (getMemberProfile()) {
+        getTransferInfo()
+          .then((info) => setTransferInfo(info))
+          .catch(() => {});
+      }
     }
   }, [open]);
 
@@ -188,13 +209,20 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
       if (r.bibles.length > 0) parts.push("성경 " + r.bibles.join("·"));
       if (r.scenes > 0) parts.push("회화집 " + r.scenes + "개");
       toast((r.profile.name || "회원") + "님, 활성화되었습니다" + (parts.length > 0 ? " — " + parts.join(", ") + " 받음" : ""));
+      // 옛 폰이 "새 폰으로 보내기"를 해 두었으면 받으라고 알려 줍니다(받기는 설정 창에서)
+      let waiting = false;
+      try {
+        const info = await getTransferInfo();
+        waiting = !!(info && info.exists && !info.fromSelf);
+      } catch (e) {}
+      if (waiting) toast("이전 폰에서 보낸 데이터가 있습니다. 설정을 다시 열고 '이전 폰 데이터 받기'를 눌러 주세요", { duration: 8000 });
       // 판·개인 단어장이 바뀌므로 앱을 새로 그립니다
-      setTimeout(() => { window.location.reload(); }, 1500);
+      setTimeout(() => { window.location.reload(); }, waiting ? 3500 : 1500);
     } catch (e) {
       const m = e instanceof Error ? e.message : "";
       if (m === "BAD_FORMAT") setMemberMsg("회원키 형식이 맞지 않습니다 (KK-XXXX-XXXX-XXXX)");
       else if (m === "UNKNOWN") setMemberMsg("없는 회원키입니다. 다시 확인해 주세요");
-      else if (m === "DEVICE_TAKEN") setMemberMsg("이미 다른 기기에서 쓰고 있는 회원키입니다. 관리자에게 기기 풀어주기를 요청해 주세요");
+      else if (m === "DEVICE_TAKEN") setMemberMsg("이미 다른 기기에서 쓰고 있는 회원키입니다. 옛 폰의 설정에서 '새 폰으로 보내기'를 먼저 누르거나, 관리자에게 기기 풀어주기를 요청해 주세요");
       else setMemberMsg("서버와 연결하지 못했습니다. 인터넷을 확인해 주세요");
       setMemberBusy(false);
     }
@@ -460,44 +488,100 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     }, 700);
   };
 
-  // 백업: 클립보드 복사 (WebView 앱에서 권장 경로)
+  // 백업: 직접 넣은 단어만 클립보드로 (기본 단어 3천여 개는 빼서 한도에 걸리지 않게)
   const handleExportCopy = async () => {
-    const { csv, count } = exportWordsToCSV();
+    const { csv, count } = exportPersonalWordsToCSV();
     if (count === 0) {
-      toast("내보낼 단어가 없습니다");
+      toast("직접 넣은 단어가 없습니다. 기본 단어장은 새 기기에서도 저절로 생깁니다");
       return;
     }
     try {
       await navigator.clipboard.writeText(csv);
-      toast("단어 " + count + "개를 클립보드에 복사했습니다");
+      toast("직접 넣은 단어 " + count + "개를 복사했습니다 (" + formatBytes(new TextEncoder().encode(csv).length) + ") — 메모나 메신저에 붙여넣어 보관하세요", { duration: 6000 });
     } catch (e) {
-      toast("클립보드 복사에 실패했습니다");
+      toast("복사하지 못했습니다. '파일 저장'을 써 주세요");
     }
   };
 
-  // 백업: 파일 다운로드 (브라우저용)
-  const handleExportDownload = () => {
-    const { csv, count } = exportWordsToCSV();
-    if (count === 0) {
-      toast("내보낼 단어가 없습니다");
-      return;
-    }
+  // 백업: 파일 저장 — 단어장·형광펜·기도문·설정까지 담은 백업 파일(.json)
+  // 앱(APK)은 blob: 주소를 저장하지 못하고 data: 주소만 다운로드 폴더에 씁니다.
+  const handleExportDownload = async () => {
+    if (backupBusy) return;
+    setBackupBusy(true);
     try {
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
+      const f = await buildBackupFile();
       const a = document.createElement("a");
-      const d = new Date();
-      const pad = (n: number) => (n < 10 ? "0" + n : "" + n);
-      a.href = url;
-      a.download = "kata-kata-backup-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + ".csv";
+      a.href = f.href;
+      a.download = f.fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 3000);
-      toast("단어 " + count + "개 다운로드를 시작했습니다");
+      toast("백업 파일(" + formatBytes(f.bytes) + ")을 다운로드 폴더에 저장합니다 — " + describeSummary(f.summary), { duration: 7000 });
     } catch (e) {
-      toast("다운로드에 실패했습니다");
+      toast("백업 파일을 만들지 못했습니다");
+    } finally {
+      setBackupBusy(false);
     }
+  };
+
+  // 새 폰으로 보내기 — 첫 번째 누름은 안내, 두 번째 누름에 보냅니다
+  const handleSendToNewPhone = async () => {
+    if (transferBusy) return;
+    if (!transferConfirm) { setTransferConfirm(true); return; }
+    setTransferBusy(true);
+    setTransferMsg("보내는 중...");
+    try {
+      const r = await sendToNewPhone();
+      setTransferConfirm(false);
+      setTransferMsg("보냈습니다 — " + describeSummary(r.summary) + " (" + formatBytes(r.bytes) + ")");
+      setTransferInfo({ exists: true, savedAt: Date.now(), bytes: r.bytes, until: r.until, fromSelf: true });
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "";
+      if (m === "TOO_BIG") setTransferMsg("보낼 데이터가 20MB를 넘습니다. '파일 저장'으로 옮겨 주세요");
+      else if (m === "REVOKED") setTransferMsg("이 기기의 회원키가 더 이상 유효하지 않습니다. 관리자에게 문의해 주세요");
+      else setTransferMsg("보내지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요");
+    } finally {
+      setTransferBusy(false);
+    }
+  };
+
+  const handleReceiveFromOldPhone = async () => {
+    if (transferBusy) return;
+    setTransferBusy(true);
+    setTransferMsg("받는 중...");
+    try {
+      const s = await receiveFromOldPhone();
+      setTransferMsg("");
+      toast("이전 폰 데이터를 옮겼습니다 — " + describeSummary(s), { duration: 6000 });
+      setTimeout(() => { window.location.reload(); }, 1800);
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "";
+      if (m === "NOT_FOUND") {
+        setTransferMsg("받을 데이터가 없습니다. 이미 받았거나 7일이 지났습니다");
+        setTransferInfo({ exists: false, savedAt: 0, bytes: 0, until: 0, fromSelf: false });
+      } else if (m === "BAD_DATA" || m === "NO_GZIP") setTransferMsg("받은 데이터를 읽지 못했습니다. 이전 폰에서 다시 보내 주세요");
+      else setTransferMsg("받지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요");
+      setTransferBusy(false);
+    }
+  };
+
+  const handleCancelTransfer = async () => {
+    if (transferBusy) return;
+    setTransferBusy(true);
+    try {
+      await cancelTransfer();
+      setTransferInfo({ exists: false, savedAt: 0, bytes: 0, until: 0, fromSelf: false });
+      setTransferMsg("보내기를 취소했습니다. 서버에서 지웠습니다");
+    } catch (e) {
+      setTransferMsg("취소하지 못했습니다. 인터넷을 확인해 주세요");
+    } finally {
+      setTransferBusy(false);
+    }
+  };
+
+  const shortDate = (t: number) => {
+    const d = new Date(t);
+    return (d.getMonth() + 1) + "월 " + d.getDate() + "일";
   };
 
   return (
@@ -642,6 +726,73 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               </Button>
             ) : null}
           </div>
+          {/* 새 폰으로 옮기기 — 회원키가 있는 기기에만 보입니다 */}
+          {memberProfile ? (
+          <div className="pt-3 border-t border-border/60">
+            <Label className="font-body text-sm text-gray-900">새 폰으로 옮기기</Label>
+            {transferInfo && transferInfo.exists && !transferInfo.fromSelf ? (
+              <div className="mt-2 rounded-md border border-sky-300 bg-sky-50 px-3 py-2.5">
+                <p className="text-xs leading-relaxed text-gray-900 font-gothic">
+                  이전 폰에서 보낸 데이터가 있습니다 ({shortDate(transferInfo.savedAt)} · {formatBytes(transferInfo.bytes)}).
+                  받으면 이 폰에 합쳐지고 서버에서는 지워집니다.
+                </p>
+                <Button
+                  type="button"
+                  className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
+                  disabled={transferBusy}
+                  onClick={handleReceiveFromOldPhone}
+                >
+                  <Download className="w-4 h-4 mr-1.5" />
+                  이전 폰 데이터 받기
+                </Button>
+              </div>
+            ) : (
+              <>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground font-gothic">
+                  직접 만든 단어장·단어, 성경 형광펜, 기도문, 화면 설정을 서버에 잠시 올려 둡니다.
+                  새 폰에 같은 회원키를 넣고 '이전 폰 데이터 받기'를 누르면 옮겨지고, 받는 즉시 서버에서 지워집니다.
+                  아무도 받지 않아도 7일 뒤 지워집니다.
+                </p>
+                {transferInfo && transferInfo.exists && transferInfo.fromSelf ? (
+                  <p className="mt-2 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-gray-900 font-gothic">
+                    보낸 데이터가 새 폰을 기다리고 있습니다 ({formatBytes(transferInfo.bytes)} · {transferInfo.until ? shortDate(transferInfo.until) + "까지" : "7일간"}).
+                    새 폰에 이 회원키를 넣으면 회원키가 새 폰으로 넘어갑니다.
+                  </p>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={"w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" + (transferConfirm ? " border-sky-400 text-sky-700" : "")}
+                  disabled={transferBusy}
+                  onClick={handleSendToNewPhone}
+                >
+                  <Smartphone className="w-4 h-4 mr-1.5" />
+                  {transferConfirm
+                    ? "한 번 더 누르면 보냅니다"
+                    : transferInfo && transferInfo.exists && transferInfo.fromSelf ? "지금 상태로 다시 보내기" : "새 폰으로 보내기"}
+                </Button>
+                {transferConfirm ? (
+                  <p className="mt-1.5 text-xs leading-relaxed text-sky-700 font-gothic">
+                    보낸 뒤 새 폰에 이 회원키를 넣으면, 이 폰의 회원 기능(성경·교재·회화집)은 꺼집니다.
+                    직접 만든 단어는 이 폰에도 그대로 남습니다.
+                  </p>
+                ) : null}
+                {transferInfo && transferInfo.exists && transferInfo.fromSelf ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
+                    disabled={transferBusy}
+                    onClick={handleCancelTransfer}
+                  >
+                    보내기 취소 (서버에서 지우기)
+                  </Button>
+                ) : null}
+              </>
+            )}
+            {transferMsg ? <p className="mt-1.5 text-xs leading-relaxed font-gothic text-muted-foreground">{transferMsg}</p> : null}
+          </div>
+          ) : null}
           {isAdminUI ? (
           <>
           <div>
@@ -908,24 +1059,30 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
           ) : null}
           <div className="pt-3 border-t border-border/60">
             <Label className="font-body text-sm text-gray-900">데이터 백업</Label>
-            <p className="mt-1 text-xs text-muted-foreground font-gothic">
-              {isAdminUI ? "모든 단어장을 CSV로 백업하고 복원합니다." : "모든 단어장을 CSV로 백업합니다."} 앱에서는 파일 저장이 되지 않으니 '복사'를 눌러 메모장이나 메신저에 붙여넣어 보관하세요.
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground font-gothic">
+              앱에 들어 있는 기본 단어장은 빼고, 직접 만든 것만 담습니다.
+              '파일 저장'은 단어장·형광펜·기도문·설정까지 다운로드 폴더에 백업 파일로 저장하고,
+              '복사'는 직접 넣은 단어만 글로 복사합니다.
             </p>
             <div className="flex gap-2 mt-2">
               <Button type="button" variant="outline" className="flex-1 text-xs" onClick={handleExportCopy}>
                 <Copy className="w-4 h-4 mr-1.5" />
                 복사
               </Button>
-              <Button type="button" variant="outline" className="flex-1 text-xs" onClick={handleExportDownload}>
+              <Button type="button" variant="outline" className="flex-1 text-xs" disabled={backupBusy} onClick={handleExportDownload}>
                 <Download className="w-4 h-4 mr-1.5" />
                 파일 저장
               </Button>
             </div>
+            <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={() => setRestoreOpen(true)}>
+              <RotateCcw className="w-4 h-4 mr-1.5" />
+              백업 되돌리기 (파일 또는 붙여넣기)
+            </Button>
             {isAdminUI ? (
             <>
             <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={() => setImportOpen(true)}>
               <Upload className="w-4 h-4 mr-1.5" />
-              CSV 가져오기 (복원)
+              CSV 가져오기 (단어 추가)
             </Button>
             <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={() => setConfirmClearData(true)}>
               <Trash2 className="w-4 h-4 mr-1.5" />
@@ -965,6 +1122,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
           </div>
         </div>
         <CSVImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={() => {}} />
+        <BackupRestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} />
 
         <AlertDialog open={confirmClearData} onOpenChange={setConfirmClearData}>
           <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
