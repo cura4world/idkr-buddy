@@ -12,6 +12,8 @@ import BackupRestoreDialog from "@/components/BackupRestoreDialog";
 import {
   TransferInfo, getTransferInfo, sendToNewPhone, receiveFromOldPhone, cancelTransfer,
   buildBackupFile, describeSummary, formatBytes,
+  BackupInfo, BackupShrinkError, getBackupInfo, backupNow, restoreFromServerBackup,
+  isAutoBackupBlocked, describeBackupMeta, isInApp,
 } from "@/lib/transfer";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Copy, Download, Upload, Trash2, Minus, Plus, Type, Volume2, KeyRound, Smartphone, RotateCcw } from "lucide-react";
@@ -87,6 +89,12 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const [transferConfirm, setTransferConfirm] = useState(false);
   const [transferMsg, setTransferMsg] = useState("");
   const [backupBusy, setBackupBusy] = useState(false);
+  // 서버 자동 백업 (회원키) — null = 아직 모름(또는 연결 안 됨)
+  const [backupInfo, setBackupInfo] = useState<BackupInfo | null>(null);
+  const [srvBusy, setSrvBusy] = useState(false);
+  const [srvMsg, setSrvMsg] = useState("");
+  const [srvBlocked, setSrvBlocked] = useState(false);
+  const [srvForceConfirm, setSrvForceConfirm] = useState(false);
   const [confirmClearData, setConfirmClearData] = useState(false);
   const [confirmClearTts, setConfirmClearTts] = useState(false);
   // 성경 파일 불러오기 — 여러 파일을 한 번에 고르면 이름으로 역본을 알아서 판별합니다.
@@ -146,9 +154,17 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
       setTransferConfirm(false);
       setTransferMsg("");
       setTransferBusy(false);
+      setBackupInfo(null);
+      setSrvBusy(false);
+      setSrvMsg("");
+      setSrvBlocked(isAutoBackupBlocked());
+      setSrvForceConfirm(false);
       if (getMemberProfile()) {
         getTransferInfo()
           .then((info) => setTransferInfo(info))
+          .catch(() => {});
+        getBackupInfo()
+          .then((info) => setBackupInfo(info))
           .catch(() => {});
       }
     }
@@ -216,8 +232,17 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
         waiting = !!(info && info.exists && !info.fromSelf);
       } catch (e) {}
       if (waiting) toast("이전 폰에서 보낸 데이터가 있습니다. 설정을 다시 열고 '이전 폰 데이터 받기'를 눌러 주세요", { duration: 8000 });
+      // 보낸 데이터는 없지만 서버 백업이 있으면(폰 분실·고장 뒤 새 폰) 되돌리기를 알려 줍니다
+      let hasBackup = false;
+      if (!waiting) {
+        try {
+          const b = await getBackupInfo();
+          hasBackup = !!(b && b.exists);
+        } catch (e) {}
+        if (hasBackup) toast("서버 백업이 있습니다. 설정을 다시 열고 '서버 백업에서 되돌리기'를 눌러 주세요", { duration: 8000 });
+      }
       // 판·개인 단어장이 바뀌므로 앱을 새로 그립니다
-      setTimeout(() => { window.location.reload(); }, waiting ? 3500 : 1500);
+      setTimeout(() => { window.location.reload(); }, waiting || hasBackup ? 3500 : 1500);
     } catch (e) {
       const m = e instanceof Error ? e.message : "";
       if (m === "BAD_FORMAT") setMemberMsg("회원키 형식이 맞지 않습니다 (KK-XXXX-XXXX-XXXX)");
@@ -507,6 +532,18 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   // 앱(APK)은 blob: 주소를 저장하지 못하고 data: 주소만 다운로드 폴더에 씁니다.
   const handleExportDownload = async () => {
     if (backupBusy) return;
+    // 앱(APK)은 지금 파일을 다운로드 폴더에 쓰지 못합니다(저장소 제한).
+    // 실패시키지 않고 대신 쓸 수 있는 길을 알려 줍니다. APK 수정은 공개판 때 함께 합니다.
+    if (isInApp()) {
+      if (memberProfile) {
+        toast("앱에서는 파일 저장 대신 서버 자동 백업이 됩니다" +
+          (backupInfo && backupInfo.exists ? " (마지막 백업: " + shortDate(backupInfo.savedAt) + ")" : "") +
+          ". 바로 올리려면 위의 '지금 백업'을 눌러 주세요", { duration: 7000 });
+      } else {
+        toast("앱에서는 아직 파일 저장이 되지 않습니다. '복사'로 단어를 보관해 주세요", { duration: 7000 });
+      }
+      return;
+    }
     setBackupBusy(true);
     try {
       const f = await buildBackupFile();
@@ -576,6 +613,52 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
       setTransferMsg("취소하지 못했습니다. 인터넷을 확인해 주세요");
     } finally {
       setTransferBusy(false);
+    }
+  };
+
+  // 지금 백업 — 서버 것보다 크게 줄었으면 한 번 더 눌러야 덮어씁니다
+  const handleBackupNow = async () => {
+    if (srvBusy) return;
+    setSrvBusy(true);
+    setSrvMsg("백업하는 중...");
+    try {
+      const r = await backupNow(srvForceConfirm);
+      setSrvForceConfirm(false);
+      setSrvBlocked(false);
+      setSrvMsg("백업했습니다 — " + describeSummary(r.summary) + " (" + formatBytes(r.bytes) + ")");
+      const fresh = await getBackupInfo();
+      if (fresh) setBackupInfo(fresh);
+    } catch (e) {
+      if (e instanceof BackupShrinkError) {
+        setSrvForceConfirm(true);
+        setSrvMsg("서버 백업(" + (e.savedAt ? shortDate(e.savedAt) + " · " : "") + describeBackupMeta(e.existing) +
+          ")이 이 폰보다 훨씬 많습니다. 새 폰이라면 먼저 '서버 백업에서 되돌리기'를 하세요. 그래도 이 폰 상태로 덮어쓰려면 '지금 백업'을 한 번 더 누르세요");
+      } else {
+        const m = e instanceof Error ? e.message : "";
+        if (m === "TOO_BIG") setSrvMsg("백업이 20MB를 넘습니다");
+        else if (m === "REVOKED") setSrvMsg("이 기기의 회원키가 더 이상 유효하지 않습니다");
+        else setSrvMsg("백업하지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요");
+      }
+    } finally {
+      setSrvBusy(false);
+    }
+  };
+
+  const handleRestoreServer = async (prev: boolean) => {
+    if (srvBusy) return;
+    setSrvBusy(true);
+    setSrvMsg("되돌리는 중...");
+    try {
+      const s = await restoreFromServerBackup(prev);
+      setSrvMsg("");
+      toast("서버 백업을 되돌렸습니다 — 새로 들어간 단어 " + s.words + "개" + (s.categories > 0 ? ", 단어장 " + s.categories + "개" : ""), { duration: 6000 });
+      setTimeout(() => { window.location.reload(); }, 1800);
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "";
+      if (m === "NOT_FOUND") setSrvMsg("서버에 백업이 없습니다");
+      else if (m === "BAD_DATA" || m === "NO_GZIP") setSrvMsg("백업을 읽지 못했습니다");
+      else setSrvMsg("되돌리지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요");
+      setSrvBusy(false);
     }
   };
 
@@ -726,6 +809,63 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               </Button>
             ) : null}
           </div>
+          {/* 서버 자동 백업 — 회원키가 있는 기기에만 보입니다 */}
+          {memberProfile ? (
+          <div className="pt-3 border-t border-border/60">
+            <Label className="font-body text-sm text-gray-900">서버 자동 백업</Label>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground font-gothic">
+              직접 만든 단어장·단어, 형광펜, 기도문, 설정을 일주일에 한 번, 와이파이에 연결돼 있을 때 서버에 자동으로 백업합니다.
+              폰을 잃어버리거나 고장 나면 새 폰에 회원키를 넣고 여기서 되돌리면 됩니다.
+            </p>
+            <p className="mt-2 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-gray-900 font-gothic">
+              {backupInfo === null
+                ? "백업 상태를 확인하는 중..."
+                : backupInfo.exists
+                  ? "마지막 백업: " + shortDate(backupInfo.savedAt) + " · " + describeBackupMeta(backupInfo.meta)
+                  : "아직 서버 백업이 없습니다. 와이파이에서 앱을 켜면 자동으로 만들어집니다"}
+            </p>
+            {srvBlocked && backupInfo && backupInfo.exists ? (
+              <p className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-gray-900 font-gothic">
+                서버 백업이 이 폰보다 많아서 자동 백업을 멈췄습니다. 새 폰이라면 아래 '서버 백업에서 되돌리기'를 눌러 주세요.
+              </p>
+            ) : null}
+            <div className="flex gap-2 mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className={"flex-1 whitespace-normal h-auto py-2.5 leading-snug text-xs" + (srvForceConfirm ? " border-red-300 text-red-600" : "")}
+                disabled={srvBusy}
+                onClick={handleBackupNow}
+              >
+                <Upload className="w-4 h-4 mr-1.5" />
+                {srvForceConfirm ? "그래도 덮어쓰기" : "지금 백업"}
+              </Button>
+              {backupInfo && backupInfo.exists ? (
+                <Button
+                  type="button"
+                  variant={srvBlocked ? "default" : "outline"}
+                  className="flex-1 whitespace-normal h-auto py-2.5 leading-snug text-xs"
+                  disabled={srvBusy}
+                  onClick={() => handleRestoreServer(false)}
+                >
+                  <RotateCcw className="w-4 h-4 mr-1.5" />
+                  서버 백업에서 되돌리기
+                </Button>
+              ) : null}
+            </div>
+            {backupInfo && backupInfo.exists && backupInfo.prevSavedAt ? (
+              <button
+                type="button"
+                className="mt-1.5 text-xs text-muted-foreground underline font-gothic"
+                disabled={srvBusy}
+                onClick={() => handleRestoreServer(true)}
+              >
+                한 단계 전 백업({shortDate(backupInfo.prevSavedAt)})에서 되돌리기
+              </button>
+            ) : null}
+            {srvMsg ? <p className="mt-1.5 text-xs leading-relaxed font-gothic text-muted-foreground">{srvMsg}</p> : null}
+          </div>
+          ) : null}
           {/* 새 폰으로 옮기기 — 회원키가 있는 기기에만 보입니다 */}
           {memberProfile ? (
           <div className="pt-3 border-t border-border/60">
@@ -1061,7 +1201,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             <Label className="font-body text-sm text-gray-900">데이터 백업</Label>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground font-gothic">
               앱에 들어 있는 기본 단어장은 빼고, 직접 만든 것만 담습니다.
-              '파일 저장'은 단어장·형광펜·기도문·설정까지 다운로드 폴더에 백업 파일로 저장하고,
+              '파일 저장'은 단어장·형광펜·기도문·설정까지 백업 파일로 저장합니다(브라우저에서. 앱에서는 회원키가 있으면 서버 자동 백업이 대신합니다).
               '복사'는 직접 넣은 단어만 글로 복사합니다.
             </p>
             <div className="flex gap-2 mt-2">
