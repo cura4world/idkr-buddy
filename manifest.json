@@ -1,0 +1,27 @@
+{
+  "name": "Kata kata - 인도네시아어 단어장",
+  "short_name": "Kata kata",
+  "description": "인도네시아어-한국어 단어 학습 앱",
+  "start_url": "/idkr-buddy/",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
+  "background_color": "#F3EFEA",
+  "theme_color": "#F3EFEA",
+  "lang": "en",
+  "scope": "/idkr-buddy/",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/idkr-buddy/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/idkr-buddy/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
