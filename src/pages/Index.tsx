@@ -16,7 +16,7 @@ import {
   clearNextPhrase,
   phraseToQuery,
 } from "@/lib/peribahasa";
-import SettingsDialog from "@/components/SettingsDialog";
+import SettingsDialog, { REOPEN_SETTINGS_KEY } from "@/components/SettingsDialog";
 import MedaliBadge from "@/components/MedaliBadge";
 import MedaliNudge from "@/components/MedaliNudge";
 import MedaliSheet from "@/components/MedaliSheet";
@@ -127,6 +127,17 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 const Index = () => {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // 설정 창에서 다른 화면(회원키 관리)으로 갔다가 뒤로 돌아오면 설정 창을 다시 엽니다.
+  // 설정 창은 화면(라우트)이 아니라 메인 위에 뜬 창이라, 표시가 없으면 메인만 보입니다.
+  // 표시는 SettingsDialog 가 나갈 때 남기고, 다시 열릴 때 지웁니다.
+  useEffect(() => {
+    try {
+      const at = Number(sessionStorage.getItem(REOPEN_SETTINGS_KEY) || "0");
+      if (at > 0 && Date.now() - at < 30 * 60 * 1000) setSettingsOpen(true);
+      else if (at > 0) sessionStorage.removeItem(REOPEN_SETTINGS_KEY);
+    } catch (e) {}
+  }, []);
 
   // 짝꿍 비교용 아이디. 없으면 첫 진입에 닫을 수 없는 팝업이 떠서 받습니다.
   // 태블릿·세컨폰처럼 "사용 안 함"을 고른 기기는 다시 묻지 않습니다.
