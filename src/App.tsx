@@ -14,6 +14,7 @@ import OneToOne from "./pages/OneToOne";
 import MemberAdmin from "./pages/MemberAdmin";
 import { refreshMembershipOnStart } from "@/lib/access";
 import { autoSyncBibleOnStart } from "@/lib/bibleAutoSync";
+import { autoBackupOnStart } from "@/lib/transfer";
 import { toast } from "sonner";
 import Prayer from "./pages/Prayer";
 import Sermons from "./pages/Sermons";
@@ -50,10 +51,20 @@ const queryClient = new QueryClient();
 // 회원 상태를 풀고 받아 둔 보호 내용을 지웁니다(인터넷이 안 되면 그대로 둠).
 // 그 확인이 끝난 뒤, 이 기기에 빠진 성경 역본이 있고 와이파이면 배경에서 받습니다
 // (회원 확인보다 먼저 받으면, 끊긴 기기에 받았다가 곧바로 지우는 일이 생깁니다).
-refreshMembershipOnStart()
-  .catch(() => {})
+// 같은 확인이 끝난 뒤, 회원키 기기면 주 1회·와이파이일 때 개인 데이터를 서버에 자동 백업합니다
+// (transfer.ts). 서버 백업이 이 폰보다 훨씬 많아 거절되면(새 폰) 되돌리기를 한 번 알립니다.
+const memberChecked = refreshMembershipOnStart().catch(() => {});
+memberChecked
   .then(() => autoSyncBibleOnStart())
   .then((got) => { if (got.length > 0) toast("성경을 이 기기에 받았습니다 — " + got.join(" · ")); })
+  .catch(() => {});
+memberChecked
+  .then(() => autoBackupOnStart())
+  .then((r) => {
+    if (r === "blocked-new") {
+      toast("서버 백업이 이 폰보다 많습니다. 설정에서 '서버 백업에서 되돌리기'를 눌러 주세요", { duration: 8000 });
+    }
+  })
   .catch(() => {});
 
 const App = () => (
