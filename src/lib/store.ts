@@ -73,6 +73,20 @@ const defaultWords: Word[] = [
   { id: "8", word: "Tidur", meaning: "자다", example: "Saya mau tidur.", exampleMeaning: "저는 자고 싶어요.", categoryId: "daily", createdAt: Date.now() },
 ];
 
+// 앱에 내장된 단어인가 — 기본·개인 폴더 단어(seed)와 처음 설치 때 깔리는 예시 단어 8개.
+// 어느 기기에서나 저절로 생기므로 백업·옮기기에 담지 않습니다.
+export function isBuiltInWord(w: Word): boolean {
+  if (w.isShared) return true;
+  return defaultWords.some((d) => d.id === w.id && d.word === w.word);
+}
+
+// 어느 기기에나 저절로 있는 단어장인가 (기본·개인 폴더, 예시 4개, 내 단어장, 지도 단어장)
+export function isBuiltInCategory(c: Category): boolean {
+  if (c.isShared) return true;
+  if (c.id === MY_WORDBOOK_ID || c.id === "map-words") return true;
+  return defaultCategories.some((d) => d.id === c.id);
+}
+
 export function getCategories(): Category[] {
   try {
     const stored = localStorage.getItem(CATEGORIES_KEY);
@@ -416,6 +430,14 @@ export function toggleSavedWord(wordId: string): boolean {
   }
 }
 
+// '다시 외울' 표시 목록을 통째로 씁니다 (새 폰으로 옮기기·백업 되돌리기에서 씁니다)
+export function setSavedWordIds(ids: string[]) {
+  try {
+    const uniq = Array.from(new Set((ids || []).filter((x) => typeof x === "string" && x)));
+    localStorage.setItem(SAVED_KEY, JSON.stringify(uniq));
+  } catch (e) {}
+}
+
 export function getSavedWords(): Word[] {
   const ids = getSavedWordIds();
   return getWords().filter((w) => ids.includes(w.id));
@@ -450,6 +472,34 @@ export function exportWordsToCSV(): { csv: string; count: number } {
   const lines: string[] = [];
   for (const cat of categories) {
     const catWords = words.filter((w) => w.categoryId === cat.id);
+    for (const w of catWords) {
+      lines.push([
+        csvField(w.word),
+        csvField(w.meaning),
+        csvField(w.example),
+        csvField(w.exampleMeaning),
+        csvField(cat.name),
+        csvField(cat.emoji),
+        savedIds.includes(w.id) ? "1" : "",
+      ].join(","));
+    }
+  }
+  const bom = String.fromCharCode(0xFEFF);
+  return { csv: bom + lines.join(CR + NL) + (lines.length > 0 ? CR + NL : ""), count: lines.length };
+}
+
+// 직접 넣은 단어만 CSV로 (백업 '복사'용)
+// 앱에 내장된 단어(isBuiltInWord)는 새 기기에서 저절로 생기므로 빼서,
+// 클립보드에 담기는 양을 사용자가 만든 몫만큼으로 줄입니다. 형식은 exportWordsToCSV 와 같습니다.
+export function exportPersonalWordsToCSV(): { csv: string; count: number } {
+  const categories = getCategories();
+  const words = getWords();
+  const savedIds = getSavedWordIds();
+  const NL = String.fromCharCode(10);
+  const CR = String.fromCharCode(13);
+  const lines: string[] = [];
+  for (const cat of categories) {
+    const catWords = words.filter((w) => w.categoryId === cat.id && !isBuiltInWord(w));
     for (const w of catWords) {
       lines.push([
         csvField(w.word),
