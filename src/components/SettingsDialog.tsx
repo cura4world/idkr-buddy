@@ -77,6 +77,13 @@ function formatMemberInput(raw: string, prev: string): string {
   return out;
 }
 
+// 설정 창에서 다른 화면으로 나갈 때 남기는 표시(sessionStorage, 값 = 남긴 시각).
+// 메인(Index)이 다시 그려질 때 이 표시가 있으면 설정 창을 다시 엽니다 — 뒤로 가기로
+// 돌아왔을 때 메인이 아니라 설정 창으로 돌아오게 하려는 것입니다. 설정 창이 열리면 지웁니다.
+export const REOPEN_SETTINGS_KEY = "kata-reopen-settings";
+// 다시 열릴 때 그 자리로 스크롤할 칸의 id
+const MEMBER_SECTION_ID = "settings-member-section";
+
 export default function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const navigate = useNavigate();
   const [apiKey, setApiKey] = useState("");
@@ -166,6 +173,20 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
         getBackupInfo()
           .then((info) => setBackupInfo(info))
           .catch(() => {});
+      }
+      // 회원키 관리에서 뒤로 돌아온 것이면 표시를 지우고 회원키 칸으로 스크롤합니다
+      let returning = false;
+      try {
+        returning = !!sessionStorage.getItem(REOPEN_SETTINGS_KEY);
+        sessionStorage.removeItem(REOPEN_SETTINGS_KEY);
+      } catch (e) {}
+      if (returning) {
+        setTimeout(() => {
+          const el = document.getElementById(MEMBER_SECTION_ID);
+          if (el) {
+            try { el.scrollIntoView({ block: "start" }); } catch (e) { el.scrollIntoView(); }
+          }
+        }, 250);
       }
     }
   }, [open]);
@@ -737,7 +758,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             </p>
           </div>
           {/* 회원키 — 모든 판에 보입니다 */}
-          <div className="pt-3 border-t border-border/60">
+          <div id={MEMBER_SECTION_ID} className="pt-3 border-t border-border/60">
             <Label className="font-body text-sm text-gray-900">회원키</Label>
             {memberProfile ? (
               <>
@@ -802,7 +823,11 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 type="button"
                 variant="outline"
                 className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
-                onClick={() => { onOpenChange(false); navigate("/members"); }}
+                onClick={() => {
+                  try { sessionStorage.setItem(REOPEN_SETTINGS_KEY, String(Date.now())); } catch (e) {}
+                  onOpenChange(false);
+                  navigate("/members");
+                }}
               >
                 <KeyRound className="w-4 h-4 mr-1.5" />
                 회원키 관리 (발급·기기 풀어주기·끊기)
@@ -943,7 +968,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               value={sermonBase}
               onChange={(e) => setSermonBaseState(e.target.value)}
               placeholder="https://kata-sermon.○○○.workers.dev"
-              className="mt-1"
+              className="mt-1 text-sm"
             />
             <Input
               type="password"
@@ -951,7 +976,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               value={sermonKey}
               onChange={(e) => setSermonKeyState(e.target.value)}
               placeholder="비밀키"
-              className="mt-2"
+              className="mt-2 text-sm"
             />
             <p className="mt-2 text-xs text-muted-foreground font-gothic">
               PC에서 올린 설교문을 이 폰으로 가져오는 데 씁니다. 주소와 비밀키는 이 기기에만 저장됩니다.
@@ -965,7 +990,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               value={percakapanBase}
               onChange={(e) => setPercakapanBaseState(e.target.value)}
               placeholder="https://kata-percakapan.○○○.workers.dev"
-              className="mt-1"
+              className="mt-1 text-sm"
             />
             <Input
               type="password"
@@ -973,7 +998,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               value={percakapanKey}
               onChange={(e) => setPercakapanKeyState(e.target.value)}
               placeholder="비밀키"
-              className="mt-2"
+              className="mt-2 text-sm"
             />
             <p className="mt-2 text-xs text-muted-foreground font-gothic">
               개인 회화집을 백업하고, 앱을 다시 설치했을 때 되돌리는 데 씁니다. 주소와 비밀키는 이 기기에만 저장됩니다.
@@ -987,7 +1012,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="AIza..."
-              className="mt-1"
+              className="mt-1 text-sm"
             />
             <p className="mt-2 text-xs text-muted-foreground font-gothic">
               단어 추가 시 뜻과 예문을 자동으로 채우는 데 사용됩니다. 키는 이 기기에만 저장되며, Google AI Studio에서 무료로 발급받을 수 있습니다. 비워두고 저장하면 키가 삭제됩니다.
@@ -1001,7 +1026,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               value={claudeKey}
               onChange={(e) => setClaudeKey(e.target.value)}
               placeholder="sk-ant-..."
-              className="mt-1"
+              className="mt-1 text-sm"
             />
             <p className="mt-2 text-xs text-muted-foreground font-gothic">
               인도네시아어 묵상 생성에 사용됩니다. console.anthropic.com에서 발급받을 수 있습니다. 비워두고 저장하면 키가 삭제됩니다.
