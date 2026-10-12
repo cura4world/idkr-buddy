@@ -1,5 +1,6 @@
 // src/lib/transfer.ts
-// 개인 데이터 옮기기 — "새 폰으로 보내기 / 이전 폰 데이터 받기" 와 백업 파일 저장·되돌리기.
+// 개인 데이터 옮기기·백업 — "새 폰으로 보내기 / 이전 폰 데이터 받기"(7일 일회용),
+// 서버 자동 백업(주 1회·와이파이·만료 없음), 백업 파일 저장·되돌리기.
 //
 // 담는 것은 사용자가 직접 만든 것뿐입니다. 앱에 내장된 기본·개인 폴더 단어(seed),
 // 서버에서 다시 받는 성경·교재·회화집, 다시 만들 수 있는 캐시(사전·이야기·음성 등)는 뺍니다.
@@ -667,6 +668,203 @@ export async function receiveFromOldPhone(): Promise<BundleSummary> {
 export async function cancelTransfer(): Promise<void> {
   const res = await memberRequest("/transfer", { method: "DELETE" }, 15000);
   checkStatus(res);
+}
+
+// ---------- 서버 자동 백업 (지워지지 않는 칸) ----------
+//
+// 고장·분실 대비. 주 1회, 와이파이일 때, 지난번과 내용이 다를 때만 조용히 올립니다.
+// 서버는 최신 + 바로 전 두 벌을 둡니다. 새 것이 지금 서버 것보다 크게 줄면(절반 미만)
+// 서버가 거절합니다(WOULD_SHRINK) — 새 폰에 키를 넣자마자 빈 상태가 좋은 백업을 덮어쓰는
+// 사고를 막기 위해서입니다. 그때는 자동 백업을 멈춰 두고 설정에서 "되돌리기"를 권합니다.
+
+const BACKUP_LAST_KEY = "kata-backup-last";       // 마지막으로 백업을 확인한 시각(올렸거나, 바뀐 것이 없었거나)
+const BACKUP_HASH_KEY = "kata-backup-hash";       // 마지막으로 올린 내용의 지문
+const BACKUP_BLOCKED_KEY = "kata-backup-blocked"; // 서버 백업이 더 많아 자동 백업을 멈춘 상태
+const AUTO_BACKUP_EVERY_MS = 7 * 24 * 60 * 60 * 1000;
+const AUTO_BACKUP_DELAY_MS = 8000; // 앱 첫 화면·성경 받기와 네트워크를 다투지 않게
+
+export interface BackupInfo {
+  exists: boolean;
+  savedAt: number;
+  bytes: number;
+  meta: Record<string, number>;
+  prevSavedAt: number;
+}
+
+export class BackupShrinkError extends Error {
+  existing: Record<string, number>;
+  savedAt: number;
+  constructor(existing: Record<string, number>, savedAt: number) {
+    super("WOULD_SHRINK");
+    this.existing = existing;
+    this.savedAt = savedAt;
+  }
+}
+
+/** 백업 크기 비교에 쓰는 전체 건수 */
+export function summaryTotal(s: BundleSummary): number {
+  return s.words + s.categories + s.saved + s.highlights + s.prayers + s.ink + s.medali + s.phrases;
+}
+
+function metaOf(s: BundleSummary): Record<string, number> {
+  return {
+    total: summaryTotal(s),
+    words: s.words,
+    categories: s.categories,
+    highlights: s.highlights,
+    prayers: s.prayers,
+  };
+}
+
+/** 서버 백업 요약(meta)을 사람이 읽는 말로 */
+export function describeBackupMeta(meta: Record<string, number>): string {
+  const parts: string[] = ["단어 " + (Number(meta.words) || 0) + "개"];
+  if (meta.categories) parts.push("단어장 " + meta.categories + "개");
+  if (meta.highlights) parts.push("형광펜 " + meta.highlights + "장");
+  if (meta.prayers) parts.push("기도문 " + meta.prayers + "개");
+  return parts.join(" · ");
+}
+
+async function contentFingerprint(b: PersonalBundle): Promise<string> {
+  const text = JSON.stringify({ ...b, createdAt: 0 });
+  try {
+    const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(d)).map((x) => (x < 16 ? "0" : "") + x.toString(16)).join("");
+  } catch (e) {
+    // subtle 을 못 쓰는 환경 — 길이와 간단한 합으로 대신합니다
+    let h = 0;
+    for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
+    return "n" + text.length + ":" + h;
+  }
+}
+
+/** 와이파이(또는 유선)로 확인될 때만 true. 알 수 없으면 false (데이터 요금 보호, bibleAutoSync 와 같음) */
+function onWifi(): boolean {
+  try {
+    const c = (navigator as unknown as { connection?: { type?: string } }).connection;
+    const t = c && c.type;
+    return t === "wifi" || t === "ethernet";
+  } catch (e) {
+    return false;
+  }
+}
+
+/** 이 기기가 앱(APK) 안에서 도는가 — APK 만 window.AndroidTTS 를 붙입니다 */
+export function isInApp(): boolean {
+  try {
+    return typeof (window as unknown as { AndroidTTS?: unknown }).AndroidTTS !== "undefined";
+  } catch (e) {
+    return false;
+  }
+}
+
+export function isAutoBackupBlocked(): boolean {
+  return lsGet(BACKUP_BLOCKED_KEY) === "1";
+}
+
+/** 서버 백업 상태. 회원이 아니거나 연결이 안 되면 null. */
+export async function getBackupInfo(): Promise<BackupInfo | null> {
+  try {
+    const res = await memberRequest("/backup/info", { method: "GET" }, 10000);
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (!d || !d.exists) return { exists: false, savedAt: 0, bytes: 0, meta: {}, prevSavedAt: 0 };
+    return {
+      exists: true,
+      savedAt: Number(d.savedAt) || 0,
+      bytes: Number(d.bytes) || 0,
+      meta: d.meta && typeof d.meta === "object" ? d.meta : {},
+      prevSavedAt: Number(d.prevSavedAt) || 0,
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * 지금 상태를 서버 백업에 올립니다.
+ * force = false 면 서버 것보다 크게 줄었을 때 BackupShrinkError 로 거절됩니다.
+ * 에러: NOT_MEMBER · TOO_BIG · REVOKED · FETCH_FAILED · BackupShrinkError
+ */
+export async function backupNow(force: boolean): Promise<{ summary: BundleSummary; bytes: number; savedAt: number }> {
+  const { bundle, summary } = await collectBundle();
+  const bytes = await gzipText(JSON.stringify(bundle));
+  if (bytes.byteLength > 20 * 1024 * 1024) throw new Error("TOO_BIG");
+  const res = await memberRequest("/backup" + (force ? "?force=1" : ""), {
+    method: "PUT",
+    headers: {
+      "content-type": "application/octet-stream",
+      "x-kata-backup-meta": JSON.stringify(metaOf(summary)),
+    },
+    body: bytes,
+  }, 120000);
+  if (res.status === 409) {
+    let d: { error?: string; existing?: Record<string, number>; savedAt?: number } = {};
+    try { d = await res.json(); } catch (e) {}
+    if (d.error === "WOULD_SHRINK") throw new BackupShrinkError(d.existing || {}, Number(d.savedAt) || 0);
+  }
+  checkStatus(res);
+  let savedAt = Date.now();
+  try { savedAt = Number((await res.json()).savedAt) || savedAt; } catch (e) {}
+  lsSet(BACKUP_LAST_KEY, String(Date.now()));
+  lsSet(BACKUP_HASH_KEY, await contentFingerprint(bundle));
+  try { localStorage.removeItem(BACKUP_BLOCKED_KEY); } catch (e) {}
+  return { summary, bytes: bytes.byteLength, savedAt };
+}
+
+/**
+ * 서버 백업(prev = true 면 한 단계 전 것)을 받아 이 기기에 합칩니다. 지우지 않습니다.
+ * 호출한 쪽에서 앱을 새로 고쳐야 합니다. 에러: NOT_MEMBER · NOT_FOUND · REVOKED · BAD_DATA · NO_GZIP · FETCH_FAILED
+ */
+export async function restoreFromServerBackup(prev: boolean): Promise<BundleSummary> {
+  const res = await memberRequest("/backup" + (prev ? "?prev=1" : ""), { method: "GET" }, 120000);
+  checkStatus(res);
+  const bundle = await parseBackupBytes(new Uint8Array(await res.arrayBuffer()));
+  if (!bundle) throw new Error("BAD_DATA");
+  const summary = await applyBundle(bundle);
+  // 합친 상태를 다음 기회에 바로 올리도록 시각을 지우고, 멈춤도 풉니다
+  try {
+    localStorage.removeItem(BACKUP_BLOCKED_KEY);
+    localStorage.removeItem(BACKUP_LAST_KEY);
+  } catch (e) {}
+  return summary;
+}
+
+let autoStarted = false;
+
+/**
+ * 앱이 켜질 때 한 번. 회원키 기기에서, 지난 확인 뒤 7일이 지났고 와이파이일 때만
+ * 내용이 바뀌었으면 서버에 올립니다.
+ * 돌려주는 값: "blocked-new" 면 이번에 처음 멈춘 것이니 사용자에게 한 번 알립니다.
+ */
+export async function autoBackupOnStart(): Promise<"skipped" | "same" | "saved" | "blocked" | "blocked-new" | "failed"> {
+  if (autoStarted) return "skipped";
+  autoStarted = true;
+  if (!memberHeaders()) return "skipped";
+  const last = Number(lsGet(BACKUP_LAST_KEY) || "0");
+  if (last > 0 && Date.now() - last < AUTO_BACKUP_EVERY_MS) return "skipped";
+  await new Promise((r) => setTimeout(r, AUTO_BACKUP_DELAY_MS));
+  try { if (navigator.onLine === false) return "skipped"; } catch (e) {}
+  if (!onWifi()) return "skipped";
+  try {
+    const { bundle } = await collectBundle();
+    const fp = await contentFingerprint(bundle);
+    if (fp === lsGet(BACKUP_HASH_KEY)) {
+      lsSet(BACKUP_LAST_KEY, String(Date.now()));
+      return "same";
+    }
+    // 비어 있는 새 폰이라도 올려 봅니다 — 서버에 더 많은 백업이 있으면 서버가 거절하고,
+    // 그 거절이 "되돌리기를 하세요" 안내의 신호가 됩니다(아래 catch).
+    await backupNow(false);
+    return "saved";
+  } catch (e) {
+    if (e instanceof BackupShrinkError) {
+      const wasBlocked = isAutoBackupBlocked();
+      lsSet(BACKUP_BLOCKED_KEY, "1");
+      return wasBlocked ? "blocked" : "blocked-new";
+    }
+    return "failed";
+  }
 }
 
 // ---------- 백업 파일 ----------
