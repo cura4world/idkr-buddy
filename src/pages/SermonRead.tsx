@@ -5,6 +5,7 @@
 // 인도네시아어와 한국어를 뒤집지 않고 한 화면에 위아래로 같이 보여줍니다.
 
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -42,6 +43,7 @@ import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveT
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import {
   SermonBlock,
+  SermonFmt,
   SermonRecord,
   getCachedSermon,
   fetchSermon,
@@ -142,7 +144,7 @@ interface GroupDraft {
   type: string;
 }
 
-const buildAudioGroups = (bs: SermonBlock[]): AudioGroup[] => {
+const buildAudioGroups = (bs: SermonBlock[], qt: boolean): AudioGroup[] => {
   const out: GroupDraft[] = [];
   let cur: GroupDraft | null = null;
   for (let i = 0; i < bs.length; i++) {
@@ -184,6 +186,11 @@ const buildAudioGroups = (bs: SermonBlock[]): AudioGroup[] => {
       continue;
     }
     if (b.kind === "heading") {
+      // QT 소제목은 스피커 없이 묶음만 끊습니다 (장절 판별도 하지 않습니다).
+      if (qt) {
+        cur = null;
+        continue;
+      }
       if (isSilentHeading(raw)) {
         cur = null;
         continue;
@@ -956,6 +963,76 @@ const SermonRead = () => {
         </span>{" "}
       </span>
     ));
+
+  // ---------- QT 성경공부 (워드 서식 그대로) ----------
+  // 워드 half-point → em. 본문 기준(17px)에 맞춰 22(11pt) = 0.863em 입니다.
+  const qtEm = (sz?: number): string => (((sz || 22) * 2) / 3 / 17).toFixed(3) + "em";
+
+  const qtLineStyle = (f?: SermonFmt): CSSProperties => ({
+    fontSize: qtEm(f && f.sz),
+    fontWeight: f && f.b ? 700 : 400,
+    color: f && f.c ? "#" + f.c : undefined,
+  });
+
+  // 워드의 15% 음영. 줄이 접혀도 각 줄마다 배경이 둥글게 이어지도록 clone 을 줍니다.
+  const qtShade = (f: SermonFmt | undefined, node: ReactNode): ReactNode =>
+    f && f.sh ? (
+      <span
+        className="bg-black/15 dark:bg-white/20 rounded-sm px-1"
+        style={{ boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" }}
+      >
+        {node}
+      </span>
+    ) : (
+      node
+    );
+
+  // s 가 줄의 start 번째 글자부터라면, 줄 맨 앞 bp 글자에 해당하는 부분만 굵게 합니다.
+  const qtBold = (s: string, start: number, bp: number): ReactNode => {
+    const n = Math.max(0, Math.min(s.length, bp - start));
+    if (n === 0) return s;
+    return (
+      <>
+        <strong style={{ fontWeight: 700 }}>{s.slice(0, n)}</strong>
+        {s.slice(n)}
+      </>
+    );
+  };
+
+  const QT_LATIN_RE = new RegExp("[A-Za-z]");
+
+  // 인니어 줄 — 단어 탭은 renderTokens 와 같은 구조. 라틴 글자가 없는 토큰(숫자·한글)은 탭하지 않습니다.
+  const renderQtId = (text: string, keyPrefix: string, f?: SermonFmt) => {
+    const bp = (f && f.bp) || 0;
+    let off = 0;
+    const toks = text.split(" ").map((tok, ti) => {
+      const start = off;
+      off += tok.length + 1;
+      const body = qtBold(tok, start, bp);
+      if (!QT_LATIN_RE.test(tok)) {
+        return (
+          <span key={keyPrefix + ti}>
+            {body}{" "}
+          </span>
+        );
+      }
+      return (
+        <span key={keyPrefix + ti} data-idw="1">
+          <span
+            onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
+            className="cursor-pointer rounded active:bg-blue-800/20"
+          >
+            {body}
+          </span>{" "}
+        </span>
+      );
+    });
+    return qtShade(f, toks);
+  };
+
+  // 한국어 줄 — 단어 탭 없이 bp 앞부분만 굵게.
+  const renderQtKo = (text: string, f?: SermonFmt) =>
+    qtShade(f, qtBold(text, 0, (f && f.bp) || 0));
 
   // 화면을 벗어나면 재생을 멈춥니다.
   useEffect(() => {
@@ -1792,12 +1869,15 @@ const SermonRead = () => {
     blocks.every((b) => !b || !b.id) &&
     blocks.some((b) => !!(b && b.ko));
 
+  // QT 성경공부 — 보내기 도구가 첫 블록에 표시를 심고, 블록마다 워드 서식(fmt)을 붙여 보냅니다.
+  const qt = !koOnly && blocks.some((b) => !!(b && b.layout === "qt"));
+
   // 통역용 — 보내기 도구가 첫 블록에 표시를 심어 보냅니다.
   const interpret = !koOnly && blocks.some((b) => !!(b && b.layout === "interpret"));
 
   // 읽기 묶음. 한 줄짜리 묶음의 캐시 키는 예전과 같아서 이미 만든 음성을 그대로 씁니다.
   // (성경 묶음·찬양 묶음만 글이 합쳐지므로 새로 만듭니다)
-  const audioGroups = buildAudioGroups(blocks);
+  const audioGroups = buildAudioGroups(blocks, qt);
 
   const groupKeyOf = (g: AudioGroup): string =>
     "sermon:" + String(id) + ":" + String(g.start) + ":" + hashText(g.text);
@@ -1899,6 +1979,38 @@ const SermonRead = () => {
           <p className={so.cls} style={{ fontSize: so.size }}>
             {b.ko}
           </p>
+        </div>
+      );
+    }
+    // QT 성경공부 — 워드의 글자 크기·색·굵기·음영을 줄마다 그대로 옮깁니다.
+    // 두 언어 모두 Pretendard(font-gothic). 아래 여백 0.941em = 워드 문단 뒤 12pt.
+    if (qt) {
+      if (!b.id && !b.ko) return null;
+      const fi = b.fmt && b.fmt.i;
+      const fk = b.fmt && b.fmt.k;
+      return (
+        <div
+          key={i}
+          id={b.kind === "heading" ? "sec-" + i : undefined}
+          className={b.kind === "heading" ? "scroll-mt-16" : ""}
+        >
+          {b.id ? (
+            <p
+              className="font-gothic leading-[1.6] break-words"
+              style={{ ...qtLineStyle(fi), marginBottom: "0.941em" }}
+            >
+              {renderQtId(b.id, "w" + i + "-", fi)}
+              {speakerAt[i] ? renderSpeaker(speakerAt[i].key, [speakerAt[i]]) : null}
+            </p>
+          ) : null}
+          {b.ko ? (
+            <p
+              className="font-gothic leading-[1.6] break-words"
+              style={{ ...qtLineStyle(fk), marginBottom: "0.941em" }}
+            >
+              {renderQtKo(b.ko, fk)}
+            </p>
+          ) : null}
         </div>
       );
     }
