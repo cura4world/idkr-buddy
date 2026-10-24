@@ -17,12 +17,17 @@ const STORE = "sermons";
 
 export type SermonKind = "title" | "ref" | "heading" | "verse" | "hymn" | "body";
 
+// QT 문서의 Word 서식. sz = half-point(생략 22), c = 글자색 16진(# 없음),
+// b = 줄 전체 굵게, sh = 음영, bp = 줄 맨 앞에서 굵은 글자 수
+export interface SermonFmt { sz?: number; c?: string; b?: number; sh?: number; bp?: number; }
+
 export interface SermonBlock {
   kind: SermonKind;
   id: string; // 인도네시아어
   ko: string; // 한국어 해석 (빈 문자열일 수 있음)
   layout?: string;
   gap?: string;
+  fmt?: { i?: SermonFmt; k?: SermonFmt }; // i = 인니어 줄, k = 한국어 줄
 }
 
 export interface SermonMeta {
