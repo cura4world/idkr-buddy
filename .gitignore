@@ -29,3 +29,9 @@ keystore/
 
 # 빌드 때 CSV 에서 생성되는 파일 — 추적하면 빌드마다 변경으로 잡혀 커밋에 딸려 들어간다
 src/data/seed.json
+
+# 연구소(HQ) 연동·보안 검사 파일 — 공개 저장소이므로 PC에만 두고 커밋하지 않는다
+LAB_STATUS.md
+LAB_INBOX.md
+security/
+security-evidence/
