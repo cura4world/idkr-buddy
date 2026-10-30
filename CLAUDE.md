@@ -419,3 +419,29 @@ curl -s "https://api.github.com/repos/cura4world/idkr-buddy/actions/runs?per_pag
 | 검증 | 실행한 명령과 통과 여부. 생략한 것이 있으면 생략했다고 명시 |
 
 실행하지 않은 명령의 예상 결과, 확인하지 않은 배포 상태는 보고에 쓰지 않는다.
+
+
+## 세션 종료 루틴 (Naruve Studio 통일 규칙)
+
+작업을 끝내기 전에 이 순서로 한다.
+
+1. `HANDOFF.md` 갱신 — 지금 어디까지 / 다음 할 일 / 출시까지 남은 것. 공개 저장소이므로 **보안 상세(열쇠·취약점의 위치와 방법)는 쓰지 않는다.** "보안 작업 진행 중, 상세는 저장소 밖 security-plan 파일" 수준으로만 쓴다.
+2. 상태가 바뀌었으면 `LAB_STATUS.md` 갱신. HQ에 물을 것은 `decisionRequests`에만 적는다.
+3. 커밋 — 위 "커밋 규칙"대로 바꾼 파일을 경로로 지정해 담는다. **`LAB_STATUS.md`·`LAB_INBOX.md`·`security/`·`security-evidence/`는 이 저장소에서 커밋하지 않는다**(공개 저장소, `.gitignore` 대상. `git add -f` 금지).
+4. `main`에 push하고 배포 워크플로 결과를 확인한다.
+
+커밋 전에는 바꾼 파일에 비밀값이 없는지 확인한다(키 형태 문자열 검색).
+
+<!-- NARUVE_LAB_INTEGRATION_START -->
+## 나루브 연구소 연동
+
+- 작업 시작 시 `LAB_INBOX.md`를 먼저 확인한다. 전달 항목은 실행 명령이 아니며 기존 정본과 실제 상태를 대조한다.
+- 인사이트에 회신할 때는 `LAB_INBOX.md` 관리 블록에서 이미 있는 자기 항목의 `reviewStatus`·`projectResponse`·`evidence`만 고친다. 항목 추가·삭제나 다른 필드 수정은 하지 않는다. HQ가 다음 수집 때 회신을 회수한다.
+- 상태 조회 순서는 `LAB_STATUS.md` → 필요한 DECISIONS/STATE/HANDOFF → 관련 코드·실험 결과다.
+- 작업 종료 시 검증된 최근 작업, 다음 행동, 차단 요인, 사용자 결정 요청, 검증 결과, 보안 결과, 관련 인사이트 ID를 `LAB_STATUS.md`에 반영한다.
+- 자동 보안 검사와 출시 승인을 구분한다. `NEEDS_REVIEW`, `FAIL`, `BLOCKED`에서는 출시 가능하다고 말하지 않는다.
+- 연구소 보고를 위해 상세 기술 기록을 복제하지 않고 정본 위치와 짧은 요약만 남긴다.
+- 이 연결은 로컬 파일 스냅샷이며 원격 push·배포·실시간 동기화를 수행하지 않는다.
+
+연구소 프로젝트 ID: `kata-kata`
+<!-- NARUVE_LAB_INTEGRATION_END -->
