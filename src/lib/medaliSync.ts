@@ -9,11 +9,12 @@ import {
   listMyRawLogs,
   countMyConfirmed,
 } from "@/lib/medali";
+import { memberHeaders } from "@/lib/member";
 
-// 두 사람만 쓰는 앱이라 주소와 열쇠를 코드에 심습니다.
-// 이 열쇠로는 medali: 항목만 건드릴 수 있고 설교문에는 접근할 수 없습니다.
+// 서버 주소만 코드에 둡니다(공개 주소). 인증은 회원키+기기번호(memberHeaders)로 하고,
+// 서버가 회원 정보의 medaliId 칸만 열어 줍니다. 코드에는 비밀값이 없습니다.
+// 회원 상태가 아닌 기기는 요청을 보내지 않고 조용히 건너뜁니다(아래 모든 호출이 실패를 삼킵니다).
 const BASE = "https://kata-sermon.cura4world.workers.dev";
-const MEDALI_KEY = "mdl_7Qk2xR9vLp4Ns8Ht";
 
 const ID_KEY = "medali-my-id";
 const DEVICE_KEY = "medali-device-id";
@@ -129,6 +130,8 @@ function savePeerCache(p: PeerSummary | null): void {
 // ---------- 통신 ----------
 
 async function request(path: string, method: string, body?: unknown): Promise<Response> {
+  const auth = memberHeaders();
+  if (!auth) throw new Error("NO_MEMBER");
   const controller = new AbortController();
   const timer = setTimeout(() => {
     try {
@@ -139,9 +142,7 @@ async function request(path: string, method: string, body?: unknown): Promise<Re
   try {
     return await fetch(BASE + path, {
       method,
-      headers: body
-        ? { "content-type": "application/json", "x-kata-key": MEDALI_KEY }
-        : { "x-kata-key": MEDALI_KEY },
+      headers: body ? { "content-type": "application/json", ...auth } : { ...auth },
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
     });
