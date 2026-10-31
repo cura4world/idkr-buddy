@@ -999,6 +999,12 @@ const SermonRead = () => {
     return { ...(f || {}), sz: qtStepDown((f && f.sz) || 22) };
   };
 
+  // 제목(title)을 뺀 인니어 줄은 1pt(= 2 half-point) 키웁니다. 한국어 줄은 그대로입니다.
+  // 한 단계 줄인 뒤(qtShrink)에 더하므로, 소제목·맨 위 상자도 줄인 크기에서 1pt 커집니다.
+  const QT_ID_BUMP = 2;
+  const qtBumpId = (b: SermonBlock, f?: SermonFmt): SermonFmt | undefined =>
+    b.kind === "title" ? f : { ...(f || {}), sz: ((f && f.sz) || 22) + QT_ID_BUMP };
+
   // 글자 모양 (p 에 줍니다). 길이는 이 줄 글자 크기 기준 em 이라 own() 으로 환산합니다.
   const qtLineStyle = (f?: SermonFmt): CSSProperties => {
     const sz = (f && f.sz) || 22;
@@ -2082,7 +2088,7 @@ const SermonRead = () => {
     // 두 언어 모두 Pretendard(font-gothic). 여백은 qtBoxStyle, 글자 모양은 qtLineStyle 입니다.
     if (qt) {
       if (!b.id && !b.ko) return null;
-      const fi = qtShrink(b, b.fmt && b.fmt.i);
+      const fi = qtBumpId(b, qtShrink(b, b.fmt && b.fmt.i));
       const fk = qtShrink(b, b.fmt && b.fmt.k);
       return (
         <div
