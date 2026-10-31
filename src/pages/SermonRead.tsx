@@ -982,6 +982,23 @@ const SermonRead = () => {
   // 문단 뒤 여백(sa)이 없는 예전 업로드는 12pt 로 봅니다.
   const QT_DEFAULT_AFTER = 12;
 
+  // 제목류는 워드보다 한 단계 작게 보여줍니다.
+  // 한 단계 = 워드 글자 크기 목록(8·9·10·10.5·11·12·14·16·18·20·22·24·26·28·36·48·72pt)의 바로 아래 칸.
+  // 그래서 제목 40(20pt)→36(18pt), 소제목 28(14pt)→24(12pt), 맨 위 상자 19(9.5pt)→18(9pt). (half-point)
+  const QT_SIZE_STEPS = [16, 18, 20, 21, 22, 24, 28, 32, 36, 40, 44, 48, 52, 56, 72, 96, 144];
+  const qtStepDown = (sz: number): number => {
+    let r = QT_SIZE_STEPS[0];
+    for (let k = 0; k < QT_SIZE_STEPS.length; k++) {
+      if (QT_SIZE_STEPS[k] < sz) r = QT_SIZE_STEPS[k];
+    }
+    return r;
+  };
+  // 제목(title)·소제목(heading)·맨 위 테두리 상자면 글자 크기를 한 단계 낮춘 서식을 돌려줍니다.
+  const qtShrink = (b: SermonBlock, f?: SermonFmt): SermonFmt | undefined => {
+    if (!(b.kind === "title" || b.kind === "heading" || (f && f.bd))) return f;
+    return { ...(f || {}), sz: qtStepDown((f && f.sz) || 22) };
+  };
+
   // 글자 모양 (p 에 줍니다). 길이는 이 줄 글자 크기 기준 em 이라 own() 으로 환산합니다.
   const qtLineStyle = (f?: SermonFmt): CSSProperties => {
     const sz = (f && f.sz) || 22;
@@ -1003,8 +1020,9 @@ const SermonRead = () => {
     return st;
   };
 
-  const qtParaClass = (f?: SermonFmt): string =>
-    "font-gothic break-words" + (f && f.shp ? " bg-black/15 dark:bg-white/20" : "");
+  // 인니어 줄은 설교문과 같은 font-word(Lora), 한국어 줄은 font-gothic(Pretendard).
+  const qtParaClass = (f?: SermonFmt, id?: boolean): string =>
+    (id ? "font-word" : "font-gothic") + " break-words" + (f && f.shp ? " bg-black/15 dark:bg-white/20" : "");
 
   // 문단 앞뒤 여백과 왼쪽 들여쓰기는 바깥 div 의 padding 으로 줍니다.
   // margin 은 이웃과 겹쳐 합쳐지지만 워드는 (앞 문단 뒤 여백 + 다음 문단 앞 여백)을 더하기 때문입니다.
@@ -1040,6 +1058,7 @@ const SermonRead = () => {
   };
 
   const QT_LATIN_RE = new RegExp("[A-Za-z]");
+  const QT_HANGUL_RE = new RegExp("[\\uac00-\\ud7a3]");
 
   // 인니어 줄 — 줄바꿈("\n")마다 나눠 그리고, 단어 탭은 renderTokens 와 같은 구조입니다.
   // 라틴 글자가 없는 토큰(숫자·한글)은 탭하지 않습니다.
@@ -1070,15 +1089,16 @@ const SermonRead = () => {
         off += tok.length + 1;
         const part = qtBold(tok, start, boldN);
         const key = keyPrefix + li + "-" + ti;
+        const hanCls = QT_HANGUL_RE.test(tok) ? "font-gothic" : undefined;
         if (!QT_LATIN_RE.test(tok)) {
           return (
-            <span key={key}>
+            <span key={key} className={hanCls}>
               {part}{" "}
             </span>
           );
         }
         return (
-          <span key={key} data-idw="1">
+          <span key={key} data-idw="1" className={hanCls}>
             <span
               onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
               className="cursor-pointer rounded active:bg-blue-800/20"
@@ -2062,8 +2082,8 @@ const SermonRead = () => {
     // 두 언어 모두 Pretendard(font-gothic). 여백은 qtBoxStyle, 글자 모양은 qtLineStyle 입니다.
     if (qt) {
       if (!b.id && !b.ko) return null;
-      const fi = b.fmt && b.fmt.i;
-      const fk = b.fmt && b.fmt.k;
+      const fi = qtShrink(b, b.fmt && b.fmt.i);
+      const fk = qtShrink(b, b.fmt && b.fmt.k);
       return (
         <div
           key={i}
@@ -2072,7 +2092,7 @@ const SermonRead = () => {
         >
           {b.id ? (
             <div style={qtBoxStyle(fi)}>
-              <p className={qtParaClass(fi)} style={qtLineStyle(fi)}>
+              <p className={qtParaClass(fi, true)} style={qtLineStyle(fi)}>
                 {renderQtId(b.id, "w" + i + "-", fi)}
                 {speakerAt[i] ? renderSpeaker(speakerAt[i].key, [speakerAt[i]]) : null}
               </p>
