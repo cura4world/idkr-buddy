@@ -1979,7 +1979,8 @@ const SermonRead = () => {
 
   // 읽기 묶음. 한 줄짜리 묶음의 캐시 키는 예전과 같아서 이미 만든 음성을 그대로 씁니다.
   // (성경 묶음·찬양 묶음만 글이 합쳐지므로 새로 만듭니다)
-  const audioGroups = buildAudioGroups(blocks, qt);
+  // 토요성경공부(qt)는 문단 듣기·전체 듣기를 쓰지 않으므로 묶음을 만들지 않습니다.
+  const audioGroups = qt ? [] : buildAudioGroups(blocks, qt);
 
   const groupKeyOf = (g: AudioGroup): string =>
     "sermon:" + String(id) + ":" + String(g.start) + ":" + hashText(g.text);
@@ -2474,23 +2475,25 @@ const SermonRead = () => {
                 <Plus size={16} />
               </button>
             </span>
-            {/* 전체 듣기 — 문단별로 만든 오디오를 순서대로 이어 붙여 읽습니다. */}
-            <button
-              type="button"
-              onClick={() => playParts(allKey, audioParts)}
-              disabled={audioParts.length === 0}
-              className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-blue-800 active:bg-muted disabled:opacity-30"
-              aria-label="전체 듣기"
-              title="전체 듣기"
-            >
-              {allLoading ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : allPlaying ? (
-                <Pause size={16} />
-              ) : (
-                <Volume2 size={16} />
-              )}
-            </button>
+            {/* 전체 듣기 — 문단별로 만든 오디오를 순서대로 이어 붙여 읽습니다. 토요성경공부(qt)에는 두지 않습니다. */}
+            {qt ? null : (
+              <button
+                type="button"
+                onClick={() => playParts(allKey, audioParts)}
+                disabled={audioParts.length === 0}
+                className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-blue-800 active:bg-muted disabled:opacity-30"
+                aria-label="전체 듣기"
+                title="전체 듣기"
+              >
+                {allLoading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : allPlaying ? (
+                  <Pause size={16} />
+                ) : (
+                  <Volume2 size={16} />
+                )}
+              </button>
+            )}
             {allPlaying || allPaused ? (
               <button
                 type="button"
