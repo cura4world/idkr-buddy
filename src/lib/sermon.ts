@@ -17,9 +17,23 @@ const STORE = "sermons";
 
 export type SermonKind = "title" | "ref" | "heading" | "verse" | "hymn" | "body";
 
-// QT 문서의 Word 서식. sz = half-point(생략 22), c = 글자색 16진(# 없음),
-// b = 줄 전체 굵게, sh = 음영, bp = 줄 맨 앞에서 굵은 글자 수
-export interface SermonFmt { sz?: number; c?: string; b?: number; sh?: number; bp?: number; }
+// 토요성경공부(QT) 문서의 Word 서식. 길이는 pt, 글자 크기는 half-point 입니다.
+export interface SermonFmt {
+  sz?: number;  // 글자 크기 half-point (생략 = 22 = 11pt)
+  c?: string;   // 글자색 16진 (# 없음)
+  b?: number;   // 줄 전체 굵게
+  u?: number;   // 밑줄
+  sh?: number;  // 글자 음영 (글자 부분만)
+  shp?: number; // 문단 음영 (줄 전체 띠)
+  bp?: number;  // 줄 맨 앞에서 굵은 글자 수 (절 번호)
+  al?: string;  // 정렬: "c" 가운데 / "r" 오른쪽 (생략 = 왼쪽)
+  bd?: number;  // 테두리 상자
+  sb?: number;  // 문단 앞 여백 (pt)
+  sa?: number;  // 문단 뒤 여백 (pt). 없으면 예전 업로드이므로 12 로 봄
+  ln?: number;  // 줄간격 배수 (없으면 한 줄)
+  il?: number;  // 왼쪽 들여쓰기 (pt)
+  hg?: number;  // 내어쓰기 (pt)
+}
 
 export interface SermonBlock {
   kind: SermonKind;
