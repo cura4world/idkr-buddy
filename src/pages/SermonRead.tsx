@@ -998,8 +998,10 @@ const SermonRead = () => {
     if (!(b.kind === "title" || b.kind === "heading" || (f && f.bd))) return f;
     return { ...(f || {}), sz: qtStepDown((f && f.sz) || 22) };
   };
+  // 한국어 줄은 종류와 상관없이 전부 한 단계 낮춥니다. (제목·소제목·맨 위 상자는 qtShrink 와 같은 결과)
+  const qtShrinkKo = (f?: SermonFmt): SermonFmt => ({ ...(f || {}), sz: qtStepDown((f && f.sz) || 22) });
 
-  // 제목(title)을 뺀 인니어 줄은 1pt(= 2 half-point) 키웁니다. 한국어 줄은 그대로입니다.
+  // 제목(title)을 뺀 인니어 줄은 1pt(= 2 half-point) 키웁니다. 한국어 줄은 더하지 않습니다.
   // 한 단계 줄인 뒤(qtShrink)에 더하므로, 소제목·맨 위 상자도 줄인 크기에서 1pt 커집니다.
   const QT_ID_BUMP = 2;
   const qtBumpId = (b: SermonBlock, f?: SermonFmt): SermonFmt | undefined =>
@@ -2090,7 +2092,7 @@ const SermonRead = () => {
     if (qt) {
       if (!b.id && !b.ko) return null;
       const fi = qtBumpId(b, qtShrink(b, b.fmt && b.fmt.i));
-      const fk = qtShrink(b, b.fmt && b.fmt.k);
+      const fk = qtShrinkKo(b.fmt && b.fmt.k);
       return (
         <div
           key={i}
