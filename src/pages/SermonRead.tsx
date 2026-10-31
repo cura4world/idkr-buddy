@@ -999,14 +999,21 @@ const SermonRead = () => {
     return { ...(f || {}), sz: qtStepDown((f && f.sz) || 22) };
   };
   // 한국어 줄은 종류와 상관없이 전부 한 단계 낮춘 뒤, 거기서 1pt(= 2 half-point) 더 줄입니다.
+  // 소제목(heading)과 맨 위 테두리 상자의 한국어는 거기서 2pt(= 4 half-point) 더 줄입니다.
   const QT_KO_CUT = 2;
-  const qtShrinkKo = (f?: SermonFmt): SermonFmt => ({ ...(f || {}), sz: qtStepDown((f && f.sz) || 22) - QT_KO_CUT });
+  const QT_KO_CUT_HEAD = 4;
+  const qtShrinkKo = (b: SermonBlock, f?: SermonFmt): SermonFmt => {
+    const inBox = !!(b.fmt && ((b.fmt.i && b.fmt.i.bd) || (b.fmt.k && b.fmt.k.bd)));
+    const cut = QT_KO_CUT + (b.kind === "heading" || inBox ? QT_KO_CUT_HEAD : 0);
+    return { ...(f || {}), sz: qtStepDown((f && f.sz) || 22) - cut };
+  };
 
-  // 제목(title)을 뺀 인니어 줄은 2pt(= 4 half-point) 키웁니다. 한국어 줄은 더하지 않습니다.
+  // 제목(title)을 뺀 인니어 줄은 2pt(= 4 half-point) 키웁니다. 제목의 인니어 줄은 1pt(= 2 half-point) 키웁니다.
   // 한 단계 줄인 뒤(qtShrink)에 더하므로, 소제목·맨 위 상자도 줄인 크기에서 2pt 커집니다.
   const QT_ID_BUMP = 4;
+  const QT_TITLE_BUMP = 2;
   const qtBumpId = (b: SermonBlock, f?: SermonFmt): SermonFmt | undefined =>
-    b.kind === "title" ? f : { ...(f || {}), sz: ((f && f.sz) || 22) + QT_ID_BUMP };
+    ({ ...(f || {}), sz: ((f && f.sz) || 22) + (b.kind === "title" ? QT_TITLE_BUMP : QT_ID_BUMP) });
 
   // 글자 모양 (p 에 줍니다). 길이는 이 줄 글자 크기 기준 em 이라 own() 으로 환산합니다.
   const qtLineStyle = (f?: SermonFmt): CSSProperties => {
@@ -2093,7 +2100,7 @@ const SermonRead = () => {
     if (qt) {
       if (!b.id && !b.ko) return null;
       const fi = qtBumpId(b, qtShrink(b, b.fmt && b.fmt.i));
-      const fk = qtShrinkKo(b.fmt && b.fmt.k);
+      const fk = qtShrinkKo(b, b.fmt && b.fmt.k);
       return (
         <div
           key={i}
