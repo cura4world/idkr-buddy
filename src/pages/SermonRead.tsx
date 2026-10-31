@@ -982,38 +982,35 @@ const SermonRead = () => {
   // 문단 뒤 여백(sa)이 없는 예전 업로드는 12pt 로 봅니다.
   const QT_DEFAULT_AFTER = 12;
 
-  // 제목류는 워드보다 한 단계 작게 보여줍니다.
-  // 한 단계 = 워드 글자 크기 목록(8·9·10·10.5·11·12·14·16·18·20·22·24·26·28·36·48·72pt)의 바로 아래 칸.
-  // 그래서 제목 40(20pt)→36(18pt), 소제목 28(14pt)→24(12pt), 맨 위 상자 19(9.5pt)→18(9pt). (half-point)
-  const QT_SIZE_STEPS = [16, 18, 20, 21, 22, 24, 28, 32, 36, 40, 44, 48, 52, 56, 72, 96, 144];
-  const qtStepDown = (sz: number): number => {
-    let r = QT_SIZE_STEPS[0];
-    for (let k = 0; k < QT_SIZE_STEPS.length; k++) {
-      if (QT_SIZE_STEPS[k] < sz) r = QT_SIZE_STEPS[k];
-    }
-    return r;
+  // ★ 토요성경공부 글자 크기표 — 요소별 최종 크기입니다. 단위는 half-point (2 = 1pt, 22 = 11pt).
+  //   크기를 바꾸고 싶으면 여기 숫자만 고치면 됩니다. (워드 원본 크기는 서식 값에 들어 있지만 여기 값이 우선합니다)
+  //   id    = 인도네시아어 줄
+  //   ko    = 한국어 줄
+  //   idKo  = 인도네시아어 줄 안에 들어 있는 한글 부분. "(예수님을 만난 사람들 1)", "(여는 나눔)" 처럼
+  //           줄에서 처음 한글이 나오는 낱말부터 줄 끝까지입니다.
+  //   워드 원본: 제목 40/28, 맨 위 상자 19, 소제목 28, 본문 22
+  interface QtSizeRow { id: number; ko?: number; idKo?: number; }
+  const QT_SIZES: Record<string, QtSizeRow> = {
+    title:   { id: 38, ko: 22 },             // 제목: 인니어 19pt / 한국어 11pt
+    box:     { id: 22, idKo: 20 },           // 맨 위 테두리 상자: 11pt / 안의 한글 10pt
+    heading: { id: 24, idKo: 22 },           // 번호 붙은 소제목(회색 띠): 12pt / 안의 한글 11pt
+    sub:     { id: 28, idKo: 22 },           // 밑줄 소제목("Lukas 19:1–10 (누가복음 …)"): 14pt / 안의 한글 11pt
+    body:    { id: 26, ko: 19 },             // 본문 한 세트: 인니어 13pt / 한국어 9.5pt
   };
-  // 제목(title)·소제목(heading)·맨 위 테두리 상자면 글자 크기를 한 단계 낮춘 서식을 돌려줍니다.
-  const qtShrink = (b: SermonBlock, f?: SermonFmt): SermonFmt | undefined => {
-    if (!(b.kind === "title" || b.kind === "heading" || (f && f.bd))) return f;
-    return { ...(f || {}), sz: qtStepDown((f && f.sz) || 22) };
-  };
-  // 한국어 줄은 종류와 상관없이 전부 한 단계 낮춘 뒤, 거기서 1pt(= 2 half-point) 더 줄입니다.
-  // 소제목(heading)과 맨 위 테두리 상자의 한국어는 거기서 2pt(= 4 half-point) 더 줄입니다.
-  const QT_KO_CUT = 2;
-  const QT_KO_CUT_HEAD = 4;
-  const qtShrinkKo = (b: SermonBlock, f?: SermonFmt): SermonFmt => {
-    const inBox = !!(b.fmt && ((b.fmt.i && b.fmt.i.bd) || (b.fmt.k && b.fmt.k.bd)));
-    const cut = QT_KO_CUT + (b.kind === "heading" || inBox ? QT_KO_CUT_HEAD : 0);
-    return { ...(f || {}), sz: qtStepDown((f && f.sz) || 22) - cut };
-  };
+  // 인니어 줄과 바로 아래 한국어 줄 사이의 틈(pt). 워드는 붙어 있어서 앱에서만 조금 벌립니다.
+  const QT_PAIR_GAP = 4;
 
-  // 제목(title)을 뺀 인니어 줄은 2pt(= 4 half-point) 키웁니다. 제목의 인니어 줄은 1pt(= 2 half-point) 키웁니다.
-  // 한 단계 줄인 뒤(qtShrink)에 더하므로, 소제목·맨 위 상자도 줄인 크기에서 2pt 커집니다.
-  const QT_ID_BUMP = 4;
-  const QT_TITLE_BUMP = 2;
-  const qtBumpId = (b: SermonBlock, f?: SermonFmt): SermonFmt | undefined =>
-    ({ ...(f || {}), sz: ((f && f.sz) || 22) + (b.kind === "title" ? QT_TITLE_BUMP : QT_ID_BUMP) });
+  // 이 블록이 크기표의 어느 줄에 해당하는지.
+  const qtSizeRow = (b: SermonBlock): QtSizeRow => {
+    const fi = b.fmt && b.fmt.i;
+    if (b.kind === "title") return QT_SIZES.title;
+    if (fi && fi.bd) return QT_SIZES.box;
+    if (b.kind === "heading") return fi && fi.shp ? QT_SIZES.heading : QT_SIZES.sub;
+    return QT_SIZES.body;
+  };
+  // 서식 f 의 크기를 sz 로 바꾼 서식. sz 가 없으면(표에 없는 칸) 워드 크기를 그대로 둡니다.
+  const qtWithSz = (f: SermonFmt | undefined, sz?: number): SermonFmt | undefined =>
+    sz === undefined ? f : { ...(f || {}), sz: sz };
 
   // 글자 모양 (p 에 줍니다). 길이는 이 줄 글자 크기 기준 em 이라 own() 으로 환산합니다.
   const qtLineStyle = (f?: SermonFmt): CSSProperties => {
@@ -1042,9 +1039,9 @@ const SermonRead = () => {
 
   // 문단 앞뒤 여백과 왼쪽 들여쓰기는 바깥 div 의 padding 으로 줍니다.
   // margin 은 이웃과 겹쳐 합쳐지지만 워드는 (앞 문단 뒤 여백 + 다음 문단 앞 여백)을 더하기 때문입니다.
-  const qtBoxStyle = (f?: SermonFmt): CSSProperties => ({
+  const qtBoxStyle = (f?: SermonFmt, minAfter?: number): CSSProperties => ({
     paddingTop: f && f.sb ? qtPt(f.sb) : undefined,
-    paddingBottom: qtPt(f && f.sa !== undefined ? f.sa : QT_DEFAULT_AFTER),
+    paddingBottom: qtPt(Math.max(f && f.sa !== undefined ? f.sa : QT_DEFAULT_AFTER, minAfter || 0)),
     paddingLeft: f && f.il ? qtPt(f.il) : undefined,
   });
 
@@ -1079,7 +1076,7 @@ const SermonRead = () => {
   // 인니어 줄 — 줄바꿈("\n")마다 나눠 그리고, 단어 탭은 renderTokens 와 같은 구조입니다.
   // 라틴 글자가 없는 토큰(숫자·한글)은 탭하지 않습니다.
   // 내어쓰기(hg)+굵은 절 번호(bp)면 번호를 hg 너비 칸에 넣어 첫 줄과 접힌 줄의 글자 시작 위치를 맞춥니다.
-  const renderQtId = (text: string, keyPrefix: string, f?: SermonFmt) => {
+  const renderQtId = (text: string, keyPrefix: string, f?: SermonFmt, koSz?: number) => {
     const bp = (f && f.bp) || 0;
     const hgv = (f && f.hg) || 0;
     const sz = (f && f.sz) || 22;
@@ -1100,12 +1097,15 @@ const SermonRead = () => {
     }
     let off = 0;
     const lines = body.split("\n").map((ln, li) => {
-      const toks = ln.split(" ").map((tok, ti) => {
+      const words = ln.split(" ");
+      // 줄에서 처음 한글이 나오는 낱말 번호 (koSz 가 있을 때만). 그 낱말부터 줄 끝까지가 "한글 부분"입니다.
+      const han = koSz ? words.findIndex((w) => QT_HANGUL_RE.test(w)) : -1;
+      const toks = words.map((tok, ti) => {
         const start = off;
         off += tok.length + 1;
         const part = qtBold(tok, start, boldN);
         const key = keyPrefix + li + "-" + ti;
-        const hanCls = QT_HANGUL_RE.test(tok) ? "font-gothic" : undefined;
+        const hanCls = QT_HANGUL_RE.test(tok) || (han >= 0 && ti >= han) ? "font-gothic" : undefined;
         if (!QT_LATIN_RE.test(tok)) {
           return (
             <span key={key} className={hanCls}>
@@ -1127,7 +1127,12 @@ const SermonRead = () => {
       return (
         <span key={keyPrefix + "L" + li}>
           {li > 0 ? <br /> : null}
-          {toks}
+          {han >= 0 ? toks.slice(0, han) : toks}
+          {han >= 0 ? (
+            <span key={keyPrefix + "K" + li} style={{ fontSize: (((koSz || sz) / sz)).toFixed(3) + "em" }}>
+              {toks.slice(han)}
+            </span>
+          ) : null}
         </span>
       );
     });
@@ -2099,8 +2104,9 @@ const SermonRead = () => {
     // 두 언어 모두 Pretendard(font-gothic). 여백은 qtBoxStyle, 글자 모양은 qtLineStyle 입니다.
     if (qt) {
       if (!b.id && !b.ko) return null;
-      const fi = qtBumpId(b, qtShrink(b, b.fmt && b.fmt.i));
-      const fk = qtShrinkKo(b, b.fmt && b.fmt.k);
+      const row = qtSizeRow(b);
+      const fi = qtWithSz(b.fmt && b.fmt.i, row.id);
+      const fk = qtWithSz(b.fmt && b.fmt.k, row.ko);
       return (
         <div
           key={i}
@@ -2108,9 +2114,9 @@ const SermonRead = () => {
           className={b.kind === "heading" ? "scroll-mt-16" : ""}
         >
           {b.id ? (
-            <div style={qtBoxStyle(fi)}>
+            <div style={qtBoxStyle(fi, b.ko ? QT_PAIR_GAP : undefined)}>
               <p className={qtParaClass(fi, true)} style={qtLineStyle(fi)}>
-                {renderQtId(b.id, "w" + i + "-", fi)}
+                {renderQtId(b.id, "w" + i + "-", fi, row.idKo)}
                 {speakerAt[i] ? renderSpeaker(speakerAt[i].key, [speakerAt[i]]) : null}
               </p>
             </div>
