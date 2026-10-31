@@ -159,6 +159,11 @@ const buildAudioGroups = (bs: SermonBlock[], qt: boolean): AudioGroup[] => {
     // 이 줄이 없으면 성경 장절과 성경 본문 사이에 낀 빈 줄 하나가 묶음을 둘로 쪼개
     // 장절에 스피커가 하나 더 붙습니다. (읽을 것이 없으니 묶음에 넣지도 않습니다)
     if (!text) continue;
+    // 토요성경공부의 테두리 상자(맨 위 "…을 만난 사람들 1" 같은 표지 줄)는 두 언어가 섞여 있어 읽지 않습니다.
+    if (qt && b.fmt && b.fmt.i && b.fmt.i.bd) {
+      cur = null;
+      continue;
+    }
     if (b.kind === "hymn") {
       // 찬양 가사는 바로 앞 찬양 제목(heading) 덩어리에 합칩니다.
       if (cur !== null && (cur.type === "hymn" || cur.type === "heading")) {
@@ -964,17 +969,52 @@ const SermonRead = () => {
       </span>
     ));
 
-  // ---------- QT 성경공부 (워드 서식 그대로) ----------
-  // 워드 half-point → em. 본문 기준(17px)에 맞춰 22(11pt) = 0.863em 입니다.
+  // ---------- 토요성경공부 (워드 서식 그대로) ----------
+  // 길이는 전부 em 으로 줍니다. 바탕 글자(17px) 기준으로 워드 1pt = 4/3px 입니다.
+  //  - 글자 크기  qtEm(half-point): 22(11pt) = 0.863em
+  //  - 여백·들여쓰기  qtPt(pt): 12pt = 0.941em
   const qtEm = (sz?: number): string => (((sz || 22) * 2) / 3 / 17).toFixed(3) + "em";
+  const qtPt = (pt: number): string => ((pt * 4) / 3 / 17).toFixed(3) + "em";
 
-  const qtLineStyle = (f?: SermonFmt): CSSProperties => ({
-    fontSize: qtEm(f && f.sz),
-    fontWeight: f && f.b ? 700 : 400,
-    color: f && f.c ? "#" + f.c : undefined,
+  // 워드의 "한 줄" 간격 = 글꼴의 글줄 높이입니다. Pretendard 는 (1950+494)/2048 = 1.193.
+  // 폰에서 너무 빽빽하면 이 숫자 하나만 키우면 됩니다 (예: 1.4).
+  const QT_LEADING = 1.193;
+  // 문단 뒤 여백(sa)이 없는 예전 업로드는 12pt 로 봅니다.
+  const QT_DEFAULT_AFTER = 12;
+
+  // 글자 모양 (p 에 줍니다). 길이는 이 줄 글자 크기 기준 em 이라 own() 으로 환산합니다.
+  const qtLineStyle = (f?: SermonFmt): CSSProperties => {
+    const sz = (f && f.sz) || 22;
+    const own = (pt: number): string => ((pt * 2) / sz).toFixed(3) + "em";
+    const st: CSSProperties = {
+      fontSize: qtEm(sz),
+      fontWeight: f && f.b ? 700 : 400,
+      color: f && f.c ? "#" + f.c : undefined,
+      lineHeight: ((f && f.ln) || 1) * QT_LEADING,
+    };
+    if (f && f.u) st.textDecoration = "underline";
+    if (f && f.al === "c") st.textAlign = "center";
+    else if (f && f.al === "r") st.textAlign = "right";
+    if (f && f.hg) st.textIndent = "-" + own(f.hg);
+    if (f && f.bd) {
+      st.border = "1px solid currentColor";
+      st.padding = own(2) + " " + own(4);
+    }
+    return st;
+  };
+
+  const qtParaClass = (f?: SermonFmt): string =>
+    "font-gothic break-words" + (f && f.shp ? " bg-black/15 dark:bg-white/20" : "");
+
+  // 문단 앞뒤 여백과 왼쪽 들여쓰기는 바깥 div 의 padding 으로 줍니다.
+  // margin 은 이웃과 겹쳐 합쳐지지만 워드는 (앞 문단 뒤 여백 + 다음 문단 앞 여백)을 더하기 때문입니다.
+  const qtBoxStyle = (f?: SermonFmt): CSSProperties => ({
+    paddingTop: f && f.sb ? qtPt(f.sb) : undefined,
+    paddingBottom: qtPt(f && f.sa !== undefined ? f.sa : QT_DEFAULT_AFTER),
+    paddingLeft: f && f.il ? qtPt(f.il) : undefined,
   });
 
-  // 워드의 15% 음영. 줄이 접혀도 각 줄마다 배경이 둥글게 이어지도록 clone 을 줍니다.
+  // 글자 음영 (워드의 15%). 줄이 접혀도 각 줄마다 배경이 이어지도록 clone 을 줍니다.
   const qtShade = (f: SermonFmt | undefined, node: ReactNode): ReactNode =>
     f && f.sh ? (
       <span
@@ -1001,38 +1041,74 @@ const SermonRead = () => {
 
   const QT_LATIN_RE = new RegExp("[A-Za-z]");
 
-  // 인니어 줄 — 단어 탭은 renderTokens 와 같은 구조. 라틴 글자가 없는 토큰(숫자·한글)은 탭하지 않습니다.
+  // 인니어 줄 — 줄바꿈("\n")마다 나눠 그리고, 단어 탭은 renderTokens 와 같은 구조입니다.
+  // 라틴 글자가 없는 토큰(숫자·한글)은 탭하지 않습니다.
+  // 내어쓰기(hg)+굵은 절 번호(bp)면 번호를 hg 너비 칸에 넣어 첫 줄과 접힌 줄의 글자 시작 위치를 맞춥니다.
   const renderQtId = (text: string, keyPrefix: string, f?: SermonFmt) => {
     const bp = (f && f.bp) || 0;
+    const hgv = (f && f.hg) || 0;
+    const sz = (f && f.sz) || 22;
+    let body = text;
+    let head: ReactNode = null;
+    let boldN = bp;
+    if (hgv > 0 && bp > 0) {
+      head = (
+        <span
+          key={keyPrefix + "n"}
+          style={{ display: "inline-block", width: ((hgv * 2) / sz).toFixed(3) + "em", fontWeight: 700 }}
+        >
+          {text.slice(0, bp)}
+        </span>
+      );
+      body = text.slice(bp).replace(new RegExp("^ +"), "");
+      boldN = 0;
+    }
     let off = 0;
-    const toks = text.split(" ").map((tok, ti) => {
-      const start = off;
-      off += tok.length + 1;
-      const body = qtBold(tok, start, bp);
-      if (!QT_LATIN_RE.test(tok)) {
+    const lines = body.split("\n").map((ln, li) => {
+      const toks = ln.split(" ").map((tok, ti) => {
+        const start = off;
+        off += tok.length + 1;
+        const part = qtBold(tok, start, boldN);
+        const key = keyPrefix + li + "-" + ti;
+        if (!QT_LATIN_RE.test(tok)) {
+          return (
+            <span key={key}>
+              {part}{" "}
+            </span>
+          );
+        }
         return (
-          <span key={keyPrefix + ti}>
-            {body}{" "}
+          <span key={key} data-idw="1">
+            <span
+              onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
+              className="cursor-pointer rounded active:bg-blue-800/20"
+            >
+              {part}
+            </span>{" "}
           </span>
         );
-      }
+      });
       return (
-        <span key={keyPrefix + ti} data-idw="1">
-          <span
-            onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
-            className="cursor-pointer rounded active:bg-blue-800/20"
-          >
-            {body}
-          </span>{" "}
+        <span key={keyPrefix + "L" + li}>
+          {li > 0 ? <br /> : null}
+          {toks}
         </span>
       );
     });
-    return qtShade(f, toks);
+    return qtShade(f, <>{head}{lines}</>);
   };
 
-  // 한국어 줄 — 단어 탭 없이 bp 앞부분만 굵게.
-  const renderQtKo = (text: string, f?: SermonFmt) =>
-    qtShade(f, qtBold(text, 0, (f && f.bp) || 0));
+  // 한국어 줄 — 단어 탭 없이, 줄바꿈마다 나누고 bp 앞부분만 굵게.
+  const renderQtKo = (text: string, f?: SermonFmt) => {
+    const bp = (f && f.bp) || 0;
+    const parts = text.split("\n").map((ln, li) => (
+      <span key={"k" + li}>
+        {li > 0 ? <br /> : null}
+        {li === 0 ? qtBold(ln, 0, bp) : ln}
+      </span>
+    ));
+    return qtShade(f, <>{parts}</>);
+  };
 
   // 화면을 벗어나면 재생을 멈춥니다.
   useEffect(() => {
@@ -1982,8 +2058,8 @@ const SermonRead = () => {
         </div>
       );
     }
-    // QT 성경공부 — 워드의 글자 크기·색·굵기·음영을 줄마다 그대로 옮깁니다.
-    // 두 언어 모두 Pretendard(font-gothic). 아래 여백 0.941em = 워드 문단 뒤 12pt.
+    // 토요성경공부 — 워드의 글자 크기·색·굵기·밑줄·음영·정렬·들여쓰기·문단 여백·줄간격을 줄마다 그대로 옮깁니다.
+    // 두 언어 모두 Pretendard(font-gothic). 여백은 qtBoxStyle, 글자 모양은 qtLineStyle 입니다.
     if (qt) {
       if (!b.id && !b.ko) return null;
       const fi = b.fmt && b.fmt.i;
@@ -1995,21 +2071,19 @@ const SermonRead = () => {
           className={b.kind === "heading" ? "scroll-mt-16" : ""}
         >
           {b.id ? (
-            <p
-              className="font-gothic leading-[1.6] break-words"
-              style={{ ...qtLineStyle(fi), marginBottom: "0.941em" }}
-            >
-              {renderQtId(b.id, "w" + i + "-", fi)}
-              {speakerAt[i] ? renderSpeaker(speakerAt[i].key, [speakerAt[i]]) : null}
-            </p>
+            <div style={qtBoxStyle(fi)}>
+              <p className={qtParaClass(fi)} style={qtLineStyle(fi)}>
+                {renderQtId(b.id, "w" + i + "-", fi)}
+                {speakerAt[i] ? renderSpeaker(speakerAt[i].key, [speakerAt[i]]) : null}
+              </p>
+            </div>
           ) : null}
           {b.ko ? (
-            <p
-              className="font-gothic leading-[1.6] break-words"
-              style={{ ...qtLineStyle(fk), marginBottom: "0.941em" }}
-            >
-              {renderQtKo(b.ko, fk)}
-            </p>
+            <div style={qtBoxStyle(fk)}>
+              <p className={qtParaClass(fk)} style={qtLineStyle(fk)}>
+                {renderQtKo(b.ko, fk)}
+              </p>
+            </div>
           ) : null}
         </div>
       );
