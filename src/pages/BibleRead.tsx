@@ -854,14 +854,16 @@ const BibleRead = () => {
 
   // 역본이 둘 다 켜져 있을 때는 어느 쪽인지 헷갈리므로 절 앞에 작게 이름을 붙입니다.
   // 하나만 켜져 있으면(인니어와 짝이거나 그것 하나뿐이거나) 이름 없이 절번호만 둡니다.
-  const renderKoVerse = (v: BibleVerse, version: BibleVersion, withLabel: boolean) => (
+  const renderKoVerse = (v: BibleVerse, version: BibleVersion, withLabel: boolean, idShown = false) => (
     <p key={"k" + version + v.verse} data-hlp="1" className="mb-2 text-[0.875em] leading-relaxed font-gothic text-gray-600">
-      {withLabel ? (
+      {withLabel && !idShown ? (
         <span className="mr-1.5 text-[0.625em] align-middle font-gothic font-semibold text-sky-500/80">
           {koLabelOf(version)}
         </span>
       ) : null}
-      <span className="text-sky-500/70 text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
+      {!idShown ? (
+        <span className="text-sky-500/70 text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
+      ) : null}
       {renderTokens(v.text, "k" + version + v.verse + "-", "ko" + version, v.verse, false)}
     </p>
   );
@@ -892,7 +894,7 @@ const BibleRead = () => {
           {title ? renderTitle(title, "t" + n) : null}
           {showId && tbMap[n] ? renderTbVerse(tbMap[n]) : null}
           {koVersionsShown.map((vid) =>
-            koMaps[vid][n] ? renderKoVerse(koMaps[vid][n], vid, multiKo) : null
+            koMaps[vid][n] ? renderKoVerse(koMaps[vid][n], vid, multiKo, showId && !!tbMap[n]) : null
           )}
         </div>
       );
