@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.github.cura4world.twa",
+    "sha256_cert_fingerprints": ["CD:C4:2B:B5:4D:FE:76:E7:99:56:C0:1B:B5:76:E4:01:F3:DC:72:AE:ED:D1:17:59:45:3E:D6:42:0C:20:FE:66"]
+  }
+}]

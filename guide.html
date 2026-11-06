@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Kata kata 설치와 사용 안내</title>
+<meta name="description" content="인도네시아어와 한국어를 같이 익히는 앱, Kata kata. 설치하는 법과 알아두면 좋은 기능." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* 앱 메인화면과 같은 값 (src/index.css) */
+    --deep: #104B60;        /* 상단 브랜드 블록 */
+    --deep-dark: #0C3B4C;
+    --deep-soft: #E4EDF1;
+    --accent: #EC7F51;      /* Kata kata. 의 주황 점 */
+    --ink: #14191B;
+    --ink-soft: #6B7378;
+    --paper: #F0F2F4;
+    --card: #FFFFFF;
+    --line: #DDE2E6;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: 1rem; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Gowun Dodum", system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 34rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  p { margin: 0 0 1rem; }
+  a { color: var(--deep); }
+
+  /* ---------- 표지 ---------- */
+  .hero {
+    position: relative;
+    background: var(--deep);
+    color: #fff;
+    margin: 0 -1.25rem 2.5rem;
+    padding: 3.25rem 1.25rem 3.25rem;
+    overflow: hidden;
+  }
+  .hero-deco { position: absolute; inset: 0; pointer-events: none; }
+  .hero-deco .ship { position: absolute; right: -0.4rem; top: 0.4rem; }
+  .hero-deco .waves { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; }
+  .hero-inner { position: relative; max-width: 34rem; margin: 0 auto; }
+  .hero .dot { color: var(--accent); }
+  .hero h1 {
+    font-family: Lora, Georgia, serif;
+    font-size: 2.6rem;
+    line-height: 1.1;
+    margin: 0 0 .35rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+  }
+  .hero .gloss {
+    font-size: 1rem;
+    color: #A8C6D2;
+    margin: 0 0 1.5rem;
+  }
+  .hero p.lead { margin: 0; color: #DCE8ED; }
+  .hero .note {
+    margin-top: 1.5rem;
+    font-size: .85rem;
+    color: #8FB2C0;
+  }
+
+  /* ---------- 낱말 카드(앱의 모습) ---------- */
+  .card-pair {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    margin: 1.75rem 0 0;
+  }
+  .card-pair .id { font-family: Lora, Georgia, serif; font-size: 1.35rem; }
+  .card-pair .ko { color: #C6DAE2; font-size: .95rem; }
+  .card-pair .ex { font-family: Lora, Georgia, serif; font-style: italic; color: #D8E6EC; font-size: .95rem; margin-top: .5rem; }
+  .card-pair .ex-ko { color: #8FB2C0; font-size: .85rem; }
+
+  /* ---------- 구역 ---------- */
+  section { margin: 0 0 3rem; }
+  h2 {
+    font-size: 1.45rem;
+    line-height: 1.35;
+    margin: 0 0 .25rem;
+    font-weight: normal;
+    color: var(--deep-dark);
+  }
+  .sub { color: var(--ink-soft); font-size: .95rem; margin: 0 0 1.5rem; }
+
+  /* ---------- 설치 단계 ---------- */
+  ol.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+  ol.steps > li {
+    counter-increment: s;
+    position: relative;
+    padding: 0 0 1.75rem 3rem;
+    border-left: 2px solid var(--line);
+    margin-left: .9rem;
+  }
+  ol.steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+  ol.steps > li::before {
+    content: counter(s);
+    position: absolute;
+    left: -.95rem;
+    top: 0;
+    width: 1.8rem; height: 1.8rem;
+    border-radius: 50%;
+    background: var(--deep);
+    color: #fff;
+    font-size: .9rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps h3 { margin: .1rem 0 .4rem; font-size: 1.05rem; font-weight: normal; }
+  ol.steps p { margin: 0 0 .6rem; font-size: .95rem; }
+
+  .install {
+    display: block;
+    background: var(--deep);
+    color: #fff;
+    text-decoration: none;
+    text-align: center;
+    padding: 1.05rem 1rem;
+    border-radius: 14px;
+    font-size: 1.1rem;
+    margin: 0 0 .6rem;
+  }
+  .install:active { background: var(--deep-dark); }
+  .install-note { font-size: .82rem; color: var(--ink-soft); text-align: center; margin: 0 0 1.5rem; }
+
+  /* ---------- 경고 화면 ---------- */
+  .warn {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 12px 12px 0;
+    padding: .9rem 1rem;
+    margin: 0 0 .9rem;
+    font-size: .95rem;
+  }
+  .warn .said { color: var(--ink-soft); font-size: .88rem; }
+  .warn .do { color: var(--deep-dark); }
+
+  /* ---------- 기능 ---------- */
+  .tip {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.15rem 1.15rem 1.25rem;
+    margin: 0 0 1rem;
+  }
+  .tip h3 { margin: 0 0 .5rem; font-size: 1.08rem; font-weight: normal; color: var(--deep-dark); }
+  .tip p { margin: 0 0 .7rem; font-size: .96rem; }
+  .tip p:last-child { margin-bottom: 0; }
+  .try {
+    display: inline-block;
+    background: var(--deep-soft);
+    color: var(--deep-dark);
+    border-radius: 999px;
+    padding: .3rem .8rem;
+    font-size: .85rem;
+  }
+  .say { font-family: Lora, Georgia, serif; }
+  .arrow { color: var(--ink-soft); }
+
+  /* 사전 입력 네 가지 */
+  .four { display: grid; gap: .5rem; margin: 0 0 .9rem; }
+  .four div {
+    background: var(--deep-soft);
+    border-radius: 10px;
+    padding: .55rem .8rem;
+    font-size: .95rem;
+  }
+  .four span { color: var(--ink-soft); font-size: .82rem; }
+
+  /* CSV */
+  .csv {
+    background: #1D2426;
+    color: #E8EDEC;
+    border-radius: 12px;
+    padding: .85rem 1rem;
+    font-size: .82rem;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre;
+    margin: 0 0 .8rem;
+  }
+
+  /* ---------- 화면 캡처 자리 ---------- */
+  figure { margin: 0 0 1rem; }
+  .shot {
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    color: var(--ink-soft);
+    font-size: .85rem;
+    text-align: center;
+    padding: 2.5rem 1rem;
+  }
+  figcaption { font-size: .82rem; color: var(--ink-soft); margin-top: .4rem; }
+
+  /* ---------- 접이식 ---------- */
+  details {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin: 0 0 .6rem;
+    overflow: hidden;
+  }
+  summary {
+    padding: .95rem 1.1rem;
+    cursor: pointer;
+    font-size: 1rem;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .5rem;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--deep); font-size: 1.2rem; }
+  details[open] summary::after { content: "–"; }
+  details[open] summary { border-bottom: 1px solid var(--line); }
+  details .body { padding: .9rem 1.1rem 1.1rem; font-size: .95rem; }
+  details .body p { margin: 0 0 .6rem; }
+  details .body p:last-child { margin-bottom: 0; }
+
+  /* ---------- 회원키 ---------- */
+  .keybox {
+    background: var(--deep-dark);
+    color: #fff;
+    border-radius: 14px;
+    padding: 1.2rem 1.15rem;
+  }
+  .keybox h2 { color: #fff; margin-bottom: .5rem; }
+  .keybox p { color: #CFE0E8; font-size: .95rem; }
+  .keybox .form {
+    font-family: Lora, Georgia, serif;
+    letter-spacing: .08em;
+    background: rgba(255,255,255,.12);
+    border-radius: 8px;
+    padding: .45rem .8rem;
+    display: inline-block;
+    margin-bottom: .8rem;
+  }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+    color: var(--ink-soft);
+    font-size: .85rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .install { transition: background .15s ease; }
+  }
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <!-- 앱 메인화면의 배경 장식 그대로: 피니시 범선(술라웨시 전통 목조선)과 물결 -->
+  <div class="hero-deco" aria-hidden="true">
+    <svg class="ship" width="196" height="147" viewBox="0 0 140 110" fill="none"
+         stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.26">
+      <path d="M10 84 Q70 104 130 84" />
+      <path d="M10 84 L130 84" />
+      <path d="M52 84 L52 12" />
+      <path d="M92 84 L92 26" />
+      <path d="M50 16 L50 78 L18 78 Z" />
+      <path d="M56 20 L56 78 L88 78 Z" />
+      <path d="M96 30 L96 78 L126 78 Z" />
+      <path d="M52 12 L52 6" />
+    </svg>
+    <svg class="waves" height="34" viewBox="0 0 400 34" preserveAspectRatio="none" fill="none"
+         stroke="#ffffff" stroke-width="1.4" stroke-linecap="round">
+      <path d="M-10 12 Q40 4 90 12 T190 12 T290 12 T390 12 T490 12" opacity="0.18" />
+      <path d="M-10 22 Q50 14 110 22 T230 22 T350 22 T470 22" opacity="0.13" />
+      <path d="M-10 31 Q60 24 130 31 T270 31 T410 31" opacity="0.09" />
+    </svg>
+  </div>
+  <div class="hero-inner">
+    <h1>Kata kata<span class="dot">.</span></h1>
+    <p class="gloss">인도네시아어와 한국어를 같이 익히는 앱</p>
+    <p class="lead">읽다가 모르는 낱말을 짚으면 뜻이 뜨고, 그 자리에서 내 단어장으로 들어갑니다. 성경과 회화, 이야기와 뉴스까지 두 언어로 나란히 읽습니다.</p>
+
+    <div class="card-pair">
+      <div class="id">kata kata</div>
+      <div class="ko">낱말들, 말</div>
+      <div class="ex">Saya belajar kata kata baru setiap hari.</div>
+      <div class="ex-ko">나는 매일 새 낱말을 배웁니다.</div>
+    </div>
+
+    <p class="note">안드로이드 폰에서 씁니다 · 지금 이 화면을 폰에서 보고 계시다면 그대로 진행하세요</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section>
+  <h2>설치하기</h2>
+  <p class="sub">스토어를 거치지 않고 바로 받습니다. 경고 화면이 두 번 나오는데, 아래 그대로 하시면 됩니다.</p>
+
+  <ol class="steps">
+    <li>
+      <h3>앱 내려받기</h3>
+      <a class="install" href="https://github.com/cura4world/idkr-buddy/releases/latest/download/kata-kata.apk">Kata kata 받기</a>
+      <p class="install-note">약 5MB · 와이파이를 권합니다</p>
+      <p>누르면 파일이 내려받아집니다. 다 받아지면 알림을 눌러 여세요.</p>
+    </li>
+
+    <li>
+      <h3>경고 넘기기</h3>
+      <p>스토어 밖에서 받은 앱이라 안드로이드가 두 번 묻습니다. 앱에 문제가 있다는 뜻이 아니라, 출처를 확인하는 절차입니다.</p>
+
+      <div class="warn">
+        <div class="said">“이 출처의 앱은 설치할 수 없습니다”</div>
+        <div class="do">설정 → 이 출처 허용을 켜고 뒤로 돌아오기</div>
+      </div>
+      <div class="warn">
+        <div class="said">“개발자를 확인할 수 없는 앱입니다”</div>
+        <div class="do">자세히 → 무시하고 설치</div>
+      </div>
+
+      <figure>
+        <div class="shot">[여기에 경고 화면 캡처가 들어갑니다]</div>
+        <figcaption>실제로 뜨는 화면</figcaption>
+      </figure>
+    </li>
+
+    <li>
+      <h3>열기</h3>
+      <p>설치가 끝나면 홈 화면에 연필 모양 아이콘이 생깁니다. 눌러서 열면 바로 쓸 수 있습니다.</p>
+      <p>앱은 켤 때마다 최신 내용을 불러옵니다. 새 기능이 생겨도 다시 설치하실 필요가 없습니다.</p>
+    </li>
+  </ol>
+</section>
+
+<section>
+  <div class="keybox">
+    <h2>회원키를 받으셨다면</h2>
+    <p>성경과 교재, 회화집은 회원키를 넣어야 열립니다.</p>
+    <div class="form">KK-XXXX-XXXX-XXXX</div>
+    <p>앱 오른쪽 위 톱니바퀴 → 회원키 칸에 넣고 활성화를 누르면, 성경 세 역본과 회화집이 자동으로 내려옵니다. 한 번만 하면 됩니다.</p>
+    <p>회원키는 처음 넣은 기기 하나에서만 쓸 수 있습니다. 폰을 바꾸시면 받으신 분께 말씀해 주세요.</p>
+  </div>
+</section>
+
+<section>
+  <h2>이것만 알면 훨씬 잘 쓰입니다</h2>
+  <p class="sub">화면에 버튼이 없어서 모르고 지나치기 쉬운 것들입니다.</p>
+
+  <div class="tip">
+    <h3>사전은 네 가지를 다 알아듣습니다</h3>
+    <p>인도네시아어인지 한국어인지, 낱말인지 문장인지 고르지 않아도 됩니다. 그냥 넣으면 알아서 판단합니다.</p>
+    <div class="four">
+      <div><span class="say">rumah</span> <span>인도네시아어 낱말</span></div>
+      <div><span class="say">Saya mau makan dulu</span> <span>인도네시아어 문장</span></div>
+      <div>감사합니다 <span>한국어 낱말</span></div>
+      <div>내일 몇 시에 만날까요 <span>한국어 문장</span></div>
+    </div>
+    <p>마이크를 눌러 말로 찾을 수도 있습니다.</p>
+  </div>
+
+  <div class="tip">
+    <h3>두 낱말이 붙어야 뜻이 되는 말은 긁어서 찾습니다</h3>
+    <p><span class="say">kipas angin</span>은 선풍기, <span class="say">kambing hitam</span>은 희생양입니다. 한 낱말만 누르면 “부채”와 “바람”으로 따로 나옵니다.</p>
+    <p>본문을 꾹 눌러 파란 손잡이로 두 낱말을 긁으면, 화면 아래에 찾기 버튼이 뜹니다.</p>
+    <span class="try">꾹 누르기 <span class="arrow">→</span> 긁기 <span class="arrow">→</span> 아래 버튼</span>
+  </div>
+
+  <div class="tip">
+    <h3>모르는 낱말은 읽다가 바로 담습니다</h3>
+    <p>성경이든 이야기든 뉴스든, 본문의 낱말을 한 번 누르면 뜻과 예문이 뜹니다. 거기서 단어장 담기를 누르면 끝입니다. 따로 옮겨 적지 않아도 됩니다.</p>
+    <p>담을 단어장은 팝업에서 고를 수 있습니다.</p>
+  </div>
+
+  <div class="tip">
+    <h3>단어장은 파일로 통째로 넣고 뺍니다</h3>
+    <p>엑셀이나 메모장에서 만든 목록을 한 번에 들여올 수 있습니다. 네 칸을 쉼표로 나누고, 맨 윗줄에 제목은 쓰지 않습니다.</p>
+    <div class="csv">rumah,집,Rumah saya kecil.,우리 집은 작습니다.
+makan,먹다,Saya makan nasi.,나는 밥을 먹습니다.</div>
+    <p>단어장 화면의 CSV 가져오기로 넣고, 설정의 데이터 백업에서 전부 내보낼 수 있습니다. 폰을 바꾸기 전에 한 번 내보내 두시면 안전합니다.</p>
+  </div>
+
+  <div class="tip">
+    <h3>좌우로 밀면 뒤집힙니다</h3>
+    <p>성경, 이야기, 묵상, 기도문, 뉴스는 앞면이 인도네시아어, 뒷면이 한국어입니다. 화면을 옆으로 밀면 넘어갑니다.</p>
+    <p>먼저 인도네시아어로 읽어보고, 막히면 뒤집어 확인하는 식으로 쓰면 좋습니다.</p>
+  </div>
+
+  <div class="tip">
+    <h3>사전에 다녀와도 읽던 자리로 돌아옵니다</h3>
+    <p>읽다가 낱말이 궁금해 사전까지 들어갔다 나와도, 보던 자리와 보던 면이 그대로 복원됩니다. 처음부터 다시 찾지 않으셔도 됩니다.</p>
+  </div>
+
+  <div class="tip">
+    <h3>전체 듣기는 두 번째부터 기다리지 않습니다</h3>
+    <p>묵상·이야기·기도·뉴스·회화에는 전체 듣기가 있습니다. 처음 들을 때만 음성을 만들고, 그다음부터는 폰에 저장된 것을 바로 재생합니다.</p>
+    <p>성경 듣기는 사람이 읽은 낭독이라 기다림 없이 바로 나옵니다.</p>
+  </div>
+</section>
+
+<section>
+  <h2>화면 둘러보기</h2>
+  <p class="sub">궁금한 것만 펼쳐 보세요.</p>
+
+  <details>
+    <summary>사전</summary>
+    <div class="body">
+      <p>낱말과 문장을 찾습니다. 인도네시아어 낱말은 뜻과 설명, 예문에 더해 비슷한 말·반대말·파생어까지 함께 보여줍니다.</p>
+      <p>한 번 찾은 낱말은 저장되어 다음에는 곧바로 뜹니다.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>단어장</summary>
+    <div class="body">
+      <p>내 단어장과 주제별 단어장이 있습니다. 카드로 넘겨 보거나 퀴즈로 확인할 수 있습니다.</p>
+      <p>읽다가 담은 낱말은 내 단어장에 모입니다.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>성경 · 묵상 · 기도문</summary>
+    <div class="body">
+      <p>성경은 인도네시아어와 한국어를 나란히 읽고, 듣기도 됩니다. 한국어는 개역개정·우리말성경 중에서, 영어는 NIV로 고를 수 있습니다.</p>
+      <p>묵상과 기도문은 그날 내용을 새로 만들어 보여줍니다. 만드는 데 1분쯤 걸립니다.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>회화 · 이야기 · 뉴스</summary>
+    <div class="body">
+      <p>회화는 장면별 대화를 화자를 나눠 들려줍니다. 이야기는 난이도를 골라 새로 만들고, 뉴스는 인도네시아 소식을 하루치 모아 보여줍니다.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>게임</summary>
+    <div class="body">
+      <p>짝맞추기, 스피드 O/X, 문장 조립, 철자 채우기, 단어 받기 다섯 가지입니다. 내 단어장의 낱말로 나오기 때문에, 담아둔 것이 많을수록 재미있습니다.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>인도네시아 이해</summary>
+    <div class="body">
+      <p>종교와 민족, 역사, 생활 요령을 정리해 두었습니다. 지도에서는 도시와 관광지를 짚어 사진과 함께 볼 수 있습니다.</p>
+    </div>
+  </details>
+</section>
+
+<section>
+  <h2>이럴 때는</h2>
+
+  <details>
+    <summary>화면이 한참 멈춰 있어요</summary>
+    <div class="body">
+      <p>묵상과 뉴스는 내용을 새로 만들기 때문에 1분 남짓 걸립니다. 기다리시면 나옵니다.</p>
+      <p>사전과 이야기는 몇 초면 됩니다. 그보다 오래 걸리면 인터넷 연결을 확인해 보세요.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>바뀐 내용이 안 보여요</summary>
+    <div class="body">
+      <p>앱을 완전히 종료한 뒤 다시 켜면 최신 내용을 불러옵니다.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>회원키가 “다른 기기에서 쓰고 있다”고 나와요</summary>
+    <div class="body">
+      <p>회원키는 기기 하나에만 묶입니다. 폰을 바꾸셨거나 앱 데이터를 지우셨다면, 키를 주신 분께 말씀하시면 풀어드립니다.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>단어장을 옮기고 싶어요</summary>
+    <div class="body">
+      <p>설정의 데이터 백업에서 복사를 누르면 전체 내용이 복사됩니다. 메모장이나 메신저에 붙여 보관했다가, 새 폰에서 CSV 가져오기로 넣으시면 됩니다.</p>
+    </div>
+  </details>
+</section>
+
+<footer>
+  <p>Kata kata는 개인이 만들어 쓰는 앱입니다. 문의는 앱을 보내주신 분께 해주세요.</p>
+</footer>
+
+</div>
+</body>
+</html>
