@@ -44,8 +44,15 @@ import GameSusun from "./pages/GameSusun";
 import GameEja from "./pages/GameEja";
 import GameTangkap from "./pages/GameTangkap";
 import NotFound from "./pages/NotFound";
+import Plus from "./pages/Plus";
+import LoginGate from "@/components/LoginGate";
+import HiddenInPublic from "@/components/HiddenInPublic";
+import { installStoreTtsShim } from "@/lib/storeTtsShim";
 
 const queryClient = new QueryClient();
+
+// 스토어 앱(공개판)에는 폰 내장 음성이 없습니다. 발음 듣기를 Gemini 음성으로 대신합니다.
+installStoreTtsShim();
 
 // 앱이 켜질 때 한 번: 회원키가 끊겼거나 다른 기기로 넘어갔으면 이 기기의
 // 회원 상태를 풀고 받아 둔 보호 내용을 지웁니다(인터넷이 안 되면 그대로 둠).
@@ -72,25 +79,27 @@ const App = () => (
     <TooltipProvider>
       <Sonner duration={2000} />
       <BrowserRouter basename="/idkr-buddy">
+        <LoginGate>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/phrase" element={<PhraseDetail />} />
           <Route path="/phrase/saved" element={<SavedPhrases />} />
           <Route path="/dictionary" element={<Dictionary />} />
           <Route path="/story" element={<Story />} />
-          <Route path="/news" element={<News />} />
-          <Route path="/devotion" element={<Devotion />} />
-          <Route path="/bible" element={<BibleRead />} />
-          <Route path="/one-to-one" element={<OneToOne />} />
-          <Route path="/members" element={<MemberAdmin />} />
-          <Route path="/prayer" element={<Prayer />} />
-          <Route path="/sermon" element={<Sermons />} />
-          <Route path="/sermon/:id" element={<SermonRead />} />
+          <Route path="/news" element={<HiddenInPublic><News /></HiddenInPublic>} />
+          <Route path="/devotion" element={<HiddenInPublic><Devotion /></HiddenInPublic>} />
+          <Route path="/bible" element={<HiddenInPublic><BibleRead /></HiddenInPublic>} />
+          <Route path="/one-to-one" element={<HiddenInPublic><OneToOne /></HiddenInPublic>} />
+          <Route path="/members" element={<HiddenInPublic><MemberAdmin /></HiddenInPublic>} />
+          <Route path="/prayer" element={<HiddenInPublic><Prayer /></HiddenInPublic>} />
+          <Route path="/sermon" element={<HiddenInPublic><Sermons /></HiddenInPublic>} />
+          <Route path="/sermon/:id" element={<HiddenInPublic><SermonRead /></HiddenInPublic>} />
+          <Route path="/plus" element={<Plus />} />
           <Route path="/map" element={<IndoMap />} />
           <Route path="/insight" element={<Insight />} />
           <Route path="/insight/overview" element={<InsightOverview />} />
           <Route path="/insight/religion" element={<InsightReligion />} />
-          <Route path="/insight/christian" element={<InsightChristian />} />
+          <Route path="/insight/christian" element={<HiddenInPublic><InsightChristian /></HiddenInPublic>} />
           <Route path="/insight/ethnic" element={<InsightEthnic />} />
           <Route path="/insight/history" element={<InsightHistory />} />
           <Route path="/insight/tips" element={<InsightTips />} />
@@ -112,6 +121,7 @@ const App = () => (
           <Route path="/permainan/tangkap" element={<GameTangkap />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </LoginGate>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
