@@ -407,8 +407,8 @@ const Index = () => {
   const [edition] = useState(getEdition);
   const wordOn = edition !== "public";
   const sermonOn = edition === "admin";
-  const newsOn = edition !== "public";
   const storeApp = isStoreApp();
+  const newsOn = !storeApp; // 뉴스는 스토어 앱에서만 뺍니다(브라우저 화면은 예전 그대로)
   useEffect(() => {
     if (takeRevokedNotice()) toast("회원키가 해제되어 받아 둔 성경·교재를 이 기기에서 지웠습니다");
   }, []);
