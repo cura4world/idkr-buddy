@@ -1,0 +1,920 @@
+name: Build Store AAB (공개판)
+
+# Google Play 에 올리는 공개판 스토어 앱 (app.naruve.katakata).
+# 관리자판·회원판 APK(build-apk.yml)와는 패키지 이름도, 서명 키도 따로입니다.
+#
+# 서명 키(STORE_KEYSTORE_BASE64 등)가 등록돼 있으면 → 서명된 AAB(bundleRelease)를 만들어 올려 둡니다.
+# 아직 없으면                                         → 디버그 빌드로 "컴파일이 되는지"만 확인합니다.
+# 실패하면 오류 줄을 Actions 주석으로 남깁니다(로그인 없이 API 로 읽을 수 있게).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [release/public]
+    paths:
+      - '.github/workflows/build-store.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform 36
+        run: sdkmanager "build-tools;36.0.0" "platforms;android-36"
+
+      - name: Setup Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Restore upload keystore (있을 때만)
+        env:
+          STORE_KEYSTORE_BASE64: ${{ secrets.STORE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$STORE_KEYSTORE_BASE64" ]; then
+            echo "$STORE_KEYSTORE_BASE64" | base64 -d > upload.jks
+            echo "SIGNED=1" >> "$GITHUB_ENV"
+          else
+            echo "서명 키가 아직 없습니다 → 디버그 빌드로 컴파일만 확인합니다"
+            echo "SIGNED=0" >> "$GITHUB_ENV"
+          fi
+
+      - name: App icons (관리자판과 같은 아이콘)
+        run: |
+          sudo apt-get install -y imagemagick -q
+          test -f public/icon-512x512.png || { echo "public/icon-512x512.png 이 없습니다"; exit 1; }
+          test -f public/icon-foreground-432.png || { echo "public/icon-foreground-432.png 이 없습니다"; exit 1; }
+          for d in mdpi:48:108 hdpi:72:162 xhdpi:96:216 xxhdpi:144:324 xxxhdpi:192:432; do
+            n=${d%%:*}; rest=${d#*:}; s=${rest%%:*}; f=${rest#*:}
+            mkdir -p app/src/main/res/mipmap-$n
+            convert public/icon-512x512.png -resize ${s}x${s} app/src/main/res/mipmap-$n/ic_launcher.png
+            convert public/icon-foreground-432.png -resize ${f}x${f} app/src/main/res/mipmap-$n/ic_launcher_foreground.png
+          done
+          mkdir -p app/src/main/res/mipmap-anydpi-v26 app/src/main/res/values
+          # 배경은 반드시 불투명 (투명이면 삼성 런처가 검게 칠함 — CLAUDE.md 금지 사항)
+          cat > app/src/main/res/values/ic_launcher_background.xml << 'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_launcher_background">#37C0D2</color>
+          </resources>
+          XML
+          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ic_launcher_background" />
+              <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+          </adaptive-icon>
+          XML
+
+      - name: Create store Android project
+        run: |
+          mkdir -p app/src/main/java/app/naruve/katakata app/src/main/res/values
+
+          cat > settings.gradle << 'GRADLE'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "KataKataStore"
+          include ':app'
+          GRADLE
+
+          cat > build.gradle << 'GRADLE'
+          plugins {
+              id 'com.android.application' version '8.13.0' apply false
+          }
+          GRADLE
+
+          cat > gradle.properties << 'GRADLE'
+          android.useAndroidX=true
+          org.gradle.jvmargs=-Xmx3072m
+          GRADLE
+
+          cat > app/build.gradle << 'GRADLE'
+          plugins {
+              id 'com.android.application'
+          }
+
+          def runNumber = System.getenv('GITHUB_RUN_NUMBER')
+          def appVersionCode = runNumber ? runNumber.toInteger() : 1
+          def webClientId = System.getenv('STORE_WEB_CLIENT_ID') ?: ''
+          def ksPass = System.getenv('STORE_KEYSTORE_PASSWORD')
+          def signed = System.getenv('SIGNED') == '1' && ksPass
+
+          android {
+              namespace 'app.naruve.katakata'
+              compileSdk 36
+              defaultConfig {
+                  applicationId 'app.naruve.katakata'
+                  minSdk 24
+                  targetSdk 36
+                  versionCode appVersionCode
+                  versionName '1.0.' + appVersionCode
+                  buildConfigField 'String', 'WEB_CLIENT_ID', '"' + webClientId + '"'
+              }
+              buildFeatures {
+                  buildConfig true
+              }
+              signingConfigs {
+                  upload {
+                      if (signed) {
+                          storeFile file('../upload.jks')
+                          storePassword ksPass
+                          keyAlias System.getenv('STORE_KEY_ALIAS')
+                          keyPassword System.getenv('STORE_KEY_PASSWORD')
+                      }
+                  }
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      if (signed) {
+                          signingConfig signingConfigs.upload
+                      }
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.7.0'
+              implementation 'androidx.core:core:1.13.1'
+              implementation 'androidx.activity:activity:1.9.3'
+              implementation 'androidx.credentials:credentials:1.5.0'
+              implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
+              implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
+              implementation 'com.android.billingclient:billing:8.0.0'
+          }
+          GRADLE
+
+          cat > app/src/main/AndroidManifest.xml << 'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+              <queries>
+                  <intent>
+                      <action android:name="android.speech.RecognitionService" />
+                  </intent>
+              </queries>
+              <application
+                  android:allowBackup="false"
+                  android:label="@string/app_name"
+                  android:icon="@mipmap/ic_launcher"
+                  android:roundIcon="@mipmap/ic_launcher"
+                  android:usesCleartextTraffic="false"
+                  android:enableOnBackInvokedCallback="true"
+                  android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:windowSoftInputMode="adjustResize"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|screenLayout|smallestScreenSize|density|layoutDirection|uiMode">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          XML
+
+          cat > app/src/main/res/values/strings.xml << 'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">Kata kata</string>
+          </resources>
+          XML
+
+          cat > app/src/main/java/app/naruve/katakata/MainActivity.java << 'JAVA'
+          package app.naruve.katakata;
+
+          import android.Manifest;
+          import android.content.ContentValues;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.graphics.Color;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.os.CancellationSignal;
+          import android.os.Environment;
+          import android.provider.MediaStore;
+          import android.util.Base64;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.PermissionRequest;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.widget.FrameLayout;
+          import android.widget.Toast;
+
+          import androidx.activity.OnBackPressedCallback;
+          import androidx.annotation.NonNull;
+          import androidx.appcompat.app.AppCompatActivity;
+          import androidx.core.content.ContextCompat;
+          import androidx.core.graphics.Insets;
+          import androidx.core.view.ViewCompat;
+          import androidx.core.view.WindowCompat;
+          import androidx.core.view.WindowInsetsCompat;
+          import androidx.core.view.WindowInsetsControllerCompat;
+          import androidx.credentials.ClearCredentialStateRequest;
+          import androidx.credentials.Credential;
+          import androidx.credentials.CredentialManager;
+          import androidx.credentials.CredentialManagerCallback;
+          import androidx.credentials.CustomCredential;
+          import androidx.credentials.GetCredentialRequest;
+          import androidx.credentials.GetCredentialResponse;
+          import androidx.credentials.exceptions.ClearCredentialException;
+          import androidx.credentials.exceptions.GetCredentialCancellationException;
+          import androidx.credentials.exceptions.GetCredentialException;
+          import androidx.credentials.exceptions.NoCredentialException;
+
+          import com.android.billingclient.api.AcknowledgePurchaseParams;
+          import com.android.billingclient.api.BillingClient;
+          import com.android.billingclient.api.BillingClientStateListener;
+          import com.android.billingclient.api.BillingFlowParams;
+          import com.android.billingclient.api.BillingResult;
+          import com.android.billingclient.api.PendingPurchasesParams;
+          import com.android.billingclient.api.ProductDetails;
+          import com.android.billingclient.api.Purchase;
+          import com.android.billingclient.api.PurchasesUpdatedListener;
+          import com.android.billingclient.api.QueryProductDetailsParams;
+          import com.android.billingclient.api.QueryPurchasesParams;
+          import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
+          import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
+          import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
+
+          import org.json.JSONArray;
+          import org.json.JSONObject;
+
+          import java.io.File;
+          import java.io.FileOutputStream;
+          import java.io.OutputStream;
+          import java.util.ArrayList;
+          import java.util.HashMap;
+          import java.util.List;
+          import java.util.Map;
+          import java.util.concurrent.Executor;
+
+          public class MainActivity extends AppCompatActivity {
+
+              private static final String APP_BASE = "https://cura4world.github.io/idkr-buddy/";
+              private static final int FILE_CHOOSER_REQUEST = 1001;
+              private static final int MIC_REQUEST = 1002;
+
+              private WebView webView;
+              private ValueCallback<Uri[]> fileCallback;
+              private PermissionRequest pendingPermissionRequest;
+              private CredentialManager credentialManager;
+              private Executor mainExecutor;
+              private BillingClient billing;
+              private final Map<String, ProductDetails> productCache = new HashMap<>();
+
+              // ── 웹으로 결과 보내기 (항상 UI 스레드에서) ─────────────
+              private void callJs(final String fn, final String jsonArg) {
+                  final String js = "window." + fn + " && window." + fn + "(" + jsonArg + ")";
+                  runOnUiThread(new Runnable() {
+                      @Override
+                      public void run() {
+                          if (webView != null) {
+                              webView.evaluateJavascript(js, null);
+                          }
+                      }
+                  });
+              }
+
+              private void toast(final String message) {
+                  runOnUiThread(new Runnable() {
+                      @Override
+                      public void run() {
+                          Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+                      }
+                  });
+              }
+
+              // ── KataStore: "나는 스토어 앱" ──────────────────────────
+              private class StoreBridge {
+                  @JavascriptInterface
+                  public String version() {
+                      return BuildConfig.VERSION_NAME;
+                  }
+              }
+
+              // ── KataAuth: Google 로그인 (Credential Manager) ─────────
+              private class AuthBridge {
+                  @JavascriptInterface
+                  public void signIn(final String nonce) {
+                      runOnUiThread(new Runnable() {
+                          @Override
+                          public void run() {
+                              startSignIn(nonce, true);
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
+                  public void signOut() {
+                      runOnUiThread(new Runnable() {
+                          @Override
+                          public void run() {
+                              credentialManager.clearCredentialStateAsync(
+                                  new ClearCredentialStateRequest(),
+                                  new CancellationSignal(),
+                                  mainExecutor,
+                                  new CredentialManagerCallback<Void, ClearCredentialException>() {
+                                      @Override
+                                      public void onResult(Void result) {
+                                      }
+
+                                      @Override
+                                      public void onError(@NonNull ClearCredentialException e) {
+                                      }
+                                  });
+                          }
+                      });
+                  }
+              }
+
+              private void sendAuth(boolean ok, String idToken, String error) {
+                  try {
+                      JSONObject o = new JSONObject();
+                      o.put("ok", ok);
+                      if (idToken != null) o.put("idToken", idToken);
+                      if (error != null) o.put("error", error);
+                      callJs("__kataAuthResult", o.toString());
+                  } catch (Exception e) {
+                      callJs("__kataAuthResult", "{ok:false,error:'FAILED'}");
+                  }
+              }
+
+              // 1차: 이 앱에 로그인했던 계정으로 바로(자동 선택). 없으면 2차: 계정 고르기 화면.
+              private void startSignIn(final String nonce, final boolean authorizedOnly) {
+                  String clientId = BuildConfig.WEB_CLIENT_ID;
+                  if (clientId == null || clientId.length() == 0) {
+                      sendAuth(false, null, "NOT_CONFIGURED");
+                      return;
+                  }
+                  GetCredentialRequest request;
+                  if (authorizedOnly) {
+                      GetGoogleIdOption option = new GetGoogleIdOption.Builder()
+                          .setFilterByAuthorizedAccounts(true)
+                          .setServerClientId(clientId)
+                          .setAutoSelectEnabled(true)
+                          .setNonce(nonce)
+                          .build();
+                      request = new GetCredentialRequest.Builder().addCredentialOption(option).build();
+                  } else {
+                      GetSignInWithGoogleOption option = new GetSignInWithGoogleOption.Builder(clientId)
+                          .setNonce(nonce)
+                          .build();
+                      request = new GetCredentialRequest.Builder().addCredentialOption(option).build();
+                  }
+                  credentialManager.getCredentialAsync(
+                      this,
+                      request,
+                      new CancellationSignal(),
+                      mainExecutor,
+                      new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
+                          @Override
+                          public void onResult(GetCredentialResponse response) {
+                              Credential c = response.getCredential();
+                              if (c instanceof CustomCredential
+                                      && GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL.equals(c.getType())) {
+                                  try {
+                                      GoogleIdTokenCredential g = GoogleIdTokenCredential.createFrom(c.getData());
+                                      sendAuth(true, g.getIdToken(), null);
+                                  } catch (Exception e) {
+                                      sendAuth(false, null, "FAILED");
+                                  }
+                              } else {
+                                  sendAuth(false, null, "FAILED");
+                              }
+                          }
+
+                          @Override
+                          public void onError(@NonNull GetCredentialException e) {
+                              if (authorizedOnly && !(e instanceof GetCredentialCancellationException)) {
+                                  startSignIn(nonce, false);
+                                  return;
+                              }
+                              if (e instanceof GetCredentialCancellationException) {
+                                  sendAuth(false, null, "CANCELED");
+                              } else if (e instanceof NoCredentialException) {
+                                  sendAuth(false, null, "NO_ACCOUNT");
+                              } else {
+                                  sendAuth(false, null, "FAILED");
+                              }
+                          }
+                      });
+              }
+
+              // ── KataBilling: Play 구독 (Billing 8) ───────────────────
+              private void emitBilling(JSONObject o) {
+                  callJs("__kataBillingEvent", o.toString());
+              }
+
+              private void emitBillingSimple(String type, String code) {
+                  try {
+                      JSONObject o = new JSONObject();
+                      o.put("type", type);
+                      if (code != null) o.put("code", code);
+                      emitBilling(o);
+                  } catch (Exception ignored) {
+                  }
+              }
+
+              private void emitPurchases(String type, List<Purchase> purchases) {
+                  try {
+                      JSONArray arr = new JSONArray();
+                      if (purchases != null) {
+                          for (Purchase p : purchases) {
+                              List<String> ids = p.getProducts();
+                              JSONObject o = new JSONObject();
+                              o.put("productId", ids.isEmpty() ? "" : ids.get(0));
+                              o.put("purchaseToken", p.getPurchaseToken());
+                              o.put("orderId", p.getOrderId() == null ? "" : p.getOrderId());
+                              o.put("acknowledged", p.isAcknowledged());
+                              int st = p.getPurchaseState();
+                              o.put("state", st == Purchase.PurchaseState.PURCHASED ? "PURCHASED"
+                                  : st == Purchase.PurchaseState.PENDING ? "PENDING" : "UNSPECIFIED");
+                              arr.put(o);
+                          }
+                      }
+                      JSONObject ev = new JSONObject();
+                      ev.put("type", type);
+                      ev.put("purchases", arr);
+                      emitBilling(ev);
+                  } catch (Exception e) {
+                      emitBillingSimple("error", "JSON");
+                  }
+              }
+
+              private final PurchasesUpdatedListener purchasesListener = new PurchasesUpdatedListener() {
+                  @Override
+                  public void onPurchasesUpdated(@NonNull BillingResult result, List<Purchase> purchases) {
+                      int code = result.getResponseCode();
+                      if (code == BillingClient.BillingResponseCode.OK) {
+                          emitPurchases("purchase", purchases);
+                      } else if (code == BillingClient.BillingResponseCode.USER_CANCELED) {
+                          emitBillingSimple("canceled", null);
+                      } else {
+                          emitBillingSimple("error", "BILLING_" + code);
+                      }
+                  }
+              };
+
+              private void withBilling(final Runnable task) {
+                  if (billing.isReady()) {
+                      task.run();
+                      return;
+                  }
+                  billing.startConnection(new BillingClientStateListener() {
+                      @Override
+                      public void onBillingSetupFinished(@NonNull BillingResult result) {
+                          if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                              task.run();
+                          } else {
+                              emitBillingSimple("error", "SETUP_" + result.getResponseCode());
+                          }
+                      }
+
+                      @Override
+                      public void onBillingServiceDisconnected() {
+                      }
+                  });
+              }
+
+              private void queryProducts(final List<String> ids, final Runnable after) {
+                  List<QueryProductDetailsParams.Product> list = new ArrayList<>();
+                  for (String id : ids) {
+                      list.add(QueryProductDetailsParams.Product.newBuilder()
+                          .setProductId(id)
+                          .setProductType(BillingClient.ProductType.SUBS)
+                          .build());
+                  }
+                  QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder().setProductList(list).build();
+                  billing.queryProductDetailsAsync(params, (billingResult, result) -> {
+                      if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                          emitBillingSimple("error", "QUERY_" + billingResult.getResponseCode());
+                          return;
+                      }
+                      for (ProductDetails pd : result.getProductDetailsList()) {
+                          productCache.put(pd.getProductId(), pd);
+                      }
+                      after.run();
+                  });
+              }
+
+              private void emitProducts() {
+                  try {
+                      JSONArray arr = new JSONArray();
+                      for (ProductDetails pd : productCache.values()) {
+                          List<ProductDetails.SubscriptionOfferDetails> offers = pd.getSubscriptionOfferDetails();
+                          if (offers == null) continue;
+                          for (ProductDetails.SubscriptionOfferDetails od : offers) {
+                              String price = "";
+                              String period = "";
+                              String trial = "";
+                              for (ProductDetails.PricingPhase ph : od.getPricingPhases().getPricingPhaseList()) {
+                                  if (ph.getPriceAmountMicros() == 0) {
+                                      trial = ph.getBillingPeriod();
+                                  } else {
+                                      price = ph.getFormattedPrice();
+                                      period = ph.getBillingPeriod();
+                                  }
+                              }
+                              JSONObject o = new JSONObject();
+                              o.put("productId", pd.getProductId());
+                              o.put("basePlanId", od.getBasePlanId());
+                              o.put("offerId", od.getOfferId() == null ? "" : od.getOfferId());
+                              o.put("offerToken", od.getOfferToken());
+                              o.put("formattedPrice", price);
+                              o.put("billingPeriod", period);
+                              o.put("freeTrialPeriod", trial);
+                              arr.put(o);
+                          }
+                      }
+                      JSONObject ev = new JSONObject();
+                      ev.put("type", "products");
+                      ev.put("products", arr);
+                      emitBilling(ev);
+                  } catch (Exception e) {
+                      emitBillingSimple("error", "JSON");
+                  }
+              }
+
+              private class BillingBridge {
+                  @JavascriptInterface
+                  public void query(final String idsJson) {
+                      runOnUiThread(new Runnable() {
+                          @Override
+                          public void run() {
+                              final List<String> ids = new ArrayList<>();
+                              try {
+                                  JSONArray a = new JSONArray(idsJson);
+                                  for (int i = 0; i < a.length(); i++) ids.add(a.getString(i));
+                              } catch (Exception e) {
+                                  emitBillingSimple("error", "BAD_IDS");
+                                  return;
+                              }
+                              withBilling(new Runnable() {
+                                  @Override
+                                  public void run() {
+                                      queryProducts(ids, new Runnable() {
+                                          @Override
+                                          public void run() {
+                                              emitProducts();
+                                          }
+                                      });
+                                  }
+                              });
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
+                  public void purchase(final String productId, final String offerToken, final String accountId) {
+                      runOnUiThread(new Runnable() {
+                          @Override
+                          public void run() {
+                              withBilling(new Runnable() {
+                                  @Override
+                                  public void run() {
+                                      ProductDetails pd = productCache.get(productId);
+                                      if (pd == null) {
+                                          emitBillingSimple("error", "NO_PRODUCT");
+                                          return;
+                                      }
+                                      List<BillingFlowParams.ProductDetailsParams> items = new ArrayList<>();
+                                      items.add(BillingFlowParams.ProductDetailsParams.newBuilder()
+                                          .setProductDetails(pd)
+                                          .setOfferToken(offerToken)
+                                          .build());
+                                      BillingFlowParams params = BillingFlowParams.newBuilder()
+                                          .setProductDetailsParamsList(items)
+                                          .setObfuscatedAccountId(accountId)
+                                          .build();
+                                      BillingResult r = billing.launchBillingFlow(MainActivity.this, params);
+                                      if (r.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                                          emitBillingSimple("error", "LAUNCH_" + r.getResponseCode());
+                                      }
+                                  }
+                              });
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
+                  public void restore() {
+                      runOnUiThread(new Runnable() {
+                          @Override
+                          public void run() {
+                              withBilling(new Runnable() {
+                                  @Override
+                                  public void run() {
+                                      QueryPurchasesParams params = QueryPurchasesParams.newBuilder()
+                                          .setProductType(BillingClient.ProductType.SUBS)
+                                          .build();
+                                      billing.queryPurchasesAsync(params, (result, list) -> {
+                                          if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                                              emitPurchases("owned", list);
+                                          } else {
+                                              emitBillingSimple("error", "RESTORE_" + result.getResponseCode());
+                                          }
+                                      });
+                                  }
+                              });
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
+                  public void manage(final String productId) {
+                      openExternal("https://play.google.com/store/account/subscriptions?sku="
+                          + Uri.encode(productId) + "&package=" + getPackageName());
+                  }
+              }
+
+              // ── AndroidFile: 다운로드 폴더에 저장 ────────────────────
+              // 안드로이드 10 이상은 MediaStore(권한 필요 없음), 그 아래는 앱 전용 다운로드 폴더.
+              private class FileBridge {
+                  @JavascriptInterface
+                  public String save(String name, String mime, String base64) {
+                      try {
+                          byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                              ContentValues v = new ContentValues();
+                              v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+                              v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+                              v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+                              Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                              if (uri == null) return "FAIL";
+                              OutputStream out = getContentResolver().openOutputStream(uri);
+                              if (out == null) return "FAIL";
+                              try {
+                                  out.write(bytes);
+                                  out.flush();
+                              } finally {
+                                  out.close();
+                              }
+                          } else {
+                              File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                              if (dir == null) return "FAIL";
+                              if (!dir.exists()) dir.mkdirs();
+                              FileOutputStream out = new FileOutputStream(new File(dir, name));
+                              try {
+                                  out.write(bytes);
+                                  out.flush();
+                              } finally {
+                                  out.close();
+                              }
+                          }
+                          return "OK";
+                      } catch (Exception e) {
+                          return "FAIL";
+                      }
+                  }
+              }
+
+              private void openExternal(String url) {
+                  try {
+                      startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                  } catch (Exception e) {
+                      toast("링크를 열 앱이 없습니다");
+                  }
+              }
+
+              // 앱 화면은 웹뷰 안에서, 정책 페이지(.html)와 바깥 링크는 브라우저로 엽니다.
+              private boolean isInAppUrl(String url) {
+                  if (url == null || !url.startsWith(APP_BASE)) return false;
+                  String path = url.substring(APP_BASE.length());
+                  int q = path.indexOf('?');
+                  if (q >= 0) path = path.substring(0, q);
+                  return !path.endsWith(".html");
+              }
+
+              @Override
+              public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+                  if (requestCode != MIC_REQUEST) return;
+                  PermissionRequest req = pendingPermissionRequest;
+                  pendingPermissionRequest = null;
+                  if (req == null) return;
+                  boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                  if (granted) {
+                      req.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                  } else {
+                      req.deny();
+                  }
+              }
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  mainExecutor = ContextCompat.getMainExecutor(this);
+                  credentialManager = CredentialManager.create(this);
+                  billing = BillingClient.newBuilder(this)
+                      .setListener(purchasesListener)
+                      .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+                      .build();
+
+                  // 안드로이드 15(타깃 35)부터 화면이 상단바·하단바 뒤까지 그려집니다.
+                  // 웹뷰를 감싼 틀에 시스템 바·키보드만큼 여백을 줘서 겹치지 않게 합니다.
+                  WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+                  FrameLayout root = new FrameLayout(this);
+                  root.setBackgroundColor(Color.parseColor("#F0F2F4"));
+                  ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+                      Insets b = insets.getInsets(WindowInsetsCompat.Type.systemBars()
+                          | WindowInsetsCompat.Type.displayCutout()
+                          | WindowInsetsCompat.Type.ime());
+                      v.setPadding(b.left, b.top, b.right, b.bottom);
+                      return WindowInsetsCompat.CONSUMED;
+                  });
+                  WindowInsetsControllerCompat bars = WindowCompat.getInsetsController(getWindow(), root);
+                  bars.setAppearanceLightStatusBars(true);
+                  bars.setAppearanceLightNavigationBars(true);
+
+                  webView = new WebView(this);
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setAllowFileAccess(false);
+                  settings.setAllowContentAccess(true);
+                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setUserAgentString(settings.getUserAgentString() + " KataStore/" + BuildConfig.VERSION_NAME);
+
+                  // 폰 내장 음성(AndroidTTS)은 넣지 않습니다 — 웹이 Gemini 음성으로 대신합니다.
+                  webView.addJavascriptInterface(new StoreBridge(), "KataStore");
+                  webView.addJavascriptInterface(new AuthBridge(), "KataAuth");
+                  webView.addJavascriptInterface(new BillingBridge(), "KataBilling");
+                  webView.addJavascriptInterface(new FileBridge(), "AndroidFile");
+
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                          String url = request.getUrl().toString();
+                          if (isInAppUrl(url)) return false;
+                          openExternal(url);
+                          return true;
+                      }
+                  });
+
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> filePathCallback,
+                              FileChooserParams fileChooserParams) {
+                          if (fileCallback != null) fileCallback.onReceiveValue(null);
+                          fileCallback = filePathCallback;
+                          try {
+                              startActivityForResult(fileChooserParams.createIntent(), FILE_CHOOSER_REQUEST);
+                          } catch (Exception e) {
+                              fileCallback = null;
+                              return false;
+                          }
+                          return true;
+                      }
+
+                      @Override
+                      public void onPermissionRequest(final PermissionRequest request) {
+                          runOnUiThread(new Runnable() {
+                              @Override
+                              public void run() {
+                                  boolean wantsAudio = false;
+                                  for (String r : request.getResources()) {
+                                      if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) wantsAudio = true;
+                                  }
+                                  if (!wantsAudio) {
+                                      request.deny();
+                                      return;
+                                  }
+                                  if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                      request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                                  } else {
+                                      pendingPermissionRequest = request;
+                                      requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_REQUEST);
+                                  }
+                              }
+                          });
+                      }
+                  });
+
+                  // 예측형 뒤로가기(타깃 36): onBackPressed 대신 디스패처로 받습니다.
+                  getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+                      @Override
+                      public void handleOnBackPressed() {
+                          if (webView != null && webView.canGoBack()) {
+                              webView.goBack();
+                          } else {
+                              setEnabled(false);
+                              getOnBackPressedDispatcher().onBackPressed();
+                          }
+                      }
+                  });
+
+                  root.addView(webView, new FrameLayout.LayoutParams(
+                      FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+                  setContentView(root);
+
+                  if (savedInstanceState != null) {
+                      webView.restoreState(savedInstanceState);
+                  } else {
+                      webView.loadUrl(APP_BASE);
+                  }
+              }
+
+              @Override
+              protected void onSaveInstanceState(@NonNull Bundle outState) {
+                  super.onSaveInstanceState(outState);
+                  if (webView != null) webView.saveState(outState);
+              }
+
+              @Override
+              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+                  if (requestCode != FILE_CHOOSER_REQUEST || fileCallback == null) return;
+                  Uri[] results = null;
+                  if (resultCode == RESULT_OK && data != null && data.getDataString() != null) {
+                      results = new Uri[]{Uri.parse(data.getDataString())};
+                  }
+                  fileCallback.onReceiveValue(results);
+                  fileCallback = null;
+              }
+
+              @Override
+              protected void onDestroy() {
+                  if (billing != null) billing.endConnection();
+                  super.onDestroy();
+              }
+          }
+          JAVA
+
+      - name: Build (서명 키가 있으면 AAB, 없으면 디버그 컴파일 확인)
+        env:
+          STORE_KEYSTORE_PASSWORD: ${{ secrets.STORE_KEYSTORE_PASSWORD }}
+          STORE_KEY_ALIAS: ${{ secrets.STORE_KEY_ALIAS }}
+          STORE_KEY_PASSWORD: ${{ secrets.STORE_KEY_PASSWORD }}
+          STORE_WEB_CLIENT_ID: ${{ vars.STORE_WEB_CLIENT_ID }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -o pipefail
+          if [ "$SIGNED" = "1" ]; then TASK=bundleRelease; else TASK=assembleDebug; fi
+          echo "실행: gradle $TASK"
+          gradle "$TASK" --no-daemon --stacktrace 2>&1 | tee build.log
+
+      - name: 실패하면 오류를 주석으로 남기기
+        if: failure()
+        run: |
+          if [ -f build.log ]; then
+            ERR=$(grep -E "error:|What went wrong|Could not|e: |FAILURE" build.log | head -60 | sed 's/%/%25/g' | tr '\n' '\r' | sed 's/\r/%0A/g')
+            echo "::error title=Store build failed::${ERR}"
+          fi
+
+      - name: Upload AAB
+        if: env.SIGNED == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kata-kata-store-aab
+          path: app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+
+      - name: Upload debug APK (컴파일 확인용)
+        if: env.SIGNED != '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kata-kata-store-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
