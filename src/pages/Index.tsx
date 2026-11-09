@@ -23,6 +23,7 @@ import MedaliSheet from "@/components/MedaliSheet";
 import MedaliIdDialog from "@/components/MedaliIdDialog";
 import { needsMedaliId, syncMedali } from "@/lib/medaliSync";
 import { getEdition, takeRevokedNotice } from "@/lib/access";
+import { isStoreApp } from "@/lib/platform";
 import {
   RotateCcw,
   SlidersHorizontal,
@@ -43,6 +44,7 @@ import {
   MessagesSquare,
   Gamepad2,
   Users,
+  Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -405,6 +407,8 @@ const Index = () => {
   const [edition] = useState(getEdition);
   const wordOn = edition !== "public";
   const sermonOn = edition === "admin";
+  const newsOn = edition !== "public";
+  const storeApp = isStoreApp();
   useEffect(() => {
     if (takeRevokedNotice()) toast("회원키가 해제되어 받아 둔 성경·교재를 이 기기에서 지웠습니다");
   }, []);
@@ -794,7 +798,10 @@ const Index = () => {
         <section className="mt-6">
           <SectionLabel>인도네시아</SectionLabel>
           <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            <Row icon={Newspaper} title="뉴스" sub="Berita" onClick={() => navigate("/news")} />
+            {/* 뉴스는 검색 그라운딩 비용이 커서 공개판에 넣지 않습니다 */}
+            {newsOn ? (
+              <Row icon={Newspaper} title="뉴스" sub="Berita" onClick={() => navigate("/news")} />
+            ) : null}
             <Row icon={ScrollText} title="이야기" sub="Cerita" onClick={() => navigate("/story")} />
             <Row icon={Compass} title="인도네시아 이해" sub="Wawasan" onClick={() => navigate("/insight")} last />
           </div>
@@ -807,6 +814,16 @@ const Index = () => {
             <Row icon={Gamepad2} title="게임방" sub="Permainan" onClick={() => navigate("/permainan")} last />
           </div>
         </section>
+
+        {/* ── 구독 ── 스토어 앱에서만. 홈 디자인을 다시 할 때 자리를 옮깁니다 */}
+        {storeApp ? (
+          <section className="mt-6">
+            <SectionLabel>구독</SectionLabel>
+            <div className="overflow-hidden rounded-2xl border border-border bg-card">
+              <Row icon={Sparkles} title="Kata kata Plus" sub="Langganan" onClick={() => navigate("/plus")} last />
+            </div>
+          </section>
+        ) : null}
       </div>
 
       {kindSheetOpen ? (
