@@ -21,7 +21,7 @@ import {
   INDONESIA_PATH,
   MapPlace,
 } from "@/lib/mapData";
-import { fetchPlaceInfo, fetchPlacePhotos, MapPlaceInfo } from "@/lib/map";
+import { fetchPlaceInfo, fetchPlacePhotos, fetchPhotoCredits, MapPlaceInfo, PhotoCredit } from "@/lib/map";
 import type { MapContentEntry, MapWord } from "@/lib/mapContent";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { addWordIfAbsent, hasWordInCategory, ensureMapWordbook, MAP_WORDBOOK_ID } from "@/lib/store";
@@ -170,6 +170,7 @@ const IndoMap = () => {
   const [savedWords, setSavedWords] = useState<Record<string, boolean>>({});
   const [infoState, setInfoState] = useState<"idle" | "loading" | "error">("idle");
   const [photos, setPhotos] = useState<string[]>([]);
+  const [credits, setCredits] = useState<PhotoCredit[]>([]);
   const [photoState, setPhotoState] = useState<"idle" | "loading" | "error">("idle");
   const [lightbox, setLightbox] = useState<string | null>(null);
   // 처음에는 도시만 켜 둡니다. 나머지는 범례 버튼으로 켭니다.
@@ -447,6 +448,7 @@ const IndoMap = () => {
     setSavedWords({});
     setInfo(null);
     setPhotos([]);
+    setCredits([]);
     setLightbox(null);
     if (!sheetOpenRef.current) {
       sheetOpenRef.current = true;
@@ -468,6 +470,12 @@ const IndoMap = () => {
           if (reqIdRef.current !== reqId) return;
           setPhotos(urls);
           setPhotoState(urls.length ? "idle" : "error");
+          // 사진 출처(저작자·라이선스)는 사진을 띄운 뒤 따로 받아 아래에 적습니다.
+          if (urls.length) {
+            fetchPhotoCredits(urls)
+              .then((c) => { if (reqIdRef.current === reqId) setCredits(c); })
+              .catch(() => {});
+          }
         })
         .catch(() => {
           if (reqIdRef.current === reqId) setPhotoState("error");
@@ -780,6 +788,21 @@ const IndoMap = () => {
                     </button>
                   ))}
                 </div>
+              ) : null}
+              {/* 사진 출처 — 위키미디어 공용 라이선스(CC BY 등)의 표시 의무 */}
+              {photoState !== "loading" && photos.length > 0 && credits.length > 0 ? (
+                <p className="mt-1.5 text-[0.6875rem] leading-relaxed font-gothic text-gray-500">
+                  사진:{" "}
+                  {credits.map((c, i) => (
+                    <span key={c.url}>
+                      {i > 0 ? " · " : ""}
+                      <a href={c.page} className="underline">
+                        {(c.artist || "저작자 미상") + (c.license ? " (" + c.license + ")" : "")}
+                      </a>
+                    </span>
+                  ))}
+                  {" "}/ Wikimedia Commons
+                </p>
               ) : null}
               <button
                 onClick={() => closeSheet()}
