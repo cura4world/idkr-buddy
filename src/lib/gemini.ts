@@ -4,6 +4,7 @@
 
 import { isMemberActive } from "@/lib/member";
 import { callGeminiJSON } from "@/lib/geminiText";
+import { hasPublicSession } from "@/lib/account";
 
 const GEMINI_KEY_STORAGE = "geminiApiKey";
 
@@ -30,7 +31,8 @@ export function setGeminiApiKey(key: string): void {
 // 화면들이 "AI 기능을 쓸 수 있는가"를 이 함수로 판단합니다.
 // 회원키 기기는 내 키가 없어도 Worker 대리 호출로 쓸 수 있으므로 함께 봅니다.
 export function hasGeminiApiKey(): boolean {
-  return getGeminiApiKey().length > 0 || isMemberActive();
+  // 공개판(스토어 앱)은 Google 로그인 세션이 있으면 서버를 거쳐 쓸 수 있습니다.
+  return getGeminiApiKey().length > 0 || isMemberActive() || hasPublicSession();
 }
 
 export interface WordFillResult {
