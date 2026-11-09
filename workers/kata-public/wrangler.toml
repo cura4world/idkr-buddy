@@ -1,0 +1,24 @@
+# kata-public — Kata kata 공개판 서버
+# 대시보드에 worker.js 를 붙여 넣어 배포해도 됩니다. 그때는 아래 값을 대시보드 설정에서 똑같이 넣습니다.
+# 비밀값(AI_PROXY_URL, PROXY_SECRET, PLAY_SERVICE_ACCOUNT, ADMIN_KEY)은 이 파일에 쓰지 않습니다.
+#   npx wrangler secret put AI_PROXY_URL
+#   npx wrangler secret put PROXY_SECRET
+#   npx wrangler secret put PLAY_SERVICE_ACCOUNT
+#   npx wrangler secret put ADMIN_KEY
+
+name = "kata-public"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+# 웹 OAuth 클라이언트 ID (구글 클라우드 콘솔에서 만든 뒤 채움). 여러 개면 쉼표로.
+GOOGLE_WEB_CLIENT_ID = ""
+PLAY_PACKAGE = "app.naruve.katakata"
+PRODUCT_IDS = "plus"
+# 한도를 바꾸려면 이 값만 고칩니다 (재논의 후). 비워 두면 worker.js 의 잠정값을 씁니다.
+LIMITS_JSON = ""
+
+[[kv_namespaces]]
+binding = "PUBLIC_KV"
+# npx wrangler kv namespace create PUBLIC_KV 로 만든 뒤 나온 id 를 넣습니다.
+id = ""
