@@ -19,6 +19,7 @@ import { hasGeminiApiKey } from "@/lib/gemini";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
+import AiReportButton from "@/components/AiReportButton";
 import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
 import { dropReturnTicket } from "@/lib/readReturn";
 import { medaliEngine } from "@/lib/medali";
@@ -1062,6 +1063,14 @@ const Dictionary = () => {
                 </button>
               </div>
             </div>
+
+            {/* AI 풀이 신고 — 스토어 앱(공개판)에서만 보입니다. 담기 버튼과 떨어진 맨 끝에 둡니다 */}
+            <AiReportButton
+              feature="dictionary"
+              input={result.word}
+              output={result.meaning + (result.meaningDetail ? " / " + result.meaningDetail : "")}
+              className="mt-6 pt-3 border-t border-gray-100"
+            />
           </div>
         )}
       </div>
