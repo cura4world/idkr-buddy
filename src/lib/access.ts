@@ -21,6 +21,7 @@ import { clearCachedMaterial } from "@/lib/materials";
 import { clearCustomPercakapan, restoreBackup } from "@/lib/percakapan";
 import { getPrivateFolderName, setPrivateFolderName } from "@/lib/store";
 import { getMyMedaliId, setMyMedaliId, isValidMedaliId } from "@/lib/medaliSync";
+import { isStoreApp } from "@/lib/platform";
 
 export type Edition = "admin" | "member" | "public";
 
@@ -35,6 +36,8 @@ function hasLegacyBibleKey(): boolean {
 }
 
 export function getEdition(): Edition {
+  // 스토어 앱(Google Play)은 기기에 예전 키가 남아 있어도 언제나 공개판입니다.
+  if (isStoreApp()) return "public";
   if (hasLegacySermonConfig() || isAdminMember()) return "admin";
   if (isMemberActive() || hasLegacyBibleKey()) return "member";
   return "public";
