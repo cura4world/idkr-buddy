@@ -13,6 +13,7 @@ import {
   signInErrorText,
   PublicSession,
 } from "@/lib/account";
+import { autoRestoreOnce } from "@/lib/billing";
 
 const SignInScreen = () => {
   const [busy, setBusy] = useState(false);
@@ -78,8 +79,15 @@ const LoginGate = ({ children }: { children: React.ReactNode }) => {
     if (!store) return;
     const off = onSessionChange(setSession);
     // 앱이 켜질 때 서버에서 플랜을 다시 받습니다. 세션이 끊겼으면 로그인 화면으로 돌아갑니다.
-    if (getSession()) refreshMe().catch(() => {});
-    return off;
+    // 그다음 구매를 조용히 다시 확인합니다(확인 못 한 구매가 환불되지 않도록).
+    if (getSession()) refreshMe().catch(() => {}).finally(() => autoRestoreOnce());
+    const offRestore = onSessionChange((s) => {
+      if (s) autoRestoreOnce();
+    });
+    return () => {
+      off();
+      offRestore();
+    };
   }, [store]);
 
   if (!store || session) return <>{children}</>;
