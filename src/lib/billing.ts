@@ -74,10 +74,35 @@ function installBillingCallback(): void {
           return;
         }
       }
+      // 기다리는 쪽이 없는 구매 알림(대기 중이던 결제가 나중에 끝남, 구매 화면을 기다리다 시간이
+      // 지남 등)도 버리지 않고 서버에 검증을 맡깁니다. 서버가 확인(acknowledge)하지 않으면
+      // 사흘 뒤 Google 이 환불하므로, 알림 하나라도 잃으면 안 됩니다(2026-11-10 검토).
+      if ((e.type === "purchase" || e.type === "owned") && Array.isArray(e.purchases)) {
+        verifyInBackground(e.purchases);
+      }
     };
   } catch (e) {}
 }
 installBillingCallback();
+
+function verifyInBackground(list: PurchaseInfo[]): void {
+  for (const p of list) {
+    if (!p || p.state !== "PURCHASED" || p.productId !== PLUS_PRODUCT_ID) continue;
+    verify(p).catch(() => {});
+  }
+}
+
+let autoRestoreDone = false;
+/**
+ * 스토어 앱이 켜질 때 한 번, 조용히 구매를 다시 확인합니다. 결제 직후 앱이 꺼졌거나 서버 확인이
+ * 실패한 구매도 여기서 다시 서버에 맡겨져 확인(acknowledge)됩니다. 화면에는 아무것도 띄우지 않습니다.
+ */
+export function autoRestoreOnce(): void {
+  if (autoRestoreDone) return;
+  if (!billingAvailable() || !getSession()) return;
+  autoRestoreDone = true;
+  restorePurchases().catch(() => {});
+}
 
 function waitFor(types: string[], ms: number): Promise<BillingEvent> {
   return new Promise((resolve) => {
