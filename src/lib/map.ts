@@ -166,6 +166,27 @@ const BAD = new RegExp(
   "i"
 );
 
+// 위키 호출은 응답이 안 오면 사진 영역이 "불러오는 중"에 멈추므로 마감을 겁니다(저장소 규칙).
+const WIKI_TIMEOUT_MS = 10000;
+
+async function wikiFetch(url: string): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    try { controller.abort(); } catch (e) {}
+  }, WIKI_TIMEOUT_MS);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// 위키미디어 공용(Commons) 사진만 씁니다. en.wikipedia 자체 파일(/wikipedia/en/)에는
+// 자유 라이선스가 아닌 "공정 이용" 이미지가 섞여 있어 공개 앱에 쓸 수 없습니다.
+function isCommonsUrl(u: string): boolean {
+  return u.indexOf("https://upload.wikimedia.org/wikipedia/commons/") === 0;
+}
+
 // 위키피디아 페이지의 대표 이미지 + 본문 내 이미지들에서 최대 2장을 뽑습니다.
 export async function fetchPlacePhotos(id: string, titleOverride?: string): Promise<string[]> {
   const title = titleOverride || WIKI_TITLE[id] || id;
@@ -173,19 +194,19 @@ export async function fetchPlacePhotos(id: string, titleOverride?: string): Prom
 
   try {
     // 1) 페이지 대표 이미지 (원본 + 썸네일)
-    const sumRes = await fetch(
+    const sumRes = await wikiFetch(
       "https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title)
     );
     if (sumRes.ok) {
       const s = await sumRes.json();
-      if (s?.originalimage?.source) urls.push(s.originalimage.source);
-      else if (s?.thumbnail?.source) urls.push(s.thumbnail.source);
+      const lead = s?.originalimage?.source || s?.thumbnail?.source || "";
+      if (lead && isCommonsUrl(lead)) urls.push(lead);
     }
   } catch (e) {}
 
   try {
     // 2) 본문 내 이미지들 (600px 폭 썸네일)
-    const imgRes = await fetch(
+    const imgRes = await wikiFetch(
       "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=images&imlimit=20&titles=" +
         encodeURIComponent(title)
     );
@@ -201,7 +222,7 @@ export async function fetchPlacePhotos(id: string, titleOverride?: string): Prom
       for (const f of files) {
         if (urls.length >= 2) break;
         try {
-          const ii = await fetch(
+          const ii = await wikiFetch(
             "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=imageinfo&iiprop=url&iiurlwidth=600&titles=" +
               encodeURIComponent(f)
           );
@@ -209,11 +230,68 @@ export async function fetchPlacePhotos(id: string, titleOverride?: string): Prom
           const d = await ii.json();
           const p = Object.values(d?.query?.pages || {})[0] as any;
           const u = p?.imageinfo?.[0]?.thumburl || p?.imageinfo?.[0]?.url;
-          if (u && !urls.includes(u)) urls.push(u);
+          if (u && isCommonsUrl(u) && !urls.includes(u)) urls.push(u);
         } catch (e) {}
       }
     }
   } catch (e) {}
 
   return urls.slice(0, 2);
+}
+
+// ── 사진 출처 ────────────────────────────────────────────────
+// 위키미디어 공용 사진은 대부분 CC BY / CC BY-SA 라 저작자·라이선스·원본 주소를 함께 보여야 합니다.
+
+export interface PhotoCredit {
+  url: string;     // 화면에 띄운 사진 주소
+  artist: string;  // 저작자 (없으면 "")
+  license: string; // 예: "CC BY-SA 4.0" (없으면 "")
+  page: string;    // 원본 설명 페이지 (Commons)
+}
+
+// 썸네일·원본 주소에서 파일 이름을 꺼냅니다.
+//   .../commons/thumb/a/ab/Name.jpg/600px-Name.jpg → Name.jpg
+//   .../commons/a/ab/Name.jpg                       → Name.jpg
+function fileNameFromUrl(u: string): string {
+  const parts = u.split("?")[0].split("/");
+  const t = parts.indexOf("thumb");
+  const raw = t >= 0 ? parts[t + 3] : parts[parts.length - 1];
+  try {
+    return decodeURIComponent(raw || "");
+  } catch (e) {
+    return raw || "";
+  }
+}
+
+const TAG_RE = new RegExp("<[^>]*>", "g");
+const SPACES_RE = new RegExp("\\s+", "g");
+
+function plainText(html: unknown): string {
+  return String(html || "").replace(TAG_RE, " ").replace(SPACES_RE, " ").trim();
+}
+
+export async function fetchPhotoCredits(urls: string[]): Promise<PhotoCredit[]> {
+  const out: PhotoCredit[] = [];
+  for (const url of urls) {
+    const name = fileNameFromUrl(url);
+    if (!name) continue;
+    try {
+      const res = await wikiFetch(
+        "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&prop=imageinfo&iiprop=extmetadata%7Curl&titles=" +
+          encodeURIComponent("File:" + name)
+      );
+      if (!res.ok) continue;
+      const d = await res.json();
+      const p = Object.values(d?.query?.pages || {})[0] as any;
+      const info = p?.imageinfo?.[0];
+      const meta = info?.extmetadata || {};
+      out.push({
+        url,
+        artist: plainText(meta?.Artist?.value).slice(0, 80),
+        license: plainText(meta?.LicenseShortName?.value).slice(0, 40),
+        page: String(info?.descriptionurl || "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(name)),
+      });
+    } catch (e) {}
+  }
+  return out;
 }
