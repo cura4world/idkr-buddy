@@ -854,8 +854,9 @@ jobs:
                           if (webView != null && webView.canGoBack()) {
                               webView.goBack();
                           } else {
-                              setEnabled(false);
-                              getOnBackPressedDispatcher().onBackPressed();
+                              // 첫 화면에서는 앱을 끝내지 않고 뒤로 보냅니다. 콜백을 끄지 않으므로
+                              // 다시 돌아왔을 때도 뒤로가기가 웹뷰 안에서 그대로 동작합니다.
+                              moveTaskToBack(true);
                           }
                       }
                   });
