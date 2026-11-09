@@ -4,6 +4,7 @@
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
+import { isStoreApp } from "@/lib/platform";
 import {
   ArrowLeft,
   Globe,
@@ -52,6 +53,7 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 const Insight = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const publicEdition = isStoreApp();
 
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto pb-9">
@@ -102,14 +104,18 @@ const Insight = () => {
               title="인도네시아 종교"
               sub="Agama"
               onClick={() => navigate("/insight/religion")}
+              last={publicEdition}
             />
-            <Row
-              icon={Cross}
-              title="인도네시아 기독교"
-              sub="Kekristenan"
-              onClick={() => navigate("/insight/christian")}
-              last
-            />
+            {/* 공개판(스토어 앱)에는 기독교 항목을 두지 않습니다 */}
+            {publicEdition ? null : (
+              <Row
+                icon={Cross}
+                title="인도네시아 기독교"
+                sub="Kekristenan"
+                onClick={() => navigate("/insight/christian")}
+                last
+              />
+            )}
           </div>
         </section>
 
