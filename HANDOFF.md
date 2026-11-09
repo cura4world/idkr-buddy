@@ -13,6 +13,8 @@
   `window.KataStore` 로만 구분하며(`src/lib/platform.ts`), 바뀐 동작은 대부분 스토어 앱일 때만 켜진다.
   서버는 새 Worker `workers/kata-public/`(kata-sermon 과 분리). 상세는 `03-architecture.md`.
 - 스토어 빌드는 서명 키 없이 디버그 컴파일까지 Actions 에서 확인됨. 서명 AAB 는 업로드 키 등록 뒤.
+- 2026-11-10 밤: 작업을 보지 않은 별도 검토자의 지적(한도 경합, 범용 대리 창구, 구매 알림 유실 등)을
+  반영함. 처리 표는 `docs/release/04-stories.md` 맨 아래 "검토 반영". 서버 자동 테스트 8개 통과.
 - 요금·한도·Plus 혜택은 **재논의 대기**(Worker 변수 `LIMITS_JSON`, `src/lib/plusCopy.ts` 로만 조정).
 - 공개판 홈 디자인은 사용자가 나중에 다시 요청할 예정(A′안 바탕).
 
