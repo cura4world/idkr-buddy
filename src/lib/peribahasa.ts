@@ -19,6 +19,7 @@ import { askPhraseJSON, generateNewPhrase, getPhraseDetail } from "@/lib/phrase"
 import { BUILTIN_SCENES } from "@/data/percakapan";
 import { getCustomScenes } from "@/lib/percakapan";
 import type { PercakapanScene } from "@/data/percakapan";
+import { isStoreApp } from "@/lib/platform";
 
 export type PhraseKind =
   | "peribahasa"
@@ -35,7 +36,7 @@ export interface PhraseKindInfo {
 }
 
 // 배열 순서가 곧 옵션 시트에 보이는 순서입니다.
-export const PHRASE_KINDS: PhraseKindInfo[] = [
+const ALL_PHRASE_KINDS: PhraseKindInfo[] = [
   { key: "peribahasa", ko: "생활 속담", id: "Peribahasa" },
   { key: "ungkapan", ko: "관용구", id: "Ungkapan" },
   { key: "alkitab", ko: "성경 말씀", id: "Ayat Alkitab" },
@@ -43,6 +44,11 @@ export const PHRASE_KINDS: PhraseKindInfo[] = [
   { key: "kosakata", ko: "단어장 폴더", id: "Kosakata" },
   { key: "percakapan", ko: "회화집 폴더", id: "Percakapan" },
 ];
+
+// 스토어 앱(공개판)에는 성경 말씀을 내지 않습니다. 옵션 시트와 저장된 선택 모두 이 목록으로 거릅니다.
+export const PHRASE_KINDS: PhraseKindInfo[] = isStoreApp()
+  ? ALL_PHRASE_KINDS.filter((k) => k.key !== "alkitab")
+  : ALL_PHRASE_KINDS;
 
 export interface Phrase {
   id: string;   // 인도네시아어
@@ -449,6 +455,7 @@ async function pickOnce(kinds: PhraseKind[]): Promise<Phrase> {
     pool.splice(i, 1);
 
     if (kind === "alkitab") {
+      if (isStoreApp()) continue; // 공개판에는 성경 말씀이 없습니다
       const p = await pickFromAlkitab();
       if (p) return p;
       continue;
@@ -575,7 +582,7 @@ async function createAyat(recent: string[]): Promise<Phrase | null> {
 }
 
 async function createPhrase(kind: PhraseKind, recent: string[]): Promise<Phrase | null> {
-  if (kind === "alkitab") return createAyat(recent);
+  if (kind === "alkitab") return isStoreApp() ? null : createAyat(recent);
 
   // 지어내지 않고 고르기만 하는 종류들 — 해설만 미리 만들어 둡니다.
   if (kind === "percakapan") {
