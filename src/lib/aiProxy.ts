@@ -10,6 +10,7 @@
 
 import { toast } from "sonner";
 import { MEMBER_BASE, memberHeaders } from "@/lib/member";
+import { PUBLIC_BASE, publicHeaders } from "@/lib/account";
 
 export type AiKind = "text" | "tts" | "news";
 
@@ -31,10 +32,19 @@ export function geminiTarget(model: string, apiKey: string, kind: AiKind): AiTar
     };
   }
   const mh = memberHeaders();
-  if (!mh) return null;
+  if (mh) {
+    return {
+      url: MEMBER_BASE + "/ai/gemini/" + model + ":generateContent",
+      headers: Object.assign({ "content-type": "application/json", "x-kata-kind": kind }, mh),
+      viaProxy: true,
+    };
+  }
+  // 공개판(스토어 앱): Google 로그인 세션으로 kata-public 서버를 거칩니다(계정별 하루 한도).
+  const ph = publicHeaders();
+  if (!ph) return null;
   return {
-    url: MEMBER_BASE + "/ai/gemini/" + model + ":generateContent",
-    headers: Object.assign({ "content-type": "application/json", "x-kata-kind": kind }, mh),
+    url: PUBLIC_BASE + "/ai/gemini/" + model + ":generateContent",
+    headers: Object.assign({ "content-type": "application/json", "x-kata-kind": kind }, ph),
     viaProxy: true,
   };
 }
@@ -82,6 +92,7 @@ export async function handleQuotaResponse(res: Response, viaProxy: boolean): Pro
     lastQuotaToast = now;
     if (code === "QUOTA_TTS") toast("하루 음성듣기 한도가 넘었습니다. 내일 다시 들을 수 있어요");
     else if (code === "QUOTA_NEWS") toast("오늘 뉴스 받기 한도가 넘었습니다");
+    else if (code === "QUOTA_TEXT") toast("오늘 AI 풀이 한도가 넘었습니다. 내일 다시 쓸 수 있어요");
     else toast("오늘 사용량 한도가 넘었습니다");
   }
   return true;
