@@ -35,6 +35,8 @@ import { pushMaterial, clearCachedMaterial } from "@/lib/materials";
 import { useRef } from "react";
 import { getEdition, Edition, EDITION_LABEL, activateAndSync, syncMemberContent, leaveMembership } from "@/lib/access";
 import { getMemberProfile, MemberProfile } from "@/lib/member";
+import { isStoreApp, hasNativeFileSave, saveFileNative } from "@/lib/platform";
+import AccountSection from "@/components/AccountSection";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -235,6 +237,14 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const isAdminUI = edition === "admin";
+  const storeApp = isStoreApp();
+
+  // 설정 창을 닫고 다른 화면으로 갑니다. 뒤로 돌아오면 Index 가 설정 창을 다시 엽니다.
+  const goFromSettings = (path: string) => {
+    try { sessionStorage.setItem(REOPEN_SETTINGS_KEY, String(Date.now())); } catch (e) {}
+    onOpenChange(false);
+    navigate(path);
+  };
 
   const handleMemberActivate = async () => {
     if (memberBusy) return;
@@ -553,6 +563,23 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   // 앱(APK)은 blob: 주소를 저장하지 못하고 data: 주소만 다운로드 폴더에 씁니다.
   const handleExportDownload = async () => {
     if (backupBusy) return;
+    // 네이티브 파일 저장 통로(AndroidFile.save)가 있는 앱(스토어 앱)은 그 길로 다운로드 폴더에 씁니다.
+    if (hasNativeFileSave()) {
+      setBackupBusy(true);
+      try {
+        const f = await buildBackupFile();
+        const b64 = f.href.slice(f.href.indexOf(",") + 1);
+        const ok = saveFileNative(f.fileName, "application/json", b64);
+        toast(ok
+          ? "백업 파일(" + formatBytes(f.bytes) + ")을 다운로드 폴더에 저장했습니다 — " + describeSummary(f.summary)
+          : "백업 파일을 저장하지 못했습니다", { duration: 7000 });
+      } catch (e) {
+        toast("백업 파일을 만들지 못했습니다");
+      } finally {
+        setBackupBusy(false);
+      }
+      return;
+    }
     // 앱(APK)은 지금 파일을 다운로드 폴더에 쓰지 못합니다(저장소 제한).
     // 실패시키지 않고 대신 쓸 수 있는 길을 알려 줍니다. APK 수정은 공개판 때 함께 합니다.
     if (isInApp()) {
@@ -757,7 +784,10 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               묵상·이야기·뉴스·기도의 "전체 듣기"에 쓰이는 목소리입니다. 이 기기에만 적용됩니다.
             </p>
           </div>
-          {/* 회원키 — 모든 판에 보입니다 */}
+          {/* 스토어 앱(공개판)은 회원키 대신 Google 계정 구역을 보여 줍니다 */}
+          {storeApp ? <AccountSection onGo={goFromSettings} /> : null}
+          {/* 회원키 — 관리자판·회원판·브라우저에 보입니다 */}
+          {storeApp ? null : (
           <div id={MEMBER_SECTION_ID} className="pt-3 border-t border-border/60">
             <Label className="font-body text-sm text-gray-900">회원키</Label>
             {memberProfile ? (
@@ -834,6 +864,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               </Button>
             ) : null}
           </div>
+          )}
           {/* 서버 자동 백업 — 회원키가 있는 기기에만 보입니다 */}
           {memberProfile ? (
           <div className="pt-3 border-t border-border/60">
