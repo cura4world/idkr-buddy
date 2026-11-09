@@ -31,6 +31,9 @@ const SESSION_TTL_SEC = 60 * 24 * 3600;
 const MAX_SESSIONS_PER_USER = 10;
 const MAX_BODY_BYTES = 32 * 1024;
 const MAX_TEXT_OUTPUT_TOKENS = 16384;
+const DEFAULT_TEXT_OUTPUT_TOKENS = 8192;
+const MAX_TEXT_CHARS = 12000; // 사전·이야기 프롬프트 + 문맥이 넉넉히 들어가는 크기
+const MAX_TTS_CHARS = 6000;   // 회화 한 장면을 한 번에 읽는 경우까지
 const AI_TIMEOUT_MS = 100000;
 const API_TIMEOUT_MS = 15000;
 const ENT_RECHECK_MS = 60 * 60 * 1000;
@@ -164,8 +167,10 @@ function productIds(env) {
 }
 
 async function readJsonBody(request, maxBytes) {
+  const declared = Number(request.headers.get("content-length") || 0);
+  if (declared > maxBytes) throw new HttpError(413, "BODY_TOO_LARGE");
   const text = await request.text();
-  if (text.length > maxBytes) throw new HttpError(413, "BODY_TOO_LARGE");
+  if (new TextEncoder().encode(text).length > maxBytes) throw new HttpError(413, "BODY_TOO_LARGE");
   if (!text) return {};
   try { return JSON.parse(text); } catch (e) { throw new HttpError(400, "BAD_JSON"); }
 }
@@ -241,7 +246,7 @@ async function createSession(env, uid) {
   const token = randomToken();
   const h = await sha256hex(token);
   const exp = Date.now() + SESSION_TTL_SEC * 1000;
-  await kvPutJson(env, "sess:" + h, { uid, exp }, SESSION_TTL_SEC);
+  await kvPutJson(env, "sess:" + h, { uid, exp, at: Date.now() }, SESSION_TTL_SEC);
   const list = (await kvGetJson(env, "usess:" + uid)) || [];
   list.push(h);
   // 오래된 세션은 끊습니다 (기기 10대 넘게 동시에 로그인할 일은 없다고 봄)
@@ -263,6 +268,9 @@ async function requireAuth(request, env) {
   if (!sess || !sess.uid || sess.exp < Date.now()) throw new HttpError(401, "NO_SESSION");
   const user = await kvGetJson(env, "user:" + sess.uid);
   if (!user) throw new HttpError(401, "NO_SESSION");
+  // 계정을 지운 뒤 같은 Google 계정으로 다시 가입하면 createdAt 이 새로 찍힙니다.
+  // 그보다 먼저 만들어진 세션(삭제 때 미처 못 지운 것)은 살아나지 않게 막습니다.
+  if ((sess.at || 0) < (user.createdAt || 0)) throw new HttpError(401, "NO_SESSION");
   return { uid: sess.uid, user, sessHash: h };
 }
 
@@ -282,7 +290,13 @@ async function getPlan(env, uid) {
     try {
       const r = await verifyWithPlay(env, uid, ent.productId, ent.purchaseToken);
       if (r.until > now) return { tier: "plus", until: r.until, productId: ent.productId };
-    } catch (e) {}
+    } catch (e) {
+      // 실패해도 확인 시각은 남겨, 요청마다 Play 를 다시 부르지 않게 합니다(한 시간 뒤 재시도).
+      try {
+        ent.checkedAt = now;
+        await kvPutJson(env, "ent:" + uid, ent);
+      } catch (e2) {}
+    }
   }
   return { tier: "free", until: 0 };
 }
@@ -295,12 +309,15 @@ async function readUsage(env, uid) {
   return { day, text: u.text || 0, tts: u.tts || 0, report: u.report || 0 };
 }
 
-async function addUsage(env, uid, kind) {
-  const day = kstDay(Date.now());
-  const key = "use:" + uid + ":" + day;
-  const u = (await kvGetJson(env, key)) || {};
-  u[kind] = (u[kind] || 0) + 1;
-  await kvPutJson(env, key, u, 3 * 24 * 3600);
+// 사용량 기록이 실패해도 사용자 요청은 실패시키지 않습니다(이미 Gemini 비용이 든 뒤일 수 있음).
+async function addUsage(env, uid, kind, delta) {
+  try {
+    const day = kstDay(Date.now());
+    const key = "use:" + uid + ":" + day;
+    const u = (await kvGetJson(env, key)) || {};
+    u[kind] = Math.max(0, (u[kind] || 0) + (delta === undefined ? 1 : delta));
+    await kvPutJson(env, key, u, 3 * 24 * 3600);
+  } catch (e) {}
 }
 
 // ── Play 구독 검증 ───────────────────────────────────────────
@@ -395,6 +412,13 @@ async function verifyWithPlay(env, uid, productId, purchaseToken) {
   }
 
   await env.PUBLIC_KV.put("ptok:" + tokenHash, uid, { expirationTtl: 400 * 24 * 3600 });
+  // 이 계정에 묶인 구매 토큰을 모두 기억해 두었다가 계정 삭제 때 전부 풉니다
+  // (재구독하면 토큰이 새로 생기므로 ent 의 마지막 토큰만으로는 부족).
+  const mineTok = (await kvGetJson(env, "uptok:" + uid)) || [];
+  if (mineTok.indexOf(tokenHash) < 0) {
+    mineTok.push(tokenHash);
+    await kvPutJson(env, "uptok:" + uid, mineTok.slice(-50), 400 * 24 * 3600);
+  }
   await kvPutJson(env, "ent:" + uid, {
     tier: valid ? "plus" : "free",
     productId,
@@ -454,7 +478,13 @@ async function handleDelete(request, env) {
 
   const ent = await kvGetJson(env, "ent:" + uid);
   const hadSubscription = !!(ent && ent.tier === "plus" && ent.until > Date.now());
-  if (ent && ent.tokenHash) await env.PUBLIC_KV.delete("ptok:" + ent.tokenHash);
+  const toks = (await kvGetJson(env, "uptok:" + uid)) || [];
+  if (ent && ent.tokenHash && toks.indexOf(ent.tokenHash) < 0) toks.push(ent.tokenHash);
+  for (const th of toks) {
+    // 다른 계정이 주인인 토큰은 건드리지 않음
+    if ((await env.PUBLIC_KV.get("ptok:" + th)) === uid) await env.PUBLIC_KV.delete("ptok:" + th);
+  }
+  await env.PUBLIC_KV.delete("uptok:" + uid);
   await env.PUBLIC_KV.delete("ent:" + uid);
 
   let cursor;
@@ -478,21 +508,52 @@ async function handleDelete(request, env) {
   return json(request, { deleted: true, hadSubscription });
 }
 
-function checkAiBody(kind, body) {
+// 앱이 실제로 보내는 모양만 새로 만들어 넘깁니다(허용 목록). 그 밖의 칸(safetySettings·candidateCount·
+// thinkingConfig·cachedContent·systemInstruction 등)은 모두 버립니다 — 이 서버가 아무 용도의
+// Gemini 대리 창구로 쓰이지 않게 하려는 것입니다(2026-11-10 독립 검토 지적).
+function sanitizeAiBody(kind, body) {
   if (!body || typeof body !== "object" || !Array.isArray(body.contents)) throw new HttpError(400, "BAD_REQUEST");
-  if (body.tools || body.toolConfig || body.tool_config || body.cachedContent) throw new HttpError(403, "TOOLS_NOT_ALLOWED");
+  if (body.tools || body.toolConfig || body.tool_config) throw new HttpError(403, "TOOLS_NOT_ALLOWED");
+  if (body.contents.length > 4) throw new HttpError(400, "BAD_REQUEST");
+
+  let chars = 0;
+  const contents = body.contents.map((c) => {
+    const parts = Array.isArray(c && c.parts) ? c.parts : [];
+    if (parts.length > 8) throw new HttpError(400, "BAD_REQUEST");
+    return {
+      role: c && c.role === "model" ? "model" : "user",
+      parts: parts.map((p) => {
+        if (!p || typeof p.text !== "string") throw new HttpError(400, "BAD_REQUEST");
+        chars += p.text.length;
+        const out = { text: p.text };
+        // 3.8 음성 모델의 읽는 방식 지시(tts.ts)
+        if (kind === "tts" && p.speech_metadata && typeof p.speech_metadata.style === "string") {
+          out.speech_metadata = { style: p.speech_metadata.style.slice(0, 200) };
+        }
+        return out;
+      }),
+    };
+  });
+  const maxChars = kind === "tts" ? MAX_TTS_CHARS : MAX_TEXT_CHARS;
+  if (chars > maxChars) throw new HttpError(413, "TEXT_TOO_LONG");
+
   const gc = body.generationConfig || {};
   const modalities = Array.isArray(gc.responseModalities) ? gc.responseModalities : [];
   const wantsAudio = modalities.indexOf("AUDIO") >= 0;
-  if (kind === "tts" && !wantsAudio) throw new HttpError(400, "KIND_MISMATCH");
-  if (kind === "text") {
+  const outGc = {};
+  if (kind === "tts") {
+    if (!wantsAudio) throw new HttpError(400, "KIND_MISMATCH");
+    outGc.responseModalities = ["AUDIO"];
+    if (gc.speechConfig && typeof gc.speechConfig === "object") outGc.speechConfig = gc.speechConfig;
+  } else {
     if (wantsAudio) throw new HttpError(400, "KIND_MISMATCH");
-    if (gc.maxOutputTokens && Number(gc.maxOutputTokens) > MAX_TEXT_OUTPUT_TOKENS) {
-      gc.maxOutputTokens = MAX_TEXT_OUTPUT_TOKENS;
-      body.generationConfig = gc;
-    }
+    if (typeof gc.responseMimeType === "string") outGc.responseMimeType = gc.responseMimeType;
+    if (gc.responseSchema && typeof gc.responseSchema === "object") outGc.responseSchema = gc.responseSchema;
+    const want = Number(gc.maxOutputTokens) || DEFAULT_TEXT_OUTPUT_TOKENS;
+    outGc.maxOutputTokens = Math.min(Math.max(want, 1), MAX_TEXT_OUTPUT_TOKENS);
+    outGc.candidateCount = 1;
   }
-  return body;
+  return { contents, generationConfig: outGc };
 }
 
 async function handleAi(request, env, model) {
@@ -502,7 +563,8 @@ async function handleAi(request, env, model) {
   const allowed = kind === "tts" ? TTS_MODELS : TEXT_MODELS;
   if (allowed.indexOf(model) < 0) throw new HttpError(403, "MODEL_NOT_ALLOWED");
 
-  const body = checkAiBody(kind, await readJsonBody(request, MAX_BODY_BYTES));
+  const body = sanitizeAiBody(kind, await readJsonBody(request, MAX_BODY_BYTES));
+  if (!env.AI_PROXY_URL || !env.PROXY_SECRET) throw new HttpError(500, "NOT_CONFIGURED");
 
   const plan = await getPlan(env, a.uid);
   const limit = getLimits(env)[plan.tier][kind];
@@ -511,19 +573,27 @@ async function handleAi(request, env, model) {
     return json(request, { error: kind === "tts" ? "QUOTA_TTS" : "QUOTA_TEXT", limit, plan: plan.tier }, 429);
   }
 
-  if (!env.AI_PROXY_URL || !env.PROXY_SECRET) throw new HttpError(500, "NOT_CONFIGURED");
-  const res = await tfetch(env.AI_PROXY_URL, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-kata-proxy": env.PROXY_SECRET,
-      "x-kata-model": model,
-    },
-    body: JSON.stringify(body),
-  }, AI_TIMEOUT_MS);
-
-  // 성공한 호출만 셉니다. 실패 응답은 상태 그대로 돌려줘야 앱의 폴백(3.8 → 3.1)이 동작합니다.
-  if (res.ok) await addUsage(env, a.uid, kind);
+  // 부르기 전에 먼저 한 칸 잡아 둡니다(동시에 여러 개를 쏘아 한도를 넘기는 것을 줄임).
+  // 실패하면 돌려줍니다. KV 는 원자적이지 않아 짧은 순간의 동시 요청까지 완벽히 막지는 못합니다 —
+  // 사용자가 늘면 Durable Object 카운터로 바꿉니다(docs/release/05 참고).
+  await addUsage(env, a.uid, kind, 1);
+  let res;
+  try {
+    res = await tfetch(env.AI_PROXY_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-kata-proxy": env.PROXY_SECRET,
+        "x-kata-model": model,
+      },
+      body: JSON.stringify(body),
+    }, AI_TIMEOUT_MS);
+  } catch (e) {
+    await addUsage(env, a.uid, kind, -1);
+    throw e;
+  }
+  // 실패 응답은 상태 그대로 돌려줘야 앱의 폴백(3.8 → 3.1)이 동작합니다. 잡아 둔 칸은 돌려줍니다.
+  if (!res.ok) await addUsage(env, a.uid, kind, -1);
   const headers = corsHeaders(request);
   headers["content-type"] = res.headers.get("content-type") || "application/json";
   headers["cache-control"] = "no-store";
@@ -552,7 +622,9 @@ async function handleReport(request, env) {
   const usage = await readUsage(env, a.uid);
   if (usage.report >= getLimits(env)[plan.tier].report) return json(request, { error: "QUOTA_REPORT" }, 429);
   const rand = randomToken().slice(0, 8);
-  const key = "report:" + new Date().toISOString() + "-" + rand;
+  // KV 목록은 키 사전순이라, 시각을 거꾸로 센 값을 앞에 두어 최신 신고가 먼저 나오게 합니다.
+  const rev = String(9999999999999 - Date.now()).padStart(13, "0");
+  const key = "report:" + rev + "-" + rand;
   await kvPutJson(env, key, {
     at: Date.now(),
     uid: a.uid,
