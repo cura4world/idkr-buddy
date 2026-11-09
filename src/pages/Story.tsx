@@ -19,6 +19,7 @@ import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } 
 import PointFloat from "@/components/PointFloat";
 import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
+import AiReportButton from "@/components/AiReportButton";
 
 const DIFF_KEY = "story-difficulty";
 const DIFFS: StoryDifficulty[] = ["하", "중", "상"];
@@ -574,6 +575,15 @@ const Story = () => {
                     </ul>
                   </>
                 ) : null}
+                {/* AI 이야기 신고 — 스토어 앱(공개판)에서만 보입니다. 카드 뒤집기와 겹치지 않게 클릭을 막습니다 */}
+                <div onClick={(e) => e.stopPropagation()}>
+                  <AiReportButton
+                    feature="story"
+                    input={current.title}
+                    output={current.indonesian}
+                    className="mt-4 pt-2 border-t border-gray-200"
+                  />
+                </div>
               </>
             )}
           </div>
