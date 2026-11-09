@@ -19,7 +19,9 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # ubuntu-latest 는 2026-10-19 부터 Ubuntu 26 으로 바뀌었고, 그 위에서 setup-android@v3 가 실패했습니다
+    # (2026-11-10 첫 실행). Android SDK 가 들어 있는 24.04 로 고정합니다.
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
