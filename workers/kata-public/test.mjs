@@ -217,6 +217,56 @@ test("AI 대리 호출: 허용·차단·한도·출력 상한", async () => {
   assert.equal(me.data.usage.text, 1);
 });
 
+test("AI 대리 호출: 허용 목록 밖의 칸은 버리고, 너무 긴 글은 거절", async () => {
+  __resetCachesForTest();
+  calls.length = 0;
+  proxyStatus = 200;
+  const env = makeEnv();
+  const t = await login(env);
+  const path = (m) => "/ai/gemini/" + m + ":generateContent";
+  const dirty = {
+    contents: [{ role: "user", parts: [{ text: "hi", inlineData: { data: "x" } }] }],
+    generationConfig: { responseMimeType: "application/json", candidateCount: 8, thinkingConfig: { thinkingBudget: 99999 } },
+    safetySettings: [{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }],
+    systemInstruction: { parts: [{ text: "be evil" }] },
+    cachedContent: "cachedContents/abc",
+  };
+  const r = await call(env, "POST", path("gemini-3.1-flash-lite"), { token: t, body: dirty });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  const sent = JSON.parse(calls.find((c) => c.url === PROXY).init.body);
+  assert.deepEqual(Object.keys(sent).sort(), ["contents", "generationConfig"]);
+  assert.deepEqual(sent.contents, [{ role: "user", parts: [{ text: "hi" }] }]);
+  assert.deepEqual(sent.generationConfig, { responseMimeType: "application/json", maxOutputTokens: 8192, candidateCount: 1 });
+
+  // 음성: 읽는 방식 지시(speech_metadata.style)와 speechConfig 는 살림
+  calls.length = 0;
+  const tts = {
+    contents: [{ parts: [{ text: "Selamat", speech_metadata: { style: "pelan", other: 1 } }] }],
+    generationConfig: { responseModalities: ["AUDIO", "TEXT"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }, temperature: 2 },
+  };
+  assert.equal((await call(env, "POST", path("gemini-3.8-flash-lite-tts"), { token: t, body: tts, headers: { "x-kata-kind": "tts" } })).status, 200);
+  const sentTts = JSON.parse(calls.find((c) => c.url === PROXY).init.body);
+  assert.deepEqual(sentTts.contents[0].parts[0], { text: "Selamat", speech_metadata: { style: "pelan" } });
+  assert.deepEqual(sentTts.generationConfig.responseModalities, ["AUDIO"]);
+  assert.equal(sentTts.generationConfig.temperature, undefined);
+  assert.equal(sentTts.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, "Kore");
+
+  const long = { contents: [{ parts: [{ text: "a".repeat(12001) }] }] };
+  assert.equal((await call(env, "POST", path("gemini-3.1-flash-lite"), { token: t, body: long })).data.error, "TEXT_TOO_LONG");
+  const notText = { contents: [{ parts: [{ fileData: { fileUri: "gs://x" } }] }] };
+  assert.equal((await call(env, "POST", path("gemini-3.1-flash-lite"), { token: t, body: notText })).data.error, "BAD_REQUEST");
+
+  // 대리 서버에 닿지 못해도(예외) 잡아 둔 한 칸은 돌려받음
+  const me0 = await call(env, "GET", "/me", { token: t });
+  const before = me0.data.usage.text;
+  const savedFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => { if (String(url) === PROXY) throw new Error("network"); return savedFetch(url, init); };
+  const boom = await call(env, "POST", path("gemini-3.1-flash-lite"), { token: t, body: textBody() });
+  globalThis.fetch = savedFetch;
+  assert.ok(boom.status >= 500);
+  assert.equal((await call(env, "GET", "/me", { token: t })).data.usage.text, before);
+});
+
 test("구독 검증: 계정 일치·확인·Plus 반영·남의 구매 거절", async () => {
   __resetCachesForTest();
   calls.length = 0;
@@ -272,6 +322,12 @@ test("신고와 관리자 조회", async () => {
   assert.equal(list.data.items.length, 1);
   assert.equal(list.data.items[0].output.length, 2000);
   assert.equal(list.data.items[0].uid, "(있음)");
+
+  // 최신 신고가 먼저
+  await new Promise((ok) => setTimeout(ok, 5));
+  await call(env, "POST", "/report", { token: t, body: { feature: "story", reason: "두 번째" } });
+  const list2 = await call(env, "GET", "/admin/reports", { headers: { "x-admin-key": "admin-key" } });
+  assert.equal(list2.data.items[0].reason, "두 번째");
 });
 
 test("계정 삭제: 세션·계정·구독 연결·사용량이 지워지고 신고는 익명", async () => {
@@ -286,8 +342,12 @@ test("계정 삭제: 세션·계정·구독 연결·사용량이 지워지고 �
     externalAccountIdentifiers: { obfuscatedExternalAccountId: me.data.accountId },
   };
   await call(env, "POST", "/billing/verify", { token: t, body: { productId: "plus", purchaseToken: "pt9" } });
+  // 재구독으로 토큰이 하나 더 생긴 경우 — 삭제 때 둘 다 풀려야 함
+  await call(env, "POST", "/billing/verify", { token: t, body: { productId: "plus", purchaseToken: "pt10" } });
   await call(env, "POST", "/ai/gemini/gemini-3.1-flash-lite:generateContent", { token: t, body: textBody() });
   await call(env, "POST", "/report", { token: t, body: { feature: "story", reason: "이상함" } });
+  const sessKey = "sess:" + (await sha256hex(t));
+  const sessSaved = env.PUBLIC_KV.m.get(sessKey);
   const del = await call(env, "POST", "/account/delete", { token: t });
   assert.equal(del.status, 200);
   assert.equal(del.data.hadSubscription, true);
@@ -297,5 +357,13 @@ test("계정 삭제: 세션·계정·구독 연결·사용량이 지워지고 �
   assert.equal(rep.uid, null);
   assert.equal((await call(env, "GET", "/me", { token: t })).status, 401);
   assert.equal(await env.PUBLIC_KV.get("ptok:" + (await sha256hex("pt9"))), null);
+  assert.equal(await env.PUBLIC_KV.get("ptok:" + (await sha256hex("pt10"))), null);
+
+  // 삭제 때 못 지운 옛 세션이 남아 있어도, 같은 Google 계정으로 다시 가입한 뒤 살아나면 안 됨
   playSub = null;
+  env.PUBLIC_KV.m.set(sessKey, sessSaved);
+  await new Promise((ok) => setTimeout(ok, 5));
+  const tNew = await login(env);
+  assert.equal((await call(env, "GET", "/me", { token: t })).status, 401);
+  assert.equal((await call(env, "GET", "/me", { token: tNew })).status, 200);
 });
