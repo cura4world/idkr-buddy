@@ -10,6 +10,7 @@ import {
   countMyConfirmed,
 } from "@/lib/medali";
 import { memberHeaders } from "@/lib/member";
+import { isStoreApp } from "@/lib/platform";
 
 // 서버 주소만 코드에 둡니다(공개 주소). 인증은 회원키+기기번호(memberHeaders)로 하고,
 // 서버가 회원 정보의 medaliId 칸만 열어 줍니다. 코드에는 비밀값이 없습니다.
@@ -77,6 +78,8 @@ export function optOutMedali(): void {
 
 // 팝업을 띄울지 판단합니다. 아이디가 있거나 제외를 선택했으면 띄우지 않습니다.
 export function needsMedaliId(): boolean {
+  // 스토어 앱(공개판)에는 부부 비교 기능이 없으므로 아이디를 묻지 않습니다.
+  if (isStoreApp()) return false;
   const v = getMyMedaliId();
   if (v === OPT_OUT) return false;
   return !isValidMedaliId(v);
