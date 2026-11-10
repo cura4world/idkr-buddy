@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import SettingsDialog, { REOPEN_SETTINGS_KEY, formatMemberInput } from "@/components/SettingsDialog";
 import MedaliSheet from "@/components/MedaliSheet";
+import PlusLockBox from "@/components/PlusLockBox";
 import { ProfileAvatar, profileName } from "@/components/BottomTabs";
 import { usePlan, PAYWALL_PATH, Tier, TIER_LABEL, isPreviewBuild } from "@/lib/plan";
 import { getSession, onSessionChange, signOut, deleteAccount, PublicSession } from "@/lib/account";
@@ -521,34 +522,14 @@ const MyInfo = () => {
         <SectionTitle>회원</SectionTitle>
         {tier === "free" ? (
           <>
-            <div
-              role="button"
-              tabIndex={0}
+            <PlusLockBox
+              title="Kata kata Plus"
+              lines={["월 3,900원,", "연간 구독 시 월 2,900원"]}
               onClick={() => navigate(PAYWALL_PATH)}
-              onKeyDown={(e) => { if (e.key === "Enter") navigate(PAYWALL_PATH); }}
-              className="active:opacity-90"
-              style={{ background: "#FFF6DC", border: "1px solid #F1E0AE", borderRadius: 18, padding: "14px 14px 14px 22px" }}
-            >
-              <p style={{ margin: 0, fontSize: rem(15), fontWeight: 600, whiteSpace: "nowrap" }}>Kata kata Plus</p>
-              <div className="flex" style={{ marginTop: 6, alignItems: "stretch", gap: 12 }}>
-                <span
-                  className="flex-1 min-w-0 font-gothic"
-                  style={{ fontSize: rem(12), lineHeight: 1.55, color: "#6E5612", whiteSpace: "nowrap" }}
-                >
-                  월 3,900원,<br />연간 구독 시 월 2,900원
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); navigate(PAYWALL_PATH); }}
-                  className="shrink-0 font-gothic text-white active:opacity-80"
-                  style={{ padding: "0 14px", borderRadius: 12, background: "#8A6A12", fontSize: rem(11.5), fontWeight: 700, lineHeight: 1.25 }}
-                >
-                  Plus<br />7일 무료 체험
-                </button>
-              </div>
-            </div>
+              wholeBox
+            />
             <p className="text-center font-gothic" style={{ margin: "2px 0 0", fontSize: rem(12), color: FAINT }}>
-              회원키가 있으신가요?{" "}
+              회원키가 있다면{" "}
               <button
                 type="button"
                 onClick={onMemberKeyRow}
@@ -907,7 +888,7 @@ const MyInfo = () => {
       <AlertDialog open={ttsConfirm} onOpenChange={setTtsConfirm}>
         <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-body text-base text-gray-900">저장된 읽기 음성을 비울까요?</AlertDialogTitle>
+            <AlertDialogTitle className="font-body text-base text-gray-900">저장된 읽기 음성을 비우시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription className="font-gothic text-xs leading-relaxed">
               이 폰에 받아 둔 음성 파일이 지워집니다. 다음에 들으면 새로 받아 옵니다.
             </AlertDialogDescription>
@@ -923,7 +904,7 @@ const MyInfo = () => {
       <AlertDialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
         <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-body text-base text-gray-900">계정을 지울까요?</AlertDialogTitle>
+            <AlertDialogTitle className="font-body text-base text-gray-900">계정을 지우시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription className="font-gothic text-xs leading-relaxed">
               서버의 계정·사용 기록·구독 연결이 지워지고 되돌릴 수 없습니다. 이 폰의 단어장은 그대로 남습니다.
               구독 중이라면 결제는 Google Play 에서 따로 해지해야 합니다.
