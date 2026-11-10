@@ -21,6 +21,7 @@ import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveT
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import AiReportButton from "@/components/AiReportButton";
 import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
+import { lastQuotaNotice } from "@/lib/aiProxy";
 import { dropReturnTicket } from "@/lib/readReturn";
 import { medaliEngine } from "@/lib/medali";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -207,6 +208,8 @@ const Dictionary = () => {
   const histHideTimer = useRef<any>(null);
 
   const errorMessage = (code: string): string => {
+    // 공개판 서버의 "처음 찾는 말" 하루·한 달 한도 (aiProxy 는 이 경우 토스트를 띄우지 않고 문장만 남김)
+    if (code.indexOf("QUOTA_") === 0) return lastQuotaNotice() || "오늘 새로 찾을 수 있는 말을 모두 찾았습니다. 내일 다시 찾아보세요.";
     if (code === "NO_API_KEY") return "Gemini API 키가 필요합니다. 설정에서 키를 입력해주세요.";
     if (code === "INVALID_API_KEY") return "API 키가 올바르지 않습니다. 설정에서 다시 확인해주세요.";
     if (code === "RATE_LIMIT") return "요청이 많습니다. 잠시 후 다시 시도해주세요.";
