@@ -111,21 +111,29 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// 2026-11-11 두 번째 실행: 위키미디어가 빠른 연속 요청을 막아(429) 중간에 멈췄습니다.
+// 요청 사이에 쉬고, 막히면 Retry-After 또는 점점 길게 기다렸다 다시 부릅니다(최대 6번).
+const PACE_MS = 400;
+let lastCall = 0;
 async function getJson(url) {
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const wait = lastCall + PACE_MS - Date.now();
+    if (wait > 0) await sleep(wait);
+    lastCall = Date.now();
     const c = new AbortController();
     const t = setTimeout(() => c.abort(), TIMEOUT_MS);
     try {
       const res = await fetch(url, { signal: c.signal, headers: { "User-Agent": UA } });
       if (res.status === 429 || res.status >= 500) {
-        await sleep(2000 * (attempt + 1));
+        const ra = Number(res.headers.get("retry-after") || "0");
+        await sleep(Math.min(60000, Math.max(ra * 1000, 5000 * Math.pow(2, attempt))));
         continue;
       }
       if (!res.ok) throw new Error("HTTP " + res.status + " " + url);
       return await res.json();
     } catch (e) {
-      if (attempt === 2) throw e;
-      await sleep(1500);
+      if (attempt === 5) throw e;
+      await sleep(3000 * (attempt + 1));
     } finally {
       clearTimeout(t);
     }
@@ -266,7 +274,13 @@ async function main() {
       console.warn("위키 실패", p.id, e.message);
     }
     names = names.filter((n) => PHOTO.test(n) && !BAD.test(n) && !SKIP.has(n));
-    let infos = (await fileInfo(names.slice(0, 12))).filter(usable);
+    // 한 지점의 조회가 실패해도 전체를 멈추지 않고 다음 지점으로 넘어갑니다.
+    let infos = [];
+    try {
+      infos = (await fileInfo(names.slice(0, 12))).filter(usable);
+    } catch (e) {
+      console.warn("파일 정보 실패", p.id, e.message);
+    }
     if (infos.filter((i) => !used.has(i.file)).length < 2) {
       try {
         const more = (await commonsSearch(p.wiki + " " + (p.type === "city" ? "city" : ""))).filter(
