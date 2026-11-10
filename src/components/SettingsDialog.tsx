@@ -1302,7 +1302,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 </Button>
                 {pcConfirmErase > 0 ? (
                   <p className="mt-1.5 text-xs leading-relaxed text-red-500 font-gothic">
-                    서버에 {pcConfirmErase}개가 있는데 지금 기기에는 없습니다. 빈 상태로 덮어쓸까요?
+                    서버에 {pcConfirmErase}개가 있는데 지금 기기에는 없습니다. 빈 상태로 덮어쓰시겠습니까?
                     한 번 더 누르면 덮어씁니다.
                   </p>
                 ) : null}
@@ -1324,7 +1324,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
           <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
             <AlertDialogHeader>
               <AlertDialogTitle className="font-body text-base text-gray-900">
-                저장된 단어·검색 결과를 비울까요?
+                저장된 단어·검색 결과를 비우시겠습니까?
               </AlertDialogTitle>
               <AlertDialogDescription className="font-gothic text-xs leading-relaxed">
                 사전에서 찾아둔 단어 풀이와 검색 결과가 지워집니다.
@@ -1343,7 +1343,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
           <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
             <AlertDialogHeader>
               <AlertDialogTitle className="font-body text-base text-gray-900">
-                저장된 읽기 음성을 비울까요?
+                저장된 읽기 음성을 비우시겠습니까?
               </AlertDialogTitle>
               <AlertDialogDescription className="font-gothic text-xs leading-relaxed">
                 미리 받아둔 음성 파일이 지워집니다.
