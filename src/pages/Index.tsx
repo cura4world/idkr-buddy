@@ -733,6 +733,18 @@ const Index = () => {
     const listStyle = { border: "1px solid " + H_LINE, borderRadius: 16 };
     const iconBtnPub = "shrink-0 flex items-center justify-center active:bg-black/5 rounded-full";
     const kindTag = phrase ? KIND_TAG[phrase.kind] || "" : "";
+    // 머리 장식 꽃 중 제목·날짜 곁의 두 송이는 글자 크기를 따라 오른쪽으로 비켜 섭니다(QA Q08).
+    // 제목 글자는 32px 에서 멈추므로(아래 h1) 제목 곁 꽃은 그 비율까지만 따라갑니다.
+    let rootScale = 1;
+    try {
+      rootScale = parseFloat(getComputedStyle(document.documentElement).fontSize) / 16 || 1;
+    } catch (e) {
+      rootScale = 1;
+    }
+    // 글자를 줄였을 때(85~95%)는 시안 자리 그대로 둡니다.
+    rootScale = Math.max(1, rootScale);
+    const titleScale = Math.min(rootScale, 32 / 28);
+    const flowerX = (x: number, s: number) => Math.round(20 + (x - 20) * s);
 
     return (
       <div
@@ -755,8 +767,8 @@ const Index = () => {
               </defs>
               <g opacity="0.3">
                 {[
-                  "translate(196 30) scale(0.72) rotate(14)",
-                  "translate(174 66) scale(0.4) rotate(-20)",
+                  "translate(" + flowerX(196, rootScale) + " 30) scale(0.72) rotate(14)",
+                  "translate(" + flowerX(174, titleScale) + " 66) scale(0.4) rotate(-20)",
                   "translate(10 160) scale(0.85) rotate(30)",
                   "translate(52 154) scale(0.42) rotate(-8)",
                   "translate(376 152) scale(0.6) rotate(50)",
@@ -805,13 +817,17 @@ const Index = () => {
                 {dateLabel}
               </p>
               <div className="flex items-center" style={{ gap: 8 }}>
-                <h1 className="font-word text-white" style={{ margin: 0, fontSize: hrem(28), fontWeight: 600, lineHeight: 1 }}>
+                {/* 앱 이름은 한 줄. 글자 크기 115% 를 넘으면 32px 에서 멈춥니다(QA Q08 — 360px·125% 에서 두 줄로 꺾이던 것) */}
+                <h1
+                  className="font-word text-white"
+                  style={{ margin: 0, fontSize: "min(" + hrem(28) + ", 32px)", fontWeight: 600, lineHeight: 1, whiteSpace: "nowrap" }}
+                >
                   Kata kata<span style={{ color: "#F29B6B" }}>.</span>
                 </h1>
                 {plus ? (
                   <span
-                    className="font-gothic flex items-center"
-                    style={{ height: 20, padding: "0 8px", borderRadius: 10, background: "#F6E7C4", color: "#5A4610", fontSize: hrem(10.5), fontWeight: 700, letterSpacing: "0.06em" }}
+                    className="font-gothic flex items-center shrink-0"
+                    style={{ height: 20, padding: "0 8px", borderRadius: 10, background: "#F6E7C4", color: "#5A4610", fontSize: "min(" + hrem(10.5) + ", 12px)", fontWeight: 700, letterSpacing: "0.06em" }}
                   >
                     PLUS
                   </span>
@@ -893,17 +909,19 @@ const Index = () => {
             className="bg-white active:bg-[#F7F9FA] transition-colors"
             style={{ border: "1px solid " + H_LINE, borderRadius: 16, padding: "14px 16px 16px" }}
           >
+            {/* 아이콘 세 개(폭 32px)는 줄지 않습니다. 좁은 폭·큰 글자에서는 제목 글자가 14.5px 에서 멈추고,
+                그래도 모자라면 제목 쪽이 줄어듭니다(QA Q08 — 360px·125% 에서 오른쪽 아이콘이 카드 밖으로 넘던 것) */}
             <div className="flex items-center" style={{ gap: 2 }}>
               <p
-                className="font-gothic shrink-0"
-                style={{ margin: 0, fontSize: hrem(14), fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
+                className="font-gothic min-w-0 truncate"
+                style={{ margin: 0, fontSize: "min(" + hrem(14) + ", 14.5px)", fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
               >
                 BAHASA HARI INI
               </p>
               {kindTag ? (
                 <span
                   className="font-gothic flex items-center shrink-0"
-                  style={{ marginLeft: 8, height: 20, padding: "0 8px", borderRadius: 10, background: "#FCE6D9", color: "#9A4419", fontSize: hrem(11), fontWeight: 600 }}
+                  style={{ marginLeft: 6, height: 20, padding: "0 7px", borderRadius: 10, background: "#FCE6D9", color: "#9A4419", fontSize: "min(" + hrem(11) + ", 12px)", fontWeight: 600 }}
                 >
                   {kindTag}
                 </span>
@@ -913,7 +931,7 @@ const Index = () => {
                 type="button"
                 onClick={(e) => { e.stopPropagation(); navigate("/phrase/saved"); }}
                 className={iconBtnPub}
-                style={{ width: 34, height: 34, color: "#646C72" }}
+                style={{ width: 32, height: 34, color: "#646C72" }}
                 aria-label="저장한 문장"
               >
                 <Bookmark size={15} strokeWidth={1.9} fill="none" />
@@ -922,7 +940,7 @@ const Index = () => {
                 type="button"
                 onClick={(e) => { e.stopPropagation(); tapNextPhrase(e); }}
                 className={iconBtnPub}
-                style={{ width: 34, height: 34, color: "#646C72" }}
+                style={{ width: 32, height: 34, color: "#646C72" }}
                 aria-label="다른 문장"
               >
                 <RotateCcw size={15} strokeWidth={1.9} />
@@ -931,7 +949,7 @@ const Index = () => {
                 type="button"
                 onClick={(e) => { e.stopPropagation(); openKindSheet(); }}
                 className={iconBtnPub}
-                style={{ width: 34, height: 34, color: "#646C72" }}
+                style={{ width: 32, height: 34, color: "#646C72" }}
                 aria-label="문장 종류 고르기"
               >
                 <SlidersHorizontal size={15} strokeWidth={1.9} />
