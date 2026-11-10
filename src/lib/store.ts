@@ -1,5 +1,6 @@
 import seedData from '@/data/seed.json';
 import { medaliEngine } from "@/lib/medali";
+import { isStoreApp } from "@/lib/platform";
 import {
   migrateSharedIdsOnce,
   makeLegacyWordResolver,
@@ -98,16 +99,26 @@ export function isBuiltInCategory(c: Category): boolean {
   return defaultCategories.some((d) => d.id === c.id);
 }
 
+// 처음 설치 때 깔리는 예시 단어장·단어. 공개판(스토어 앱·미리보기)은 예시 없이 빈 상태로 시작합니다
+// (QA Q16 — 시안 W1 의 처음 상태. "보관한 단어장 4권 · 모은 단어 0" 이 헷갈림). 관리자판·회원판은 예전 그대로.
+// defaultCategories·defaultWords 자체는 그대로 둡니다 — isBuiltIn* 판단과 sharedIdMigration 이 씁니다.
+function initialCategories(): Category[] {
+  return isStoreApp() ? [] : defaultCategories;
+}
+function initialWords(): Word[] {
+  return isStoreApp() ? [] : defaultWords;
+}
+
 export function getCategories(): Category[] {
   try {
     const stored = localStorage.getItem(CATEGORIES_KEY);
     if (stored) {
-      const parsed = safeParse<Category[]>(stored, defaultCategories);
-      return Array.isArray(parsed) ? parsed : defaultCategories;
+      const parsed = safeParse<Category[]>(stored, initialCategories());
+      return Array.isArray(parsed) ? parsed : initialCategories();
     }
-    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(defaultCategories));
+    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(initialCategories()));
   } catch (e) {}
-  return defaultCategories;
+  return initialCategories();
 }
 
 export function saveCategories(categories: Category[]) {
@@ -118,12 +129,12 @@ export function getWords(): Word[] {
   try {
     const stored = localStorage.getItem(WORDS_KEY);
     if (stored) {
-      const parsed = safeParse<Word[]>(stored, defaultWords);
-      return Array.isArray(parsed) ? parsed : defaultWords;
+      const parsed = safeParse<Word[]>(stored, initialWords());
+      return Array.isArray(parsed) ? parsed : initialWords();
     }
-    localStorage.setItem(WORDS_KEY, JSON.stringify(defaultWords));
+    localStorage.setItem(WORDS_KEY, JSON.stringify(initialWords()));
   } catch (e) {}
-  return defaultWords;
+  return initialWords();
 }
 
 export function saveWords(words: Word[]) {
@@ -236,7 +247,30 @@ try {
   migrateSharedIdsOnce(localStorage, seedData as SeedLike);
 } catch (e) {}
 
+// 공개판에 이미 깔린 예시 단어장(미리보기 APK 로 먼저 써 본 기기)을 한 번만 걷어냅니다.
+// 예시 단어만 들어 있는 예시 단어장만 지웁니다 — 사용자가 단어를 넣은 단어장은 그대로 둡니다.
+const SAMPLE_CLEARED_FLAG = "kata-public-samples-cleared";
+function removeUntouchedSamplesOnce() {
+  if (!isStoreApp()) return;
+  try {
+    if (localStorage.getItem(SAMPLE_CLEARED_FLAG) === "1") return;
+    const cats = getCategories();
+    const words = getWords();
+    const remove = new Set<string>();
+    for (const c of cats) {
+      if (c.isShared || !defaultCategories.some((d) => d.id === c.id)) continue;
+      if (words.every((w) => w.categoryId !== c.id || isBuiltInWord(w))) remove.add(c.id);
+    }
+    if (remove.size > 0) {
+      saveCategories(cats.filter((c) => !remove.has(c.id)));
+      saveWords(words.filter((w) => !(remove.has(w.categoryId) && isBuiltInWord(w))));
+    }
+    localStorage.setItem(SAMPLE_CLEARED_FLAG, "1");
+  } catch (e) {}
+}
+
 initSharedCategories();
+removeUntouchedSamplesOnce();
 ensureMyWordbook();
 sortMyWordbookNewestFirstOnce();
 purgeFailedMeaningWords();
