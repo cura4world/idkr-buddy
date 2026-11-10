@@ -3,7 +3,7 @@ sedikit,적은,Hanya ada sedikit makanan tersisa.,남은 음식이 조금밖에 
 menghitung,세다/계산하다,Dia menghitung uang kembaliannya.,그는 거스름돈을 세었다.
 mengurangi,줄이다,Kita harus mengurangi penggunaan plastik.,우리는 플라스틱 사용을 줄여야 한다.
 menambahkan,추가하다,Boleh saya menambahkan sedikit garam?,소금을 조금 추가해도 될까요?
-melipat gandakan,배증하다,Strategi ini melipat gandakan keuntungan mereka.,이 전략은 그들의 수익을 두 배로 늘렸다.
+melipatgandakan,몇 배로 늘리다/배가하다,Strategi ini melipatgandakan keuntungan mereka.,이 전략은 그들의 수익을 몇 배로 늘렸다.
 menyusut,줄어들다,Cadangan air di danau itu menyusut drastis.,그 호수의 수자원이 급격히 줄어들었다.
 kira-kira,대략/약,Jarak dari sini kira-kira dua kilometer.,여기서 거리는 대략 2킬로미터이다.
 sekitar,약/대략,Ada sekitar seratus orang di sana.,그곳에 약 백 명의 사람이 있다.
@@ -20,7 +20,7 @@ tiga,셋/삼,Dia menunggu selama tiga jam.,그는 세 시간 동안 기다렸다
 empat,넷/사,Meja itu punya empat kaki.,그 탁자는 다리가 넷이다.
 lima,다섯/오,Anak itu berumur lima tahun.,그 아이는 다섯 살이다.
 enam,여섯/육,Kami bertemu pukul enam sore.,우리는 저녁 여섯 시에 만난다.
-tujuh,일곱/칠,Ada tujuh hari dalam seminggu.,일주일은 이레다.
+tujuh,일곱/칠,Ada tujuh hari dalam seminggu.,일주일은 칠 일이다.
 delapan,여덟/팔,Dia bekerja delapan jam sehari.,그는 하루에 여덟 시간 일한다.
 sembilan,아홉/구,Toko itu buka pukul sembilan pagi.,그 가게는 아침 아홉 시에 문을 연다.
 sepuluh,열/십,Saya membeli sepuluh butir telur.,저는 달걀 열 개를 샀습니다.
@@ -41,7 +41,7 @@ dua ratus,이백,Jaraknya sekitar dua ratus kilometer.,거리는 약 이백 킬�
 seribu,천,Uang seribu rupiah tidak cukup untuk membeli itu.,천 루피아로는 그것을 사기에 부족하다.
 sepuluh ribu,만,Harganya sepuluh ribu rupiah saja.,값은 만 루피아밖에 안 된다.
 seratus ribu,십만,Saya menukar uang seratus ribu rupiah.,저는 십만 루피아를 환전했습니다.
-sejuta,백만,Mobil bekas itu dijual sejuta rupiah.,그 중고차는 백만 루피아에 팔렸다.
+sejuta,백만,Harga ponsel bekas itu sejuta rupiah.,그 중고 휴대폰 값은 백만 루피아다.
 semiliar,십억,Proyek itu menelan biaya semiliar rupiah.,그 사업에는 십억 루피아가 들었다.
 belasan,십몇 개의,Belasan anak bermain di lapangan.,십몇 명의 아이들이 운동장에서 놀았다.
 puluhan,수십의,Puluhan orang menunggu di depan loket.,수십 명이 매표소 앞에서 기다렸다.
@@ -56,7 +56,7 @@ terakhir,마지막,Ini kesempatan terakhir untuk mendaftar.,이번이 등록할 
 setengah,절반,Saya hanya makan setengah porsi.,저는 반 인분만 먹었습니다.
 seperempat,사분의 일,Tinggal seperempat kue di piring.,접시에 케이크가 사분의 일 남았다.
 sepertiga,삼분의 일,Sepertiga penduduk desa itu petani.,그 마을 주민의 삼분의 일은 농부다.
-separuh,반쪽/절반,Separuh jalannya masih jauh.,길의 절반이 아직 멀다.
+separuh,반쪽/절반,Separuh gajinya dia kirim ke orang tuanya.,그는 월급의 절반을 부모님께 보낸다.
 persen,퍼센트,Harga naik sepuluh persen tahun ini.,올해 가격이 십 퍼센트 올랐다.
 beberapa,몇몇의,Beberapa orang datang terlambat.,몇 사람이 늦게 왔다.
 sebagian,일부,Sebagian bukunya sudah saya baca.,그 책의 일부는 이미 읽었다.
@@ -65,7 +65,7 @@ total,합계/총,Total belanjanya lima puluh ribu rupiah.,장 본 것의 합계�
 jumlah,수량/총계,Jumlah peserta tahun ini bertambah.,올해 참가자 수가 늘었다.
 sejumlah,얼마간의/다수의,Sejumlah warga hadir dalam rapat itu.,다수의 주민이 그 회의에 참석했다.
 rata-rata,평균,Rata-rata umur mereka tiga puluh tahun.,그들의 평균 연령은 삼십 세다.
-maksimal,최대의,Ruangan ini maksimal untuk dua puluh orang.,이 방은 최대 스무 명까지다.
+maksimal,최대의,Ruangan ini muat maksimal dua puluh orang.,이 방에는 최대 스무 명까지 들어간다.
 minimal,최소의,Minimal pembelian sepuluh ribu rupiah.,최소 구매액은 만 루피아입니다.
 genap,꽉 찬/만(滿),Umurnya genap tiga puluh tahun hari ini.,오늘로 그의 나이가 꼭 서른이 되었다.
 angka,숫자/수치,Tulislah angka itu di papan tulis.,그 숫자를 칠판에 쓰세요.
@@ -89,7 +89,7 @@ porsi,인분,Kami memesan dua porsi sate ayam.,우리는 닭 사테 이 인분�
 kotak,상자 (수분류사),Dia mengirim satu kotak buah ke rumah kami.,그는 우리 집으로 과일 한 상자를 보냈다.
 kaleng,캔 (수분류사),Ada tiga kaleng susu di lemari.,찬장에 우유 세 캔이 있다.
 karung,자루 (큰 포대),Petani itu memanen sepuluh karung padi.,그 농부는 벼 열 자루를 수확했다.
-pak,갑/팩,Tolong ambil satu pak susu di kulkas.,냉장고에서 우유 한 팩만 꺼내 줘.
+lusin,다스 (12개),Ibu membeli satu lusin piring.,어머니는 접시 한 다스를 샀다.
 kali,번/회 (횟수),Saya sudah ke Jakarta tiga kali.,저는 자카르타에 세 번 가 봤습니다.
 kilo,킬로그램,Tolong beli dua kilo beras.,쌀 두 킬로만 사다 줘.
 gram,그램,Resep ini butuh dua ratus gram gula.,이 조리법에는 설탕 이백 그램이 필요하다.
