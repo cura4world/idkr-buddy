@@ -88,6 +88,22 @@ export const LEGACY_WORD_RENAMES: Record<string, string> = {
   "plat nomor": "pelat nomor",
 };
 
+/**
+ * 처음 설치 때 깔리는 예시 단어 8개(store.ts defaultWords)의 대문자 표제어 → 소문자.
+ * 고유명사가 아닌데 대문자로 시작해 목록·게임에서 튀었습니다. ID 는 그대로라 글자만 바꿉니다.
+ * 사용자가 고친 단어(글자가 다르거나 다른 단어장으로 옮긴 것)는 건드리지 않습니다.
+ */
+export const LEGACY_DEFAULT_WORD_CASE: Record<string, { from: string; to: string; categoryId: string }> = {
+  "1": { from: "Selamat pagi", to: "selamat pagi", categoryId: "greetings" },
+  "2": { from: "Terima kasih", to: "terima kasih", categoryId: "greetings" },
+  "3": { from: "Nasi goreng", to: "nasi goreng", categoryId: "food" },
+  "4": { from: "Satu", to: "satu", categoryId: "numbers" },
+  "5": { from: "Dua", to: "dua", categoryId: "numbers" },
+  "6": { from: "Apa kabar?", to: "apa kabar?", categoryId: "greetings" },
+  "7": { from: "Makan", to: "makan", categoryId: "daily" },
+  "8": { from: "Tidur", to: "tidur", categoryId: "daily" },
+};
+
 export interface KeyValueStore {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
@@ -216,7 +232,7 @@ export function migrateSharedIdsOnce(store: KeyValueStore, seed: SeedLike | null
 
     // 2) 단어 — 단어장 ID 를 바꾸고, 공용 단어는 단어 ID 도 바꿉니다
     //    (공용 단어는 곧 시드 동기화가 새로 채우지만, 그 전에 읽는 곳이 있어도 맞도록)
-    const words = parseArray(store.getItem(WORDS_KEY)) as { id?: string; categoryId?: string; isShared?: boolean }[] | null;
+    const words = parseArray(store.getItem(WORDS_KEY)) as { id?: string; word?: string; categoryId?: string; isShared?: boolean }[] | null;
     if (words) {
       const seen = new Set<string>();
       const next: unknown[] = [];
@@ -224,10 +240,13 @@ export function migrateSharedIdsOnce(store: KeyValueStore, seed: SeedLike | null
         if (!w || typeof w.id !== "string") { next.push(w); continue; }
         const catId = typeof w.categoryId === "string" ? upgradeLegacyCategoryId(w.categoryId) : w.categoryId;
         const id = w.isShared ? upgradeLegacyWordId(w.id, resolver) : w.id;
-        if (catId !== w.categoryId || id !== w.id) result.words++;
+        // 예시 단어 8개의 대문자 표제어를 소문자로 (사용자가 고치지 않은 것만)
+        const dc = !w.isShared ? LEGACY_DEFAULT_WORD_CASE[w.id] : undefined;
+        const word = dc && w.word === dc.from && catId === dc.categoryId ? dc.to : w.word;
+        if (catId !== w.categoryId || id !== w.id || word !== w.word) result.words++;
         if (seen.has(id)) continue;
         seen.add(id);
-        next.push(catId === w.categoryId && id === w.id ? w : { ...w, id, categoryId: catId });
+        next.push(catId === w.categoryId && id === w.id && word === w.word ? w : { ...w, id, word, categoryId: catId });
       }
       store.setItem(WORDS_KEY, JSON.stringify(next));
     }
