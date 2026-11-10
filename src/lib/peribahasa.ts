@@ -17,7 +17,7 @@ import { getWordsByCategory, getCategories, Category, Word } from "@/lib/store";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { askPhraseJSON, generateNewPhrase, getPhraseDetail } from "@/lib/phrase";
 import { BUILTIN_SCENES } from "@/data/percakapan";
-import { getCustomScenes } from "@/lib/percakapan";
+import { getCustomScenes, isCategoryVisible } from "@/lib/percakapan";
 import type { PercakapanScene } from "@/data/percakapan";
 import { isStoreApp } from "@/lib/platform";
 
@@ -395,7 +395,10 @@ async function pickFromPercakapan(): Promise<Phrase | null> {
       if (custom && custom.length > 0) scenes = scenes.concat(custom);
     } catch (e) { /* 사용자 장면을 못 읽으면 기본 장면만 씁니다 */ }
 
-    const usable = scenes.filter((s) => s && Array.isArray(s.lines) && s.lines.length > 0);
+    // 공개판에서 이 등급에 안 보이는 회화집(교회와 신앙)은 오늘의 문장에도 나오지 않게 합니다.
+    const usable = scenes.filter(
+      (s) => s && Array.isArray(s.lines) && s.lines.length > 0 && isCategoryVisible(s.cat)
+    );
     if (usable.length === 0) return null;
 
     for (let attempt = 0; attempt < 12; attempt += 1) {
