@@ -235,6 +235,9 @@ jobs:
               }
           }
           dependencies {
+              // webkit 이 끌어오는 옛 kotlin-stdlib-jdk7/jdk8(1.6.21)과 새 kotlin-stdlib(1.8.22)이 겹쳐
+              // checkDebugDuplicateClasses 가 실패합니다(2026-11-11 첫 실행). BOM 으로 버전을 맞춥니다.
+              implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
               implementation 'androidx.appcompat:appcompat:1.7.0'
               implementation 'androidx.core:core:1.13.1'
               implementation 'androidx.activity:activity:1.9.3'
