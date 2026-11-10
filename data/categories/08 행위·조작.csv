@@ -1,7 +1,7 @@
 duduk,앉다,Silakan duduk di kursi ini.,이 의자에 앉으세요.
 berdiri,서다,Semua orang berdiri saat lagu kebangsaan.,국가가 울릴 때 모두 일어섰다.
 bermain,놀다,Anak-anak bermain di halaman rumah.,아이들은 집 마당에서 논다.
-membawa,가져오다,Tolong bawa tas ini ke ruang tamu.,이 가방을 거실로 가져다 주세요.
+membawa,가져가다/가져오다,Tolong bawa tas ini ke ruang tamu.,이 가방을 거실로 가져다 주세요.
 mengambil,가져가다/집다,Dia mengambil buku dari rak.,그는 선반에서 책을 집었다.
 memberikan,주다,Ibu memberikan hadiah kepada anaknya.,어머니는 아이에게 선물을 주었다.
 menerima,받다,Saya menerima paket dari teman.,나는 친구에게서 소포를 받았다.
@@ -11,7 +11,7 @@ mencari,찾다,Saya mencari kunci yang hilang.,나는 잃어버린 열쇠를 찾
 membantu,돕다,Dia selalu membantu orang yang kesulitan.,그는 항상 어려움에 처한 사람을 돕는다.
 berusaha,노력하다,Dia terus berusaha meski gagal berkali-kali.,그는 여러 번 실패해도 계속 노력한다.
 mencoba,시도하다,Saya ingin mencoba masakan baru ini.,나는 이 새로운 요리를 시도해 보고 싶다.
-berhasil,성공하다,Akhirnya dia berhasil lulus ujian.,결국 그는 시험에 합격했다.
+berhasil,성공하다,Dia berhasil membuka usaha sendiri.,그는 자기 사업을 차리는 데 성공했다.
 memulai,시작하다,Mari kita memulai rapat sekarang.,지금 회의를 시작합시다.
 menyelesaikan,끝내다/완성하다,Dia menyelesaikan tugasnya tepat waktu.,그는 과제를 제때 완성했다.
 berhenti,멈추다/그만두다,Dia berhenti merokok tahun lalu.,그는 작년에 담배를 끊었다.
@@ -32,11 +32,11 @@ memegang,잡다/쥐다,Dia memegang tangan anaknya erat-erat.,그는 아이의 �
 melepaskan,놓아주다/풀다,Dia melepaskan balon ke langit.,그는 풍선을 하늘로 놓아주었다.
 mendorong,밀다,Tolong dorong pintu itu ke dalam.,그 문을 안쪽으로 밀어 주세요.
 menarik,당기다,Dia menarik napas dalam-dalam.,그는 심호흡을 했다.
-memukul,때리다,Dia memukul bola dengan raket.,그는 라켓으로 공을 쳤다.
+memukul,때리다/치다,Dia memukul bola dengan raket.,그는 라켓으로 공을 쳤다.
 menendang,차다,Pemain itu menendang bola ke gawang.,그 선수는 골대를 향해 공을 찼다.
 melempar,던지다,Anak itu melempar bola ke tembok.,그 아이는 벽을 향해 공을 던졌다.
 menangkap,잡다/받다,Dia menangkap bola dengan kedua tangan.,그는 두 손으로 공을 잡았다.
-memotong,자르다,Ibu memotong sayuran untuk sup.,어머니는 수프를 위해 채소를 잘랐다.
+memotong,자르다,Ibu memotong sayuran untuk sup.,어머니는 수프를 끓이려고 채소를 썰었다.
 menyimpan,보관하다/저장하다,Simpan makanan ini di kulkas.,이 음식을 냉장고에 보관하세요.
 mengemas,포장하다,Dia mengemas barang dengan rapi.,그는 물건을 깔끔하게 포장했다.
 membungkus,싸다/감싸다,Tolong bungkus kado ini dengan cantik.,이 선물을 예쁘게 싸 주세요.
@@ -50,7 +50,7 @@ melambaikan,흔들다,Dia melambaikan tangan saat berpisah.,그는 헤어질 때
 merangkul,껴안다/포옹하다,Ibu merangkul anaknya dengan hangat.,어머니는 아이를 따뜻하게 껴안았다.
 menepuk,두드리다,Dia menepuk bahu temannya pelan-pelan.,그는 친구의 어깨를 가볍게 두드렸다.
 mencium,키스하다/냄새를 맡다,Ibu mencium kening anaknya sebelum tidur.,어머니는 자기 전에 아이의 이마에 키스했다.
-menjabat,악수하다,Mereka saling menjabat tangan saat bertemu.,그들은 만날 때 악수를 나눴다.
+berjabat tangan,악수하다,Mereka berjabat tangan saat bertemu.,그들은 만날 때 악수를 나눴다.
 berlutut,무릎을 꿇다,Dia berlutut untuk meminta maaf.,그는 사과하기 위해 무릎을 꿇었다.
 membungkuk,허리를 굽히다,Dia membungkuk memberi hormat kepada yang lebih tua.,그는 어른에게 인사하기 위해 허리를 굽혔다.
 menyeret,끌다,Dia menyeret koper besar di bandara.,그는 공항에서 큰 트렁크를 끌었다.
@@ -99,9 +99,9 @@ merentangkan,펼치다/뻗다,Dia merentangkan tangannya lebar-lebar.,그는 두
 mengencangkan,조이다/단단히 하다,Dia mengencangkan baut yang longgar.,그는 느슨한 볼트를 조였다.
 mengendurkan,느슨하게 하다,Tolong kendurkan tali yang terlalu kencang itu.,너무 팽팽한 줄을 느슨하게 해 주세요.
 memutar,돌리다/틀다,Dia memutar musik keras-keras di kamarnya.,그는 방에서 음악을 크게 틀었다.
-membalikkan,뒤집다,Dia membalikkan pancake saat sudah matang.,그는 팬케이크가 익자 뒤집었다.
+membalikkan,뒤집다,Dia membalikkan panekuk saat sudah matang.,그는 팬케이크가 익자 뒤집었다.
 menembus,뚫다/헤치고 나아가다,Rombongan itu menembus badai salju dengan gigih.,일행은 눈보라를 굳세게 헤치고 나아갔다.
-menyiram api,불을 끄다,Petugas pemadam menyiram api dengan selang besar.,소방관이 큰 호스로 불을 껐다.
+memadamkan,불을 끄다,Petugas berhasil memadamkan api dalam satu jam.,소방관들이 한 시간 만에 불을 껐다.
 menyulut,불을 붙이다,Dia menyulut lilin ulang tahun satu per satu.,그는 생일 초에 하나씩 불을 붙였다.
 meredam,잠재우다/약화시키다,Pemerintah berusaha meredam konflik yang terjadi.,정부는 발생한 갈등을 잠재우려 노력했다.
 meledakkan,폭발시키다,Tim penjinak bom meledakkan bom itu di tempat aman.,폭발물 처리반은 안전한 장소에서 폭탄을 폭발시켰다.

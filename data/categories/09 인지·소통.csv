@@ -1,5 +1,5 @@
 berbicara,말하다,Dia berbicara dengan sopan kepada semua orang.,그는 모든 사람에게 공손하게 말한다.
-mendengar,듣다,Saya senang mendengar musik klasik.,나는 클래식 음악 듣는 것을 좋아한다.
+mendengar,듣다,Saya mendengar suara aneh dari dapur.,부엌에서 이상한 소리가 들렸다.
 melihat,보다,Kami melihat pertunjukan di teater.,우리는 극장에서 공연을 보았다.
 membaca,읽다,Dia suka membaca buku sebelum tidur.,그는 자기 전에 책 읽는 것을 좋아한다.
 menulis,쓰다,Saya menulis surat untuk teman lama.,나는 오랜 친구에게 편지를 썼다.
@@ -10,9 +10,9 @@ mengerti,이해하다,Apakah kamu mengerti penjelasan tadi?,방금 설명을 이
 tahu,알다,Saya tidak tahu alamat rumahnya.,나는 그의 집 주소를 모른다.
 berpikir,생각하다,Dia berpikir sejenak sebelum menjawab.,그는 대답하기 전에 잠시 생각했다.
 ingat,기억하다,Saya masih ingat hari pertama kami bertemu.,나는 우리가 처음 만난 날을 아직 기억한다.
-lupa,잊다,Maaf saya lupa membawa buku itu.,"미안해요, 그 책 가져오는 걸 잊었어요."
+lupa,잊다,"Maaf, saya lupa membawa buku itu.","미안해요, 그 책 가져오는 걸 잊었어요."
 menghubungi,연락하다,Tolong hubungi saya jika ada masalah.,문제가 있으면 연락해 주세요.
-mencari tahu,알아내다,Saya ingin mencari tahu kebenarannya.,나는 그 사실의 진실을 알아내고 싶다.
+mencari tahu,알아내다,Saya ingin mencari tahu kebenarannya.,나는 진실을 알아내고 싶다.
 menganalisis,분석하다,Tim itu menganalisis data dengan cermat.,그 팀은 데이터를 면밀하게 분석했다.
 membuktikan,증명하다,Dia membuktikan teorinya dengan eksperimen.,그는 실험으로 자신의 이론을 증명했다.
 menyimpulkan,결론짓다,Guru menyimpulkan pelajaran hari ini.,선생님은 오늘 수업을 정리하며 결론을 내렸다.
@@ -32,7 +32,7 @@ mempertimbangkan,고려하다,Pertimbangkan baik-baik sebelum memutuskan.,결정
 mengakui,인정하다,Dia mengakui kesalahannya dengan jujur.,그는 자신의 실수를 솔직하게 인정했다.
 menyangkal,부정하다,Dia menyangkal semua tuduhan terhadapnya.,그는 자신에 대한 모든 혐의를 부정했다.
 mengungkapkan,표현하다/드러내다,Dia mengungkapkan perasaannya lewat surat.,그는 편지를 통해 자신의 감정을 표현했다.
-menyampaikan,전달하다,Tolong sampaikan salam saya kepada keluarganya.,그의 가족에게 제 안부를 전달해 주세요.
+menyampaikan,전달하다,Tolong sampaikan salam saya kepada keluarganya.,그의 가족에게 제 안부를 전해 주세요.
 menceritakan,이야기하다,Nenek menceritakan dongeng sebelum tidur.,할머니는 자기 전에 동화를 이야기해 주었다.
 mendeskripsikan,묘사하다,Tolong deskripsikan orang yang kamu lihat.,당신이 본 사람을 묘사해 주세요.
 menyimpan rahasia,비밀을 지키다,Dia pandai menyimpan rahasia temannya.,그는 친구의 비밀을 잘 지킨다.
@@ -49,7 +49,7 @@ berdebat,토론하다/논쟁하다,Mereka berdebat tentang kebijakan baru itu.,�
 mengandalkan,의지하다/신뢰하다,Kita harus mengandalkan Tuhan dalam setiap keputusan.,우리는 모든 결정에서 주님을 의지해야 한다.
 membimbing,인도하다/안내하다,Roh Kudus membimbing kita dalam setiap langkah hidup.,성령님은 삶의 모든 발걸음에서 우리를 인도하신다.
 pikiran,생각/마음,Pikirannya terus melayang ke masa lalu.,그의 생각은 계속 과거로 흘러간다.
-ingatan,기억,Ingatan tentang hari itu tidak pernah bisa dilupakan.,그날에 대한 기억은 결코 잊혀질 수 없다.
+ingatan,기억,Ingatan tentang hari itu tidak pernah bisa dilupakan.,그날의 기억은 결코 잊을 수 없다.
 niat,의도/뜻,Niatnya untuk berubah sangat kuat dan tulus.,변하려는 그의 의도는 매우 강하고 진실하다.
 keputusan,결정,Keputusan itu diambilnya setelah berdoa dan berpikir panjang.,그 결정은 오랫동안 기도하고 생각한 끝에 내려졌다.
 tujuan,목적/목표,Tujuan hidupnya adalah memuliakan Tuhan dalam segala hal.,그의 삶의 목적은 모든 일에서 하나님을 영화롭게 하는 것이다.
@@ -72,7 +72,7 @@ membayangkan,상상하다/그려 보다,Saya tidak bisa membayangkan hidup tanpa
 bilang,말하다 (구어),Dia bilang mau datang besok pagi.,걔가 내일 아침에 온다고 했어.
 berkata,말하다 (격식),Ibu berkata bahwa kita harus jujur.,어머니는 우리가 정직해야 한다고 말씀하셨다.
 mengobrol,수다 떨다/잡담하다,Kami mengobrol sambil minum kopi.,우리는 커피를 마시며 수다를 떨었다.
-memberitahu,알려 주다,Tolong beritahu saya kalau dia sudah tiba.,그가 도착하면 저에게 알려 주세요.
+memberi tahu,알려 주다,Tolong beri tahu saya kalau dia sudah tiba.,그가 도착하면 저에게 알려 주세요.
 menyebut,언급하다/부르다,Dia tidak menyebut nama orang itu.,그는 그 사람의 이름을 언급하지 않았다.
 memanggil,부르다,Ibu memanggil anaknya dari dapur.,어머니가 부엌에서 아이를 불렀다.
 berteriak,소리치다,Dia berteriak minta tolong dari jauh.,그는 멀리서 도와 달라고 소리쳤다.
