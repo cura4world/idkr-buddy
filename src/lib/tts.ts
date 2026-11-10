@@ -5,8 +5,22 @@
 // - 긴 글은 문단으로 쪼개 생성하되(품질 드리프트 방지), 재생은 이어서 하나처럼.
 // - 재생/일시정지/정지 컨트롤 + 상태 구독(subscribe) 제공.
 
-import { geminiTarget, handleQuotaResponse } from "@/lib/aiProxy";
+import { geminiTarget, handleQuotaResponse, AiKind } from "@/lib/aiProxy";
 import { getGeminiApiKey } from "@/lib/gemini";
+import { isStoreApp } from "@/lib/platform";
+
+/**
+ * 공개판 서버가 셀 기능 이름(x-kata-kind)을 재생 키의 앞머리로 정합니다. (추가 전용 — 기존 사용법은 그대로)
+ *   "say:"   storeTtsShim 이 넘기는 단어·예문·지도·이해의 짧은 발음 → word-audio
+ *   "story-" 이야기 화면의 PlayButton(cacheKey "story-v2-<id>") → longread (한 편 = 한 번)
+ *   그 밖     묵상·기도·뉴스(관리자판 화면) → tts
+ */
+export function ttsKindForKey(key: string): AiKind {
+  const k = String(key || "");
+  if (k.indexOf("say:") === 0) return "word-audio";
+  if (k.indexOf("story-") === 0) return "longread";
+  return "tts";
+}
 
 const TTS_MODEL = "gemini-3.8-flash-lite-tts";
 // 3.8 이 요청을 거절하면(400·404) 한 번만 이 모델로 다시 만듭니다.
@@ -283,9 +297,11 @@ async function generateAudioForText(
   attempt = 0,
   model: string = TTS_MODEL,
   legacyRetry = true, // false 면 3.8 이 거절돼도 예전 모델로 넘어가지 않고 오류를 그대로 던집니다
+  kind: AiKind = "tts", // 공개판 서버가 셀 기능 이름 (ttsKindForKey)
+  unit = "",            // 긴 읽기 한 편의 이름 — 문단 여러 조각을 한 번으로 셈
 ): Promise<string> {
   // 내 키가 있으면 직접, 없고 회원키가 있으면 Worker 를 거칩니다(키는 서버에만).
-  const target = geminiTarget(model, getGeminiApiKey(), "tts");
+  const target = geminiTarget(model, getGeminiApiKey(), kind, unit);
   if (!target) throw new Error("NO_API_KEY");
 
   // 지시문을 소리내어 읽어버리는 문제 방지: 명확한 preamble + 낭독 대상 라벨.
@@ -329,10 +345,10 @@ async function generateAudioForText(
     if (!res.ok) {
       // 3.8 이 거절하면(모델 없음·형식 오류) 예전 모델로 한 번만 다시 만듭니다.
       if (legacyRetry && verbatim && (res.status === 400 || res.status === 404)) {
-        return generateAudioForText(text, voiceName, 0, LEGACY_TTS_MODEL, false);
+        return generateAudioForText(text, voiceName, 0, LEGACY_TTS_MODEL, false, kind, unit);
       }
       // 500은 가끔 오디오 대신 텍스트 토큰을 반환하는 알려진 이슈 → 1회 재시도
-      if (res.status === 500 && attempt < 1) return generateAudioForText(text, voiceName, attempt + 1, model, legacyRetry);
+      if (res.status === 500 && attempt < 1) return generateAudioForText(text, voiceName, attempt + 1, model, legacyRetry, kind, unit);
       if (res.status === 400 || res.status === 403) throw new Error("INVALID_API_KEY");
       if (res.status === 429) throw new Error("RATE_LIMIT");
       throw new Error("REQUEST_FAILED_" + res.status);
@@ -347,7 +363,7 @@ async function generateAudioForText(
     const inline = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
     const b64: string = inline?.data ?? "";
     if (!b64) {
-      if (attempt < 1) return generateAudioForText(text, voiceName, attempt + 1, model, legacyRetry);
+      if (attempt < 1) return generateAudioForText(text, voiceName, attempt + 1, model, legacyRetry, kind, unit);
       throw new Error("EMPTY_AUDIO");
     }
     // 3.8 TTS 는 헤더가 붙은 WAV 를 줍니다. 헤더를 또 씌우면 소리가 깨집니다.
@@ -546,6 +562,8 @@ class TtsPlayer {
 
     const voiceName = voiceNameOf(getTtsVoice());
     const chunks = splitForTts(text);
+    const kind = ttsKindForKey(key);
+    const unit = kind === "longread" ? key : "";
 
     // 각 청크의 오디오 dataUrl 확보 (캐시 우선)
     const urls: string[] = [];
@@ -555,14 +573,19 @@ class TtsPlayer {
         const ckey = key + "::v=" + voiceName + "::" + i + "/" + chunks.length;
         let url = await getCachedAudio(ckey);
         if (!url) {
-          url = await generateAudioForText(chunks[i], voiceName);
+          url = await generateAudioForText(chunks[i], voiceName, 0, TTS_MODEL, true, kind, unit);
           await saveCachedAudio(ckey, url);
         }
         urls.push(url);
       }
     } catch (e) {
-      // 클라우드 실패 → 무료 폴백으로 전체 읽기
       if (myToken !== this.token) return;
+      // 스토어 앱에서 한도 초과·Plus 필요는 안내(aiProxy)만 하고 멈춥니다. 스토어 앱의 폰 음성 폴백은
+      // storeTtsShim 이라 다시 Gemini 발음(word-audio)으로 가서 잠금을 우회하게 됩니다.
+      // (관리자판·회원판은 진짜 폰 음성이 있으므로 예전처럼 폴백합니다.)
+      const msg = String((e as any) && (e as any).message ? (e as any).message : "");
+      if (msg.indexOf("QUOTA") === 0 && isStoreApp()) { this.stop(); return; }
+      // 클라우드 실패 → 무료 폴백으로 전체 읽기
       this.emit({ state: "playing", usedFallback: true });
       speakFallback(text);
       // 내장 TTS는 종료 이벤트를 신뢰하기 어려워 상태만 idle로 되돌릴 타이머 없이 둠(정지 버튼으로 종료)
@@ -587,3 +610,31 @@ class TtsPlayer {
 }
 
 export const ttsPlayer = new TtsPlayer();
+
+// ── 추가 전용: 짧은 글(단어 발음)의 음성 주소 ─────────────────────
+// 듣고 고르기(Dengar) 게임이 씁니다. 게임은 소리를 직접 재생해야(천천히 듣기 = 재생 속도 조절)
+// 하므로 ttsPlayer 대신 주소만 받아 갑니다. 캐시 키는 ttsPlayer.toggle("say:" + 글, 글) 과
+// 똑같이 만들어, 단어 발음 버튼(스토어 앱의 AndroidTTS 대체)으로 한 번 들은 단어는 다시 만들지 않습니다.
+// cacheOnly 면 새로 만들지 않고 저장된 것만 돌려줍니다(오프라인일 때 "들어 본 단어" 고르기용).
+// 실패하면 null — 부르는 쪽이 글자로 대신 보여 줍니다. 기존 함수·메서드는 바꾸지 않았습니다.
+export async function getSayAudioUrl(
+  text: string,
+  opts?: { cacheOnly?: boolean },
+): Promise<string | null> {
+  const t = String(text || "").trim();
+  if (!t) return null;
+  try {
+    const chunks = splitForTts(t);
+    if (chunks.length !== 1) return null; // 단어·짧은 구절 전용
+    const voiceName = voiceNameOf(getTtsVoice());
+    const ckey = "say:" + t + "::v=" + voiceName + "::0/1";
+    const have = await getCachedAudio(ckey);
+    if (have) return have;
+    if (opts && opts.cacheOnly) return null;
+    const url = await generateAudioForText(chunks[0], voiceName);
+    await saveCachedAudio(ckey, url);
+    return url;
+  } catch {
+    return null;
+  }
+}

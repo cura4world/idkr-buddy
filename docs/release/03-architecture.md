@@ -72,20 +72,75 @@
 | 경로 | 인증 | 요청 | 응답 |
 |---|---|---|---|
 | `POST /auth/google` | 없음 | `{idToken, nonce?}` | `{token, user, plan}` |
-| `GET /me` | Bearer | | `{user, plan, usage, limits}` |
+| `GET /me` | Bearer | | `{user, plan, usage, limits, features}` (아래 "/me 모양") |
 | `POST /auth/signout` | Bearer | | `{ok}` |
 | `POST /account/delete` | Bearer | | `{deleted:true}` |
-| `POST /ai/gemini/{model}:generateContent` | Bearer + `x-kata-kind` | Gemini 요청 본문 | Gemini 응답 그대로 / 429 `QUOTA_TEXT·QUOTA_TTS` |
-| `POST /billing/verify` | Bearer | `{productId, purchaseToken}` | `{plan}` |
+| `POST /ai/gemini/{model}:generateContent` | Bearer + `x-kata-kind` (+ 긴 읽기는 `x-kata-unit`) | Gemini 요청 본문 | Gemini 응답 그대로 / 429 `QUOTA_<KIND>` `{kind, period, limit, plan}` / 403 `PLUS_REQUIRED` `{kind, plan}` |
+| `POST /billing/verify` | Bearer | `{productId, purchaseToken}` | `{valid, plan}` |
 | `POST /report` | Bearer | `{feature, input, output, reason}` | `{ok}` |
 | `GET /admin/reports` | `x-admin-key` | `?limit=` | `{items}` |
+| `POST /admin/special` | `x-admin-key` | `{email \| uid, action:"grant"\|"revoke", tier?:"special"\|"admin", until?:ms(0=무기한), note?}` | `{ok, uid, pending, plan}` |
+| `GET /admin/special` | `x-admin-key` | `?email=` 또는 `?uid=` | `{uid, pending, plan}` |
+
+`plan` = `{tier, until, trial?, productId?}` — `tier` 는 `free`·`trial`·`plus`·`special`·`admin`. 체험이면 `trial: true`.
+
+### 기능별 한도 (S41, 2026-11-11 — 정본: 결정 문서 "무료와 Plus", 사본: `08-polish-stories.md`)
+
+앱이 `x-kata-kind` 에 기능 이름을 적어 보내고, 서버가 그 이름별로 **한국 날짜(하루)·한국 달(한 달)** 을 셉니다.
+
+| `x-kata-kind` | 무엇 | 무료 | Plus 하루/한 달 | 체험 | Special·관리자 |
+|---|---|---|---|---|---|
+| `story` | 이야기 불러오기 | 하루 1 | 5 / 60 | 2 / — | 제한 없음 |
+| `percakapan-make` | 회화집 만들기 | 잠김 | 3 / 30 | 1 / 15 | 제한 없음 |
+| `longread` | 내가 만든 이야기·회화 듣기 | 잠김 | 5 / 50 | 2 / 25, 체험 합계 15 | 제한 없음 |
+| `dict-new` | 사전에서 처음 찾는 말(숨김) | 하루 50 | 50 / 400 | 50 / — | 제한 없음 |
+| `phrase` | 오늘의 문장 새로 | 하루 1 | 제한 없음(안전 상한 50) | Plus 와 같음 | 제한 없음 |
+| `word-audio` | 단어·예문 발음 (글 600자까지) | 하루 100·한 달 1,500(숨김) | 안 셈(안전 상한 1,000) | Plus 와 같음 | 제한 없음 |
+| `shared-audio` | 기본 회화집·문장 하나·지도·이해 읽기 | 잠김 | 안 셈(안전 상한 400) | Plus 와 같음 | 제한 없음 |
+| `text` | 그 밖의 짧은 풀이(단어 탭·단어 채우기·지도·이해 설명·문장 해설) | 하루 200(숨김) | 1,000(숨김) | Plus 와 같음 | 제한 없음 |
+| `tts` | 예전 이름(음성 전반) — 그대로 받음 | 하루 30 | 400 | Plus 와 같음 | 제한 없음 |
+
+- 체험 = Plus 의 절반(내림, 최소 1). 단 무료보다 박해지지 않게 무료 값으로 올림(사전 50, 무료에 한 달 상한이 없는 기능은 체험도 없음).
+- 체험 긴 읽기 합계 15 는 지금 하루 2 × 7일 = 14 라 실제로는 걸리지 않습니다(표대로 넣어 둠).
+- **긴 읽기는 한 편 = 한 번.** 이야기는 문단마다 따로 부르므로, 앱이 `x-kata-unit`(재생 캐시 키)을 붙이면 그날 첫 조각만 셉니다. 같은 편은 하루 24조각까지.
+- 숨김(`hidden`) 상한은 남은 횟수로 보여 주지 않습니다. "안 셈"인 기능에도 안전 상한을 둔 이유: 기능 이름은 앱이 스스로 밝히는 값이라 서버가 내용을 확인할 수 없습니다.
+- 앱 쪽 이름 정하기: `geminiText`(호출마다 `kind` 선택 매개변수) · `tts.ts` `ttsKindForKey`(재생 키 `say:`→`word-audio`, `story-`→`longread`) · `percakapanAudio`(`scene.custom`→`longread`, 그 밖→`shared-audio`). 회원판 Worker 로 갈 때는 예전 이름(`text`·`tts`·`news`)으로 바꿔 보냅니다.
+
+### /me 모양
+
+```
+usage:  {day:"YYYY-MM-DD", month:"YYYY-MM", text, tts, report}   ← 예전 칸(하루 수) 그대로
+limits: {text, tts, report}                                       ← 예전 칸(하루 상한, 제한 없으면 null)
+features: { <kind>: { locked, hidden,
+                      used:  {day, month, total?},
+                      limit: {day|null, month|null, total?},
+                      left:  {day|null, month|null, total?} } }   ← null = 제한 없음, total 은 체험만
+```
+
+### 체험 판정 (best-effort)
+
+Play `subscriptionsv2` 의 `lineItems[].offerPhase.freeTrial` 이 있으면 체험. `offerPhase` 칸이 없는 응답이면
+제안 ID·태그에 `trial` 이 들어 있고 `startTime` 에서 8일이 안 됐을 때만 체험으로 봅니다(체험 뒤에도 offerId 는 남으므로).
+Play 콘솔에서 체험 제안 ID 에 `trial` 을 넣어 두면(예: `trial-7d`) 대비책도 맞습니다.
+
+### Special Member 정하기 (회원키 없이, 임시)
+
+```
+curl -X POST https://kata-public.cura4world.workers.dev/admin/special \
+  -H "x-admin-key: <ADMIN_KEY>" -H "content-type: application/json" \
+  -d '{"email":"someone@gmail.com","action":"grant"}'
+```
+- 아직 로그인한 적 없는 이메일이면 "미리 준 등급"(`pending:true`)으로 두었다가 첫 로그인 때 붙습니다.
+- 이 기능 전에 로그인한 사람은 이메일 찾기표가 없으므로 한 번 다시 로그인하거나 `uid`(`g_`+Google sub)로 줍니다.
+- 거두기 `{"email":…, "action":"revoke"}` — 관리자가 준 등급만 지우고 Play 구독은 그대로.
+- Play 검증이 `ent:` 를 다시 써도 관리자가 준 등급(`ent.staff`)은 남습니다. 계정을 지우면 함께 지워집니다.
 
 ### 남용 방지 (AI 대리 호출)
 
 - 허용 모델만: 텍스트 `gemini-3.1-flash-lite`·`3.5-flash-lite`·`2.5-flash-lite`, 음성 `gemini-3.8-flash-lite-tts`·`3.1-flash-tts-preview`
-- `x-kata-kind`가 `news`면 거절 (공개판에 뉴스 없음). 요청 본문에 `tools`가 있으면 거절 (검색 그라운딩 차단)
-- 본문 최대 32KB, 텍스트 `maxOutputTokens` 상한 16,384
-- 한도는 계정 × 한국 날짜 × 종류. 성공한 호출만 센다
+- 위 표에 없는 `x-kata-kind`(예: `news`)면 거절. 요청 본문에 `tools`가 있으면 거절 (검색 그라운딩 차단)
+- 본문 최대 32KB, 텍스트 `maxOutputTokens` 상한 16,384, 글자 수는 기능별(텍스트 12,000 · 음성 6,000 · 단어 발음 600)
+- 부르기 전에 한 칸 잡고(하루·한 달·체험 합계), 실패하면 돌려줌 — 성공한 호출만 남음
 
 ### KV 구조 (`PUBLIC_KV`)
 
@@ -94,8 +149,12 @@
 | `user:<uid>` | `{uid, email, name, picture, createdAt}` | 계정 삭제까지 |
 | `sess:<sha256(token)>` | `{uid, exp}` | 60일 |
 | `usess:<uid>` | 세션 해시 목록 (삭제용) | 계정 삭제까지 |
-| `use:<uid>:<YYYY-MM-DD>` | `{text, tts}` | 3일 |
-| `ent:<uid>` | `{tier, productId, tokenHash, until, checkedAt}` | 계정 삭제까지 |
+| `use:<uid>:<YYYY-MM-DD>` | 하루 사용량 `{<kind>: n, report, units:{longread:{<unit>: 조각 수}}}` | 3일 |
+| `usem:<uid>:<YYYY-MM>` | 한 달 사용량 `{<kind>: n}` | 40일 |
+| `uset:<uid>` | 체험 기간 합계 `{longread: n}` | 400일 |
+| `ent:<uid>` | `{tier(free·trial·plus·special·admin), productId, purchaseToken, tokenHash, until, trial, state, checkedAt, staff?}` — `staff = {tier, until, note, at}` 는 관리자가 준 등급 | 계정 삭제까지 |
+| `email:<sha256(소문자 이메일)>` | `uid` (관리자가 이메일로 등급을 줄 때 찾기표, 로그인 때 씀) | 계정 삭제까지 |
+| `spec:<sha256(소문자 이메일)>` | 로그인 전에 미리 준 등급 `{tier, until, note, at}` — 첫 로그인 때 `ent.staff` 로 옮김 | 붙거나 거둘 때까지 |
 | `ptok:<sha256(purchaseToken)>` | `uid` (한 구매를 여러 계정이 나눠 쓰지 못하게) | 400일 |
 | `report:<ts>-<rand>` | 신고 내용 (계정 삭제 시 uid 지움) | 180일 |
 | `ureports:<uid>` | 내 신고 키 목록 (삭제용) | 180일 |
@@ -111,8 +170,8 @@
 | `PROXY_SECRET` | 비밀 | 기존 Cloud Run 비밀 (같은 값) |
 | `PLAY_PACKAGE` | 변수 | `app.naruve.katakata` |
 | `PLAY_SERVICE_ACCOUNT` | 비밀 | Play Developer API 서비스 계정 JSON |
-| `ADMIN_KEY` | 비밀 | 신고 조회용 |
-| `LIMITS_JSON` | 변수 (선택) | 한도 덮어쓰기 `{"free":{"text":200,"tts":30},"plus":{...}}` |
+| `ADMIN_KEY` | 비밀 | 신고 조회·Special 주기(`/admin/*`) |
+| `LIMITS_JSON` | 변수 (선택) | 한도 덮어쓰기 — 적은 칸만 바뀜. `{"plus":{"story":{"day":6,"month":70}},"trial":{"longread":{"total":20}},"free":{"tts":0}}` (숫자 하나 = 하루 상한, `null` = 그 기간 제한 없음, `"locked":true` = 잠금). 예전 모양 `{"free":{"text":200}}` 도 그대로 받음 |
 
 ## 왜 이렇게 했나
 

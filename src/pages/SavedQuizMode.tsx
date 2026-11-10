@@ -213,7 +213,7 @@ export default function SavedQuizMode() {
             다시 하기
           </button>
           <button onClick={() => navigate("/saved")} className="text-sm text-foreground font-body hover:underline underline-offset-4">
-            돌아가기
+            단어장으로
           </button>
         </div>
       </div>
@@ -251,16 +251,16 @@ export default function SavedQuizMode() {
             let className = "w-full text-left px-5 py-4 rounded-xl border transition-all duration-300 font-body text-sm ";
             if (selected) {
               if (choice === currentQ.correctAnswer) {
-                // 정답은 항상 초록. accent(탠저린)는 붉게 보여 오답으로 오해됩니다.
-                className += "bg-emerald-500/15 border-emerald-500 text-foreground";
+                // 정답은 항상 연한 초록 (단어장 퀴즈와 같은 색)
+                className += "bg-[#EEF5F0] border-[#7FB596] text-[#1D1F1E]";
               } else if (choice === selected) {
-                // 내가 잘못 고른 것만 빨강
-                className += "bg-rose-500/15 border-rose-500 text-foreground";
+                // 내가 잘못 고른 것만 연한 분홍
+                className += "bg-[#F8EEEE] border-[#D49A9A] text-[#1D1F1E]";
               } else {
-                className += "bg-card border-border/30 text-muted-foreground/50";
+                className += "bg-white border-[#ECEFF1] text-[#B7BDC1]";
               }
             } else {
-              className += "bg-card border-border/50 hover:border-primary/30 active:scale-[0.98] text-gray-900";
+              className += "bg-white border-[#E6EAEC] active:scale-[0.98] text-[#1D1F1E]";
             }
             return (
               <button key={choice} onClick={() => handleSelect(choice)} className={className}>
@@ -275,10 +275,10 @@ export default function SavedQuizMode() {
         <button
           onClick={handleToggleRandom}
           title={isRandom ? "랜덤 끄기" : "랜덤 켜기"}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full transition-colors border ${
+          className={`h-10 px-4 rounded-full border flex items-center gap-1.5 transition-colors ${
             isRandom
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+              ? "bg-[#E3EEEC] text-[#2C6D63] border-[#2C6D63]"
+              : "bg-white text-[#1D1F1E] border-[#DDE3E6]"
           }`}
         >
           <Shuffle size={15} />
@@ -294,10 +294,10 @@ export default function SavedQuizMode() {
             setSpeakOn(next);
           }}
           title={speakOn ? "발음 끄기" : "발음 켜기"}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full transition-colors border ${
+          className={`h-10 px-4 rounded-full border flex items-center gap-1.5 transition-colors ${
             speakOn
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
+              ? "bg-[#E3EEEC] text-[#2C6D63] border-[#2C6D63]"
+              : "bg-white text-[#1D1F1E] border-[#DDE3E6]"
           }`}
         >
           {speakOn ? <Volume2 size={15} /> : <VolumeX size={15} />}

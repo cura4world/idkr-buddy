@@ -41,19 +41,19 @@ export const PAYWALL_PATH = "/plus";        // 잠긴 메뉴를 누르면 여기
 | # | 스토리 | 상태 | 받아들임 조건 |
 |---|---|---|---|
 | S40 | **미리보기 APK + 등급 전환** | ⬜ | 아래 "S40 상세" |
-| S41 | 한도 확정 반영 (서버) | ⬜ | 무료·Plus·체험·Special 한도가 결정 문서 표와 같음(아래). 하루·한 달 둘 다. 테스트 추가·통과 |
-| S42 | 구독 화면 (PW1·PW2) + `plusCopy.ts` | ⬜ | 문구·혜택 5줄·요금제 2칸·버튼·안내 시안 그대로. 가격은 Play 값, 없으면(미리보기) 고정 표시 |
+| S41 | 한도 확정 반영 (서버) | ✅ | 무료·Plus·체험·Special 한도가 결정 문서 표와 같음(아래). 하루·한 달 둘 다. 테스트 추가·통과 — 서버 배포는 아직(Cloudflare 에 붙여 넣기 필요) |
+| S42 | 구독 화면 (PW1·PW2) + `plusCopy.ts` | ✅ | 문구·혜택 5줄·요금제 2칸·버튼·안내 시안 그대로. 가격은 Play 값, 없으면(미리보기) 고정 표시 — 폰 확인 🔍 |
 | S43 | 단어장 재분류·검토·새 5권 | 🔍 작업 끝·내용 검토 대기 | 01~34 공개 34권 3,005단어, 35~41 성경과 신앙(공개판 staff 만). 보관함 ID 이전(`kata-shared-ids-v2`). WORDLIST-PLAN·`data/REVIEW-2026-11.md` 갱신 |
 | S44 | 회화집 채우기 + 난이도 하 | 🔍 | 공개 14개 폴더 86장면, 교회와 신앙은 staff 만. `PercakapanLevel` 에 "하" 추가, 만들기 기본 "중" |
-| S45 | 홈 (H5·H6) + 하단 탭 | ⬜ | 시안 그대로. 무료는 잠긴 메뉴 눌러 구독 화면 |
-| S46 | 내 정보 (ME1·ME2·ME3) | ⬜ | 등급별 회원 구역, 학습 기록 그래프, 훈장 설명, 설정 목록 |
-| S47 | 사전 결과 (D4) + 오늘의 문장 (P1) | ⬜ | 결정 문서의 확정안 그대로 |
-| S48 | 내 단어장 (W1) · 단어장 폴더 (F1) · 단어장 안 (K1·K4) | ⬜ | 시안 그대로. 폴더는 묶음 바로가기 칩, 성경과 신앙은 staff 만 |
-| S49 | 카드 (C1) · 퀴즈 (Q1·Q2) | ⬜ | 지금 배치, 차분한 색, "홈으로" → "단어장으로" |
+| S45 | 홈 (H5·H6) + 하단 탭 | 🟡 | 시안 그대로. 무료는 잠긴 메뉴 눌러 구독 화면 — 구현 끝, 폰 확인 대기 |
+| S46 | 내 정보 (ME1·ME2·ME3) | 🟡 | 등급별 회원 구역, 학습 기록 그래프, 훈장 설명, 설정 목록 — 구현 끝. 공개판 회원키 확인·서버 자동 백업·친구 비교·상위 % 는 서버가 없어 안내 문구만 |
+| S47 | 사전 결과 (D4) + 오늘의 문장 (P1) | ✅ | 결정 문서의 확정안 그대로 (박스 높이 고정 여부는 결정 문서에서 아직 미정 — 넣지 않음) |
+| S48 | 내 단어장 (W1) · 단어장 폴더 (F1) · 단어장 안 (K1·K4) | ✅ | 시안 그대로. 폴더는 묶음 바로가기 칩, 성경과 신앙은 staff 만 |
+| S49 | 카드 (C1) · 퀴즈 (Q1·Q2) | ✅ | 지금 배치, 차분한 색, "홈으로" → "단어장으로" |
 | S50 | 단어장 예문 색연필 그림 | 🔍 | 단어마다 예문 장면 SVG, 단어장별 파일로 나눠 열 때만 불러옴. 단어와 스피커 사이 빈 공간 |
-| S51 | 게임방 (G1·G2) + 게임 다듬기 + 새 게임 3개 | ⬜ | 7줄 목록(오늘의 단어 퍼즐 맨 위, 무료도 가능). 짝맞추기·단어장 퀴즈 뺌. 빠른 짝짓기·듣고 고르기·오늘의 단어 퍼즐 추가 |
-| S52 | 이야기 (ST1~ST5) | ⬜ | 하/중/상 동그라미, "이야기 불러오기", 무료 하루 1편·듣기 잠금 상자 |
-| S53 | 회화집 화면 (PC1~PC4) | ⬜ | 헤더 "+ 회화집 만들기" 알약, ⋮ 없음, 만들기 시트 하/중/상 가운데 정렬 46px |
+| S51 | 게임방 (G1·G2) + 게임 다듬기 + 새 게임 3개 | 🟡 | 7줄 목록(오늘의 단어 퍼즐 맨 위, 무료도 가능). 짝맞추기·단어장 퀴즈 뺌. 빠른 짝짓기·듣고 고르기·오늘의 단어 퍼즐 추가 — 구현 끝, 폰 확인 대기(시간 감각·소리) |
+| S52 | 이야기 (ST1~ST5) | ✅ | 하/중/상 동그라미, "이야기 불러오기", 무료 하루 1편·듣기 잠금 상자 |
+| S53 | 회화집 화면 (PC1~PC4) | ✅ | 헤더 "+ 회화집 만들기" 알약, ⋮ 없음, 만들기 시트 하/중/상 가운데 정렬 46px |
 | S54 | 인도네시아 이해 (IN1·IN2) + 지도 (MP1·MP2) | ⬜ | 지도 큰 카드, 생활 정보, PETA INDONESIA, 가로 보기 버튼, 시트 출처 문구 없음, 종교·역사 핀(공개판 고르게, 선교 10곳 staff) |
 | S55 | 사진 출처 화면 (설정 > 앱 정보) | ⬜ | 지역별 작가·라이선스·원본 링크 목록. 지도 사진 고정 목록(겹침 없음) 🔍 |
 | S56 | 말투·통일 규칙 전체 훑기 | ⬜ | 공개판에 보이는 모든 문구에서 "~해요" 0건(관리자 전용 화면 제외), 같은 기능 같은 모양 |
@@ -97,3 +97,36 @@ export const PAYWALL_PATH = "/plus";        // 잠긴 메뉴를 누르면 여기
 (각 스토리가 끝날 때 아래에 한 줄씩: 커밋 해시, 바꾼 파일, 검증 결과, 폰에서 볼 것)
 
 - **S43** (2026-11-11) 커밋 `4af0527`(이름 변경) → `a952caf`~`ec180b9`(검토 5묶음) → `925b8d5`·`c7fa16c`·`fb71162`·`02dd287`·`9dcaf08`(새 5권) → `56cb6ae`~`6938707`(ID 이전·staff 표시·이모지) → `9d74a92`·`af74272`(문서). 바꾼 파일: `data/categories/*.csv` 41개, `src/lib/sharedIdMigration.ts`(새)·`wordbookAccess.ts`(새)·`store.ts`·`transfer.ts`·`gamePool.ts`·`peribahasa.ts`, `src/pages/Wordbooks.tsx`·`CategoryDetail.tsx`·`StudyMode.tsx`·`QuizMode.tsx`, `scripts/csv-to-seed.js`, `src/test/sharedIdMigration.test.ts`(새). 검증: csv-to-seed 41권 3,555단어, check-wordlist 중복 0·형식오류 0, esbuild·tsc·build 통과, vitest 8개 통과(이전 테스트 7). 폰에서 볼 것: 단어장 폴더 묶음 6개와 순서(01 인사·기본 표현이 맨 위), 미리보기에서 무료/Plus 는 성경과 신앙 묶음이 안 보이고 Special·관리자는 보임, 관리자판은 그대로 41권, 이전 전에 별표한 단어가 보관함에 그대로 있는지.
+- **S41** (2026-11-11) `ea97d8e`·`6386eaa`·`352fe7e` 서버(`workers/kata-public/worker.js`·`test.mjs`·`wrangler.toml`), `d9603a6`~`d3f522d` 앱(aiProxy·geminiText·tts·percakapanAudio·story·dictionary·percakapan·phrase·peribahasa·account·plan·billing·AccountSection·Story·Percakapan·Dictionary).
+  기능 이름(`x-kata-kind`): story · percakapan-make · longread · dict-new · phrase · word-audio · shared-audio · text · tts(예전). 하루·한 달·체험 합계, 긴 읽기는 `x-kata-unit` 한 편 = 한 번.
+  `/me` 에 `features`, 관리자 `POST/GET /admin/special`. 계약·표는 `03-architecture.md`.
+  검증: `node --test workers/kata-public/test.mjs` 16/16(기존 8 그대로 통과 + 새 8), esbuild 바꾼 파일 전부, `tsc` 0, `npm run build` 0.
+  판단: 체험 사전은 절반(25)이 무료(50)보다 적어 무료 값으로 올림 · Plus 의 "제한 없음/안 셈" 기능에 숨은 안전 상한 · Plus 필요(403)는 자동 이동 대신 "Plus 보기" 버튼 달린 알림.
+  남은 일: **Worker 배포 전에는 폰에 반영 안 됨**(코드만). 폰에서 볼 것: 무료로 이야기 2편째 → "오늘 불러올 수 있는 이야기를 모두 불러왔습니다…", 무료로 이야기 듣기 → "Plus 보기" 알림.
+- **S42** (2026-11-11) `800e13a` `src/pages/Plus.tsx` + `src/lib/plusCopy.ts`(내보내는 이름이 바뀌어 한 커밋).
+  시안 PW1·PW2 와 390×844 렌더 비교(미리보기 빌드 + Playwright): 두 장 모두 픽셀 차 40 넘는 점 0개. "이용 중" 상자도 확인.
+  가격: Play `formattedPrice`(원화 "₩34,800" → "34,800원", 월 환산·할인율은 원화만 계산), 없으면 고정 34,800/3,900원. 체험: Play `freeTrialPeriod`, Play 가 없으면 미리보기 `kata-preview-trial-used` 키(없으면 체험 가능).
+  폰에서 볼 것: 글꼴(Pretendard/Gowun Dodum) 실제 모양, 아래 안전 영역 여백, 연간↔월간 눌렀을 때 버튼·안내 문구 바뀜, 미리보기 패널 "체험 이미 사용" 켜면 PW2 문구.
+- S47 (11/11) f6526a9 phrase.ts(알아두기 지시문) · 654e1d2 AiReportButton.tsx(문구) · cec6679 Dictionary.tsx · 496d895 PhraseDetail.tsx · 297be27 SavedPhrases.tsx — esbuild·tsc·build 통과, Playwright 390px 캡처로 D4·P1 대조(단어·문장·한국어 단어/문장·한도 초과·빈 알아두기·공개판 신고). 폰에서 볼 것: 사전 makan 결과 카드 순서·색, 담기 알약, 문장 점선 밑줄 탭, 알아두기 없는 문장에서 구역 숨김, 글자 크기 단계별 줄바꿈
+- S44 (2026-11-11) · 커밋: 이 줄을 담은 커밋 바로 앞의 "회화집:" 커밋 20개 · 파일: `src/data/percakapan/` (새 9개 + types·index·01·03·05·08 + REVIEW-2026-11.md), `src/lib/percakapan.ts`·`percakapanAudio.ts`·`peribahasa.ts`, `src/pages/Percakapan.tsx` · 검증: esbuild 21파일·tsc·`npm run build` 통과, 데이터 점검 스크립트(폴더별 장면 수 = 목표, 새 장면 6~10줄, 모든 줄 id·ko 있음, 공개 86/전체 94) 통과 · 폰에서 볼 것: 미리보기에서 무료·Plus 는 폴더 14개(교회와 신앙 없음), Special·관리자는 15개 / 새 장면 소리(남녀 목소리 구분) / 만들기 시트 하·중·상 세 칸, 기본 중 / 고친 3장면(자기소개·오토바이 기사·병문안)이 새 대사로 다시 읽히는지
+- S45·S46 (2026-11-11): 8726b21 `BottomTabs.tsx`(새) · e37ef09 `SettingsDialog.tsx`(회원키 서식 함수 export 한 줄) · e3ebe3f `MyInfo.tsx`(새, /me) · c9c7769 `Index.tsx`(스토어 앱일 때만 H5·H6 홈, 관리자판 홈 그대로) · 17636cb `App.tsx`(/me 라우트·탭 막대). esbuild 5파일·tsc·build 통과, 390×844 Playwright 로 무료·Plus·Special 홈/내 정보와 잠금→구독 화면·탭 뒤로가기 확인. 폰에서 볼 것: 탭 막대 안전 영역 여백, 잠긴 메뉴 안개 안내 후 구독 화면, 안드로이드 뒤로가기(탭→홈→앱 뒤로), 공부 시간 막대, Google 사진. 다른 탭 화면(`SavedWords`·`Permainan`)은 아직 뒤로가기 화살표가 있고 하단 여백은 탭 막대의 빈칸이 대신함(그 화면 담당이 `--kata-tabbar-h` 로 맞추면 됨).
+- S48·S49·S50 (2026-11-11): c59fec3 `wordbookGroups.ts`(새, 번호→묶음·색, 예전 36권/새 41권 자동 판별) · f5a9928 `src/data/illust/`(새, 그림 2권 12장면 + README) · c36f700 `illust.ts`(새) · 7e3ec50 `WordIllust.tsx`(새) · 7052ef9 `vite.config.ts`(그림 파일 precache 제외·CacheFirst `kata-illust`) · 5918276 `CategoryCard.tsx` · 7066890 `Wordbooks.tsx` · e91ae96·84714e2 `CategoryDetail.tsx` · 77a316b `SavedWords.tsx`(내 단어장 탭 /saved = W1 화면, 뒤로가기 없음, `--kata-tabbar-h`) · 8696ec1 `StudyMode.tsx` · 8c6241a `QuizMode.tsx` · 18ca293 `SavedQuizMode.tsx`. esbuild·tsc·build 통과, 390×844 Playwright(스토어 앱 흉내, 무료·Plus·Special)로 W1·F1·K1·K4·C1·Q1·Q2·탭 대조. 무료는 폴더·기본 단어장·카드·퀴즈 모두 /plus 로, Plus 는 29권(성경과 신앙 없음), Special 은 6칩 36권. 폰에서 볼 것: 동물·전치사 단어장 그림 위치(단어·스피커와 안 겹침)와 긴 목록 스크롤 부드러움, 폴더 칩 누르면 그 묶음으로 내려가고 진해짐, 내 단어장 탭 30개 넘음 안내·묶기, 보관한 단어장 ⋮(이름 변경·삭제), 퀴즈 결과 "단어장으로", 글자 크기 단계별 줄바꿈. 남은 것: 나머지 단어 그림(S50 내용), 단어장 재분류(S43) 뒤 부제 번호가 새 번호로 나오는지.
+- S51 (2026-11-11): 0fb4b05 `kataHariIni.ts`(새, 퍼즐 엔진) · e4fee40 `src/test/kataHariIni.test.ts`(새, 20개) · b99c161 `medali.ts`(판 이름 jodoh·dengar·kata 추가만) · dcb6485 `gamePool.ts`(비슷한 단어 고르기) · 21b4abb `tts.ts`(`getSayAudioUrl` 추가만, 기존 함수 그대로) · 7eef74b `components/game/GameKit.tsx`(새) · 4ec3711 `MedaliPill.tsx`(새) · 36dc3c0 `PlusGame.tsx`(새) · ac65d9a `GameKata.tsx` · 86fe925 `GameJodoh.tsx` · f3429f0 `GameDengar.tsx` (새 3개) · b60af32 `GameOX.tsx` · 34ef5e8 `GameSusun.tsx` · 94bba1b `GameEja.tsx` · 95079e2 `GameTangkap.tsx` · 55a2440 `Permainan.tsx` · a6934bc `App.tsx`(라우트, `GameMatch.tsx` 삭제). esbuild 16파일·tsc·vitest 21개·build 통과, 390×844 Playwright(스토어 앱 흉내, 무료·Plus)로 G1·G2·GM-Kata·Jodoh·OX·Dengar·Susun·Eja·Tangkap·결과 대조. 게임방은 공개판에서 뒤로가기 없음 + `calc(100dvh - var(--kata-tabbar-h))`, 관리자판은 탭 막대가 없어 뒤로가기 유지. 무료가 Plus 게임 주소로 들어오면 게임방으로. 퍼즐 정답은 앱에 든 기본 단어장(성경과 신앙 단어장·대문자 단어 제외) 다섯 글자 표제어를 알파벳순 → 고정 씨앗 순열 → 한국 시간 날짜 번호로 고름(목록 한 바퀴 동안 겹침 없음, 입력 단어 목록 검사는 안 함). 듣고 고르기는 시안대로 "비슷한 단어 넷 중 고르기"(뜻 보기 아님), 소리를 못 받으면 뜻을 글자로 보여 줌. 폰에서 볼 것: 빠른 짝짓기 60초·단어 받기 낙하 속도 체감, 듣고 고르기 첫 소리 대기 시간·천천히 듣기(재생 속도 0.7), O/X·짝짓기에서 단어 발음이 너무 잦지 않은지, 퍼즐 자판 크기(30×44)가 손가락에 맞는지, 탭 막대와 게임방 마지막 줄 간격.
+- **S52 이야기** (2026-11-11) — 커밋 `505217b`(WordMiniSheet 새로) · `1e8bddf`(LevelCircles 새로) · `03def9b`(Story.tsx).
+  오늘의 이야기 카드(진한 책 그림, 반짝이 없음) + 하/중/상 60px 동그라미·점 + "이야기 불러오기" 50px, 지난 이야기 카드(Lora 제목·귤색 카테고리 칩·오늘/어제/11월 7일).
+  무료: 하루 1편(한국 시간 자정, 이 기기 기록 + 서버 QUOTA 응답으로 판단) → 다 쓰면 ST2 상태(회색 버튼 + "오늘의 이야기를 불러왔습니다 · 내일 새 이야기가 열립니다"),
+  귤색 상자 "인도네시아어 발음으로 이야기 듣기" + "Plus / 7일 무료 체험"(→ `/plus`)은 무료에게 늘 보임. 본문 "듣기"는 자물쇠 → 말풍선 "소리 읽기는 Plus 회원 기능입니다", 한 번 더(또는 말풍선) 누르면 `/plus`.
+  Plus 가 한도(429 QUOTA_*)에 걸리면 버튼을 막고 "오늘 불러올 수 있는 이야기를 모두 불러왔습니다 · 내일 다시 열립니다".
+  본문 Lora 17px·점선 밑줄·누른 단어 귤색, 뒷면 16px + "이 글을 더 이해하려면" 상자, 단어 시트는 시안 ST3(복사 버튼 뺌).
+  검증: esbuild 바꾼 7개 파일 통과, `tsc --noEmit -p tsconfig.app.json` 통과, `npm run build` 통과, Playwright 390×844(스토어 앱 흉내 + 무료/Plus 세션)로 ST1~ST5 대조, QUOTA 429 흉내로 막힘 상태 확인.
+  폰에서 볼 것: 무료 계정으로 하루 1편 뒤 버튼이 회색으로 바뀌는지, 잠긴 듣기 말풍선, 체험 버튼 → 구독 화면, 단어 시트 버튼 높이.
+- **S53 회화집 화면** (2026-11-11) — 커밋 `fec6a95`(percakapanAudio.ts 에 `progress()` 추가 전용) · `119bb32`(Percakapan.tsx) · `3ebb0a6`(PercakapanCategory.tsx) · `9975b50`(PercakapanRead.tsx).
+  PC1: 머리 "+ 회화집 만들기" 알약(⋮ 없음), "회화집 N개", 색 타일 + 이모지 + 개수. 무료는 자물쇠 표시, 누르면 "회화집은 Plus 회원 기능입니다" + `/plus` (직접 만든 회화집이 든 폴더는 열림 — 구독 취소 뒤에도 내 회화 글은 계속).
+  PC2: 01·02 번호, "N줄". PC3: 청록 "전체 듣기/일시정지" 알약, 화자 안내 줄(역할 · 여자/남자 목소리), 청록 스피커, 전체 듣기 중 지금 줄을 재생 위치 비율로 짐작해 연청록 바탕 + 왼쪽 막대(화면 밖이면 따라 스크롤).
+  PC4: 아래 시트, 회화집 이름 / 카테고리(이모지 + 선택) / 상황 설명("자세할수록 대화가 자연스럽습니다") / 난이도 46px 가운데(기본 중) / "+ 회화집 만들기" 48px / "만드는 데 20초쯤 걸립니다". 한도 초과면 버튼 회색 + 안내.
+  교회와 신앙은 S44 의 `isCategoryVisible()` 로 거름: 폴더 목록(등급이 바뀌면 다시 불러옴), 장면 목록 주소 직접 진입 → `/percakapan` 으로 되돌림,
+  읽기 주소 직접 진입(`findScene` 이 null) → 무한 로딩 대신 "볼 수 없는 회화집입니다" + "회화집 목록으로" 버튼. 관리자판의 "백업 불러오기"는 공개판에서만 숨김.
+  난이도: S44 병합 뒤 `PercakapanLevel`("하"|"중"|"상") 그대로 쓰고, 만들기 시트 동그라미는 `PERCAKAPAN_LEVELS` 를 `LevelCircles levels` 로 넘김(기본 중). 새 폴더(uang·hari-raya·kantor) 타일 색 지정.
+  검증: 위와 같음, Playwright 로 PC1~PC4 + 무료 잠금(폴더 누르면 `/plus`) + Special 만 교회와 신앙 보임 + 무음 소리로 전체 듣기 줄 표시 확인.
+  폰에서 볼 것: 전체 듣기 중 표시 줄이 실제 소리와 대략 맞는지(글자 수 비율 짐작이라 한두 줄 어긋날 수 있음), 만들기 시트가 키보드에 가려지지 않는지.
+  남은 것: 본문 "듣기"는 공용 `PlayButton`(수정 금지)이라 아이콘이 ▶(시안은 스피커). 뒷면 신고 버튼은 공용 `AiReportButton`("풀이가 이상합니다", 시안은 "내용이 이상합니다"). 이야기·회화집 만들기는 `geminiText` 가 `x-kata-kind: text` 로 보내므로, 서버가 이야기·회화집 만들기 한도를 따로 세려면 `geminiText` 에 kind 선택값이 필요(S41). 한도 초과 토스트는 `aiProxy` 가 띄우는 공통 문구("오늘 사용량 한도가 넘었습니다" / QUOTA_TEXT 는 "~어요" 말투 — S56).

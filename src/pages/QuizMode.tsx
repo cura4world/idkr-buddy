@@ -1,12 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, Word } from "@/lib/store";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
-import { isWordbookVisible } from "@/lib/wordbookAccess";
 import { ArrowLeft, RotateCcw, Shuffle, Volume2, VolumeX } from "lucide-react";
 import { medaliEngine } from "@/lib/medali";
 import { displayWord } from "@/lib/wordCase";
 import PointFloat from "@/components/PointFloat";
+import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { groupOf, displayMeaning } from "@/lib/wordbookGroups";
+
+// 아래 알약 버튼 (시안: 퀴즈 풀기 — 켜진 버튼만 연한 청록)
+const PILL = "h-10 px-4 rounded-full border flex items-center gap-1.5 transition-colors";
+const PILL_OFF = "bg-white text-[#1D1F1E] border-[#DDE3E6]";
+const PILL_ON = "bg-[#E3EEEC] text-[#2C6D63] border-[#2C6D63]";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -64,7 +70,7 @@ export default function QuizMode() {
   const categories = getCategories();
   // 뒤로가기: 직전 화면으로 한 단계만
   const handleBack = () => goBackOr(navigate, location.key, wordbookFallback(id));
-  const category = categories.find((c) => c.id === id && isWordbookVisible(c)); // 성경과 신앙은 staff 만
+  const category = categories.find((c) => c.id === id);
   const allWords = id ? getWordsByCategory(id) : [];
 
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -73,6 +79,14 @@ export default function QuizMode() {
   const [reviewList, setReviewList] = useState<Word[]>([]);
   const [isRandom, setIsRandom] = useState(false);
   const [speakOn, setSpeakOn] = useState(() => loadSpeakOn());
+  const plan = usePlan();
+  // 결과 화면 "단어장으로": 단어장 안에서 왔으면 한 단계 뒤로, 아니면(폴더의 퀴즈 알약 등) 그 단어장을 엽니다.
+  const fromBook = !!(location.state as { fromBook?: boolean } | null)?.fromBook;
+  const goWordbook = () => {
+    stopSpeak();
+    if (fromBook && location.key !== "default") navigate(-1);
+    else navigate("/category/" + (id || ""), { replace: true });
+  };
 
   const makeQuestions = (random: boolean) => {
     const source = random ? shuffle(allWords) : allWords;
@@ -184,6 +198,12 @@ export default function QuizMode() {
     setQuestions(makeQuestions(next));
   };
 
+  // 기본 단어장 잠금 (무료 → 구독 화면, 성경과 신앙 → 관리자·Special Member 만)
+  if (category && category.isShared && !plan.plus) return <Navigate to={PAYWALL_PATH} replace />;
+  if (category && category.isShared && !plan.staff && groupOf(category, categories) === "faith") {
+    return <Navigate to="/wordbooks" replace />;
+  }
+
   if (!category || allWords.length < 2) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
@@ -195,34 +215,34 @@ export default function QuizMode() {
 
   if (isFinished) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 max-w-lg mx-auto">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-8 max-w-lg mx-auto font-body text-[#1D1F1E]">
         <PointFloat value={floatVal} seq={floatSeq} />
         <div className="text-center">
-          <p className="text-4xl mb-4">🍃</p>
-          <p className="text-lg font-body font-medium">
-            {questions.length}개 중 {correctCount}개
+          <p className="m-0 text-[2.5rem] leading-none">🍃</p>
+          <p className="mt-4 text-lg font-semibold">
+            <span className="font-word">{questions.length}</span>개 중 <span className="font-word">{correctCount}</span>개
           </p>
-          <p className="text-sm text-foreground font-body mt-1">수고하셨습니다</p>
+          <p className="mt-1 text-sm text-[#8C9399]">수고하셨습니다</p>
         </div>
         {reviewList.length > 0 && (
           <div className="mt-8 w-full">
-            <p className="text-sm text-foreground font-body mb-3">다시 볼 단어</p>
-            <div className="space-y-2">
+            <p className="mb-2.5 text-sm">다시 볼 단어</p>
+            <div className="flex flex-col gap-2">
               {reviewList.map((w) => (
-                <div key={w.id} className="bg-card rounded-lg p-3 border border-border/50">
-                  <p className="font-word text-sm font-medium text-card-foreground">{w.word}</p>
-                  <p className="text-sm text-card-foreground font-body">{w.meaning}</p>
+                <div key={w.id} className="bg-white rounded-[10px] border border-[#E6EAEC] py-3 px-3.5">
+                  <p className="m-0 font-word text-[0.9375rem] font-semibold text-[#104B60]">{w.word}</p>
+                  <p className="mt-0.5 text-sm text-[#34332F]">{displayMeaning(w.meaning)}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
-        <div className="flex gap-3 mt-8">
-          <button onClick={restart} className="flex items-center gap-2 text-sm text-foreground font-body hover:underline underline-offset-4">
+        <div className="mt-[30px] flex gap-5 text-sm">
+          <button onClick={restart} className="flex items-center gap-1.5 active:opacity-70">
             <RotateCcw size={14} /> 다시 하기
           </button>
-          <button onClick={() => navigate("/")} className="text-sm text-foreground font-body hover:underline underline-offset-4">
-            홈으로
+          <button onClick={goWordbook} className="active:opacity-70">
+            단어장으로
           </button>
         </div>
       </div>
@@ -231,15 +251,14 @@ export default function QuizMode() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
-      {/* 헤더 — 뒤로가기·숫자 흰색 */}
-      <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={handleBack} className="text-foreground hover:text-foreground/80">
+      <div className="h-14 shrink-0 flex items-center justify-between px-4">
+        <button onClick={handleBack} className="w-10 h-10 -ml-2 flex items-center justify-center text-foreground" aria-label="뒤로">
           <ArrowLeft size={20} />
         </button>
-        <span className="text-sm text-foreground font-body">
+        <span className="font-word text-[0.90625rem] text-[#1D1F1E]">
           {questionIndex + 1} / {questions.length}
         </span>
-        <div className="w-5" />
+        <span className="w-8" />
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6">
@@ -247,51 +266,47 @@ export default function QuizMode() {
           <button
             type="button"
             onClick={() => speak(currentQ.word.word)}
-            className="font-word text-2xl font-semibold text-foreground active:opacity-70"
+            className="font-word text-[1.75rem] font-semibold text-[#104B60] active:opacity-70"
             title="발음 듣기"
           >
             {displayWord(currentQ.word.word, currentQ.word.example)}
           </button>
           {currentQ.word.example && (
-            <p className="text-base text-foreground font-word mt-2">
+            <p className="mt-2.5 font-word text-base leading-[1.6] text-[#4B5356]">
               {currentQ.word.example}
             </p>
           )}
         </div>
         <div className="w-full max-w-sm space-y-3">
           {currentQ.choices.map((choice) => {
-            let className = "w-full text-left px-5 py-4 rounded-xl border transition-all duration-300 font-body text-sm ";
+            let className = "w-full text-left px-5 py-4 rounded-xl border transition-all duration-300 font-body text-[0.9375rem] ";
             if (selected) {
               if (choice === currentQ.correctAnswer) {
-                // 정답은 항상 초록. accent(탠저린)는 붉게 보여 오답으로 오해됩니다.
-                className += "bg-emerald-500/15 border-emerald-500 text-foreground";
+                // 정답은 항상 연한 초록. accent(탠저린)는 붉게 보여 오답으로 오해됩니다.
+                className += "bg-[#EEF5F0] border-[#7FB596] text-[#1D1F1E]";
               } else if (choice === selected) {
-                // 내가 잘못 고른 것만 빨강
-                className += "bg-rose-500/15 border-rose-500 text-foreground";
+                // 내가 잘못 고른 것만 연한 분홍
+                className += "bg-[#F8EEEE] border-[#D49A9A] text-[#1D1F1E]";
               } else {
-                className += "bg-card border-border/30 text-muted-foreground/50";
+                className += "bg-white border-[#ECEFF1] text-[#B7BDC1]";
               }
             } else {
-              className += "bg-card border-border/50 hover:border-primary/30 active:scale-[0.98] text-gray-900";
+              className += "bg-white border-[#E6EAEC] active:scale-[0.98] text-[#1D1F1E]";
             }
             return (
               <button key={choice} onClick={() => handleSelect(choice)} className={className}>
-                {choice}
+                {displayMeaning(choice)}
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="flex justify-center gap-2 py-4">
+      <div className="shrink-0 flex justify-center gap-2 pt-4 pb-[30px]">
         <button
           onClick={handleToggleRandom}
           title={isRandom ? "랜덤 끄기" : "랜덤 켜기"}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full transition-colors border ${
-            isRandom
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
-          }`}
+          className={`${PILL} ${isRandom ? PILL_ON : PILL_OFF}`}
         >
           <Shuffle size={15} />
           <span className="font-gothic text-[0.75rem] font-semibold tracking-wide">
@@ -306,11 +321,7 @@ export default function QuizMode() {
             setSpeakOn(next);
           }}
           title={speakOn ? "발음 끄기" : "발음 켜기"}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full transition-colors border ${
-            speakOn
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card text-gray-900 border-border/50 hover:border-primary/50"
-          }`}
+          className={`${PILL} ${speakOn ? PILL_ON : PILL_OFF}`}
         >
           {speakOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
           <span className="font-gothic text-[0.75rem] font-semibold tracking-wide">

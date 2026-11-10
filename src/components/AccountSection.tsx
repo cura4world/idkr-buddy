@@ -1,6 +1,6 @@
 // src/components/AccountSection.tsx
 // 설정 창의 "내 계정" 구역 — 스토어 앱(공개판)에서만, 회원키 구역 자리에 들어갑니다.
-// 이메일 · 플랜 · 오늘 사용량 · Plus · 구독 관리 · 로그아웃 · 계정 삭제 · 약관 링크.
+// 이메일 · 플랜 · Plus · 구독 관리 · 로그아웃 · 계정 삭제 · 약관 링크.
 // 계정 삭제는 Play 정책 요건입니다(앱 안에서 직접 지울 수 있어야 함).
 
 import { useEffect, useState } from "react";
@@ -14,9 +14,7 @@ import {
   onSessionChange,
   refreshMe,
   signOut,
-  PublicLimits,
   PublicSession,
-  PublicUsage,
 } from "@/lib/account";
 import { manageSubscription } from "@/lib/billing";
 import { DELETE_ACCOUNT_URL, PRIVACY_URL, TERMS_URL } from "@/lib/platform";
@@ -27,26 +25,19 @@ interface Props {
 
 const AccountSection = ({ onGo }: Props) => {
   const [session, setSession] = useState<PublicSession | null>(getSession());
-  const [usage, setUsage] = useState<PublicUsage | null>(null);
-  const [limits, setLimits] = useState<PublicLimits | null>(null);
   const [busy, setBusy] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const off = onSessionChange(setSession);
-    refreshMe()
-      .then((r) => {
-        if (r) {
-          setUsage(r.usage);
-          setLimits(r.limits);
-        }
-      })
-      .catch(() => {});
+    // 플랜만 새로 받아 둡니다(세션에 저장 → onSessionChange 로 다시 그림).
+    // 예전의 "오늘 AI 풀이 x/200" 숫자는 기능별 한도(S41)와 맞지 않아 뺐습니다 — 남은 횟수는 /me 의 features.
+    refreshMe().catch(() => {});
     return off;
   }, []);
 
   if (!session) return null;
-  const plus = session.plan.tier === "plus" && session.plan.until > Date.now();
+  const plus = (session.plan.tier === "plus" || session.plan.tier === "trial") && session.plan.until > Date.now();
 
   const handleSignOut = async () => {
     if (busy) return;
@@ -83,7 +74,6 @@ const AccountSection = ({ onGo }: Props) => {
       <p className="mt-1 text-xs font-gothic text-gray-900 break-all">{session.user.email}</p>
       <p className="mt-0.5 text-xs font-gothic text-muted-foreground">
         {plus ? "Kata kata Plus 이용 중" : "무료 이용 중"}
-        {usage && limits ? " · 오늘 AI 풀이 " + usage.text + "/" + limits.text + " · 음성 " + usage.tts + "/" + limits.tts : ""}
       </p>
 
       <Button

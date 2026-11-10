@@ -14,6 +14,7 @@ import {
   PublicSession,
 } from "@/lib/account";
 import { autoRestoreOnce } from "@/lib/billing";
+import { isPreview } from "@/lib/preview";
 
 const SignInScreen = () => {
   const [busy, setBusy] = useState(false);
@@ -72,7 +73,8 @@ const SignInScreen = () => {
 };
 
 const LoginGate = ({ children }: { children: React.ReactNode }) => {
-  const store = isStoreApp();
+  // 미리보기 APK 는 로그인 없이 바로 엽니다(콘솔 설정 전이라 로그인·결제를 쓰지 않음). 서버 확인도 하지 않습니다.
+  const store = isStoreApp() && !isPreview();
   const [session, setSession] = useState<PublicSession | null>(() => (store ? getSession() : null));
 
   useEffect(() => {

@@ -367,3 +367,298 @@ test("계정 삭제: 세션·계정·구독 연결·사용량이 지워지고 �
   assert.equal((await call(env, "GET", "/me", { token: t })).status, 401);
   assert.equal((await call(env, "GET", "/me", { token: tNew })).status, 200);
 });
+
+// ── S41 기능별 한도 ─────────────────────────────────────────
+
+const aiPath = (m) => "/ai/gemini/" + m + ":generateContent";
+const TEXT_M = "gemini-3.1-flash-lite";
+const TTS_M = "gemini-3.8-flash-lite-tts";
+const ai = (env, t, kind, body, extra = {}) =>
+  call(env, "POST", aiPath(kind === "text" || TEXT_KINDS_T.indexOf(kind) >= 0 ? TEXT_M : TTS_M), {
+    token: t, body: body || (TEXT_KINDS_T.indexOf(kind) >= 0 ? textBody() : ttsBody), headers: Object.assign({ "x-kata-kind": kind }, extra),
+  });
+const TEXT_KINDS_T = ["text", "story", "percakapan-make", "dict-new", "phrase"];
+
+function kstNow(offsetDays = 0) {
+  return new Date(Date.now() + 9 * 3600 * 1000 + offsetDays * 86400000).toISOString();
+}
+
+async function makePlus(env, t, extraSub = {}) {
+  const me = await call(env, "GET", "/me", { token: t });
+  playSub = Object.assign({
+    subscriptionState: "SUBSCRIPTION_STATE_ACTIVE",
+    acknowledgementState: "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED",
+    startTime: new Date().toISOString(),
+    lineItems: [{ productId: "plus", expiryTime: new Date(Date.now() + 30 * 86400000).toISOString() }],
+    externalAccountIdentifiers: { obfuscatedExternalAccountId: me.data.accountId },
+  }, extraSub);
+  const v = await call(env, "POST", "/billing/verify", { token: t, body: { productId: "plus", purchaseToken: "tok-" + me.data.user.id } });
+  assert.equal(v.status, 200, JSON.stringify(v.data));
+  playSub = null;
+  return v.data.plan;
+}
+
+test("무료: 이야기 하루 1편, 회화 만들기·긴 읽기·공용 소리 잠김, 단어 발음·오늘의 문장", async () => {
+  __resetCachesForTest();
+  proxyStatus = 200;
+  const env = makeEnv();
+  const t = await login(env);
+
+  assert.equal((await ai(env, t, "story")).status, 200);
+  const over = await ai(env, t, "story");
+  assert.equal(over.status, 429);
+  assert.equal(over.data.error, "QUOTA_STORY");
+  assert.equal(over.data.period, "day");
+  assert.equal(over.data.limit, 1);
+  assert.equal(over.data.plan, "free");
+
+  for (const k of ["percakapan-make", "longread", "shared-audio"]) {
+    const r = await ai(env, t, k);
+    assert.equal(r.status, 403, k);
+    assert.equal(r.data.error, "PLUS_REQUIRED", k);
+    assert.equal(r.data.kind, k);
+  }
+
+  assert.equal((await ai(env, t, "word-audio")).status, 200);
+  // 단어 발음은 짧은 글만 (긴 글을 단어 발음으로 위장하지 못하게)
+  const longWord = { contents: [{ parts: [{ text: "a".repeat(601) }] }], generationConfig: { responseModalities: ["AUDIO"] } };
+  assert.equal((await ai(env, t, "word-audio", longWord)).data.error, "TEXT_TOO_LONG");
+
+  assert.equal((await ai(env, t, "phrase")).status, 200);
+  assert.equal((await ai(env, t, "phrase")).data.error, "QUOTA_PHRASE");
+
+  // 모르는 이름은 거절, 예전 이름(text/tts)은 그대로 받음
+  assert.equal((await ai(env, t, "banana")).data.error, "KIND_NOT_ALLOWED");
+  assert.equal((await ai(env, t, "text")).status, 200);
+  assert.equal((await ai(env, t, "tts")).status, 200);
+
+  const me = await call(env, "GET", "/me", { token: t });
+  const f = me.data.features;
+  assert.deepEqual(f.story.used, { day: 1, month: 1 });
+  assert.deepEqual(f.story.limit, { day: 1, month: null });
+  assert.deepEqual(f.story.left, { day: 0, month: null });
+  assert.equal(f.longread.locked, true);
+  assert.equal(f["dict-new"].hidden, true);
+  assert.equal(f["dict-new"].limit.day, 50);
+  assert.equal(f.phrase.used.day, 1);
+  assert.equal(me.data.usage.month, kstNow().slice(0, 7));
+  // 예전 칸은 그대로
+  assert.equal(me.data.limits.text, 200);
+  assert.equal(me.data.usage.text, 1);
+  assert.equal(me.data.usage.tts, 1);
+});
+
+test("무료: 사전 처음 찾는 말 하루 50", async () => {
+  __resetCachesForTest();
+  proxyStatus = 200;
+  const env = makeEnv();
+  const t = await login(env);
+  for (let i = 0; i < 50; i++) assert.equal((await ai(env, t, "dict-new")).status, 200);
+  const over = await ai(env, t, "dict-new");
+  assert.equal(over.data.error, "QUOTA_DICT_NEW");
+  assert.equal(over.data.period, "day");
+});
+
+test("Plus: 하루·한 달 한도, 긴 읽기는 한 편(x-kata-unit)을 한 번으로 셈", async () => {
+  __resetCachesForTest();
+  proxyStatus = 200;
+  const env = makeEnv();
+  const t = await login(env);
+  const plan = await makePlus(env, t);
+  assert.equal(plan.tier, "plus");
+  assert.equal(plan.trial, undefined);
+
+  for (let i = 0; i < 5; i++) assert.equal((await ai(env, t, "story")).status, 200);
+  assert.equal((await ai(env, t, "story")).data.error, "QUOTA_STORY");
+
+  // 긴 읽기: 같은 편의 조각 4개 = 1회. 다른 편 4개를 더 들으면 5회, 그다음 편은 한도
+  for (let i = 0; i < 4; i++) assert.equal((await ai(env, t, "longread", null, { "x-kata-unit": "story-v2-a" })).status, 200);
+  for (const u of ["b", "c", "d", "e"]) assert.equal((await ai(env, t, "longread", null, { "x-kata-unit": "story-v2-" + u })).status, 200);
+  const lr = await ai(env, t, "longread", null, { "x-kata-unit": "story-v2-f" });
+  assert.equal(lr.data.error, "QUOTA_LONGREAD");
+  // 이미 센 편의 다음 조각은 한도가 차도 계속 들을 수 있음
+  assert.equal((await ai(env, t, "longread", null, { "x-kata-unit": "story-v2-a" })).status, 200);
+  // 같은 편 값을 돌려 쓰는 것은 조각 24개까지
+  // (b 는 위에서 1조각) + 23조각 = 24조각까지 되고, 25번째에서 거절
+  for (let i = 0; i < 23; i++) assert.equal((await ai(env, t, "longread", null, { "x-kata-unit": "story-v2-b" })).status, 200);
+  assert.equal((await ai(env, t, "longread", null, { "x-kata-unit": "story-v2-b" })).data.error, "QUOTA_LONGREAD");
+
+  // 공용 소리·회화 만들기는 열림
+  assert.equal((await ai(env, t, "shared-audio")).status, 200);
+  assert.equal((await ai(env, t, "percakapan-make")).status, 200);
+
+  const me = await call(env, "GET", "/me", { token: t });
+  assert.equal(me.data.features.longread.used.day, 5);
+  assert.equal(me.data.features.longread.used.month, 5);
+  assert.deepEqual(me.data.features.story.limit, { day: 5, month: 60 });
+  assert.equal(me.data.limits.text, 1000);
+
+  // 한 달 한도: 이번 달 회화 만들기가 이미 30 이면 거절 (하루 수와 별개)
+  const mKey = "usem:g_1001:" + kstNow().slice(0, 7);
+  const m = JSON.parse(env.PUBLIC_KV.m.get(mKey));
+  m["percakapan-make"] = 30;
+  env.PUBLIC_KV.m.set(mKey, JSON.stringify(m));
+  const pm = await ai(env, t, "percakapan-make");
+  assert.equal(pm.data.error, "QUOTA_PERCAKAPAN_MAKE");
+  assert.equal(pm.data.period, "month");
+  assert.equal(pm.data.limit, 30);
+});
+
+test("실패한 호출은 하루·한 달·긴 읽기 편 모두 돌려받음", async () => {
+  __resetCachesForTest();
+  const env = makeEnv();
+  const t = await login(env);
+  await makePlus(env, t);
+  proxyStatus = 500;
+  assert.equal((await ai(env, t, "story")).status, 500);
+  assert.equal((await ai(env, t, "longread", null, { "x-kata-unit": "u1" })).status, 500);
+  proxyStatus = 200;
+  const me = await call(env, "GET", "/me", { token: t });
+  assert.deepEqual(me.data.features.story.used, { day: 0, month: 0 });
+  assert.deepEqual(me.data.features.longread.used, { day: 0, month: 0 });
+  // 편이 지워졌으므로 다시 부르면 새로 1회로 셈
+  assert.equal((await ai(env, t, "longread", null, { "x-kata-unit": "u1" })).status, 200);
+  assert.equal((await call(env, "GET", "/me", { token: t })).data.features.longread.used.day, 1);
+});
+
+test("체험: Play 의 무료 체험 단계 → trial, 한도는 절반·긴 읽기 체험 합계 15", async () => {
+  __resetCachesForTest();
+  proxyStatus = 200;
+  const env = makeEnv();
+  const t = await login(env);
+  const plan = await makePlus(env, t, {
+    lineItems: [{
+      productId: "plus",
+      expiryTime: new Date(Date.now() + 7 * 86400000).toISOString(),
+      offerDetails: { basePlanId: "yearly", offerId: "free-week" },
+      offerPhase: { freeTrial: {} },
+    }],
+  });
+  assert.equal(plan.tier, "trial");
+  assert.equal(plan.trial, true);
+  const me = await call(env, "GET", "/me", { token: t });
+  assert.equal(me.data.plan.tier, "trial");
+  const f = me.data.features;
+  assert.deepEqual(f.story.limit, { day: 2, month: null });
+  assert.deepEqual(f["percakapan-make"].limit, { day: 1, month: 15 });
+  assert.deepEqual(f.longread.limit, { day: 2, month: 25, total: 15 });
+  assert.deepEqual(f["dict-new"].limit, { day: 50, month: null }); // 무료(50)보다 박해지지 않게
+  assert.equal(f.phrase.limit.day, 50);
+
+  assert.equal((await ai(env, t, "story")).status, 200);
+  assert.equal((await ai(env, t, "story")).status, 200);
+  assert.equal((await ai(env, t, "story")).data.error, "QUOTA_STORY");
+
+  // 체험 기간 합계: 이미 15번 들었으면 오늘 첫 편이라도 거절
+  env.PUBLIC_KV.m.set("uset:g_1001", JSON.stringify({ longread: 15 }));
+  const tot = await ai(env, t, "longread", null, { "x-kata-unit": "x" });
+  assert.equal(tot.data.error, "QUOTA_LONGREAD");
+  assert.equal(tot.data.period, "total");
+  assert.equal(tot.data.limit, 15);
+  env.PUBLIC_KV.m.set("uset:g_1001", JSON.stringify({ longread: 3 }));
+  assert.equal((await ai(env, t, "longread", null, { "x-kata-unit": "x" })).status, 200);
+  assert.equal(JSON.parse(env.PUBLIC_KV.m.get("uset:g_1001")).longread, 4);
+});
+
+test("체험 판정 대비책: offerPhase 가 없으면 제안 이름의 trial + 시작 7일 안쪽만", async () => {
+  __resetCachesForTest();
+  const env = makeEnv();
+  const t = await login(env);
+  const fresh = await makePlus(env, t, {
+    startTime: new Date(Date.now() - 2 * 86400000).toISOString(),
+    lineItems: [{ productId: "plus", expiryTime: new Date(Date.now() + 5 * 86400000).toISOString(), offerDetails: { basePlanId: "monthly", offerId: "trial-7d" } }],
+  });
+  assert.equal(fresh.tier, "trial");
+  const t2 = await login(env, { sub: "4004", email: "d@example.com" });
+  const old = await makePlus(env, t2, {
+    startTime: new Date(Date.now() - 20 * 86400000).toISOString(),
+    lineItems: [{ productId: "plus", expiryTime: new Date(Date.now() + 10 * 86400000).toISOString(), offerDetails: { basePlanId: "monthly", offerId: "trial-7d" } }],
+  });
+  assert.equal(old.tier, "plus");
+  // offerPhase 가 있으면 그것만 봄 (basePrice = 유료 단계)
+  const t3 = await login(env, { sub: "5005", email: "e@example.com" });
+  const paid = await makePlus(env, t3, {
+    lineItems: [{ productId: "plus", expiryTime: new Date(Date.now() + 10 * 86400000).toISOString(), offerDetails: { offerId: "trial-7d" }, offerPhase: { basePrice: {} } }],
+  });
+  assert.equal(paid.tier, "plus");
+});
+
+test("관리자: Special Member 주기(로그인 전 이메일로 미리)·거두기, Play 검증이 지우지 않음", async () => {
+  __resetCachesForTest();
+  proxyStatus = 200;
+  const env = makeEnv();
+  const adm = { "x-admin-key": "admin-key" };
+  assert.equal((await call(env, "POST", "/admin/special", { body: { email: "s@example.com" } })).status, 403);
+  assert.equal((await call(env, "POST", "/admin/special", { body: { email: "s@example.com" }, headers: { "x-admin-key": "nope" } })).status, 403);
+  assert.equal((await call(env, "POST", "/admin/special", { body: { email: "not-an-email" }, headers: adm })).data.error, "BAD_REQUEST");
+
+  // 아직 로그인한 적 없는 이메일 → 미리 준 등급
+  const pre = await call(env, "POST", "/admin/special", { body: { email: "S@Example.com", action: "grant", note: "교회" }, headers: adm });
+  assert.equal(pre.status, 200, JSON.stringify(pre.data));
+  assert.equal(pre.data.pending, true);
+  const got = await call(env, "GET", "/admin/special?email=s@example.com", { headers: adm });
+  assert.equal(got.data.pending.tier, "special");
+  assert.equal(got.data.uid, null);
+
+  const t = await login(env, { sub: "7007", email: "s@example.com" });
+  const me = await call(env, "GET", "/me", { token: t });
+  assert.equal(me.data.plan.tier, "special");
+  assert.equal(me.data.features.story.limit.day, null);
+  assert.equal(me.data.features.longread.locked, false);
+  for (let i = 0; i < 8; i++) assert.equal((await ai(env, t, "story")).status, 200);
+  const got2 = await call(env, "GET", "/admin/special?email=s@example.com", { headers: adm });
+  assert.equal(got2.data.uid, "g_7007");
+  assert.equal(got2.data.pending, null);
+
+  // Play 구독을 붙여도 Special 은 남음
+  await makePlus(env, t);
+  assert.equal((await call(env, "GET", "/me", { token: t })).data.plan.tier, "special");
+
+  // 거두면 Play 구독(Plus)으로 돌아감
+  const rv = await call(env, "POST", "/admin/special", { body: { uid: "g_7007", action: "revoke" }, headers: adm });
+  assert.equal(rv.data.plan.tier, "plus");
+
+  // 로그인한 계정에 관리자 등급, 기한 지나면 끝
+  const t2 = await login(env, { sub: "8008", email: "admin2@example.com" });
+  const g = await call(env, "POST", "/admin/special", { body: { email: "admin2@example.com", tier: "admin", until: Date.now() + 60000 }, headers: adm });
+  assert.equal(g.data.plan.tier, "admin");
+  assert.equal((await call(env, "GET", "/me", { token: t2 })).data.plan.tier, "admin");
+  const ent = JSON.parse(env.PUBLIC_KV.m.get("ent:g_8008"));
+  ent.staff.until = Date.now() - 1;
+  env.PUBLIC_KV.m.set("ent:g_8008", JSON.stringify(ent));
+  assert.equal((await call(env, "GET", "/me", { token: t2 })).data.plan.tier, "free");
+
+  // KV 에 직접 tier 를 적어도 인정 (수동 운영)
+  env.PUBLIC_KV.m.set("ent:g_8008", JSON.stringify({ tier: "special", until: 0 }));
+  assert.equal((await call(env, "GET", "/me", { token: t2 })).data.plan.tier, "special");
+
+  assert.equal((await call(env, "POST", "/admin/special", { body: { uid: "g_none" }, headers: adm })).data.error, "USER_NOT_FOUND");
+});
+
+test("LIMITS_JSON: 새 모양(칸별 day/month/locked)과 예전 모양(숫자) 모두", async () => {
+  __resetCachesForTest();
+  proxyStatus = 200;
+  const env = makeEnv({
+    LIMITS_JSON: JSON.stringify({
+      free: { story: { day: 2 }, longread: { locked: false, day: 1 }, text: 3 },
+      plus: { story: { month: null } },
+      trial: { longread: { total: 3 } },
+    }),
+  });
+  const t = await login(env);
+  assert.equal((await ai(env, t, "story")).status, 200);
+  assert.equal((await ai(env, t, "story")).status, 200);
+  assert.equal((await ai(env, t, "story")).data.error, "QUOTA_STORY");
+  assert.equal((await ai(env, t, "longread")).status, 200);
+  assert.equal((await ai(env, t, "longread")).data.error, "QUOTA_LONGREAD");
+  const me = await call(env, "GET", "/me", { token: t });
+  assert.equal(me.data.limits.text, 3);
+  assert.equal(me.data.features.text.hidden, true);
+  await makePlus(env, t, {
+    lineItems: [{ productId: "plus", expiryTime: new Date(Date.now() + 7 * 86400000).toISOString(), offerPhase: { freeTrial: {} } }],
+  });
+  const me2 = await call(env, "GET", "/me", { token: t });
+  assert.equal(me2.data.features.longread.limit.total, 3);
+  // 체험 이야기: plus month 를 없앴으므로 체험도 month 없음, day 는 max(절반 2, 무료 2) = 2
+  assert.deepEqual(me2.data.features.story.limit, { day: 2, month: null });
+});

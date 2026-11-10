@@ -1,16 +1,30 @@
 // src/pages/GameEja.tsx
-// 철자 채우기 (Eja). 뜻을 보고 빈칸에 글자를 채웁니다 — 철자와 발음을 잡는 게임입니다.
+// 철자 채우기 (Eja) — 시안 GM-Eja. 뜻을 보고 빈칸에 글자를 채웁니다 — 철자와 발음을 잡는 게임입니다.
 // 재료는 전부 로컬(gamePool) — API 호출이 없습니다.
 // 여섯 단어를 끝내야 점수·단어 기록이 남습니다. 중간에 나가면 아무것도 남지 않습니다.
-// 화면 구성·종료 연출은 문장 조립(GameSusun.tsx)과 같은 모양으로 맞췄습니다.
+// 화면 조각(머리·상태 줄·결과)은 GameKit 하나를 같이 씁니다.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Star, Volume2 } from "lucide-react";
-import { goBackOr } from "@/lib/nav";
 import { drawPool } from "@/lib/gamePool";
 import type { PoolWord } from "@/lib/gamePool";
-import { medaliEngine, listRounds, dateKey, MEDALI_COLORS } from "@/lib/medali";
+import { medaliEngine, listRounds, dateKey } from "@/lib/medali";
+import {
+  G,
+  CARD_SHADOW,
+  TILE_SHADOW,
+  GameScreen,
+  GameLoading,
+  GameEmpty,
+  GameReady,
+  GameResult,
+  StatusRow,
+  Stat,
+  Dots,
+  IconSpeaker,
+  speakWord,
+  stopSpeak,
+} from "@/components/game/GameKit";
+import type { ResultRow } from "@/components/game/GameKit";
 
 const ROUND_WORDS = 6;        // 한 판에 채울 단어 수
 const MIN_WORDS = 4;          // 이보다 적으면 게임을 못 엽니다
@@ -23,6 +37,7 @@ const WRONG_TILES = 3;        // 정답에 없는 훼방 글자
 const DONE_MS = 1600;         // 완성한 단어를 보여주는 시간 (발음을 듣는 동안)
 const SHAKE_MS = 300;
 const GOOD_MISS = 1;          // 미스가 이 이하면 "맞힌 것"으로 봅니다
+const ROW_WIDTH = 322;        // 카드 안쪽 폭 (390 화면 − 바깥 16×2 − 안쪽 18×2)
 
 const ALPHABET = "abcdefghijklmnopqrstuvwxyz";
 
@@ -39,26 +54,13 @@ interface Tile {
   ch: string;                 // 소문자 글자
 }
 
-interface WordResult {
-  word: string;
-  meaning: string;
-  source: PoolWord["source"];
-  misses: number;
-  correct: boolean;
-  becameConfirmed: boolean;
-}
-
 interface RoundResult {
+  score: number;
   durationSec: number;
   bestBefore: number;         // 이번 판 이전의 최고 점수. 없으면 0
-  items: WordResult[];
+  rows: ResultRow[];
+  starWords: string[];
 }
-
-const SOURCE_LABEL: Record<PoolWord["source"], string> = {
-  wordbook: "단어장",
-  lookup: "찾아본",
-  seed: "기본",
-};
 
 // 정규식 없이 알파벳만 가려냅니다 (백슬래시가 들어갈 일이 없게).
 const isAlpha = (c: string): boolean => {
@@ -130,56 +132,7 @@ export function makeTiles(slots: Slot[], rand: () => number = Math.random): Tile
   return tiles;
 }
 
-/* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 (PhraseDetail과 같은 방식) */
-const speak = (text: string) => {
-  const w = window as any;
-  if (w.AndroidTTS) {
-    try {
-      w.AndroidTTS.speak(text, "id-ID");
-      return;
-    } catch (e) { /* 폴백으로 넘어갑니다 */ }
-  }
-  try {
-    window.speechSynthesis?.cancel?.();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "id-ID";
-    u.rate = 0.95;
-    window.speechSynthesis?.speak?.(u);
-  } catch (e) { /* 지원하지 않는 기기는 조용히 넘어갑니다 */ }
-};
-
-// "+3" 같은 점수 표시가 위로 떠오르며 사라집니다. (소리 없음)
-const FloatPoint = ({ text }: { text: string }) => {
-  const [on, setOn] = useState(false);
-  useEffect(() => {
-    let inner = 0;
-    const outer = requestAnimationFrame(() => {
-      inner = requestAnimationFrame(() => setOn(true));
-    });
-    return () => {
-      cancelAnimationFrame(outer);
-      if (inner) cancelAnimationFrame(inner);
-    };
-  }, []);
-  return (
-    <span
-      className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-1 font-gothic text-sm font-semibold"
-      style={{
-        color: MEDALI_COLORS.emas,
-        opacity: on ? 0 : 1,
-        transform: on ? "translate(-50%, -12px)" : "translate(-50%, 0)",
-        transition: "opacity 1s linear, transform 1s ease-out",
-      }}
-    >
-      {text}
-    </span>
-  );
-};
-
 const GameEja = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
   const [phase, setPhase] = useState<Phase>("loading");
   const [index, setIndex] = useState(0);
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -187,6 +140,7 @@ const GameEja = () => {
   const [filled, setFilled] = useState<string[]>([]);   // 왼쪽 빈칸부터 채운 글자
   const [shakeId, setShakeId] = useState<number | null>(null);
   const [solved, setSolved] = useState(false);
+  const [good, setGood] = useState(0);                  // 지금까지 맞힌 단어 수
   const [result, setResult] = useState<RoundResult | null>(null);
   const [gained, setGained] = useState(0);
   const [floatOn, setFloatOn] = useState(false);
@@ -200,6 +154,7 @@ const GameEja = () => {
   const nextTimerRef = useRef<number | null>(null);
   const shakeTimerRef = useRef<number | null>(null);
   const floatTimerRef = useRef<number | null>(null);
+  const aliveRef = useRef(true);
 
   const setupWord = useCallback((i: number) => {
     const item = poolRef.current[i];
@@ -220,28 +175,22 @@ const GameEja = () => {
     finishedRef.current = true;
 
     const misses = missesRef.current;
-    const items: WordResult[] = poolRef.current.map((p, i) => ({
+    const rows: ResultRow[] = poolRef.current.map((p, i) => ({
       word: p.word,
       meaning: p.meaning,
       source: p.source,
-      misses: misses[i] || 0,
       correct: (misses[i] || 0) <= GOOD_MISS,
-      becameConfirmed: false,
     }));
 
     const got = await medaliEngine.addPoints("game", 3);
-    if (got > 0) {
-      setGained(got);
-      setFloatOn(true);
-      floatTimerRef.current = window.setTimeout(() => setFloatOn(false), 1200);
-    }
 
-    for (const it of items) {
+    const starWords: string[] = [];
+    for (const it of rows) {
       const r = await medaliEngine.recordWordResult(it.word, it.correct, it.source);
-      it.becameConfirmed = r.becameConfirmed;
+      if (r.becameConfirmed) starWords.push(it.word);
     }
 
-    const score = items.filter((it) => it.correct).length;
+    const score = rows.filter((it) => it.correct).length;
 
     let bestBefore = 0;
     try {
@@ -258,10 +207,18 @@ const GameEja = () => {
       date: dateKey(new Date()),
       durationSec,
       score,
-      words: items.map((it) => ({ word: it.word, correct: it.correct, source: it.source })),
+      words: rows.map((it) => ({ word: it.word, correct: it.correct, source: it.source })),
     });
 
-    setResult({ durationSec, bestBefore, items });
+    if (!aliveRef.current) return;
+    if (got > 0) {
+      setGained(got);
+      setFloatOn(true);
+      floatTimerRef.current = window.setTimeout(() => {
+        if (aliveRef.current) setFloatOn(false);
+      }, 1200);
+    }
+    setResult({ score, durationSec, bestBefore, rows, starWords });
     setPhase("done");
   }, []);
 
@@ -269,6 +226,7 @@ const GameEja = () => {
     finishedRef.current = false;
     startedAtRef.current = 0;
     missesRef.current = poolRef.current.map(() => 0);
+    setGood(0);
     setResult(null);
     setGained(0);
     setFloatOn(false);
@@ -295,6 +253,7 @@ const GameEja = () => {
               use.push(p);
             }
           }
+          if (!aliveRef.current) return;
           if (use.length < MIN_WORDS) {
             poolRef.current = [];
             setPhase("empty");
@@ -305,6 +264,7 @@ const GameEja = () => {
           else setPhase("ready");
         })
         .catch(() => {
+          if (!aliveRef.current) return;
           poolRef.current = [];
           setPhase("empty");
         });
@@ -318,11 +278,13 @@ const GameEja = () => {
 
   // 화면을 벗어날 때 남은 타이머 정리 (setState 없이 정리만)
   useEffect(() => {
+    aliveRef.current = true;
     return () => {
+      aliveRef.current = false;
       if (nextTimerRef.current) window.clearTimeout(nextTimerRef.current);
       if (shakeTimerRef.current) window.clearTimeout(shakeTimerRef.current);
       if (floatTimerRef.current) window.clearTimeout(floatTimerRef.current);
-      try { window.speechSynthesis?.cancel?.(); } catch (e) {}
+      stopSpeak();
     };
   }, []);
 
@@ -335,7 +297,9 @@ const GameEja = () => {
       missesRef.current[index] = (missesRef.current[index] || 0) + 1;
       setShakeId(t.id);
       if (shakeTimerRef.current) window.clearTimeout(shakeTimerRef.current);
-      shakeTimerRef.current = window.setTimeout(() => setShakeId(null), SHAKE_MS);
+      shakeTimerRef.current = window.setTimeout(() => {
+        if (aliveRef.current) setShakeId(null);
+      }, SHAKE_MS);
       return;
     }
 
@@ -348,9 +312,11 @@ const GameEja = () => {
     // 단어 완성 — 발음을 한 번 들려주고 다음으로
     lockedRef.current = true;
     setSolved(true);
+    if ((missesRef.current[index] || 0) <= GOOD_MISS) setGood((n) => n + 1);
     const item = poolRef.current[index];
-    if (item) speak(item.word);
+    if (item) speakWord(item.word, 0.95);
     nextTimerRef.current = window.setTimeout(() => {
+      if (!aliveRef.current) return;
       const n = index + 1;
       if (n >= poolRef.current.length) {
         const sec = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000));
@@ -366,223 +332,133 @@ const GameEja = () => {
   // 빈칸 칸에 지금까지 채운 글자를 배분합니다
   let blankSeen = 0;
   const view = slots.map((s) => {
-    if (!s.blank) return { ch: s.ch, blank: false, done: true, letter: s.letter };
+    if (!s.blank) return { ch: s.ch, blank: false, done: true, letter: s.letter, now: false };
     const got = filled[blankSeen];
+    const now = blankSeen === filled.length;   // 지금 채울 칸
     blankSeen++;
-    return { ch: got || "", blank: true, done: !!got, letter: true };
+    return { ch: got || "", blank: true, done: !!got, letter: true, now };
   });
 
+  // 긴 단어는 칸을 줄여 한 줄에 넣습니다 (시안 34×46, 글자 22px)
+  const cells = Math.max(1, slots.length);
+  const cellW = Math.max(18, Math.min(34, Math.floor((ROW_WIDTH - 4 * (cells - 1)) / cells)));
+  const cellH = Math.round(cellW * (46 / 34));
+  const cellFont = Math.max(15, Math.round(cellW * (22 / 34)));
+
   return (
-    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-clip bg-background pb-9">
-      <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => goBackOr(navigate, location.key, "/permainan")}
-          className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
-          title="뒤로"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">
-          EJA
-        </h1>
-      </header>
+    <GameScreen id="eja">
+      {phase === "loading" ? <GameLoading /> : null}
+      {phase === "empty" ? <GameEmpty text="단어가 아직 부족합니다" /> : null}
+      {phase === "ready" ? (
+        <GameReady
+          id="eja"
+          lines={["뜻을 보고 빈칸에 글자를 채우세요", "소리 버튼으로 발음을 들어도 됩니다"]}
+          onStart={beginPlay}
+        />
+      ) : null}
 
-      <div className="px-4">
-        {phase === "loading" ? (
-          <p className="pt-16 text-center font-gothic text-[0.875rem] text-muted-foreground">
-            준비 중...
-          </p>
-        ) : null}
+      {phase === "playing" && current ? (
+        <>
+          <StatusRow
+            left={<Dots n={poolRef.current.length} cur={index} />}
+            right={<Stat icon="check" label="맞힌 수" value={good} />}
+          />
 
-        {phase === "empty" ? (
-          <div className="mt-6 rounded-2xl border border-border bg-card px-4 py-10 text-center">
-            <p className="text-[0.9375rem] text-foreground">단어가 아직 부족해요</p>
-            <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
-              사전에서 단어를 만나고 오세요
+          <div
+            className="mt-2 rounded-[20px] bg-white px-[18px] pt-[22px] pb-6 flex flex-col items-center"
+            style={{
+              boxShadow: solved ? "0 0 0 1.5px " + G.tealBd + ", " + CARD_SHADOW : CARD_SHADOW,
+              transition: "box-shadow 150ms ease",
+            }}
+          >
+            <p className="font-gothic text-[12px] font-semibold" style={{ color: G.mute }}>
+              뜻
             </p>
-            <button
-              type="button"
-              onClick={() => navigate("/dictionary")}
-              className="mt-5 h-10 px-4 rounded-full bg-primary text-[0.8125rem] font-gothic font-medium text-white active:opacity-90"
-            >
-              사전으로 가기
-            </button>
-          </div>
-        ) : null}
-
-        {phase === "ready" ? (
-          <div className="mt-6 rounded-2xl border border-border bg-card px-4 py-10 text-center">
-            <p className="text-[0.9375rem] text-foreground">뜻을 보고 빈칸에 글자를 채워요</p>
-            <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
-              소리 버튼으로 발음을 들어도 괜찮아요
-            </p>
-            <button
-              type="button"
-              onClick={beginPlay}
-              className="mt-6 h-12 w-full max-w-[16rem] rounded-[13px] bg-primary text-[0.9375rem] font-medium text-white active:opacity-90"
-            >
-              시작
-            </button>
-          </div>
-        ) : null}
-
-        {phase === "playing" && current ? (
-          <div className="pt-3">
-            <p className="font-gothic text-[0.75rem] text-muted-foreground">
-              {index + 1} / {poolRef.current.length}
-            </p>
-
-            {/* 문제 = 뜻 */}
-            <div className="mt-3 flex items-start gap-2">
-              <p className="flex-1 min-w-0 font-gothic text-[1.0625rem] leading-snug text-foreground break-words">
+            <div className="mt-1.5 flex items-center gap-2.5 max-w-full">
+              <span className="min-w-0 font-gothic text-[22px] font-semibold text-center break-keep" style={{ color: G.text }}>
                 {current.meaning}
-              </p>
+              </span>
               <button
                 type="button"
-                onClick={() => speak(current.word)}
-                className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full border border-border bg-card text-muted-foreground active:bg-muted/60"
-                title="발음 듣기"
+                aria-label="발음 듣기"
+                onClick={() => speakWord(current.word, 0.95)}
+                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 active:opacity-70"
+                style={{ background: "#E2F1EC", color: G.teal }}
               >
-                <Volume2 size={17} />
+                <IconSpeaker size={16} small />
               </button>
             </div>
 
-            {/* 글자 칸 */}
-            <div
-              className={
-                "mt-5 min-h-[76px] rounded-2xl border px-3 py-4 flex flex-wrap items-center justify-center gap-1 transition-colors " +
-                (solved ? "border-primary bg-primary/5" : "border-border bg-card")
-              }
-            >
-              {view.map((v, i) =>
-                v.letter ? (
+            <div className="mt-[22px] flex items-center justify-center gap-1">
+              {view.map((v, i) => {
+                if (!v.letter) {
+                  // 하이픈은 보이게, 공백은 틈으로
+                  return v.ch === " " ? (
+                    <span key={i} style={{ width: Math.round(cellW / 3) }} aria-hidden="true" />
+                  ) : (
+                    <span
+                      key={i}
+                      className="font-word px-0.5"
+                      style={{ fontSize: cellFont, color: G.mute }}
+                    >
+                      {v.ch}
+                    </span>
+                  );
+                }
+                let style: React.CSSProperties = { color: G.text };
+                if (v.blank) {
+                  if (v.done) style = { background: G.tealBg, color: G.teal };
+                  else if (v.now && !solved) style = { background: "#FFFFFF", border: "2px solid " + G.teal };
+                  else style = { background: G.soft, border: "1.5px dashed #C9CFD3" };
+                }
+                return (
                   <span
                     key={i}
-                    className={
-                      "w-7 h-9 flex items-center justify-center rounded-md font-word text-[1.125rem] " +
-                      (v.blank
-                        ? v.done
-                          ? "bg-primary/15 text-primary"
-                          : "bg-primary/15 text-transparent"
-                        : "text-foreground")
-                    }
+                    className="rounded-[10px] box-border flex items-center justify-center font-word font-semibold"
+                    style={{ width: cellW, height: cellH, fontSize: cellFont, ...style }}
                   >
-                    {v.ch || "·"}
+                    {v.ch}
                   </span>
-                ) : (
-                  <span key={i} className="w-2" aria-hidden="true" />
-                )
-              )}
-            </div>
-
-            {/* 글자 알약 */}
-            <div className="mt-5 flex flex-wrap justify-center gap-2">
-              {tray.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => handleTile(t)}
-                  className={
-                    "w-11 h-11 rounded-xl border font-word text-[1.0625rem] transition-colors " +
-                    (shakeId === t.id
-                      ? "border-destructive bg-destructive/10 text-foreground"
-                      : "border-border bg-card text-foreground active:bg-muted/60")
-                  }
-                  style={shakeId === t.id ? { transform: "translateX(2px)" } : undefined}
-                >
-                  {t.ch}
-                </button>
-              ))}
+                );
+              })}
             </div>
           </div>
-        ) : null}
 
-        {phase === "done" && result ? (
-          <div className="mt-4">
-            <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center">
-              <p className="relative inline-block font-word text-[1.375rem] font-medium leading-snug text-foreground">
-                <span className="tabular-nums text-primary">{result.items.length}</span>단어 중{" "}
-                <span className="tabular-nums text-primary">
-                  {result.items.filter((it) => it.correct).length}
-                </span>
-                단어
-                {floatOn ? <FloatPoint text={"+" + gained} /> : null}
-              </p>
-              <p className="mt-2 font-gothic text-[0.8125rem] text-muted-foreground">
-                {result.durationSec}초
-                {result.bestBefore === 0 ||
-                result.items.filter((it) => it.correct).length > result.bestBefore
-                  ? " · 최고 기록!"
-                  : " · 최고 " + result.bestBefore + "단어"}
-              </p>
-            </div>
-
-            {result.items.some((it) => it.becameConfirmed) ? (
-              <div className="mt-3 rounded-2xl border border-border bg-card px-4 py-3.5">
-                <p className="flex items-center gap-1.5 font-gothic text-[0.75rem] font-semibold text-muted-foreground">
-                  <Star
-                    size={13}
-                    color={MEDALI_COLORS.emas}
-                    fill={MEDALI_COLORS.emas}
-                    className="shrink-0"
-                  />
-                  별이 된 단어
-                </p>
-                <p className="mt-1.5 font-word text-[0.9375rem] text-foreground break-words">
-                  {result.items
-                    .filter((it) => it.becameConfirmed)
-                    .map((it) => it.word)
-                    .join(", ")}
-                </p>
-              </div>
-            ) : null}
-
-            <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-card">
-              {result.items.map((it, i) => (
-                <div
-                  key={it.word + i}
-                  className={
-                    "flex items-center gap-3 px-4 py-3 " +
-                    (i === result.items.length - 1 ? "" : "border-b border-border") +
-                    (it.correct ? "" : " opacity-50")
-                  }
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-word text-[0.9375rem] leading-tight text-foreground truncate">
-                      {it.word}
-                    </p>
-                    <p className="mt-0.5 text-[0.78125rem] text-muted-foreground truncate">
-                      {it.meaning}
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-full border border-border px-2 py-0.5 font-gothic text-[0.6875rem] text-muted-foreground">
-                    {SOURCE_LABEL[it.source]}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 flex gap-2">
+          {/* 글자 알약 */}
+          <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+            {tray.map((t) => (
               <button
+                key={t.id}
                 type="button"
-                onClick={() => goBackOr(navigate, location.key, "/permainan")}
-                className="flex-1 h-11 rounded-[13px] border border-border text-[0.875rem] font-gothic text-foreground/80 active:bg-muted"
+                onClick={() => handleTile(t)}
+                className="w-[52px] h-[52px] rounded-[14px] box-border flex items-center justify-center font-word text-[20px] font-semibold"
+                style={
+                  shakeId === t.id
+                    ? { background: G.badBg, border: "1px solid " + G.badBd, color: G.text, transform: "translateX(2px)" }
+                    : { background: "#FFFFFF", border: "1px solid " + G.line, boxShadow: TILE_SHADOW, color: G.text }
+                }
               >
-                게임방으로
+                {t.ch}
               </button>
-              <button
-                type="button"
-                onClick={() => loadPool(true)}
-                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-gothic font-medium text-white active:opacity-90"
-              >
-                한 판 더
-              </button>
-            </div>
+            ))}
           </div>
-        ) : null}
-      </div>
-    </div>
+        </>
+      ) : null}
+
+      {phase === "done" && result ? (
+        <GameResult
+          label={"맞힌 단어 · " + result.rows.length + "단어 중 · " + result.durationSec + "초"}
+          value={result.score}
+          best={result.score > 0 && result.score > result.bestBefore}
+          bestText={result.bestBefore > 0 ? "최고 " + result.bestBefore + "개" : undefined}
+          gained={gained}
+          floatOn={floatOn}
+          starWords={result.starWords}
+          rows={result.rows}
+          onAgain={() => loadPool(true)}
+        />
+      ) : null}
+    </GameScreen>
   );
 };
 

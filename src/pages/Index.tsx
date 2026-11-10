@@ -24,6 +24,7 @@ import MedaliIdDialog from "@/components/MedaliIdDialog";
 import { needsMedaliId, syncMedali } from "@/lib/medaliSync";
 import { getEdition, takeRevokedNotice } from "@/lib/access";
 import { isStoreApp } from "@/lib/platform";
+import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import {
   RotateCcw,
   SlidersHorizontal,
@@ -44,7 +45,6 @@ import {
   MessagesSquare,
   Gamepad2,
   Users,
-  Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -126,6 +126,97 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   </p>
 );
 
+/* ── 공개판(스토어 앱) 홈 — 시안 H5(무료) · H6(Plus·Special Member·관리자) ─────────── */
+
+const H_DEEP = "#104B60";
+const H_LINE = "#E3E8EB";
+const H_LOCK = "#8F7E4E";
+const hrem = (px: number) => px / 16 + "rem";
+
+// 문장 종류 꼬리표 (홈 카드 제목 옆)
+const KIND_TAG: Record<string, string> = {
+  peribahasa: "속담",
+  ungkapan: "관용구",
+  alkitab: "성경",
+  kosakataku: "내 단어장",
+  kosakata: "단어장",
+  percakapan: "회화",
+};
+
+// 무료 사용자의 "다른 문장" 은 하루 한 번 (결정 문서 무료와 Plus 표)
+const FREE_PHRASE_DAY_KEY = "kata-free-phrase-refresh-day";
+function localDay(): string {
+  const d = new Date();
+  return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+}
+
+// 잠긴 메뉴를 누르면 그 자리에서 피어오르는 안내 (시안 H5 의 안개 말풍선)
+const FOG_CSS =
+  "@keyframes kataFog{0%{opacity:0;transform:translate(-50%,4px) scale(.98);filter:blur(6px)}" +
+  "18%{opacity:1;transform:translate(-50%,-6px) scale(1);filter:blur(0)}" +
+  "62%{opacity:1;transform:translate(-50%,-14px) scale(1);filter:blur(0)}" +
+  "100%{opacity:0;transform:translate(-50%,-36px) scale(1.03);filter:blur(8px)}}" +
+  ".kata-fog{animation:kataFog 2.4s ease-out forwards}";
+
+// 잠긴 메뉴: 안내가 다 떠오른 뒤 구독 화면으로 넘어갑니다
+const LOCK_NAV_DELAY_MS = 700;
+
+const FLOWER_PETAL = "M0 0 C8 -6 12 -18 5 -24 C-1 -22 -4 -10 0 0 Z";
+
+const LockMark = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={H_LOCK} strokeWidth="2"
+    strokeLinecap="round" aria-hidden="true" className="shrink-0">
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </svg>
+);
+
+const ChevronMark = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B5BCC1" strokeWidth="2"
+    aria-hidden="true" className="shrink-0">
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+);
+
+type PubRowProps = {
+  tileBg: string;
+  icon: React.ReactNode;
+  title: string;
+  sub: string;
+  locked: boolean;
+  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  last?: boolean;
+};
+
+const PubRow = ({ tileBg, icon, title, sub, locked, onClick, last }: PubRowProps) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-label={locked ? title + ", Plus 회원 기능" : undefined}
+    className="w-full flex items-center text-left active:bg-black/[0.03] transition-colors"
+    style={{ gap: 12, padding: "12px 16px", borderBottom: last ? "0" : "1px solid " + H_LINE }}
+  >
+    <span
+      className="shrink-0 flex items-center justify-center"
+      style={{ width: 32, height: 32, borderRadius: 9, background: tileBg }}
+    >
+      {icon}
+    </span>
+    <span className="flex-1 min-w-0 flex flex-col" style={{ gap: 2 }}>
+      <span className="truncate" style={{ fontSize: hrem(15) }}>{title}</span>
+      <span className="font-word truncate" style={{ fontSize: hrem(11.5), color: "#646C72" }}>{sub}</span>
+    </span>
+    {locked ? <LockMark /> : <ChevronMark />}
+  </button>
+);
+
+const tileIcon = (stroke: string, children: React.ReactNode) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {children}
+  </svg>
+);
+
 const Index = () => {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -134,6 +225,8 @@ const Index = () => {
   // 설정 창은 화면(라우트)이 아니라 메인 위에 뜬 창이라, 표시가 없으면 메인만 보입니다.
   // 표시는 SettingsDialog 가 나갈 때 남기고, 다시 열릴 때 지웁니다.
   useEffect(() => {
+    // 공개판은 설정이 "내 정보" 탭에 있어 그 화면이 이 표시를 받습니다(MyInfo.tsx)
+    if (isStoreApp()) return;
     try {
       const at = Number(sessionStorage.getItem(REOPEN_SETTINGS_KEY) || "0");
       if (at > 0 && Date.now() - at < 30 * 60 * 1000) setSettingsOpen(true);
@@ -409,6 +502,63 @@ const Index = () => {
   const sermonOn = edition === "admin";
   const storeApp = isStoreApp();
   const newsOn = !storeApp; // 뉴스는 스토어 앱에서만 뺍니다(브라우저 화면은 예전 그대로)
+
+  // 공개판 홈: 등급은 usePlan() 하나로만 판단합니다
+  const { plus } = usePlan();
+  const [fog, setFog] = useState<{ text: string; x: number; y: number; n: number } | null>(null);
+  const fogTimers = useRef<number[]>([]);
+  const lockNavTimer = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      fogTimers.current.forEach((t) => window.clearTimeout(t));
+      fogTimers.current = [];
+      if (lockNavTimer.current !== null) window.clearTimeout(lockNavTimer.current);
+      lockNavTimer.current = null;
+    };
+  }, []);
+
+  // 누른 자리 바로 위에 안내를 띄웁니다 (가로는 화면 가운데 근처로 모읍니다)
+  const showFog = (el: HTMLElement | null, text: string) => {
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+    try {
+      if (el) {
+        const r = el.getBoundingClientRect();
+        const mid = window.innerWidth / 2;
+        x = Math.min(Math.max(r.left + r.width / 2, mid - 45), mid + 45);
+        y = r.top - 6;
+      }
+    } catch (e) {}
+    fogTimers.current.forEach((t) => window.clearTimeout(t));
+    fogTimers.current = [];
+    setFog((prev) => ({ text, x, y, n: (prev ? prev.n : 0) + 1 }));
+    fogTimers.current.push(window.setTimeout(() => setFog(null), 2500));
+  };
+
+  // 무료 사용자가 잠긴 메뉴를 누르면: 안내가 떠오르고, 곧 구독 화면으로 넘어갑니다.
+  // 넘어갈 때는 setState 없이 navigate 만 부릅니다(언마운트 중 setState 금지 규칙).
+  const tapLocked = (e: React.MouseEvent<HTMLElement>, text: string) => {
+    if (lockNavTimer.current !== null) return;
+    showFog(e.currentTarget, text);
+    lockNavTimer.current = window.setTimeout(() => {
+      lockNavTimer.current = null;
+      navigate(PAYWALL_PATH);
+    }, LOCK_NAV_DELAY_MS);
+  };
+
+  // 무료: "다른 문장" 은 하루 한 번
+  const tapNextPhrase = (e: React.MouseEvent<HTMLElement>) => {
+    if (!plus) {
+      let used = "";
+      try { used = localStorage.getItem(FREE_PHRASE_DAY_KEY) || ""; } catch (err) {}
+      if (used === localDay()) {
+        showFog(e.currentTarget, "새 문장은 하루 한 번 받을 수 있습니다");
+        return;
+      }
+      try { localStorage.setItem(FREE_PHRASE_DAY_KEY, localDay()); } catch (err) {}
+    }
+    refreshPhrase(kinds);
+  };
   useEffect(() => {
     if (takeRevokedNotice()) toast("회원키가 해제되어 받아 둔 성경·교재를 이 기기에서 지웠습니다");
   }, []);
@@ -457,7 +607,7 @@ const Index = () => {
 
   const startVoice = () => {
     if (!speechSupported) {
-      toast("이 기기에서는 음성 검색을 지원하지 않아요");
+      toast("이 기기에서는 음성 검색을 쓸 수 없습니다");
       return;
     }
     if (listening) {
@@ -483,7 +633,7 @@ const Index = () => {
       rec.onerror = (ev: any) => {
         setListening(false);
         if (ev?.error === "not-allowed" || ev?.error === "service-not-allowed") {
-          toast("마이크 권한이 필요해요. 설정에서 허용해주세요");
+          toast("마이크 권한이 필요합니다. 폰 설정에서 허용해 주세요");
         }
       };
       rec.onend = () => setListening(false);
@@ -492,9 +642,442 @@ const Index = () => {
       rec.start();
     } catch (e) {
       setListening(false);
-      toast("음성 검색을 시작하지 못했어요");
+      toast("음성 검색을 시작하지 못했습니다");
     }
   };
+
+  // 문장 종류 고르기 시트 — 공개판·관리자판 공용
+  const kindSheet = kindSheetOpen ? (
+    <>
+      <div
+        className="fixed inset-0 z-40 bg-black/40"
+        onClick={closeKindSheet}
+      />
+      <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
+        <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border" />
+        <h2 className="px-4 text-base font-semibold text-foreground">어떤 문장을 보시겠어요?</h2>
+        <p className="px-4 pb-3.5 pt-1.5 text-[0.78125rem] leading-relaxed text-muted-foreground">
+          여러 개를 고르면 그중 하나가 무작위로 나옵니다.
+        </p>
+        <div className="border-t border-border">
+          {PHRASE_KINDS.map((info) => {
+            const on = kinds.indexOf(info.key) >= 0;
+            return (
+              <button
+                key={info.key}
+                type="button"
+                onClick={() => toggleKind(info.key)}
+                className="flex w-full items-center gap-3 border-b border-border px-4 py-3.5 text-left active:bg-muted/60"
+              >
+                <span
+                  className={
+                    "flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-md border-2 " +
+                    (on ? "border-primary bg-primary text-white" : "border-border text-transparent")
+                  }
+                >
+                  <Check size={13} strokeWidth={3} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[0.875rem] leading-tight text-foreground">{info.ko}</span>
+                  <span className="mt-0.5 block font-word text-[0.71875rem] text-muted-foreground">
+                    {info.id}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={closeKindSheet}
+          className="mx-4 mt-4 h-12 w-[calc(100%-2rem)] rounded-[13px] bg-primary text-[0.9375rem] font-medium text-white"
+        >
+          완료
+        </button>
+      </div>
+    </>
+  ) : null;
+
+  // 최근 검색어 — 검색창을 눌렀을 때만 (최대 10개). 본문 위에 떠있는 플로팅 박스
+  const historyBox = showHistory && query.trim() === "" && history.length > 0 ? (
+    <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl bg-card shadow-[0_10px_24px_-8px_rgba(8,32,38,0.35)]">
+      {history.map((term, i) => (
+        <button
+          key={term + i}
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => goSearch(term)}
+          className={
+            "w-full flex items-center gap-2.5 px-4 py-2.5 text-left active:bg-muted/60 transition-colors " +
+            (i === history.length - 1 ? "" : "border-b border-border")
+          }
+        >
+          <Search size={14} className="shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1 truncate text-[0.875rem] text-foreground/80">{term}</span>
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  // ── 공개판(스토어 앱) 홈 — 시안 H5(무료) · H6(Plus 이상). 설정은 하단 탭 "내 정보"로 옮겼습니다.
+  if (storeApp) {
+    const sectionTitle = (t: string) => (
+      <p
+        className="font-gothic"
+        style={{ margin: "0 4px 9px", fontSize: hrem(14), fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
+      >
+        {t}
+      </p>
+    );
+    const listBox = "bg-white overflow-hidden";
+    const listStyle = { border: "1px solid " + H_LINE, borderRadius: 16 };
+    const iconBtnPub = "shrink-0 flex items-center justify-center active:bg-black/5 rounded-full";
+    const kindTag = phrase ? KIND_TAG[phrase.kind] || "" : "";
+
+    return (
+      <div
+        className="w-full max-w-lg mx-auto bg-background flex flex-col"
+        style={{ minHeight: "calc(100dvh - var(--kata-tabbar-h, 0px))", color: "#141819" }}
+      >
+        <style>{FOG_CSS}</style>
+
+        {/* ── 머리 ── */}
+        <div className="relative shrink-0" style={{ background: H_DEEP, padding: "28px 20px 26px" }}>
+          {/* 장식만 블록 안에서 잘라냅니다(최근 검색어 박스가 잘리지 않게) */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <svg className="absolute left-0 top-0" width="390" height="170" aria-hidden="true">
+              <defs>
+                <g id="kataHomeFlower">
+                  {[0, 72, 144, 216, 288].map((r) => (
+                    <path key={r} d={FLOWER_PETAL} transform={"rotate(" + r + ")"} />
+                  ))}
+                </g>
+              </defs>
+              <g opacity="0.3">
+                {[
+                  "translate(196 30) scale(0.72) rotate(14)",
+                  "translate(174 66) scale(0.4) rotate(-20)",
+                  "translate(10 160) scale(0.85) rotate(30)",
+                  "translate(52 154) scale(0.42) rotate(-8)",
+                  "translate(376 152) scale(0.6) rotate(50)",
+                ].map((t) => (
+                  <g key={t} transform={t}>
+                    <use href="#kataHomeFlower" fill="#ffffff" />
+                    <circle r="4" fill="#F6C27A" />
+                  </g>
+                ))}
+              </g>
+            </svg>
+            {/* 통코난 지붕 (토라자 전통 가옥) */}
+            <svg
+              className="absolute"
+              style={{ right: -6, top: 8 }}
+              width="190" height="122" viewBox="0 0 140 90" fill="none" stroke="#ffffff" strokeWidth="1.3"
+              strokeLinecap="round" strokeLinejoin="round" opacity="0.34" aria-hidden="true"
+            >
+              <path d="M4 10 C26 30 46 34 70 34 C94 34 114 30 136 10" />
+              <path d="M18 22 C34 40 50 44 70 44 C90 44 106 40 122 22" />
+              <path d="M4 10 L18 22 M136 10 L122 22" />
+              <path d="M30 27 C44 37 56 39 70 39 C84 39 96 37 110 27" />
+              <path d="M40 44 L100 44 L96 66 L44 66 Z" />
+              <path d="M50 51 L90 51 M48 58 L92 58" />
+              <path d="M58 51 L62 58 L66 51 L70 58 L74 51 L78 58 L82 51" />
+              <path d="M50 66 L50 84 M70 66 L70 84 M90 66 L90 84" />
+              <path d="M28 84 L112 84" />
+            </svg>
+            <svg
+              className="absolute left-0 right-0 bottom-0 w-full"
+              height="34" viewBox="0 0 400 34" preserveAspectRatio="none" fill="none" stroke="#ffffff"
+              strokeWidth="1.4" strokeLinecap="round" aria-hidden="true"
+            >
+              <path d="M-10 12 Q40 4 90 12 T190 12 T290 12 T390 12 T490 12" opacity="0.2" />
+              <path d="M-10 22 Q50 14 110 22 T230 22 T350 22 T470 22" opacity="0.14" />
+              <path d="M-10 31 Q60 24 130 31 T270 31 T410 31" opacity="0.1" />
+            </svg>
+          </div>
+
+          <div className="relative flex items-start justify-between">
+            <div className="min-w-0 flex flex-col" style={{ gap: 6 }}>
+              <p
+                className="font-gothic uppercase"
+                style={{ margin: 0, fontSize: hrem(11), fontWeight: 600, letterSpacing: "0.1em", color: "#CFE1E7" }}
+              >
+                {dateLabel}
+              </p>
+              <div className="flex items-center" style={{ gap: 8 }}>
+                <h1 className="font-word text-white" style={{ margin: 0, fontSize: hrem(28), fontWeight: 600, lineHeight: 1 }}>
+                  Kata kata<span style={{ color: "#F29B6B" }}>.</span>
+                </h1>
+                {plus ? (
+                  <span
+                    className="font-gothic flex items-center"
+                    style={{ height: 20, padding: "0 8px", borderRadius: 10, background: "#F6E7C4", color: "#5A4610", fontSize: hrem(10.5), fontWeight: 700, letterSpacing: "0.06em" }}
+                  >
+                    PLUS
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            <div className="relative flex items-center shrink-0">
+              <MedaliBadge onClick={openMedali} />
+              <MedaliNudge />
+            </div>
+          </div>
+
+          {/* 검색 */}
+          <div ref={searchAreaRef} className="relative" style={{ marginTop: 16 }}>
+            <div className="flex items-center min-w-0" style={{ gap: 8 }}>
+              <div
+                className="flex-1 min-w-0 flex items-center bg-white"
+                style={{ height: 46, borderRadius: 23, gap: 8, padding: "0 6px 0 16px" }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2C6D63" strokeWidth="2" aria-hidden="true" className="shrink-0">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
+                </svg>
+                <input
+                  ref={searchInputRef}
+                  size={1}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") goSearch(); }}
+                  onFocus={openSearchHistory}
+                  onClick={openSearchHistory}
+                  onBlur={() => {
+                    hideHistoryRef.current = window.setTimeout(() => closeSearchHistory(), 160);
+                  }}
+                  placeholder="단어·문장 (인니어/한국어)"
+                  aria-label="검색"
+                  className="flex-1 min-w-0 w-full bg-transparent outline-none text-[#141819] placeholder:text-muted-foreground"
+                  style={{ fontSize: hrem(14) }}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                />
+                <button
+                  type="button"
+                  onClick={startVoice}
+                  aria-label="음성 검색"
+                  className="shrink-0 flex items-center justify-center rounded-full"
+                  style={{ width: 36, height: 36, color: listening ? "#DC2626" : "#646C72" }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <rect x="9" y="2" width="6" height="12" rx="3" />
+                    <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4" />
+                  </svg>
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => goSearch()}
+                className="shrink-0 font-gothic text-white active:bg-white/30"
+                style={{ width: 46, height: 46, borderRadius: 23, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.32)", fontSize: hrem(12), fontWeight: 500 }}
+              >
+                검색
+              </button>
+            </div>
+            {historyBox}
+          </div>
+        </div>
+
+        {/* ── 본문 ── */}
+        <div
+          className="flex-1 flex flex-col"
+          style={{ padding: plus ? "16px 16px 16px" : "14px 16px 16px", gap: plus ? 22 : 18 }}
+        >
+          {/* 오늘의 인도네시아어 */}
+          <section
+            role="button"
+            tabIndex={0}
+            onClick={() => openPhrase()}
+            onKeyDown={(e) => { if (e.key === "Enter") openPhrase(); }}
+            className="bg-white active:bg-[#F7F9FA] transition-colors"
+            style={{ border: "1px solid " + H_LINE, borderRadius: 16, padding: "14px 16px 16px" }}
+          >
+            <div className="flex items-center" style={{ gap: 2 }}>
+              <p
+                className="font-gothic shrink-0"
+                style={{ margin: 0, fontSize: hrem(14), fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
+              >
+                BAHASA HARI INI
+              </p>
+              {kindTag ? (
+                <span
+                  className="font-gothic flex items-center shrink-0"
+                  style={{ marginLeft: 8, height: 20, padding: "0 8px", borderRadius: 10, background: "#FCE6D9", color: "#9A4419", fontSize: hrem(11), fontWeight: 600 }}
+                >
+                  {kindTag}
+                </span>
+              ) : null}
+              <span className="flex-1" />
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); navigate("/phrase/saved"); }}
+                className={iconBtnPub}
+                style={{ width: 34, height: 34, color: "#646C72" }}
+                aria-label="저장한 문장"
+              >
+                <Bookmark size={15} strokeWidth={1.9} fill="none" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); tapNextPhrase(e); }}
+                className={iconBtnPub}
+                style={{ width: 34, height: 34, color: "#646C72" }}
+                aria-label="다른 문장"
+              >
+                <RotateCcw size={15} strokeWidth={1.9} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); openKindSheet(); }}
+                className={iconBtnPub}
+                style={{ width: 34, height: 34, color: "#646C72" }}
+                aria-label="문장 종류 고르기"
+              >
+                <SlidersHorizontal size={15} strokeWidth={1.9} />
+              </button>
+            </div>
+            {phraseLoading && !phrase ? (
+              <div className="mt-3.5 space-y-2">
+                <div className="h-4 w-4/5 rounded bg-muted" />
+                <div className="h-3 w-3/5 rounded bg-muted" />
+              </div>
+            ) : phrase ? (
+              <>
+                <p className="font-word" style={{ margin: "8px 0 0", fontSize: hrem(19), fontWeight: 500, lineHeight: 1.5 }}>
+                  {phrase.id}
+                </p>
+                {phrase.ko ? (
+                  <p style={{ margin: "4px 0 0", fontSize: hrem(13), lineHeight: 1.6, color: "#4D565B" }}>{phrase.ko}</p>
+                ) : null}
+              </>
+            ) : null}
+          </section>
+
+          {/* 단어장 */}
+          <section>
+            {sectionTitle("단어장")}
+            <div className={listBox} style={listStyle}>
+              <PubRow
+                tileBg="#DDF0EA"
+                icon={tileIcon("#2C6D63", (
+                  <>
+                    <path d="M4 4h4v16H4zM10 4h4v16h-4z" />
+                    <path d="M15.5 5.2l3.9-1 3.6 14.6-3.9 1z" />
+                  </>
+                ))}
+                title="기본 단어장 폴더"
+                sub="Kosakata"
+                locked={!plus}
+                onClick={(e) => (plus ? navigate("/wordbooks") : tapLocked(e, "기본 단어장은 Plus 회원 기능입니다"))}
+              />
+              <PubRow
+                tileBg="#DCEAF6"
+                icon={tileIcon("#2B5F86", (
+                  <>
+                    <path d="M3 5h12v8H8l-5 4z" />
+                    <path d="M9 16h7l5 4v-9h-3" />
+                  </>
+                ))}
+                title="회화집 폴더"
+                sub="Percakapan"
+                locked={!plus}
+                onClick={(e) => (plus ? navigate("/percakapan") : tapLocked(e, "회화집은 Plus 회원 기능입니다"))}
+                last
+              />
+            </div>
+          </section>
+
+          {/* 인도네시아 */}
+          <section>
+            {sectionTitle("인도네시아")}
+            <div className={listBox} style={listStyle}>
+              <PubRow
+                tileBg="#FCE6D9"
+                icon={tileIcon("#B4501F", (
+                  <>
+                    <path d="M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3z" />
+                    <path d="M21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z" />
+                  </>
+                ))}
+                title="이야기"
+                sub="Cerita"
+                locked={false}
+                onClick={() => navigate("/story")}
+              />
+              <PubRow
+                tileBg="#E9E4F5"
+                icon={tileIcon("#5B4A8A", (
+                  <>
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M15.5 8.5l-2 5-5 2 2-5z" />
+                  </>
+                ))}
+                title="인도네시아 이해 · 지도"
+                sub="Wawasan"
+                locked={!plus}
+                onClick={(e) => (plus ? navigate("/insight") : tapLocked(e, "인도네시아 이해는 Plus 회원 기능입니다"))}
+                last
+              />
+            </div>
+          </section>
+
+          {/* Plus 줄 — 무료에게만 (Plus·Special Member·관리자에게는 사라집니다) */}
+          {!plus ? (
+            <button
+              type="button"
+              onClick={() => navigate(PAYWALL_PATH)}
+              className="w-full flex items-center text-left active:opacity-90"
+              style={{ gap: 12, padding: "11px 12px 11px 14px", background: "#FFF6DC", border: "1px solid #F1E0AE", borderRadius: 16 }}
+            >
+              <span
+                className="shrink-0 flex items-center justify-center bg-white"
+                style={{ width: 32, height: 32, borderRadius: 9 }}
+              >
+                <svg width="22" height="22" viewBox="-26 -26 52 52" aria-hidden="true">
+                  {[0, 72, 144, 216, 288].map((r) => (
+                    <path key={r} d={FLOWER_PETAL} fill="#D9A94A" transform={"rotate(" + r + ")"} />
+                  ))}
+                  <circle r="5" fill="#8A6A12" />
+                </svg>
+              </span>
+              <span className="flex-1 min-w-0 flex flex-col" style={{ gap: 2 }}>
+                <span style={{ fontSize: hrem(15) }}>Kata kata Plus</span>
+                <span className="font-gothic" style={{ fontSize: hrem(11.5), color: "#6E5612" }}>
+                  회화·게임·소리 읽기 모두 열기
+                </span>
+              </span>
+              <span
+                className="shrink-0 flex items-center text-center text-white font-gothic"
+                style={{ height: 42, padding: "0 13px", borderRadius: 21, background: "#8A6A12", fontSize: hrem(12), fontWeight: 700, lineHeight: 1.3 }}
+              >
+                Plus<br />7일 무료 체험
+              </span>
+            </button>
+          ) : null}
+        </div>
+
+        {fog ? (
+          <div
+            key={fog.n}
+            role="status"
+            className="kata-fog fixed z-40 pointer-events-none whitespace-nowrap font-gothic"
+            style={{
+              left: fog.x, top: fog.y, padding: "7px 14px", borderRadius: 16,
+              background: "rgba(226,231,234,0.94)", backdropFilter: "blur(6px)",
+              boxShadow: "0 4px 14px rgba(16,40,50,0.08)", fontSize: hrem(12.5), fontWeight: 500, color: "#4D565B",
+            }}
+          >
+            {fog.text}
+          </div>
+        ) : null}
+
+        {kindSheet}
+        <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
+        <MedaliIdDialog open={needId} onDone={() => setNeedId(false)} />
+      </div>
+    );
+  }
 
   const iconBtn =
     "w-9 h-9 rounded-full flex items-center justify-center text-white/80 hover:bg-white/10 active:bg-white/20 transition-colors";
@@ -612,25 +1195,7 @@ const Index = () => {
           </div>
 
           {/* 최근 검색어 — 검색창을 눌렀을 때만 (최대 10개). 본문 위에 떠있는 플로팅 박스 */}
-          {showHistory && query.trim() === "" && history.length > 0 ? (
-            <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl bg-card shadow-[0_10px_24px_-8px_rgba(8,32,38,0.35)]">
-              {history.map((term, i) => (
-                <button
-                  key={term + i}
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => goSearch(term)}
-                  className={
-                    "w-full flex items-center gap-2.5 px-4 py-2.5 text-left active:bg-muted/60 transition-colors " +
-                    (i === history.length - 1 ? "" : "border-b border-border")
-                  }
-                >
-                  <Search size={14} className="shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate text-[0.875rem] text-foreground/80">{term}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
+          {historyBox}
         </div>
       </div>
 
@@ -814,68 +1379,9 @@ const Index = () => {
             <Row icon={Gamepad2} title="게임방" sub="Permainan" onClick={() => navigate("/permainan")} last />
           </div>
         </section>
-
-        {/* ── 구독 ── 스토어 앱에서만. 홈 디자인을 다시 할 때 자리를 옮깁니다 */}
-        {storeApp ? (
-          <section className="mt-6">
-            <SectionLabel>구독</SectionLabel>
-            <div className="overflow-hidden rounded-2xl border border-border bg-card">
-              <Row icon={Sparkles} title="Kata kata Plus" sub="Langganan" onClick={() => navigate("/plus")} last />
-            </div>
-          </section>
-        ) : null}
       </div>
 
-      {kindSheetOpen ? (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/40"
-            onClick={closeKindSheet}
-          />
-          <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
-            <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border" />
-            <h2 className="px-4 text-base font-semibold text-foreground">어떤 문장을 보시겠어요?</h2>
-            <p className="px-4 pb-3.5 pt-1.5 text-[0.78125rem] leading-relaxed text-muted-foreground">
-              여러 개를 고르면 그중 하나가 무작위로 나옵니다.
-            </p>
-            <div className="border-t border-border">
-              {PHRASE_KINDS.map((info) => {
-                const on = kinds.indexOf(info.key) >= 0;
-                return (
-                  <button
-                    key={info.key}
-                    type="button"
-                    onClick={() => toggleKind(info.key)}
-                    className="flex w-full items-center gap-3 border-b border-border px-4 py-3.5 text-left active:bg-muted/60"
-                  >
-                    <span
-                      className={
-                        "flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-md border-2 " +
-                        (on ? "border-primary bg-primary text-white" : "border-border text-transparent")
-                      }
-                    >
-                      <Check size={13} strokeWidth={3} />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-[0.875rem] leading-tight text-foreground">{info.ko}</span>
-                      <span className="mt-0.5 block font-word text-[0.71875rem] text-muted-foreground">
-                        {info.id}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              type="button"
-              onClick={closeKindSheet}
-              className="mx-4 mt-4 h-12 w-[calc(100%-2rem)] rounded-[13px] bg-primary text-[0.9375rem] font-medium text-white"
-            >
-              완료
-            </button>
-          </div>
-        </>
-      ) : null}
+      {kindSheet}
 
       <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />

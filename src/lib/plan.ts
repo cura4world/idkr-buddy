@@ -64,10 +64,13 @@ export function getTier(): Tier {
   const s = getSession();
   if (!s) return "free";
   const p = s.plan as { tier?: string; until?: number; trial?: boolean };
-  if (p.tier === "admin") return "admin";
-  if (p.tier === "special") return "special";
-  if (p.tier === "plus" && typeof p.until === "number" && p.until > Date.now()) {
-    return p.trial ? "trial" : "plus";
+  // special·admin 은 until 0 이 무기한. 기한이 있으면 지난 뒤에는 무료로 봅니다(서버도 같은 판단).
+  const live = typeof p.until === "number" && p.until > Date.now();
+  if (p.tier === "admin" && (!p.until || live)) return "admin";
+  if (p.tier === "special" && (!p.until || live)) return "special";
+  // 서버는 체험을 {tier:"trial", trial:true} 로 줍니다. 예전 모양 {tier:"plus", trial:true} 도 받습니다.
+  if ((p.tier === "plus" || p.tier === "trial") && live) {
+    return p.trial || p.tier === "trial" ? "trial" : "plus";
   }
   return "free";
 }
