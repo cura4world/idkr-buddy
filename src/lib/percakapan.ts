@@ -443,6 +443,7 @@ async function callGenerate(prompt: string): Promise<string> {
     return await callGeminiText(prompt, {
       timeoutMs: GEN_TIMEOUT_MS,
       maxOutputTokens: 8192,
+      kind: "percakapan-make",
     });
   } catch (e: any) {
     const code = (e && e.message) || "";
