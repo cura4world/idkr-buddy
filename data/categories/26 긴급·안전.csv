@@ -1,0 +1,98 @@
+darurat,비상/긴급,"Ini darurat, tolong cepat datang!","긴급 상황이에요, 빨리 와 주세요!"
+keadaan darurat,비상사태/긴급 상황,"Dalam keadaan darurat, hubungi nomor 112.",긴급 상황에서는 112로 연락하세요.
+nomor darurat,긴급 전화번호,Simpan nomor darurat di ponsel Anda.,휴대폰에 긴급 전화번호를 저장해 두세요.
+pertolongan,도움/구조,Dia berteriak meminta pertolongan.,그는 도와 달라고 소리쳤다.
+pertolongan pertama,응급 처치,Petugas memberikan pertolongan pertama kepada korban.,담당자가 피해자에게 응급 처치를 했다.
+kotak P3K,구급상자,Kotak P3K ada di laci dapur.,구급상자는 부엌 서랍에 있다.
+kebakaran,화재,Kebakaran itu terjadi tengah malam.,그 화재는 한밤중에 일어났다.
+pemadam kebakaran,소방대/소방관,Pemadam kebakaran tiba dalam sepuluh menit.,소방대가 십 분 만에 도착했다.
+api,불,Api cepat menjalar ke rumah sebelah.,불이 옆집으로 빠르게 번졌다.
+asap,연기,Asap tebal keluar dari jendela dapur.,부엌 창문에서 짙은 연기가 나왔다.
+terbakar,불타다/타 버리다,Rumah itu terbakar habis.,그 집은 다 타 버렸다.
+alat pemadam api,소화기,Alat pemadam api dipasang di setiap lantai.,소화기는 층마다 설치되어 있다.
+korsleting,합선/누전,Kebakaran itu disebabkan korsleting listrik.,그 화재는 전기 합선 때문이었다.
+mati lampu,정전 (일상어),Tadi malam mati lampu selama tiga jam.,어젯밤 세 시간 동안 정전이었다.
+gas bocor,가스 누출/가스가 새다,"Kalau gas bocor, segera buka jendela.",가스가 새면 바로 창문을 여세요.
+alarm,경보기/알람,Alarm kebakaran berbunyi di gedung itu.,그 건물에서 화재 경보가 울렸다.
+sirene,사이렌,Terdengar sirene ambulans dari jauh.,멀리서 구급차 사이렌이 들렸다.
+pintu darurat,비상구,Pintu darurat ada di ujung lorong.,비상구는 복도 끝에 있다.
+tangga darurat,비상계단,Gunakan tangga darurat saat ada kebakaran.,불이 나면 비상계단을 이용하세요.
+jalur evakuasi,대피로,Ikuti tanda jalur evakuasi.,대피로 표시를 따라가세요.
+evakuasi,대피/철수,Warga dievakuasi sebelum banjir datang.,홍수가 오기 전에 주민들이 대피했다.
+titik kumpul,집결지/대피 장소,Semua karyawan berkumpul di titik kumpul.,전 직원이 집결지에 모였다.
+tempat pengungsian,대피소/피난처,Ratusan warga tinggal di tempat pengungsian.,수백 명의 주민이 대피소에서 지낸다.
+bahaya,위험,"Awas, ada bahaya longsor di sini.","조심하세요, 여기는 산사태 위험이 있어요."
+awas,조심해!/주의,"Awas, ada mobil!","조심해, 차 와!"
+waspada,경계하는/조심하는,Tetap waspada saat berjalan malam hari.,밤길을 걸을 때는 늘 조심하세요.
+peringatan,경고/주의보,Ada peringatan cuaca buruk malam ini.,오늘 밤 악천후 주의보가 있다.
+tanda bahaya,위험 표지/경고 신호,Perhatikan tanda bahaya di dekat sungai.,강 근처의 위험 표지판을 잘 보세요.
+keamanan,보안/치안,Keamanan di kompleks ini dijaga satpam.,이 단지의 보안은 경비원이 맡고 있다.
+keselamatan,안전,Utamakan keselamatan saat bekerja.,일할 때는 안전을 최우선으로 하세요.
+kantor polisi,경찰서,Laporkan kehilangan itu ke kantor polisi.,그 분실 건은 경찰서에 신고하세요.
+pos polisi,파출소/경찰 초소,Ada pos polisi di dekat terminal.,터미널 근처에 경찰 초소가 있다.
+pencuri,도둑,Pencuri itu masuk lewat jendela.,그 도둑은 창문으로 들어왔다.
+pencurian,절도/도난,Pencurian motor sering terjadi di sini.,이곳에서는 오토바이 도난이 자주 일어난다.
+dicuri,도둑맞다,Dompet saya dicuri di dalam bus.,버스 안에서 지갑을 도둑맞았어요.
+copet,소매치기,"Hati-hati, banyak copet di pasar.","조심하세요, 시장에 소매치기가 많아요."
+kecopetan,소매치기를 당하다,Dia kecopetan di kereta.,그는 기차에서 소매치기를 당했다.
+perampok,강도,Perampok itu sudah ditangkap polisi.,그 강도는 경찰에 붙잡혔다.
+merampok,강도질하다/털다,Dua orang merampok toko emas.,두 사람이 금은방을 털었다.
+penipuan,사기,Hati-hati dengan penipuan lewat telepon.,전화 사기를 조심하세요.
+menipu,속이다/사기 치다,Dia menipu banyak orang dengan janji palsu.,그는 거짓 약속으로 많은 사람을 속였다.
+penipu,사기꾼,Penipu itu mengaku sebagai petugas bank.,그 사기꾼은 은행 직원이라고 속였다.
+palsu,가짜의/위조된,Uang itu ternyata palsu.,그 돈은 알고 보니 위조지폐였다.
+hilang,잃어버리다/없어지다,Paspor saya hilang di bandara.,공항에서 여권을 잃어버렸어요.
+kehilangan,잃다/분실,Saya kehilangan dompet di stasiun.,저는 역에서 지갑을 잃어버렸습니다.
+barang hilang,분실물,Tanyakan ke bagian barang hilang.,분실물 센터에 문의하세요.
+korban,피해자/희생자,Korban kecelakaan dibawa ke rumah sakit.,사고 피해자들은 병원으로 옮겨졌다.
+terluka,다치다,Dua orang terluka dalam kecelakaan itu.,그 사고로 두 사람이 다쳤다.
+luka parah,중상,Sopir itu mengalami luka parah.,그 운전기사는 중상을 입었다.
+luka ringan,경상,Penumpang lainnya hanya luka ringan.,다른 승객들은 경상만 입었다.
+berdarah,피가 나다,Lututnya berdarah karena jatuh.,넘어져서 무릎에서 피가 난다.
+luka bakar,화상,Siram luka bakar dengan air mengalir.,화상 부위는 흐르는 물로 식히세요.
+keracunan,중독되다/식중독에 걸리다,Puluhan siswa keracunan makanan.,학생 수십 명이 식중독에 걸렸다.
+racun,독,Simpan racun tikus jauh dari anak-anak.,쥐약은 아이들 손이 닿지 않는 곳에 두세요.
+digigit,물리다,Anak itu digigit anjing di jalan.,그 아이는 길에서 개에게 물렸다.
+tersengat,쏘이다,Dia tersengat lebah di kebun.,그는 밭에서 벌에 쏘였다.
+tersengat listrik,감전되다,Tukang itu tersengat listrik saat memperbaiki kabel.,그 기술자는 전선을 고치다가 감전되었다.
+hanyut,떠내려가다,Sandalnya hanyut terbawa arus sungai.,그의 슬리퍼가 강물에 떠내려갔다.
+terseret arus,물살에 휩쓸리다,"Jangan berenang terlalu jauh, nanti terseret arus.","너무 멀리 헤엄치지 마, 물살에 휩쓸려."
+pelampung,구명조끼/구명부표,Pakai pelampung sebelum naik perahu.,배에 타기 전에 구명조끼를 입으세요.
+tim SAR,수색구조대,Tim SAR masih mencari korban yang hilang.,수색구조대가 실종자를 아직 찾고 있다.
+bantuan,도움/지원,Kami butuh bantuan segera.,우리는 당장 도움이 필요합니다.
+nyawa,목숨,Helm bisa menyelamatkan nyawa Anda.,헬멧이 당신의 목숨을 구할 수 있습니다.
+panik,당황하다/허둥대다,"Jangan panik, ikuti petunjuk petugas.",당황하지 말고 담당자 안내를 따르세요.
+tetap tenang,침착함을 유지하다,Tetap tenang saat terjadi gempa.,지진이 나면 침착하세요.
+berlindung,몸을 피하다/대피하다,Berlindunglah di bawah meja saat gempa.,지진이 나면 책상 아래로 몸을 피하세요.
+mengunci,잠그다,Jangan lupa mengunci pintu sebelum tidur.,자기 전에 문 잠그는 것 잊지 마세요.
+melapor,신고하다,Segera melapor ke polisi kalau melihat hal yang mencurigakan.,수상한 것을 보면 바로 경찰에 신고하세요.
+mencurigakan,수상한,Ada orang mencurigakan di depan rumah.,집 앞에 수상한 사람이 있다.
+kekerasan,폭력,Kekerasan dalam rumah tangga harus dilaporkan.,가정 폭력은 신고해야 한다.
+perkelahian,싸움 (몸싸움),Terjadi perkelahian di depan warung.,가게 앞에서 싸움이 벌어졌다.
+penculikan,납치,Kasus penculikan anak itu sudah terungkap.,그 아동 납치 사건은 이미 해결되었다.
+ancaman,위협/협박,Dia melapor karena mendapat ancaman.,그는 협박을 받아 신고했다.
+kecelakaan lalu lintas,교통사고,Kecelakaan lalu lintas sering terjadi saat mudik.,귀성길에는 교통사고가 자주 난다.
+tabrak lari,뺑소니,Polisi mencari pelaku tabrak lari itu.,경찰이 그 뺑소니범을 찾고 있다.
+pelaku,범인/가해자,Pelaku pencurian itu tertangkap kamera.,그 절도범이 카메라에 찍혔다.
+CCTV,감시 카메라 (CCTV),Kejadian itu terekam CCTV toko.,그 일은 가게 CCTV에 찍혔다.
+gempa susulan,여진,Gempa susulan masih terasa sampai pagi.,여진이 아침까지 계속 느껴졌다.
+banjir bandang,급류 홍수/돌발 홍수,Banjir bandang menghanyutkan jembatan desa.,갑작스러운 홍수가 마을 다리를 휩쓸어 갔다.
+kebakaran hutan,산불,Kebakaran hutan menimbulkan kabut asap.,산불로 연무가 생겼다.
+kabut asap,연무 (산불 연기),Sekolah diliburkan karena kabut asap.,연무 때문에 학교가 휴교했다.
+peringatan dini,조기 경보,Sistem peringatan dini tsunami sudah dipasang.,쓰나미 조기 경보 시스템이 설치되었다.
+siaga,경계 태세/비상 대기,Status gunung itu naik menjadi siaga.,그 화산의 경보 단계가 경계 단계로 올라갔다.
+posko,대책 본부/현장 지원소,Bantuan dikumpulkan di posko bencana.,구호품은 재난 대책 본부에 모은다.
+relawan,자원봉사자,Banyak relawan datang membantu korban banjir.,많은 자원봉사자가 홍수 피해자를 도우러 왔다.
+donasi,기부/성금,Kami mengumpulkan donasi untuk korban gempa.,우리는 지진 피해자를 위한 성금을 모았다.
+asuransi,보험,Untungnya mobil itu punya asuransi.,다행히 그 차는 보험에 들어 있었다.
+napas buatan,인공호흡,Petugas memberi napas buatan kepada korban tenggelam.,담당자가 물에 빠진 사람에게 인공호흡을 했다.
+tidak sadarkan diri,의식을 잃다,Korban ditemukan tidak sadarkan diri.,피해자는 의식을 잃은 채 발견되었다.
+sadar,의식이 있는/정신이 든,Pasien itu sudah sadar pagi ini.,그 환자는 오늘 아침 의식을 되찾았다.
+lift,엘리베이터,Jangan memakai lift saat kebakaran.,화재 시에는 엘리베이터를 쓰지 마세요.
+terjebak,갇히다,Dua orang terjebak di dalam lift.,두 사람이 엘리베이터에 갇혔다.
+runtuh,무너지다,Bangunan tua itu runtuh saat gempa.,그 오래된 건물이 지진 때 무너졌다.
+meledak,폭발하다,Tabung gas itu meledak di dapur.,가스통이 부엌에서 폭발했다.
+ledakan,폭발,Suara ledakan terdengar sampai jauh.,폭발음이 멀리까지 들렸다.
+jaga diri,몸조심하다,Jaga diri baik-baik di negeri orang.,타국에서 몸조심 잘하세요.
+rawan,(사고·재해가) 잦은/위험한,Daerah itu rawan banjir.,그 지역은 홍수가 잦다.
+dilarang masuk,출입 금지,Dilarang masuk tanpa izin.,허가 없이 출입 금지.
