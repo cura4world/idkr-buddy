@@ -306,7 +306,7 @@ const Dictionary = () => {
       return;
     }
     inputRef.current?.blur();
-    setQuery("");
+    setQuery(w); // 찾은 말을 검색창에 남겨 둡니다 (시안 D4, QA Q10)
     const detected = detectInputKind(w);
     const cacheKey = dictCacheKey(detected, w);
 
@@ -708,8 +708,9 @@ const Dictionary = () => {
           </button>
         </div>
 
-        {/* 최근 검색어 — 본문 위에 떠있는 플로팅 박스 (상단 기본 화면에는 같은 목록이 이미 있어 안 띄웁니다) */}
-        {showHistory && !isHome && query.trim() === "" && history.length > 0 ? (
+        {/* 최근 검색어 — 본문 위에 떠있는 플로팅 박스 (상단 기본 화면에는 같은 목록이 이미 있어 안 띄웁니다)
+            검색창에 방금 찾은 말이 남아 있어도(Q10) 고치기 전까지는 목록을 띄웁니다. */}
+        {showHistory && !isHome && (query.trim() === "" || query.trim() === lastTerm) && history.length > 0 ? (
           <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl bg-card shadow-[0_10px_24px_-8px_rgba(8,32,38,0.35)]">
             {history.slice(0, 10).map((term, i, arr) => (
               <button
