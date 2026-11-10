@@ -126,7 +126,7 @@ const InsightTips = () => {
 
   const startPress = (id: string) => {
     pressTimer.current = setTimeout(() => {
-      if (confirm("이 정보를 삭제할까요?")) {
+      if (confirm("이 정보를 삭제하시겠습니까?")) {
         deleteTip(id);
         setTips((prev) => prev.filter((t) => t.id !== id));
       }
@@ -139,7 +139,7 @@ const InsightTips = () => {
 
   return (
     <div className="min-h-screen bg-background px-4 pt-4 pb-28 max-w-lg mx-auto">
-      <header className="flex items-center gap-2 mb-3">
+      <header className="sticky top-0 z-30 -mx-4 -mt-4 mb-4 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => goBackOr(navigate, location.key, "/insight")}
           className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-black/5 active:bg-black/10 -ml-1"
@@ -154,7 +154,7 @@ const InsightTips = () => {
       <button
         onClick={handleGenerate}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-gothic font-semibold bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 disabled:opacity-60 active:scale-[0.99] transition-transform mb-5"
+        className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-gothic font-semibold bg-[#2C6D63] text-white disabled:opacity-60 active:scale-[0.99] transition-transform mb-5"
       >
         {loading ? (
           <>
@@ -174,7 +174,7 @@ const InsightTips = () => {
           <p className="text-sm font-gothic text-muted-foreground leading-relaxed">
             아직 정보가 없습니다.
             <br />
-            위 버튼을 눌러 첫 번째 정보를 열어보세요.
+            위 버튼을 눌러 첫 번째 정보를 열어 보세요.
           </p>
         </div>
       )}
@@ -188,7 +188,7 @@ const InsightTips = () => {
             onPointerDown={() => startPress(t.id)}
             onPointerUp={cancelPress}
             onPointerLeave={cancelPress}
-            className="bg-card rounded-2xl border border-emerald-300/50 overflow-hidden select-none"
+            className="bg-card rounded-2xl border border-[#E3E8EB] overflow-hidden select-none"
           >
             {/* 제목 행 (항상 보임, 탭하면 토글) */}
             <button
@@ -199,7 +199,7 @@ const InsightTips = () => {
               <h2 className={"flex-1 min-w-0 text-sm font-semibold text-gray-900 leading-snug " + (isOpen ? "" : "truncate")}>{t.title}</h2>
               <ChevronDown
                 size={17}
-                className={"text-emerald-500 shrink-0 transition-transform " + (isOpen ? "rotate-180" : "")}
+                className={"text-[#2C6D63] shrink-0 transition-transform " + (isOpen ? "rotate-180" : "")}
               />
             </button>
 
@@ -209,23 +209,23 @@ const InsightTips = () => {
                 <p className="text-sm font-gothic text-gray-700 leading-relaxed">{t.body}</p>
 
                 {t.indo && (
-                  <div className="mt-2.5 flex items-center gap-2 bg-emerald-500/[0.07] rounded-xl px-3 py-2">
+                  <div className="mt-2.5 flex items-center gap-2 bg-[#E2F1EC] rounded-xl px-3 py-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-word text-[0.9375rem] text-emerald-900 leading-snug">{t.indo}</p>
+                      <p className="font-word text-[0.9375rem] text-[#104B60] leading-snug">{t.indo}</p>
                       {t.indoKo && (
                         <p className="text-xs font-gothic text-gray-500 mt-0.5">{t.indoKo}</p>
                       )}
                     </div>
                     <button
                       onClick={() => openInDictionary(t.indo as string)}
-                      className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center shrink-0 active:bg-emerald-500/20"
+                      className="w-7 h-7 rounded-full bg-white text-[#2C6D63] flex items-center justify-center shrink-0 active:opacity-80"
                       title="사전에서 보기"
                     >
                       <BookOpen size={13} />
                     </button>
                     <button
                       onClick={() => speak(t.indo as string, "id")}
-                      className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center shrink-0 active:bg-emerald-500/20"
+                      className="w-7 h-7 rounded-full bg-white text-[#2C6D63] flex items-center justify-center shrink-0 active:opacity-80"
                       title="발음 듣기"
                     >
                       <Volume2 size={13} />
