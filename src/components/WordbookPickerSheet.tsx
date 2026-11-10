@@ -55,7 +55,7 @@ export default function WordbookPickerSheet({ open, onOpenChange, targetId, onPi
           <div className="fixed inset-0 z-40 bg-black/40" onClick={() => onOpenChange(false)} />
           <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
             <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
-            <h2 className="px-4 pb-3 text-sm font-semibold text-foreground">어디에 담을까요?</h2>
+            <h2 className="px-4 pb-3 text-sm font-semibold text-foreground">담을 단어장을 고르세요</h2>
             <div className="max-h-[45vh] overflow-y-auto border-t border-border">
               {targets.length === 0 ? (
                 <p className="px-4 py-4 text-[0.75rem] leading-relaxed text-muted-foreground">
