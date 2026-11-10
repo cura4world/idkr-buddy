@@ -176,7 +176,9 @@ const Percakapan = () => {
     } catch (e: any) {
       setCreating(false);
       const code = (e && e.message) || "";
-      if (code === "NO_API_KEY") toast.error("설정에서 Gemini API 키를 넣어 주세요");
+      // QUOTA_*: 오늘 만들 회화를 다 만들었거나 Plus 기능 — 안내는 aiProxy 가 이미 띄웠습니다.
+      if (code.indexOf("QUOTA") === 0) { /* 겹쳐 띄우지 않음 */ }
+      else if (code === "NO_API_KEY") toast.error("설정에서 Gemini API 키를 넣어 주세요");
       else if (code === "INVALID_API_KEY") toast.error("Gemini API 키가 맞지 않습니다");
       else if (code === "RATE_LIMIT") toast.error("요청이 많습니다. 잠시 뒤에 다시 해주세요");
       else if (code === "TIMEOUT") toast.error("시간이 너무 오래 걸려 멈췄습니다");
