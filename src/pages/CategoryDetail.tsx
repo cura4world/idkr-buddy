@@ -21,8 +21,40 @@ import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { GROUP_STYLES, GroupKey, groupOf, bookTitle, bookNumberText, displayMeaning } from "@/lib/wordbookGroups";
 import { loadIllustBook, hasIllustBook, IllustScene } from "@/lib/illust";
 import { useCompactPill } from "@/lib/useCompactPill";
+import { useBackClose } from "@/hooks/useBackClose";
 
 const MY_WORDBOOK_ID = "my-wordbook";
+
+/**
+ * useBackClose 가 칸을 쌓은 창·메뉴를 닫고, 그 칸이 히스토리에서 빠진 뒤에 next 를 부릅니다(최대 0.5초).
+ * 닫을 때의 history.back() 은 비동기라, 곧바로 다른 창을 열거나(메뉴 → 이름 변경) 화면을 떠나면(삭제 → 뒤로)
+ * 늦게 도착한 back 이 새 창의 칸을 빼거나 이동을 삼킵니다.
+ */
+function closeThen(close: () => void, next: () => void): void {
+  const entryOf = (): unknown => {
+    try {
+      const s = window.history.state as Record<string, unknown> | null;
+      return s ? s.kataBackClose : null;
+    } catch (e) {
+      return null;
+    }
+  };
+  const before = entryOf();
+  close();
+  if (!before) {
+    next();
+    return;
+  }
+  const start = Date.now();
+  const tick = () => {
+    if (entryOf() !== before || Date.now() - start > 500) {
+      next();
+      return;
+    }
+    window.setTimeout(tick, 16);
+  };
+  window.setTimeout(tick, 0);
+}
 // 묶기 권유 배너를 닫은 시점의 단어 수. 이보다 50개 더 모이면 다시 띄웁니다.
 const NUDGE_KEY = "my-archive-nudge-at";
 const NUDGE_MIN = 30;
@@ -180,6 +212,11 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   const [menuOpen, setMenuOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteCatOpen, setDeleteCatOpen] = useState(false);
+  // 폰 뒤로가기는 창·메뉴만 닫습니다(QA Q03). 단어 추가·고치기·CSV·단어장 만들기·이름 변경 창은 창 쪽에서 처리합니다.
+  useBackClose(menuOpen, () => setMenuOpen(false));
+  useBackClose(archiveOpen, () => setArchiveOpen(false));
+  useBackClose(moveOpen, () => setMoveOpen(false));
+  useBackClose(deleteCatOpen, () => setDeleteCatOpen(false));
   // 기본 단어장 색연필 그림 (그 권의 파일만, 열 때 받아 옴)
   const [scenes, setScenes] = useState<Record<string, IllustScene>>({});
   const plan = usePlan();
@@ -843,9 +880,13 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   const handleDeleteCategory = () => {
     cancelLongPress();
     stopAutoScroll();
-    deleteCategory(category.id);
-    toast("'" + category.name + "' 단어장을 삭제했습니다");
-    goBackOr(navigate, location.key, "/category/" + MY_WORDBOOK_ID);
+    const target = category;
+    // 창이 쌓은 히스토리 칸이 빠진 뒤에 지우고 떠납니다(먼저 떠나면 늦게 온 back 이 이동을 삼킴).
+    closeThen(() => setDeleteCatOpen(false), () => {
+      deleteCategory(target.id);
+      toast("'" + target.name + "' 단어장을 삭제했습니다");
+      goBackOr(navigate, location.key, "/category/" + MY_WORDBOOK_ID);
+    });
   };
 
   const menuItems: { label: string; onClick: () => void; danger?: boolean }[] = isMine
@@ -939,7 +980,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
                     <button
                       key={m.label}
                       type="button"
-                      onClick={() => { setMenuOpen(false); m.onClick(); }}
+                      onClick={() => closeThen(() => setMenuOpen(false), m.onClick)}
                       className={"flex w-full items-center px-4 py-3 text-left font-gothic text-[0.875rem] active:bg-muted " + (m.danger ? "text-destructive" : "text-popover-foreground")}
                     >
                       {m.label}
