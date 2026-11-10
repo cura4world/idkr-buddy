@@ -5,7 +5,7 @@
 // 주의: gemini.ts 를 import 하지 않습니다. gemini.ts 가 이 파일을 import 하므로
 // 순환 참조를 피하기 위해 API 키는 localStorage 에서 직접 읽습니다.
 
-import { geminiTarget, handleQuotaResponse, lastQuotaCode, AiKind } from "@/lib/aiProxy";
+import { geminiTarget, handleQuotaResponse, lastQuotaCode, publicProxyError, AiKind } from "@/lib/aiProxy";
 const KEY_STORAGE = "geminiApiKey";
 
 function readApiKey(): string {
@@ -107,6 +107,9 @@ async function callOnce(
 
   // 한도 초과·Plus 필요: 서버 코드(QUOTA_STORY·QUOTA_DICT_NEW·QUOTA_PLUS_REQUIRED …)로 던집니다. 재시도하지 않습니다.
   if (await handleQuotaResponse(res, target.viaProxy)) throw new Error(lastQuotaCode());
+  // 공개판 서버의 401(세션 만료)·403(허용 안 됨)은 키 오류가 아닙니다 — 공개판 전용 코드로.
+  const pubErr = publicProxyError(res, target);
+  if (pubErr) throw new Error(pubErr);
   if (!res.ok) {
     if (res.status === 403) throw new Error("INVALID_API_KEY");
     if (res.status === 400) throw new Error("BAD_REQUEST");
