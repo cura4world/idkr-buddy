@@ -11,6 +11,8 @@ import {
   refreshMe,
   signInWithGoogle,
   signInErrorText,
+  takeSessionExpired,
+  SESSION_EXPIRED_TEXT,
   PublicSession,
 } from "@/lib/account";
 import { autoRestoreOnce } from "@/lib/billing";
@@ -18,7 +20,8 @@ import { isPreview } from "@/lib/preview";
 
 const SignInScreen = () => {
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
+  // 서버가 세션을 받지 않아(401) 로그인 화면으로 돌아온 것이면 그 사실을 먼저 알려 줍니다.
+  const [msg, setMsg] = useState(() => (takeSessionExpired() ? SESSION_EXPIRED_TEXT : ""));
 
   const start = async () => {
     if (busy) return;
