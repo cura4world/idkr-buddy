@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from "react";
+import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
-import { ArrowLeft, Sparkles, Volume2, Loader2, Plus, Check, BookOpen, X, Maximize2, Minimize2, ChevronDown } from "lucide-react";
+import { ArrowLeft, Volume2, Loader2, BookOpen, Lock, Lightbulb, Maximize2, Minimize2 } from "lucide-react";
 import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
 import { generateStory, quickLookupWord, StoryDifficulty } from "@/lib/story";
@@ -10,6 +11,8 @@ import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
+import WordMiniSheet from "@/components/WordMiniSheet";
+import LevelCircles from "@/components/LevelCircles";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import PlayButton from "@/components/PlayButton";
@@ -20,9 +23,24 @@ import PointFloat from "@/components/PointFloat";
 import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
 import AiReportButton from "@/components/AiReportButton";
+import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 
 const DIFF_KEY = "story-difficulty";
-const DIFFS: StoryDifficulty[] = ["하", "중", "상"];
+// 서버가 "오늘 한도를 다 썼다"고 알려 준 날 (한국 시간 기준 "YYYY-MM-DD")
+const QUOTA_DAY_KEY = "story-quota-day";
+
+// 시안(ST1~ST5) 색
+const C = {
+  txt: "#1D1F1E",
+  sub: "#646C72",
+  mute: "#9AA1A6",
+  deep: "#104B60",
+  teal: "#2C6D63",
+  amberBg: "#FCEFD9",
+  amberFg: "#8C5A12",
+  greyBg: "#F1F4F5",
+};
+const CARD_STYLE = { background: "#FFFFFF", borderRadius: 20, boxShadow: "0 1px 3px rgba(16,40,50,0.06)" };
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
 const speak = (text: string, lang: "id" | "ko" = "id") => {
@@ -40,26 +58,70 @@ const speak = (text: string, lang: "id" | "ko" = "id") => {
   } catch (e) {}
 };
 
+/** 한국 시간 기준 날짜 ("하루"는 한국 시간 자정 기준 — 결정 문서) */
+const kstDay = (t: number) => new Date(t + 9 * 3600 * 1000).toISOString().slice(0, 10);
+
+/** 목록 날짜: 오늘 / 어제 / 11월 7일 (해가 다르면 2025년 11월 7일) */
 const fmtDate = (t: number) => {
   const d = new Date(t);
-  return d.getFullYear() + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + String(d.getDate()).padStart(2, "0");
+  const now = new Date();
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((startOf(now) - startOf(d)) / 86400000);
+  if (diff === 0) return "오늘";
+  if (diff === 1) return "어제";
+  const md = d.getMonth() + 1 + "월 " + d.getDate() + "일";
+  return d.getFullYear() === now.getFullYear() ? md : d.getFullYear() + "년 " + md;
 };
+
+/** 카테고리 칩: "인도네시아 문화" → "문화" */
+const shortCat = (c: string) => (c || "").replace("인도네시아 ", "").trim() || c;
+
+const Chip = ({ children, tone }: { children: ReactNode; tone: "amber" | "grey" }) => (
+  <span
+    className="h-[22px] px-[9px] rounded-full flex items-center font-gothic text-[0.71875rem] font-semibold whitespace-nowrap min-w-0 truncate"
+    style={tone === "amber" ? { background: C.amberBg, color: C.amberFg } : { background: C.greyBg, color: C.sub }}
+  >
+    {children}
+  </span>
+);
+
+// 펼친 책 그림 (시안 BOOK_ART — 진한 색, 반짝이 없음)
+const BookArt = () => (
+  <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true">
+    <path d="M5 13c6-3 13-3 19 2v24c-6-5-13-5-19-2z" fill="#E9B46A" />
+    <path d="M43 13c-6-3-13-3-19 2v24c6-5 13-5 19-2z" fill="#F2C987" />
+    <path d="M24 15v24" stroke="#9C6424" strokeWidth="1.8" />
+    <path
+      d="M9 19c4-1.6 8-1.4 11 .6M9 24c4-1.6 8-1.4 11 .6M28 19.6c3-2 7-2.2 11-.6M28 24.6c3-2 7-2.2 11-.6"
+      stroke="#9C6424"
+      strokeWidth="1.4"
+      fill="none"
+      strokeLinecap="round"
+      opacity="0.75"
+    />
+  </svg>
+);
 
 const Story = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { widthClass, canWide, wide, toggle } = useWideMode();
+  const plan = usePlan();
   const [stories, setStories] = useState<StoryRecord[]>([]);
   const [difficulty, setDifficulty] = useState<StoryDifficulty>(() => {
-    const v = localStorage.getItem(DIFF_KEY);
+    let v: string | null = null;
+    try { v = localStorage.getItem(DIFF_KEY); } catch (e) {}
     return v === "하" || v === "중" || v === "상" ? v : "중";
   });
   const [generating, setGenerating] = useState(false);
   const [current, setCurrent] = useState<StoryRecord | null>(null);
   const [flipped, setFlipped] = useState(false);
+  const [quotaDay, setQuotaDay] = useState<string>(() => {
+    try { return localStorage.getItem(QUOTA_DAY_KEY) || ""; } catch (e) { return ""; }
+  });
 
   // ---------- 읽기 점수 (보이지 않는 타이머) ----------
-  // 화면에는 아무 표시도 없고, 한국어 면을 처음 여는 순간에만 "+N"이 한 번 뜽니다.
+  // 화면에는 아무 표시도 없고, 한국어 면을 처음 여는 순간에만 "+N"이 한 번 뜹니다.
   const trackerRef = useRef<ReadingTracker | null>(null);
   const [floatVal, setFloatVal] = useState(0);
   const [floatSeq, setFloatSeq] = useState(0);
@@ -91,6 +153,15 @@ const Story = () => {
     if (current && flipped) t.koreanOpened();
   }, [flipped, current]);
 
+  // ---------- 무료: 듣기 잠금 안내 말풍선 ----------
+  const [lockTip, setLockTip] = useState(false);
+  const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+    };
+  }, []);
+
   // 앞/뒤 문단 DOM 참조 (뒤집을 때 읽던 문단으로 스크롤 맞추기)
   const paraRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
   const pendingPara = useRef<number | null>(null);
@@ -119,6 +190,7 @@ const Story = () => {
   const handleFlip = () => {
     const side = flipped ? "ko" : "id";
     pendingPara.current = currentParaIndex(side);
+    setLockTip(false);
     setFlipped((f) => !f);
   };
 
@@ -145,6 +217,7 @@ const Story = () => {
 
   // 단어 미니 팝업
   const [popupWord, setPopupWord] = useState<string | null>(null);
+  const [popupTok, setPopupTok] = useState(""); // 누른 단어 자리 (본문에서 표시)
   const [popupSentence, setPopupSentence] = useState("");
   const [popupLoading, setPopupLoading] = useState(false);
   const [popupMeaning, setPopupMeaning] = useState("");
@@ -211,6 +284,7 @@ const Story = () => {
     wordCache.current.clear();
     setCurrent(rec);
     setFlipped(false);
+    setLockTip(false);
     paraRefs.current = {};
     pendingPara.current = null;
     if (!cardStateRef.current) {
@@ -224,6 +298,7 @@ const Story = () => {
     ttsPlayer.stop();
     setCurrent(null);
     setFlipped(false);
+    setLockTip(false);
     paraRefs.current = {};
     pendingPara.current = null;
     setPopupWord(null);
@@ -260,7 +335,7 @@ const Story = () => {
   }, []);
 
   // ---------- 돌아올 자리로 되돌리기 ----------
-  // 사전에 다녀오면 이 화면은 새로 마운트되어 목록으로 돌아갑니다.
+  // 사전(또는 구독 화면)에 다녀오면 이 화면은 새로 마운트되어 목록으로 돌아갑니다.
   // 표가 있으면 보던 이야기 카드를 다시 열고, 면과 스크롤까지 되돌립니다.
   const pendingReturnRef = useRef<{ y: number; flipped: boolean } | null>(null);
   const cancelRestoreRef = useRef<(() => void) | null>(null);
@@ -302,10 +377,19 @@ const Story = () => {
     try { localStorage.setItem(DIFF_KEY, d); } catch {}
   };
 
+  // ---------- 오늘 더 불러올 수 있는가 ----------
+  // 무료는 하루 1편(한국 시간 자정 기준). 서버가 한도를 세고, 화면은 이 기기의 기록과
+  // 서버가 돌려준 한도 초과(QUOTA)를 보고 미리 막아 둡니다.
+  const today = kstDay(Date.now());
+  const madeToday = stories.some((s) => kstDay(s.createdAt) === today);
+  const quotaToday = quotaDay === today;
+  const freeUsed = !plan.plus && (madeToday || quotaToday);
+  const blocked = freeUsed || quotaToday;
+
   const handleGenerate = async () => {
-    if (generating) return;
+    if (generating || blocked) return;
     if (!hasGeminiApiKey()) {
-      toast("Gemini API 키가 필요합니다. 설정에서 입력해주세요");
+      toast("Gemini API 키가 필요합니다. 설정에서 입력하세요");
       return;
     }
     setGenerating(true);
@@ -317,12 +401,34 @@ const Story = () => {
       openCard(rec);
     } catch (e: any) {
       const code = e?.message || "";
-      if (code === "RATE_LIMIT") toast("요청이 많습니다. 잠시 후 다시 시도해주세요");
-      else if (code === "NO_API_KEY" || code === "INVALID_API_KEY") toast("API 키를 설정에서 확인해주세요");
-      else toast("이야기 생성에 실패했습니다. 다시 시도해주세요");
+      if (code === "QUOTA") {
+        // 서버가 오늘 한도를 다 썼다고 알려 왔습니다. 오늘은 버튼을 막고 버튼 아래에 안내를 둡니다.
+        // (토스트는 aiProxy 가 이미 한 번 띄우므로 여기서는 더 띄우지 않습니다)
+        try { localStorage.setItem(QUOTA_DAY_KEY, today); } catch (err) {}
+        setQuotaDay(today);
+      } else if (code === "RATE_LIMIT") toast("요청이 많습니다. 잠시 후 다시 시도하세요");
+      else if (code === "NO_API_KEY" || code === "INVALID_API_KEY") toast("API 키를 설정에서 확인하세요");
+      else toast("이야기를 불러오지 못했습니다. 다시 시도하세요");
     } finally {
       setGenerating(false);
     }
+  };
+
+  const goPaywall = () => {
+    // 카드를 보던 중이면 돌아올 자리를 적어 둡니다 (setState 없이 이동만)
+    if (current) writeReturnTicket("story", current.id, currentScrollY(), flipped);
+    navigate(PAYWALL_PATH);
+  };
+
+  // 무료: 잠긴 "듣기" — 처음 누르면 안내 말풍선, 말풍선이 떠 있을 때 한 번 더 누르면 구독 화면
+  const onLockedListen = () => {
+    if (lockTip) {
+      goPaywall();
+      return;
+    }
+    setLockTip(true);
+    if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+    lockTimerRef.current = setTimeout(() => setLockTip(false), 2800);
   };
 
   // 단어 탭 → 미니 팝업
@@ -333,10 +439,10 @@ const Story = () => {
   const openPhrasePopup = () => {
     const s = takeSelPhrase();
     if (!s.phrase) return;
-    openWordPopup(s.phrase, s.sentence);
+    openWordPopup(s.phrase, s.sentence, "");
   };
 
-  const openWordPopup = async (rawToken: string, sentence: string) => {
+  const openWordPopup = async (rawToken: string, sentence: string, tokKey: string) => {
     if (shouldIgnoreTap()) return;
     // 글자를 고르는 중이면 팝업을 열지 않습니다
     // (선택을 끝내며 나는 탭이 단어 팝업을 잘못 여는 것을 막습니다)
@@ -348,6 +454,7 @@ const Story = () => {
     const key = word.toLowerCase();
     const reqId = ++popupReqId.current;
     setPopupWord(word);
+    setPopupTok(tokKey);
     setPopupSentence(sentence);
     // 이미 대상 단어장에 있는 단어면 처음부터 "저장됨"으로 표시
     setPopupSaved(!!saveTargetId && hasWordInCategory(saveTargetId, word));
@@ -396,14 +503,9 @@ const Story = () => {
       });
   };
 
-  const copyPopupWord = async () => {
-    if (!popupWord) return;
-    try {
-      await navigator.clipboard.writeText(popupWord);
-      toast("복사되었습니다");
-    } catch (e) {
-      toast("복사에 실패했어요");
-    }
+  const closePopup = () => {
+    setPopupWord(null);
+    setPopupTok("");
   };
 
   const openInDictionary = () => {
@@ -430,17 +532,27 @@ const Story = () => {
   };
 
   // 인니어 텍스트를 단어 단위로 쪼개 탭 가능하게 렌더링 (제목/본문 공용)
+  // 단어마다 옅은 점선 밑줄, 지금 뜻을 보고 있는 단어는 귤색 바탕 (시안 ST3)
   const renderTokens = (text: string, keyPrefix: string) =>
-    text.split(" ").map((tok, ti) => (
-      <span key={keyPrefix + ti} data-idw="1">
-        <span
-          onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
-          className="cursor-pointer rounded active:bg-primary/20"
-        >
-          {tok}
-        </span>{" "}
-      </span>
-    ));
+    text.split(" ").map((tok, ti) => {
+      const k = keyPrefix + ti;
+      const on = !!popupWord && popupTok === k;
+      return (
+        <span key={k} data-idw="1">
+          <span
+            onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text, k); }}
+            className="cursor-pointer active:bg-primary/20"
+            style={
+              on
+                ? { background: "#FCEFD9", borderRadius: 4, padding: "0 2px", borderBottom: "2px solid #E0A85A" }
+                : { borderBottom: "1px dotted rgba(16,75,96,0.28)" }
+            }
+          >
+            {tok}
+          </span>{" "}
+        </span>
+      );
+    });
 
   // 인니어 본문을 문단→문장→단어로 쪼개 탭 가능하게 렌더링
   const renderIndonesian = (text: string) => {
@@ -451,7 +563,8 @@ const Story = () => {
         <p
           key={pi}
           ref={(el) => { paraRefs.current["id-" + pi] = el; }}
-          className="mb-4 text-base leading-relaxed font-word text-gray-900"
+          className={"font-word text-[1.0625rem] leading-[1.85] " + (pi === 0 ? "mt-3.5" : "mt-3")}
+          style={{ color: C.txt }}
         >
           {sentences.map((sent, si) => (
             <span key={si}>{renderTokens(sent, pi + "-" + si + "-")}</span>
@@ -466,106 +579,133 @@ const Story = () => {
       <p
         key={i}
         ref={(el) => { paraRefs.current["ko-" + i] = el; }}
-        className="mb-4 text-xs leading-relaxed text-gray-800 font-gothic"
+        className={"text-[1rem] leading-[1.85] break-words " + (i === 0 ? "mt-3" : "mt-2.5")}
+        style={{ color: C.txt }}
       >
         {para}
       </p>
     ));
+
+  const header = (onBack: () => void, backTitle: string) => (
+    <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
+      <button
+        onClick={onBack}
+        className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+        title={backTitle}
+      >
+        <ArrowLeft size={20} />
+      </button>
+      <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">CERITA INDONESIA</h1>
+      {canWide ? (
+        <button
+          type="button"
+          onClick={toggle}
+          className="shrink-0 w-9 h-9 flex items-center justify-center text-muted-foreground active:text-foreground"
+          title={wide ? "원래 크기로" : "넓게 보기"}
+          aria-label={wide ? "원래 크기로" : "넓게 보기"}
+        >
+          {wide ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+        </button>
+      ) : null}
+    </header>
+  );
 
   // ---------- 카드 뷰 ----------
   if (current) {
     return (
       <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
         <PointFloat value={floatVal} seq={floatSeq} />
-        <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
-          <button
-            onClick={closeCard}
-            className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
-            title="목록으로"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="flex-1 min-w-0 truncate font-word text-[1.0625rem] font-semibold tracking-[0.06em]">CERITA INDONESIA</h1>
-          {canWide ? (
-            <button
-              type="button"
-              onClick={toggle}
-              className="shrink-0 w-9 h-9 flex items-center justify-center text-muted-foreground active:text-foreground"
-              title={wide ? "원래 크기로" : "넓게 보기"}
-              aria-label={wide ? "원래 크기로" : "넓게 보기"}
-            >
-              {wide ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-            </button>
-          ) : null}
-        </header>
+        {header(closeCard, "목록으로")}
 
-        <div className="px-4 py-4">
-          <div
-            {...swipeHandlers}
-            className="-mx-4 bg-card border-y border-border/60 px-4 py-5 min-h-[72vh] content-bump"
-          >
+        {/* 화면 전체에서 옆으로 밀면 뒤집힙니다 (카드 아래 빈 곳 포함) */}
+        <div {...swipeHandlers} className="px-4 pt-4 pb-6" style={{ minHeight: "calc(100dvh - 61px)" }}>
+          <div className="relative" style={CARD_STYLE}>
             {!flipped ? (
-              <>
+              <div style={{ padding: "18px 18px 22px" }}>
                 {/* 앞면: 인니어 본문 */}
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 truncate">{current.category}</span>
-                  <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5 shrink-0">난이도 {current.difficulty}</span>
-                  <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <PlayButton
-                      cacheKey={"story-v2-" + current.id}
-                      text={[current.title, current.indonesian].filter(Boolean).join("\n\n")}
-                      label="듣기"
-                    />
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Chip tone="amber">{shortCat(current.category)}</Chip>
+                  <Chip tone="grey">난이도 {current.difficulty}</Chip>
+                  <span className="flex-1" />
+                  <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {plan.plus ? (
+                      <PlayButton
+                        cacheKey={"story-v2-" + current.id}
+                        text={[current.title, current.indonesian].filter(Boolean).join("\n\n")}
+                        label="듣기"
+                        className="!h-[34px] !px-[13px] !py-0 !text-[0.78125rem] !font-semibold !bg-[#E2F1EC] !text-[#2C6D63] font-gothic"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={onLockedListen}
+                        className="h-[34px] px-3 rounded-full flex items-center gap-1.5 font-gothic text-[0.78125rem] font-semibold"
+                        style={{ background: C.greyBg, color: "#8F7E4E" }}
+                        aria-label="듣기 (Plus 회원 기능)"
+                      >
+                        <Lock size={14} strokeWidth={2} />
+                        듣기
+                      </button>
+                    )}
                   </span>
                 </div>
-                <div className="mb-3 min-w-0">
-                  <h2 className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">
-                    {renderTokens(current.title, "title-")}
-                  </h2>
-                </div>
+                <h2
+                  className="mt-3.5 font-word text-[1.375rem] font-semibold leading-[1.35] break-words min-w-0"
+                  style={{ color: C.deep }}
+                >
+                  {renderTokens(current.title, "title-")}
+                </h2>
                 {renderIndonesian(current.indonesian)}
-              </>
+                {lockTip ? (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); goPaywall(); }}
+                    className="absolute z-10 right-[6px] top-[59px] px-3 py-2 rounded-xl font-gothic text-[0.78125rem] text-left"
+                    style={{
+                      background: "rgba(226,231,234,0.96)",
+                      color: "#4D565B",
+                      boxShadow: "0 2px 8px rgba(16,40,50,0.08)",
+                    }}
+                  >
+                    소리 읽기는 Plus 회원 기능입니다
+                  </button>
+                ) : null}
+              </div>
             ) : (
-              <>
-                {/* 뒷면: 한국어 번역 + 단어 학습 */}
-                <h2 className="text-sm font-bold text-gray-900 break-words mb-3">{current.titleKo}</h2>
+              <div style={{ padding: 18 }}>
+                {/* 뒷면: 한국어 번역 + 배경 설명 */}
+                <h2 className="text-[1.125rem] font-semibold break-words" style={{ color: C.txt }}>{current.titleKo}</h2>
                 {renderKorean(current.korean)}
                 {current.background && current.background.length > 0 ? (
-                  <>
-                    <div className="border-t border-gray-200 my-4" />
-                    <div className="rounded-lg bg-black/[0.04] px-3 py-3">
-                      <p className="text-xs font-bold text-gray-900 font-gothic mb-2">💡 이 글을 더 이해하려면</p>
-                      {current.background.map((b, i) => (
-                        <p
-                          key={i}
-                          className={
-                            "text-xs text-gray-700 font-gothic leading-relaxed" +
-                            (i < current.background!.length - 1 ? " mb-2" : "")
-                          }
-                        >
-                          {b.heading && (
-                            <span className="font-semibold text-gray-900">{b.heading} · </span>
-                          )}
-                          {b.body}
-                        </p>
-                      ))}
-                    </div>
-                  </>
+                  <div className="mt-[18px] rounded-[14px]" style={{ background: "#FBF5E6", padding: "14px 14px 12px" }}>
+                    <p className="flex items-center gap-1.5 font-gothic text-[0.8125rem] font-bold" style={{ color: "#6E5612" }}>
+                      <Lightbulb size={15} strokeWidth={1.9} className="shrink-0" />
+                      이 글을 더 이해하려면
+                    </p>
+                    {current.background.map((b, i) => (
+                      <p
+                        key={i}
+                        className={"font-gothic text-[0.8125rem] leading-[1.7] break-words " + (i === 0 ? "mt-2" : "mt-1.5")}
+                        style={{ color: "#3B3A35" }}
+                      >
+                        {b.heading && <b>{b.heading} · </b>}
+                        {b.body}
+                      </p>
+                    ))}
+                  </div>
                 ) : current.hardWords && current.hardWords.length > 0 ? (
-                  <>
+                  <div className="mt-[18px] rounded-[14px]" style={{ background: "#FBF5E6", padding: "12px 14px" }}>
                     {/* 예전에 만든 이야기 (단어 정리) */}
-                    <div className="border-t border-gray-200 my-4" />
-                    <ul className="space-y-1.5 text-xs text-gray-800 font-gothic">
+                    <ul className="space-y-1.5 font-gothic text-[0.8125rem]" style={{ color: "#3B3A35" }}>
                       {current.hardWords.map((h, i) => (
                         <li key={i} className="flex gap-2 min-w-0 items-center">
-                          <span className="text-gray-400">•</span>
                           <span className="min-w-0 break-words">
-                            <span className="font-semibold text-gray-900">{h.word}</span>{" "}
-                            <span>{h.meaning}</span>
+                            <b>{h.word}</b> {h.meaning}
                           </span>
                           <button
                             onClick={(e) => { e.stopPropagation(); speak(h.word, "id"); }}
-                            className="shrink-0 text-primary/70 hover:text-primary"
+                            className="shrink-0"
+                            style={{ color: C.teal }}
                             title="발음 듣기"
                           >
                             <Volume2 size={13} />
@@ -573,7 +713,7 @@ const Story = () => {
                         </li>
                       ))}
                     </ul>
-                  </>
+                  </div>
                 ) : null}
                 {/* AI 이야기 신고 — 스토어 앱(공개판)에서만 보입니다. 카드 뒤집기와 겹치지 않게 클릭을 막습니다 */}
                 <div onClick={(e) => e.stopPropagation()}>
@@ -581,98 +721,36 @@ const Story = () => {
                     feature="story"
                     input={current.title}
                     output={current.indonesian}
-                    className="mt-4 pt-2 border-t border-gray-200"
+                    className="mt-4 pt-1.5 border-t border-[#EEF1F3]"
                   />
                 </div>
-              </>
+              </div>
             )}
           </div>
-          <p className="text-center text-muted-foreground text-xs mt-3">
-            {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 해석, 단어를 탭하면 뜻이 나옵니다"}
+          <p className="mt-3 text-center font-gothic text-[0.75rem]" style={{ color: C.mute }}>
+            {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 해석, 단어를 누르면 뜻이 나옵니다"}
           </p>
         </div>
 
         {/* 단어 미니 팝업 */}
         <PhraseFindBar phrase={selPhrase} onFind={openPhrasePopup} hidden={!!popupWord} widthClass={widthClass} />
         {popupWord && (
-          <div className="fixed inset-0 z-50" onClick={() => setPopupWord(null)}>
-            <div className="absolute inset-0 bg-black/40" />
-            <div
-              className={"absolute bottom-0 left-0 right-0 " + widthClass + " mx-auto bg-card rounded-t-2xl px-5 pt-5 pb-7"}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <p className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">{popupWord}</p>
-                <button
-                  onClick={() => speak(popupWord, "id")}
-                  className="shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center"
-                  title="발음 듣기"
-                >
-                  <Volume2 size={15} />
-                </button>
-                <span className="flex-1" />
-                <button
-                  onClick={() => setPopupWord(null)}
-                  className="shrink-0 w-8 h-8 rounded-full bg-black/5 text-gray-500 flex items-center justify-center"
-                  title="닫기"
-                >
-                  <X size={15} />
-                </button>
-              </div>
-              {popupLoading ? (
-                <div className="flex items-center gap-2 text-gray-400 mt-2 text-sm">
-                  <Loader2 size={15} className="animate-spin" /> 뜻을 찾고 있어요...
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm font-bold text-gray-900 mt-1.5 break-words font-gothic">{popupMeaning}</p>
-                  {popupInfo && (
-                    <p className="text-xs text-gray-500 mt-1 break-words font-gothic">{popupInfo}</p>
-                  )}
-                </>
-              )}
-              <div className="flex gap-2 mt-4">
-                <div className="flex-1 min-w-0 flex items-stretch overflow-hidden rounded-full text-xs font-medium">
-                  <button
-                    onClick={savePopupWord}
-                    disabled={popupSaved || popupLoading || !popupMeaning || isFailedMeaning(popupMeaning) || !saveTargetId}
-                    className={`flex-1 min-w-0 flex items-center justify-center gap-1 py-2 ${
-                      popupSaved || !saveTargetId ? "bg-gray-100 text-gray-400" : "bg-primary text-white disabled:opacity-50"
-                    }`}
-                  >
-                    {popupSaved ? <Check size={13} className="shrink-0" /> : <Plus size={13} className="shrink-0" />}
-                    <span className="truncate">
-                      {popupSaved ? "저장됨" : saveTargetId ? saveTargetName : "단어장을 먼저 만들어 주세요"}
-                    </span>
-                  </button>
-                  {/* 담긴 뒤에도 다른 단어장에는 담을 수 있어야 하므로 ⌄ 는 잠그지 않습니다 */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); openPicker(); }}
-                    title="담을 단어장 고르기"
-                    className={`shrink-0 flex items-center px-2.5 border-l ${
-                      popupSaved || !saveTargetId
-                        ? "border-gray-200 bg-gray-100 text-gray-400"
-                        : "border-white/30 bg-primary text-white"
-                    }`}
-                  >
-                    <ChevronDown size={13} />
-                  </button>
-                </div>
-                <button
-                  onClick={copyPopupWord}
-                  className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-gray-700"
-                >
-                  복사
-                </button>
-                <button
-                  onClick={openInDictionary}
-                  className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-gray-700"
-                >
-                  사전에서 보기
-                </button>
-              </div>
-            </div>
-          </div>
+          <WordMiniSheet
+            word={popupWord}
+            loading={popupLoading}
+            meaning={popupMeaning}
+            info={popupInfo}
+            saved={popupSaved}
+            saveDisabled={popupLoading || !popupMeaning || isFailedMeaning(popupMeaning)}
+            saveTargetId={saveTargetId}
+            saveTargetName={saveTargetName}
+            widthClass={widthClass}
+            onClose={closePopup}
+            onSave={savePopupWord}
+            onPickTarget={openPicker}
+            onDictionary={openInDictionary}
+            onSpeak={() => speak(popupWord, "id")}
+          />
         )}
 
         {/* 담을 단어장 고르는 시트 — 팝업(z-50)보다 위에 오도록 한 단계 더 띄웁니다 */}
@@ -692,89 +770,106 @@ const Story = () => {
   // ---------- 리스트 뷰 ----------
   return (
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
-      <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
-        <button
-          onClick={() => goBackOr(navigate, location.key, "/")}
-          className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
-          title="뒤로"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">CERITA INDONESIA</h1>
-        {canWide ? (
-          <button
-            type="button"
-            onClick={toggle}
-            className="shrink-0 w-9 h-9 flex items-center justify-center text-muted-foreground active:text-foreground"
-            title={wide ? "원래 크기로" : "넓게 보기"}
-            aria-label={wide ? "원래 크기로" : "넓게 보기"}
-          >
-            {wide ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-          </button>
-        ) : null}
-      </header>
+      {header(() => goBackOr(navigate, location.key, "/"), "뒤로")}
 
-      <div className="px-4 py-4">
-        {/* 난이도 + 만들기 */}
-        <div className="bg-card border border-border/60 rounded-xl px-4 py-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-900 shrink-0">난이도</span>
-            <div className="flex gap-1.5">
-              {DIFFS.map((d) => (
-                <button
-                  key={d}
-                  onClick={() => pickDifficulty(d)}
-                  className={`rounded-full px-3.5 py-1 text-sm font-medium ${
-                    difficulty === d ? "bg-primary text-white" : "bg-black/5 text-gray-600"
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
+      <div className="px-4 pt-4 pb-6 flex flex-col gap-2.5">
+        {/* 오늘의 이야기: 난이도 + 불러오기 */}
+        <div style={{ ...CARD_STYLE, padding: "18px 16px 16px" }}>
+          <div className="flex items-center gap-3">
+            <span
+              className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ background: "#FDF3E1" }}
+            >
+              <BookArt />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-[1.0625rem] font-semibold" style={{ color: C.txt }}>오늘의 이야기</span>
+              <span className="block mt-[3px] font-gothic text-[0.78125rem]" style={{ color: C.sub }}>
+                난이도를 고르고 새 이야기를 불러옵니다
+              </span>
+            </span>
+          </div>
+          <div className="mt-[18px]">
+            <LevelCircles value={difficulty} onChange={pickDifficulty} variant="story" disabled={generating} />
           </div>
           <button
             onClick={handleGenerate}
-            disabled={generating}
-            className="w-full mt-3 flex items-center justify-center gap-2 rounded-full py-3 text-sm font-medium bg-primary text-white disabled:opacity-60"
+            disabled={generating || blocked}
+            className="mt-3.5 w-full h-[50px] rounded-2xl flex items-center justify-center gap-2 font-gothic text-[0.9375rem] font-semibold"
+            style={
+              blocked
+                ? { background: "#E9EDEF", color: C.mute }
+                : { background: C.teal, color: "#FFFFFF", opacity: generating ? 0.75 : 1 }
+            }
           >
             {generating ? (
-              <><Loader2 size={16} className="animate-spin" /> 이야기를 짓고 있어요...</>
+              <><Loader2 size={18} className="animate-spin" /> 이야기를 불러오는 중...</>
             ) : (
-              <><Sparkles size={16} /> 이야기 만들기</>
+              <><BookOpen size={18} strokeWidth={1.9} /> 이야기 불러오기</>
             )}
           </button>
+          {blocked ? (
+            <p className="mt-2.5 text-center font-gothic text-[0.78125rem]" style={{ color: C.sub }}>
+              {freeUsed
+                ? "오늘의 이야기를 불러왔습니다 · 내일 새 이야기가 열립니다"
+                : "오늘 불러올 수 있는 이야기를 모두 불러왔습니다 · 내일 다시 열립니다"}
+            </p>
+          ) : null}
         </div>
+
+        {/* 무료: 듣기·여러 편은 Plus (시안 ST2) */}
+        {!plan.plus ? (
+          <div
+            className="rounded-[18px]"
+            style={{ background: "#FFF6DC", border: "1px solid #F1E0AE", padding: "14px 14px 14px 22px" }}
+          >
+            <p className="text-[0.9375rem] font-semibold whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: C.txt }}>
+              인도네시아어 발음으로 이야기 듣기
+            </p>
+            <div className="mt-1.5 flex items-stretch gap-3">
+              <span className="flex-1 min-w-0 font-gothic text-[0.75rem] leading-[1.55] break-keep" style={{ color: "#6E5612" }}>
+                Plus는 이야기를 음성으로 듣고,
+                <br />
+                하루에 여러 편 불러오기가 가능합니다
+              </span>
+              <button
+                type="button"
+                onClick={goPaywall}
+                className="shrink-0 px-3.5 rounded-xl font-gothic text-[0.71875rem] font-bold leading-[1.25]"
+                style={{ background: "#8A6A12", color: "#FFFFFF" }}
+              >
+                Plus
+                <br />
+                7일 무료 체험
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {/* 지난 이야기 */}
         {stories.length > 0 ? (
-          <div className="mt-5">
-            <p className="text-xs text-muted-foreground mb-2 px-1 font-gothic">지난 이야기</p>
-            <ul className="space-y-2">
-              {stories.map((s) => (
-                <li key={s.id}>
-                  <button
-                    onClick={() => openCard(s)}
-                    className="w-full text-left bg-card border border-border/60 rounded-xl px-4 py-3 min-w-0"
-                  >
-                    <p className="text-sm font-semibold text-gray-900 break-words font-word">{s.title}</p>
-                    <p className="text-xs text-gray-500 break-words mt-0.5 font-gothic">{s.titleKo}</p>
-                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                      <span className="text-[0.6875rem] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">{s.category}</span>
-                      <span className="text-[0.6875rem] font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">난이도 {s.difficulty}</span>
-                      <span className="text-[0.6875rem] text-gray-400 ml-auto">{fmtDate(s.createdAt)}</span>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            <BookOpen size={30} className="mx-auto mb-3 opacity-60" />
-            <p className="text-sm">첫 이야기를 만들어보세요</p>
-          </div>
-        )}
+          <>
+            <p className="mt-3.5 mx-1 font-gothic text-[0.875rem] font-bold tracking-[0.02em]" style={{ color: "#3B4245" }}>
+              지난 이야기
+            </p>
+            {stories.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => openCard(s)}
+                className="w-full text-left min-w-0 active:opacity-80"
+                style={{ ...CARD_STYLE, padding: "14px 16px" }}
+              >
+                <p className="font-word text-[1.0625rem] font-semibold break-words" style={{ color: C.deep }}>{s.title}</p>
+                <p className="mt-[3px] font-gothic text-[0.8125rem] break-words" style={{ color: C.sub }}>{s.titleKo}</p>
+                <div className="mt-2.5 flex items-center gap-1.5 min-w-0">
+                  <Chip tone="amber">{shortCat(s.category)}</Chip>
+                  <Chip tone="grey">난이도 {s.difficulty}</Chip>
+                  <span className="ml-auto shrink-0 font-gothic text-[0.75rem]" style={{ color: C.mute }}>{fmtDate(s.createdAt)}</span>
+                </div>
+              </button>
+            ))}
+          </>
+        ) : null}
       </div>
     </div>
   );
