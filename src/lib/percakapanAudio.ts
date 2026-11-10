@@ -315,6 +315,19 @@ class PercakapanAudioPlayer {
     return this.snap;
   }
 
+  /**
+   * 지금 소리의 재생 위치와 길이(초). 소리가 없거나 길이를 아직 모르면 null.
+   * 전체 듣기는 파일 하나라 몇 번째 줄인지 알 수 없으므로, 읽기 화면이 이 값으로 줄을 짐작합니다.
+   * (읽기 전용 — 재생 상태는 바꾸지 않습니다)
+   */
+  progress(): { time: number; duration: number } | null {
+    const a = this.audio;
+    if (!a) return null;
+    const d = a.duration;
+    if (!isFinite(d) || d <= 0) return null;
+    return { time: a.currentTime || 0, duration: d };
+  }
+
   private emit(patch: Partial<PcAudioSnapshot>) {
     this.snap = { ...this.snap, ...patch };
     this.listeners.forEach((fn) => {
