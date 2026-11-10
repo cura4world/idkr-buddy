@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import { isStoreApp } from "@/lib/platform";
 import { PAYWALL_PATH, usePlan } from "@/lib/plan";
+import PlusLockBox from "@/components/PlusLockBox";
 import { INDONESIA_PATH, MAP_CITIES, NEIGHBOR_SHAPES } from "@/lib/mapData";
 import { ArrowLeft, Globe, Landmark, Users, Cross, Hourglass, Lightbulb, ChevronRight, Lock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -116,29 +117,13 @@ const MapCard = ({ locked, onClick }: { locked: boolean; onClick: () => void }) 
   </button>
 );
 
-// Plus 안내 상자 (무료 사용자). 색은 다듬기 스토리 공통 규칙의 귤색 상자.
+// Plus 안내 상자 (무료 사용자) — 공용 PlusLockBox (게임방·이야기·내 정보와 같은 모양).
 const PlusBox = ({ onClick }: { onClick: () => void }) => (
-  <div className="rounded-[18px] border border-[#F1E0AE] bg-[#FFF6DC] py-3.5 pr-3.5 pl-[22px]">
-    <p className="font-gothic text-[0.9375rem] font-semibold text-foreground whitespace-nowrap">
-      인도네시아 이해는 Plus 회원 기능입니다
-    </p>
-    <div className="mt-1.5 flex items-stretch gap-3">
-      <span className="flex-1 min-w-0 font-gothic text-[0.75rem] leading-[1.55] text-[#6E5612] whitespace-nowrap">
-        Plus로 지도와 읽을거리를 열고,
-        <br />
-        지역마다 단어를 담을 수 있습니다
-      </span>
-      <button
-        type="button"
-        onClick={onClick}
-        className="px-3.5 rounded-xl bg-[#8A6A12] text-white font-gothic text-[0.71875rem] font-bold leading-[1.25] shrink-0 active:opacity-90"
-      >
-        Plus
-        <br />
-        7일 무료 체험
-      </button>
-    </div>
-  </div>
+  <PlusLockBox
+    title="인도네시아 이해는 Plus 회원 기능입니다"
+    lines={["Plus로 지도와 읽을거리를 열고,", "지역마다 단어를 담을 수 있습니다"]}
+    onClick={onClick}
+  />
 );
 
 const Insight = () => {
