@@ -13,6 +13,7 @@ import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveT
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import WordMiniSheet from "@/components/WordMiniSheet";
 import LevelCircles from "@/components/LevelCircles";
+import PlusLockBox from "@/components/PlusLockBox";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import PlayButton from "@/components/PlayButton";
@@ -821,31 +822,11 @@ const Story = () => {
 
         {/* 무료: 듣기·여러 편은 Plus (시안 ST2) */}
         {!plan.plus ? (
-          <div
-            className="rounded-[18px]"
-            style={{ background: "#FFF6DC", border: "1px solid #F1E0AE", padding: "14px 14px 14px 22px" }}
-          >
-            <p className="text-[0.9375rem] font-semibold whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: C.txt }}>
-              인도네시아어 발음으로 이야기 듣기
-            </p>
-            <div className="mt-1.5 flex items-stretch gap-3">
-              <span className="flex-1 min-w-0 font-gothic text-[0.75rem] leading-[1.55] break-keep" style={{ color: "#6E5612" }}>
-                Plus는 이야기를 음성으로 듣고,
-                <br />
-                하루에 여러 편 불러오기가 가능합니다
-              </span>
-              <button
-                type="button"
-                onClick={goPaywall}
-                className="shrink-0 px-3.5 rounded-xl font-gothic text-[0.71875rem] font-bold leading-[1.25]"
-                style={{ background: "#8A6A12", color: "#FFFFFF" }}
-              >
-                Plus
-                <br />
-                7일 무료 체험
-              </button>
-            </div>
-          </div>
+          <PlusLockBox
+            title="인도네시아어 발음으로 이야기 듣기"
+            lines={["Plus는 이야기를 음성으로 듣고,", "하루에 여러 편 불러오기가 가능합니다"]}
+            onClick={goPaywall}
+          />
         ) : null}
 
         {/* 지난 이야기 */}
