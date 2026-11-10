@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useBackClose } from "@/hooks/useBackClose";
 
 interface Props {
   open: boolean;
@@ -52,6 +53,9 @@ const emojis = [
 export default function AddCategoryDialog({ open, onOpenChange, onAdded }: Props) {
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("📚");
+
+  // 폰의 뒤로가기는 이 창만 닫습니다(화면을 떠나지 않음)
+  useBackClose(open, () => onOpenChange(false));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
