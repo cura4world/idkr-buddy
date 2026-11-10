@@ -9,7 +9,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
 import { goBackOr } from "@/lib/nav";
 import { MAP_CITIES, MAP_CULTURE, MAP_FAITH, MAP_SPOTS } from "@/lib/mapData";
-import { MAP_PHOTOS, MAP_REGION_LABEL, MAP_REGION_ORDER, MapPhoto, MapRegion } from "@/lib/mapPhotos";
+import { MAP_PHOTOS, MAP_REGION_LABEL, MAP_REGION_ORDER, MapPhoto, MapRegion, getPlacePhotos } from "@/lib/mapPhotos";
 
 export const PHOTO_CREDITS_PATH = "/about/photos";
 
@@ -49,8 +49,9 @@ function buildGroups(): Group[] {
   return MAP_REGION_ORDER.map((region) => ({
     region,
     places: Object.keys(MAP_PHOTOS)
-      .filter((id) => MAP_PHOTOS[id].region === region && MAP_PHOTOS[id].photos.length > 0)
-      .map((id) => ({ id, ko: ko[id] || id, photos: MAP_PHOTOS[id].photos }))
+      // 지도 시트에 실제로 보이는 사진만 출처에 적습니다(기록 사진 제외, 지점마다 최대 2장).
+      .filter((id) => MAP_PHOTOS[id].region === region && getPlacePhotos(id).length > 0)
+      .map((id) => ({ id, ko: ko[id] || id, photos: getPlacePhotos(id) }))
       .sort((a, b) => a.ko.localeCompare(b.ko, "ko")),
   })).filter((g) => g.places.length > 0);
 }
