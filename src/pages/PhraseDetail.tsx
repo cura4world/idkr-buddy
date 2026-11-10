@@ -507,7 +507,7 @@ const PhraseDetail = () => {
               {isAyat ? (
                 koVerse ? (
                   <section className="flex flex-col gap-2.5">
-                    <Label>어떤 뜻인가요</Label>
+                    <Label>이런 뜻입니다</Label>
                     <p className="m-0 font-gothic text-[0.84375rem] leading-[1.7] text-[#34332F]">{koVerse}</p>
                     <p className="m-0 font-gothic text-[0.71875rem] text-muted-foreground">
                       {koRefLabel ? koRefLabel + " · 새번역" : "새번역"}
@@ -516,7 +516,7 @@ const PhraseDetail = () => {
                 ) : null
               ) : data.meaning ? (
                 <section className="flex flex-col gap-2.5">
-                  <Label>어떤 뜻인가요</Label>
+                  <Label>이런 뜻입니다</Label>
                   <p className="m-0 font-gothic text-[0.84375rem] leading-[1.7] text-[#34332F]">{latinSpans(data.meaning)}</p>
                 </section>
               ) : null}
@@ -606,7 +606,7 @@ const PhraseDetail = () => {
               <p className="text-lg font-bold text-foreground break-words min-w-0 font-word">{popupWord}</p>
               <button
                 onClick={() => speak(popupWord, "id")}
-                className="shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center"
+                className="shrink-0 w-8 h-8 rounded-full bg-[#E3EEEC] text-[#2C6D63] flex items-center justify-center active:opacity-80"
                 title="발음 듣기"
               >
                 <Volume2 size={15} />
