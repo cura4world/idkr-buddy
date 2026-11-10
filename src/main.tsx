@@ -3,6 +3,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { applyFontScale } from "./lib/fontScale";
 import { startUsageTimer } from "./lib/usageTimer";
+import { isPreview } from "./lib/preview";
 
 // 저장된 글자 크기 배율을 앱 시작 시 적용
 applyFontScale();
@@ -29,7 +30,18 @@ try {
 
 // 앱 자동 업데이트: 서비스워커가 새 버전으로 교체되면 즉시 새로고침하고,
 // 앱이 포그라운드로 돌아올 때마다 새 버전이 있는지 확인합니다.
-if ("serviceWorker" in navigator) {
+// 미리보기 APK 는 서비스워커를 쓰지 않습니다(vite.config.ts 에서 등록 스크립트도 빠짐).
+// 브라우저에서 미리보기를 띄웠을 때 예전에 등록된 것이 남아 있으면 풀어 둡니다.
+if (isPreview()) {
+  try {
+    navigator.serviceWorker
+      ?.getRegistrations()
+      .then((regs) => regs.forEach((r) => { r.unregister().catch(() => {}); }))
+      .catch(() => {});
+  } catch (e) {
+    // 무시
+  }
+} else if ("serviceWorker" in navigator) {
   let refreshed = false;
   try {
     navigator.serviceWorker.addEventListener("controllerchange", () => {
