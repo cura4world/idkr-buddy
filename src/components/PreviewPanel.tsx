@@ -6,6 +6,7 @@
 // 폰 뒤로가기는 시트만 닫도록 히스토리를 한 칸 쌓습니다(CLAUDE.md: 한 화면 안의 뒤로가기는 pushState + popstate).
 
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Check, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tier, TIER_LABEL, setPreviewTier, usePlan } from "@/lib/plan";
@@ -23,6 +24,8 @@ function maskKey(k: string): string {
 
 export default function PreviewPanel() {
   const { tier } = usePlan();
+  // 구독 화면은 아래쪽 안내 문구가 알약에 가려져, 그 화면에서만 왼쪽 위로 옮깁니다.
+  const onPaywall = useLocation().pathname === "/plus";
   const [open, setOpen] = useState(false);
   const [trialUsed, setTrialUsed] = useState<boolean>(previewTrialUsed());
   const [savedKey, setSavedKey] = useState<string>(getGeminiApiKey());
@@ -105,11 +108,15 @@ export default function PreviewPanel() {
           type="button"
           onClick={openSheet}
           className="fixed z-[60] rounded-full px-3 py-1.5 font-gothic text-[11.5px] font-medium leading-none text-white shadow-sm backdrop-blur-sm active:opacity-80"
-          style={{
-            right: "12px",
-            bottom: "calc(env(safe-area-inset-bottom, 0px) + 78px)",
-            backgroundColor: "rgba(28, 38, 40, 0.58)",
-          }}
+          style={
+            onPaywall
+              ? { left: "12px", top: "calc(env(safe-area-inset-top, 0px) + 16px)", backgroundColor: "rgba(28, 38, 40, 0.58)" }
+              : {
+                  right: "12px",
+                  bottom: "calc(env(safe-area-inset-bottom, 0px) + 78px)",
+                  backgroundColor: "rgba(28, 38, 40, 0.58)",
+                }
+          }
           aria-label="미리보기 설정 열기"
         >
           미리보기 · {TIER_LABEL[tier]}
