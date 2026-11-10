@@ -102,6 +102,29 @@ export function hasPublicSession(): boolean {
   return getSession() !== null;
 }
 
+// ── 세션 만료 (서버가 401) ───────────────────────────────────
+// 로그인 화면(LoginGate)이 "로그인이 끝났습니다…" 안내를 한 번 보여 주도록 표시해 둡니다.
+const EXPIRED_KEY = "kata-public-session-expired";
+export const SESSION_EXPIRED_TEXT = "로그인이 끝났습니다. 다시 로그인하세요.";
+
+/** 서버가 세션을 받지 않을 때(401): 이 기기의 세션을 지워 로그인 화면으로 돌아가게 합니다. */
+export function expireSession(): void {
+  if (!getSession()) return;
+  try { sessionStorage.setItem(EXPIRED_KEY, "1"); } catch (e) {}
+  saveSession(null);
+}
+
+/** 방금 세션이 만료돼 로그인 화면으로 왔는지 (한 번 읽으면 지움). */
+export function takeSessionExpired(): boolean {
+  try {
+    const v = sessionStorage.getItem(EXPIRED_KEY) === "1";
+    if (v) sessionStorage.removeItem(EXPIRED_KEY);
+    return v;
+  } catch (e) {
+    return false;
+  }
+}
+
 /** 공개판 서버에 보낼 인증 헤더. 세션이 없으면 null. */
 export function publicHeaders(): Record<string, string> | null {
   const s = getSession();
@@ -256,7 +279,7 @@ export async function refreshMe(): Promise<{
     return null; // 인터넷이 안 되면 지금 상태 유지
   }
   if (res.status === 401) {
-    saveSession(null);
+    expireSession();
     return null;
   }
   if (!res.ok) return null;
