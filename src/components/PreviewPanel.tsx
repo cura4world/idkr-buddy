@@ -1,12 +1,12 @@
 // src/components/PreviewPanel.tsx
-// 미리보기 APK 전용 — 화면 오른쪽 아래 작은 알약 "미리보기 · 등급" 과 그 설정 시트.
+// 미리보기 APK 전용 — 화면 왼쪽 끝에 붙은 얇은 손잡이 "미리보기" 와 그 설정 시트(머리에 지금 등급).
+// (QA Q04: 예전 오른쪽 아래 알약은 퍼즐 자판·지도 축소·사전 ▼ 등 실제 버튼을 덮었습니다.)
 // App.tsx 가 isPreview() 일 때만 한 번 붙입니다. 관리자판·회원판·스토어 앱에는 나타나지 않습니다.
 //
 // 시트: 등급 전환 / 체험을 이미 쓴 계정 / Gemini API 키 / 이 미리보기 데이터 비우기.
 // 폰 뒤로가기는 시트만 닫도록 히스토리를 한 칸 쌓습니다(CLAUDE.md: 한 화면 안의 뒤로가기는 pushState + popstate).
 
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
 import { Check, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tier, TIER_LABEL, setPreviewTier, usePlan } from "@/lib/plan";
@@ -24,8 +24,6 @@ function maskKey(k: string): string {
 
 export default function PreviewPanel() {
   const { tier } = usePlan();
-  // 구독 화면은 아래쪽 안내 문구가 알약에 가려져, 그 화면에서만 왼쪽 위로 옮깁니다.
-  const onPaywall = useLocation().pathname === "/plus";
   const [open, setOpen] = useState(false);
   const [trialUsed, setTrialUsed] = useState<boolean>(previewTrialUsed());
   const [savedKey, setSavedKey] = useState<string>(getGeminiApiKey());
@@ -104,22 +102,23 @@ export default function PreviewPanel() {
   return (
     <>
       {open ? null : (
+        // 왼쪽 화면 끝에 붙은 얇은 손잡이(폭 12px). 화면 좌우 여백은 글자 85% 에서도 13.6px 이라
+        // 버튼·자판·목록 행을 덮지 않습니다. 등급은 시트 머리에 보입니다.
         <button
           type="button"
           onClick={openSheet}
-          className="fixed z-[60] rounded-full px-3 py-1.5 font-gothic text-[11.5px] font-medium leading-none text-white shadow-sm backdrop-blur-sm active:opacity-80"
-          style={
-            onPaywall
-              ? { left: "12px", top: "calc(env(safe-area-inset-top, 0px) + 16px)", backgroundColor: "rgba(28, 38, 40, 0.58)" }
-              : {
-                  right: "12px",
-                  bottom: "calc(env(safe-area-inset-bottom, 0px) + 78px)",
-                  backgroundColor: "rgba(28, 38, 40, 0.58)",
-                }
-          }
-          aria-label="미리보기 설정 열기"
+          data-preview-tab=""
+          className="fixed left-0 z-[60] flex items-center justify-center rounded-r-[8px] font-gothic text-[9.5px] font-medium leading-none tracking-[0.12em] text-white active:opacity-80"
+          style={{
+            top: "45%",
+            width: "12px",
+            height: "56px",
+            backgroundColor: "rgba(28, 38, 40, 0.42)",
+            writingMode: "vertical-rl",
+          }}
+          aria-label={"미리보기 설정 열기 (지금 " + TIER_LABEL[tier] + ")"}
         >
-          미리보기 · {TIER_LABEL[tier]}
+          미리보기
         </button>
       )}
 
@@ -129,7 +128,12 @@ export default function PreviewPanel() {
           <div className="fixed inset-x-0 bottom-0 z-[71] mx-auto max-h-[88vh] max-w-lg overflow-y-auto rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5 font-gothic">
             <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
             <div className="px-4 pb-3">
-              <h2 className="text-[14px] font-semibold text-foreground">미리보기 설정</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="min-w-0 flex-1 text-[14px] font-semibold text-foreground">미리보기 설정</h2>
+                <span className="shrink-0 rounded-full bg-[#E2F1EC] px-2.5 py-1 text-[12px] font-semibold leading-none text-[#2C6D63]">
+                  지금 {TIER_LABEL[tier]}
+                </span>
+              </div>
               <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
                 출시 전 검사용 앱입니다. 지금 쓰시는 앱과 데이터가 따로 저장됩니다.
               </p>
