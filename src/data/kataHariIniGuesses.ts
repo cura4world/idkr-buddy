@@ -1,0 +1,61 @@
+// src/data/kataHariIniGuesses.ts
+// 오늘의 단어 퍼즐에서 정답 말고도 입력으로 받아 주는 실제 단어들 (소문자 a~z 다섯 글자).
+// 정답 목록(kataHariIniWords.ts)에 있는 말은 여기 다시 적지 않습니다 — 두 목록을 합쳐서 검사합니다.
+//
+// 만든 날: 2026-11-11. 출처 세 가지를 합쳤습니다.
+// 1) 공용 기본 단어장 표제어(성경과 신앙 단어장 포함, 여러 낱말 표제어는 낱말로 나눔)
+// 2) 기본 단어장 예문에 소문자로 한 번 이상 나온 낱말 (대문자로만 나오는 사람·지명은 빠짐)
+// 3) 손으로 고른 흔한 인도네시아어 다섯 글자 단어
+// 단어장 CSV 와 연결되어 있지 않으므로 CSV 가 바뀌어도 그대로입니다.
+// 아는 실제 단어가 거절된다는 말이 나오면 여기에 알파벳순으로 끼워 넣으면 됩니다(순서는 판정에 영향 없음).
+// 정답 목록과 달리 이 목록은 어디를 고쳐도 날짜별 정답이 바뀌지 않습니다.
+
+export const KATA_EXTRA_GUESSES: ReadonlyArray<string> = [
+  "abadi", "acara", "acuan", "agung", "ajaib", "ajang", "akbar", "akhir", "akrab", "aktif",
+  "alami", "alang", "album", "alias", "altar", "ambil", "ancam", "aneka", "angsa", "antar",
+  "antri", "anyam", "apung", "arena", "aroma", "arsip", "arwah", "asasi", "asing", "aspal",
+  "aspek", "babak", "badan", "bahan", "bahas", "bahwa", "bajak", "bakar", "bakat", "bakau",
+  "balai", "balap", "balas", "balon", "bantu", "baris", "batal", "batas", "batin", "bawah",
+  "bayar", "bekal", "bekas", "belah", "belas", "belok", "benci", "benda", "betah", "biasa",
+  "biaya", "bijih", "bilas", "bilik", "bisik", "bosan", "buang", "budak", "bukti", "bunyi",
+  "bursa", "butuh", "buyut", "cacat", "cakap", "camar", "canda", "capai", "catat", "cegah",
+  "celah", "ceria", "cetak", "cicil", "cicip", "cukur", "curam", "dadar", "dahak", "dahan",
+  "damai", "dapat", "darat", "dasar", "debat", "debit", "depan", "deras", "dewan", "dicat",
+  "didik", "diisi", "dinas", "diuji", "dodol", "donat", "donor", "dukun", "dunia", "email",
+  "emosi", "empuk", "encer", "endap", "etika", "fakta", "fasih", "final", "finis", "fokus",
+  "gagah", "galak", "galon", "ganda", "ganti", "garis", "garuk", "gelar", "genre", "gerak",
+  "getar", "gigit", "gosok", "goyah", "gugup", "gugur", "gulai", "gurun", "gusar", "habis",
+  "hadap", "hafal", "hamba", "hantu", "hapus", "harap", "harta", "hasil", "henti", "hidup",
+  "himne", "hisap", "huruf", "iblis", "ibuku", "iklim", "ikuti", "imbas", "induk", "injak",
+  "injil", "intan", "irama", "iuran", "jahat", "jahit", "jalur", "jamin", "jamur", "janji",
+  "jarum", "jawab", "jeans", "jemur", "jenis", "jenuh", "jepit", "jeruk", "jilat", "jodoh",
+  "joget", "jubah", "jumat", "jumpa", "kabar", "kacau", "kaget", "kagum", "kamis", "kamus",
+  "kanal", "kanan", "kanon", "kapas", "karya", "kawan", "kawin", "kayuh", "kecak", "kecap",
+  "kedai", "kejar", "kekal", "kemah", "kenal", "kerak", "kerja", "kesal", "kesan", "ketat",
+  "ketik", "ketua", "kicau", "kilat", "kipas", "kirim", "kitab", "kodok", "kolak", "kolom",
+  "kuasa", "kudus", "kukus", "kuman", "kupas", "kurir", "kutub", "kutuk", "lahir", "lapis",
+  "lapor", "larut", "latar", "latih", "lawan", "lecet", "ledak", "lemak", "lemon", "lepas",
+  "letak", "lihat", "lilin", "limau", "lipat", "lodeh", "logam", "lokal", "loket", "luang",
+  "lumba", "lunas", "luput", "luruh", "lusuh", "mabuk", "macam", "macan", "makna", "masak",
+  "massa", "mawar", "mayat", "mebel", "medan", "media", "medis", "megah", "melon", "merdu",
+  "mesin", "minus", "mirip", "model", "mohon", "moral", "mulai", "murid", "murni", "nafas",
+  "nakal", "nasib", "ngeri", "nikah", "nikel", "nyala", "nyata", "nyeri", "obrol", "ombak",
+  "omong", "organ", "padam", "pakai", "paket", "paksa", "palem", "panti", "papan", "pasta",
+  "patah", "patuh", "patut", "pawai", "pecel", "pegal", "pekan", "pelan", "pelat", "peluk",
+  "penat", "perak", "peran", "perca", "pesan", "pesat", "pesta", "petak", "petik", "piala",
+  "piatu", "pihak", "pijat", "pikir", "pilih", "pisah", "pojok", "pokok", "pompa", "pucat",
+  "puisi", "puluh", "punah", "pusar", "pusat", "putar", "putus", "ragam", "rakit", "ramai",
+  "rambu", "rasul", "ratus", "rawat", "rayap", "rebus", "receh", "redup", "rekam", "rekan",
+  "rekor", "repot", "resmi", "ribut", "risau", "robek", "roboh", "rokok", "rompi", "ruang",
+  "rubah", "rujak", "rumus", "rusuk", "sabtu", "sabuk", "sains", "salam", "salat", "salib",
+  "saman", "sandi", "saran", "sawit", "sekat", "selai", "selam", "semak", "senin", "sepak",
+  "sepoi", "serba", "sesak", "sesal", "setan", "sikap", "sikut", "silat", "silau", "silih",
+  "sinar", "sipil", "siput", "sisik", "situs", "spons", "studi", "suatu", "sudut", "sunyi",
+  "supir", "surga", "suruh", "susun", "sutra", "tabib", "tabut", "tahan", "tamah", "tamak",
+  "tamat", "tanam", "tanda", "tanya", "tarik", "taruh", "tebak", "teduh", "tegak", "tegas",
+  "teguh", "tekan", "telan", "tenda", "tepuk", "tetap", "tetes", "tikar", "timba", "tinta",
+  "tirai", "tiram", "titik", "tobat", "tokoh", "tolak", "tomat", "topan", "tuang", "tubuh",
+  "tukar", "tulis", "tulus", "tumis", "tunda", "tupai", "turut", "tusuk", "tutup", "ujung",
+  "ulang", "ulung", "umpet", "unjuk", "usaha", "usang", "video", "votum", "wahyu", "wakil",
+  "walau", "warna", "warni", "warta", "wujud", "yakin", "yatim", "zaman", "zebra",
+];
