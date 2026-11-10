@@ -14,6 +14,7 @@ import {
   findCategory,
   saveCustomScene,
   deleteCustomScene,
+  isCategoryVisible,
 } from "@/lib/percakapan";
 import type { PercakapanCategory, PercakapanScene } from "@/lib/percakapan";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
@@ -30,8 +31,8 @@ const PercakapanCategory = () => {
 
   // 교회와 신앙은 관리자·Special Member 에게만 — 주소로 바로 들어와도 폴더 목록으로 돌려보냅니다.
   useEffect(() => {
-    if (catId === "gereja" && !plan.staff) navigate("/percakapan", { replace: true });
-  }, [catId, plan.staff, navigate]);
+    if (catId && !isCategoryVisible(catId)) navigate("/percakapan", { replace: true });
+  }, [catId, plan.tier, navigate]);
 
   const [cat, setCat] = useState<PercakapanCategory | null>(null);
   const [scenes, setScenes] = useState<PercakapanScene[]>([]);
