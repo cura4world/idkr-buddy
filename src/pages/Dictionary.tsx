@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { Fragment, useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Volume2, Plus, Check, Loader2, Mic, ChevronDown } from "lucide-react";
+import { ArrowLeft, Search, Volume1, Plus, Check, Loader2, Mic, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import {
   lookupWord,
@@ -41,58 +41,128 @@ const speak = (text: string, lang: "id" | "ko") => {
   } catch (e) {}
 };
 
-// 별점 (채움: 포인트색, 빈칸: 연회색)
-const Stars = ({ n }: { n: number }) => {
+// ---- 결과 화면 모양 (시안 "사전 안 4": 2번 표제어 + 3번 본문) ----
+// 글자 크기는 시안의 px 를 rem 으로 옮겨 씁니다(글자 크기 설정을 따라가도록).
+// 시안 크기가 이미 content-bump 한 단계 키운 크기라, 결과 카드에 content-bump 를 그대로 두어도
+// 아래의 고정 rem 크기는 더 커지지 않습니다.
+
+// 5칸 막대 (회화 사용빈도·난이도)
+const Bars = ({ n, on }: { n: number; on: string }) => {
   const full = Math.max(0, Math.min(5, n));
   return (
-    <span>
-      <span className="text-accent">{"★".repeat(full)}</span>
-      <span className="text-gray-300">{"☆".repeat(5 - full)}</span>
+    <span className="mt-2 flex gap-[3px]" role="img" aria-label={"5단계 중 " + full}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span key={i} className="h-[5px] flex-1 rounded-[3px]" style={{ background: i < full ? on : "#E3E7EA" }} />
+      ))}
     </span>
   );
 };
 
-const Divider = () => <div className="border-t border-gray-200 my-5" />;
+const FREQ_LABEL = ["", "드물게", "가끔", "보통", "자주", "아주 자주"];
+const DIFF_LABEL = ["", "쉬움", "쉬운 편", "보통", "어려운 편", "어려움"];
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-  <h3 className="text-sm font-semibold text-gray-900 mb-2.5">{children}</h3>
+  <h3 className="m-0 font-gothic text-[0.8125rem] font-bold text-[#1F4F4A]">{children}</h3>
 );
 
-// 능동형/수동형/반대/비슷한/파생 단어 공통 카드 섹션
-const RelatedSection = ({ title, items }: { title: string; items: DictRelatedItem[] }) => {
-  if (!items || items.length === 0) return null;
-  return (
-    <>
-      <Divider />
-      <SectionTitle>{title}</SectionTitle>
-      <ul className="space-y-2.5">
-        {items.map((it, i) => (
-          <li key={i} className="rounded-lg bg-black/5 px-3 py-2.5 min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <p className="text-base font-semibold text-gray-900 break-words min-w-0">{it.word}</p>
-              <button
-                onClick={() => speak(it.word, "id")}
-                className="shrink-0 text-primary/70 hover:text-primary"
-                title="발음 듣기"
-              >
-                <Volume2 size={14} />
-              </button>
-            </div>
-            {it.meaning && (
-              <p className="text-xs text-gray-500 break-words mt-0.5 font-gothic">{it.meaning}</p>
-            )}
-            {it.example && (
-              <div className="mt-1">
-                <p className="text-sm text-gray-800 break-words">{it.example}</p>
-                {it.exampleKo && <p className="text-xs text-gray-500 break-words">{it.exampleKo}</p>}
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-    </>
+// 한국어 설명 속 인니어(로마자) 낱말만 Lora 로 보여 줍니다.
+function latinSpans(text: string, sizeClass?: string): React.ReactNode[] {
+  const parts = (text || "").split(new RegExp("([A-Za-z\\u00C0-\\u024F][A-Za-z\\u00C0-\\u024F'\\-]*(?:\\s+[A-Za-z\\u00C0-\\u024F][A-Za-z\\u00C0-\\u024F'\\-]*)*)"));
+  return parts.filter((x) => x !== "").map((part, i) =>
+    new RegExp("^[A-Za-z\\u00C0-\\u024F]").test(part) ? (
+      <span key={i} className={"font-word " + (sizeClass || "")}>{part}</span>
+    ) : (
+      <span key={i}>{part}</span>
+    )
   );
-};
+}
+
+// 시안의 스피커는 소리 물결이 하나인 모양(Volume1)입니다.
+const SpeakIcon = ({ size }: { size: number }) => <Volume1 size={size} strokeWidth={2} />;
+
+// 형태와 관련 단어 — 꼬리표 색 (시안의 4색 + 반대 단어)
+const RELATED_KINDS: { key: "activeForms" | "passiveForms" | "opposites" | "similar" | "derived"; title: string; bg: string; fg: string }[] = [
+  { key: "activeForms", title: "능동형", bg: "#DDF0EA", fg: "#245A51" },
+  { key: "passiveForms", title: "수동형", bg: "#DCEAF6", fg: "#24506F" },
+  { key: "opposites", title: "반대 단어", bg: "#F6E2E2", fg: "#7A3535" },
+  { key: "similar", title: "유사 단어", bg: "#E9E4F5", fg: "#4E3F78" },
+  { key: "derived", title: "파생 단어", bg: "#FCE6D9", fg: "#8C3F18" },
+];
+
+const RelatedCard = ({ it, title, bg, fg }: { it: DictRelatedItem; title: string; bg: string; fg: string }) => (
+  <div className="flex min-w-0 flex-col gap-[3px] rounded-[14px] border border-[#E6EAE8] px-3.5 py-3">
+    <span
+      className="flex h-5 items-center self-start rounded-[10px] px-2 font-gothic text-[0.6875rem] font-semibold"
+      style={{ background: bg, color: fg }}
+    >
+      {title}
+    </span>
+    <div className="mt-1 flex min-w-0 items-baseline gap-2">
+      <p className="m-0 break-words font-word text-[1.125rem] font-semibold text-[#104B60]">{it.word}</p>
+      <p className="m-0 min-w-0 flex-1 break-words font-gothic text-[0.8125rem] text-[#5E5D57]">{it.meaning}</p>
+      <button
+        onClick={() => speak(it.word, "id")}
+        className="-my-2 -mr-2 flex h-8 w-8 shrink-0 items-center justify-center self-center text-[#1F4F4A]"
+        title="발음 듣기"
+        aria-label="발음 듣기"
+      >
+        <SpeakIcon size={15} />
+      </button>
+    </div>
+    {it.example ? (
+      <p className="m-0 mt-1.5 break-words font-word text-[0.9375rem] leading-[1.45]">{it.example}</p>
+    ) : null}
+    {it.exampleKo ? (
+      <p className="m-0 break-words text-[0.8125rem] leading-[1.5] text-[#5E5D57]">{it.exampleKo}</p>
+    ) : null}
+  </div>
+);
+
+// 흰 본문 카드 (시안: 20px 둥글기, 옅은 그림자, 구역 사이 26px)
+const BodyCard = ({ children }: { children: React.ReactNode }) => (
+  <div className="flex flex-col gap-[26px] rounded-[20px] bg-card px-5 pb-[22px] pt-5 shadow-[0_1px_3px_rgba(16,40,50,0.06)] content-bump">
+    {children}
+  </div>
+);
+
+// 연민트 표제 카드
+const HeroCard = ({ children }: { children: React.ReactNode }) => (
+  <section className="rounded-[20px] bg-[#E2F1EC] px-5 pb-[18px] pt-5">{children}</section>
+);
+
+const HeroSpeaker = ({ onClick, title }: { onClick: () => void; title: string }) => (
+  <button
+    onClick={onClick}
+    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#2C6D63]"
+    title={title}
+    aria-label={title}
+  >
+    <SpeakIcon size={19} />
+  </button>
+);
+
+const RowSpeaker = ({ onClick, title }: { onClick: () => void; title: string }) => (
+  <button
+    onClick={onClick}
+    className="-mr-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center text-[#1F4F4A]"
+    title={title}
+    aria-label={title}
+  >
+    <SpeakIcon size={16} />
+  </button>
+);
+
+// 예문 한 줄 (번호 · 인니어 · 한국어 · 스피커)
+const ExampleRow = ({ n, id, ko }: { n: number; id: string; ko: string }) => (
+  <div className="flex min-w-0 items-start gap-2.5">
+    <span className="w-3.5 shrink-0 font-word text-[0.9375rem] italic leading-[1.45] text-[#B59B6A]">{n}</span>
+    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <p className="m-0 break-words font-word text-[1rem] leading-[1.45]">{id}</p>
+      {ko ? <p className="m-0 break-words text-[0.8125rem] leading-[1.5] text-[#5E5D57]">{ko}</p> : null}
+    </div>
+    <RowSpeaker onClick={() => speak(id, "id")} title="예문 듣기" />
+  </div>
+);
 
 // 검색 히스토리 (localStorage, 최신순, 최대 30개)
 const HISTORY_KEY = "dict-search-history";
@@ -215,6 +285,8 @@ const Dictionary = () => {
     if (code === "NETWORK") return "네트워크 연결을 확인해주세요.";
     if (code === "SERVER_ERROR") return "Gemini 서버 오류입니다. 잠시 후 다시 시도해주세요.";
     if (code === "BAD_REQUEST") return "요청 처리에 실패했습니다. 잠시 후 다시 시도해주세요.";
+    // 공개판 서버의 숨은 한도(처음 찾는 단어 하루 N번)를 넘은 경우. 이미 찾아본 단어는 캐시로 계속 보입니다.
+    if (code === "QUOTA") return "오늘 새로 찾을 수 있는 단어를 모두 찾았습니다. 이미 찾아본 단어는 그대로 볼 수 있고, 새 단어는 내일 다시 찾을 수 있습니다.";
     return "검색에 실패했습니다. 잠시 후 다시 시도해주세요.";
   };
 
@@ -438,7 +510,7 @@ const Dictionary = () => {
 
   const startVoice = () => {
     if (!speechSupported) {
-      toast("이 기기에서는 음성 검색을 지원하지 않아요");
+      toast("이 기기에서는 음성 검색을 쓸 수 없습니다");
       return;
     }
     // 이미 듣는 중이면 중지
@@ -465,9 +537,9 @@ const Dictionary = () => {
       rec.onerror = (ev: any) => {
         setListening(false);
         if (ev?.error === "not-allowed" || ev?.error === "service-not-allowed") {
-          toast("마이크 권한이 필요해요. 설정에서 허용해주세요");
+          toast("마이크 권한이 필요합니다. 설정에서 허용해 주세요");
         } else if (ev?.error === "no-speech") {
-          toast("음성이 들리지 않았어요. 다시 시도해주세요");
+          toast("음성이 들리지 않았습니다. 다시 말해 보세요");
         }
       };
       rec.onend = () => setListening(false);
@@ -476,7 +548,7 @@ const Dictionary = () => {
       rec.start();
     } catch (e) {
       setListening(false);
-      toast("음성 검색을 시작할 수 없어요");
+      toast("음성 검색을 시작할 수 없습니다");
     }
   };
 
@@ -588,12 +660,12 @@ const Dictionary = () => {
         </button>
       )}
 
-      <div className={isHome ? "px-4 pt-4 pb-0 flex-1 min-h-0 flex flex-col" : "px-4 py-4"}>
-        {/* 검색창 */}
-        <div ref={histAreaRef} className={`relative ${isHome ? "mb-2" : "mb-4"}`}>
+      <div className={isHome ? "px-4 pt-4 pb-0 flex-1 min-h-0 flex flex-col" : "px-4 pt-4 pb-10 flex flex-col gap-3"}>
+        {/* 검색창 (시안: 46px 알약 + 청록 동그라미 "검색") */}
+        <div ref={histAreaRef} className={`relative ${isHome ? "mb-2" : "mb-1"}`}>
         <div className="flex items-center gap-2 min-w-0">
-          <div className="flex-1 min-w-0 flex items-center gap-2 bg-card border border-border rounded-full px-4 py-2.5">
-            <Search size={18} className="text-gray-400 shrink-0" />
+          <div className="flex-1 min-w-0 h-[46px] flex items-center gap-2 bg-card border border-[#E3E8EB] rounded-full pl-4 pr-1.5">
+            <Search size={18} className="text-[#2C6D63] shrink-0" />
             <input
               ref={inputRef}
               size={1}
@@ -609,23 +681,24 @@ const Dictionary = () => {
                 histHideTimer.current = window.setTimeout(() => closeHistoryPanel(), 160);
               }}
               placeholder="단어·문장 (인니어/한국어)"
-              className="flex-1 min-w-0 w-full bg-transparent outline-none text-sm text-gray-900 placeholder:text-gray-400"
+              className="flex-1 min-w-0 w-full bg-transparent outline-none font-body text-[0.9375rem] text-[#1D1F1E] placeholder:text-gray-400"
               autoCapitalize="none"
               autoCorrect="off"
             />
             {/* 마이크 */}
             <button
               onClick={startVoice}
-              className={`shrink-0 ${listening ? "text-red-500" : "text-gray-400 hover:text-primary"}`}
+              className={`shrink-0 w-9 h-9 flex items-center justify-center ${listening ? "text-red-500" : "text-[#646C72] hover:text-primary"}`}
               title="음성 검색"
+              aria-label="음성 검색"
             >
-              <Mic size={18} />
+              <Mic size={18} strokeWidth={1.8} />
             </button>
           </div>
           <button
             onClick={() => handleSearch()}
             disabled={loading}
-            className="shrink-0 w-11 h-11 rounded-full bg-primary/10 text-primary text-[0.75rem] font-gothic font-medium flex items-center justify-center disabled:opacity-50"
+            className="shrink-0 w-[46px] h-[46px] rounded-full bg-[#2C6D63] text-white text-[0.75rem] font-gothic font-semibold flex items-center justify-center disabled:opacity-60"
           >
             {loading ? <Loader2 size={18} className="animate-spin" /> : "검색"}
           </button>
@@ -677,14 +750,14 @@ const Dictionary = () => {
         {loading && (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Loader2 size={28} className="animate-spin mb-3" />
-            <p className="text-sm">사전을 찾고 있어요...</p>
+            <p className="text-sm font-gothic">사전을 찾는 중입니다</p>
           </div>
         )}
 
-        {/* 에러 */}
+        {/* 에러 (한도 안내 포함) */}
         {!loading && error && (
-          <div className="text-center py-12 text-foreground/80">
-            <p className="text-sm">{error}</p>
+          <div className="rounded-[20px] bg-card px-5 py-8 text-center shadow-[0_1px_3px_rgba(16,40,50,0.06)]">
+            <p className="font-gothic text-[0.84375rem] leading-[1.7] text-[#34332F] break-keep">{error}</p>
           </div>
         )}
 
@@ -694,7 +767,7 @@ const Dictionary = () => {
             <div className="pt-1 pb-4 text-muted-foreground">
               <p className="text-xs flex items-center justify-center gap-1">
                 <Search size={13} className="opacity-60 shrink-0" />
-                <span>인니어·한국어 단어나 문장을 검색해보세요</span>
+                <span>인니어·한국어 단어나 문장을 검색해 보세요</span>
               </p>
             </div>
             {history.length > 0 && (
@@ -741,310 +814,310 @@ const Dictionary = () => {
 
         {/* (2) 인도네시아어 문장 결과 */}
         {!loading && idSentence && (
-          <div className="bg-card border border-border/60 rounded-xl px-5 py-5 content-bump">
-            {/* 끊어읽기: 인니어 / 한국어 */}
-            <div className="flex items-start justify-between gap-2 min-w-0">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900 break-words font-word leading-relaxed">
+          <>
+            {/* 끊어읽기: 인니어 / 한국어 (단어 결과와 같은 연민트 표제 카드) */}
+            <HeroCard>
+              <div className="flex min-w-0 items-start justify-between gap-2">
+                <p className="m-0 min-w-0 break-words font-word text-[1.1875rem] font-semibold leading-[1.5] text-[#104B60]">
                   {chunkedSentence(idSentence)}
                 </p>
-                <p className="text-xs text-gray-600 mt-1.5 break-words leading-relaxed font-gothic">
+                <HeroSpeaker onClick={() => speak(idSentence.original, "id")} title="문장 듣기" />
+              </div>
+              {idSentence.translation ? (
+                <p className="m-0 mt-2 break-words text-[0.9375rem] leading-[1.6] text-[#2E3E3A]">
                   {idSentence.translation}
                 </p>
-              </div>
-              <button
-                onClick={() => speak(idSentence.original, "id")}
-                className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
-                title="문장 듣기"
-              >
-                <Volume2 size={18} />
-              </button>
-            </div>
+              ) : null}
+            </HeroCard>
 
-            {/* 단어 분석 */}
-            {idSentence.wordAnalysis.length > 0 && (
-              <>
-                <Divider />
-                <SectionTitle>단어 분석</SectionTitle>
-                <div className="space-y-3.5">
-                  {idSentence.wordAnalysis.map((w, i) => (
-                    <div key={i} className="min-w-0">
-                      <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                        <span className="font-semibold text-primary break-words font-word">{w.word}</span>
-                        <button
-                          onClick={() => speak(w.word, "id")}
-                          className="shrink-0 text-primary/70 hover:text-primary"
-                          title="발음 듣기"
-                        >
-                          <Volume2 size={14} />
-                        </button>
-                        {w.meaning && (
-                          <span className="text-xs text-gray-800 break-words font-gothic">{w.meaning}</span>
+            {(idSentence.wordAnalysis.length > 0 || idSentence.natural.id || idSentence.patterns.length > 0) && (
+              <BodyCard>
+                {/* 단어 분석 */}
+                {idSentence.wordAnalysis.length > 0 && (
+                  <section className="flex flex-col gap-3">
+                    <SectionTitle>단어 분석</SectionTitle>
+                    {idSentence.wordAnalysis.map((w, i) => (
+                      <div key={i} className="min-w-0">
+                        <div className="flex min-w-0 items-baseline gap-2">
+                          <span className="break-words font-word text-[1.0625rem] font-semibold text-[#104B60]">{w.word}</span>
+                          <span className="min-w-0 flex-1 break-words font-gothic text-[0.8125rem] text-[#5E5D57]">{w.meaning}</span>
+                          <button
+                            onClick={() => speak(w.word, "id")}
+                            className="-my-2 -mr-2 flex h-8 w-8 shrink-0 items-center justify-center self-center text-[#1F4F4A]"
+                            title="발음 듣기"
+                            aria-label="발음 듣기"
+                          >
+                            <SpeakIcon size={15} />
+                          </button>
+                        </div>
+                        {w.points.length > 0 && (
+                          <ul className="m-0 mt-1 flex flex-col gap-1 pl-0">
+                            {w.points.map((pt, j) => (
+                              <li key={j} className="flex min-w-0 gap-2 font-gothic text-[0.8125rem] leading-[1.6] text-[#34332F]">
+                                <span className="shrink-0 text-[#B59B6A]">·</span>
+                                <span className="min-w-0 break-words">{latinSpans(pt)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {w.note && (
+                          <p className="m-0 mt-1 break-words font-gothic text-[0.75rem] leading-[1.6] text-[#6B6A64]">{latinSpans(w.note)}</p>
                         )}
                       </div>
-                      {w.points.length > 0 && (
-                        <ul className="mt-1 space-y-1 pl-1">
-                          {w.points.map((pt, j) => (
-                            <li key={j} className="flex gap-2 min-w-0 text-xs text-gray-600 font-gothic">
-                              <span className="text-gray-400 shrink-0">•</span>
-                              <span className="min-w-0 break-words">{pt}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {w.note && (
-                        <p className="mt-1 text-xs text-gray-500 break-words font-gothic leading-relaxed">{w.note}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+                    ))}
+                  </section>
+                )}
 
-            {/* 더 자연스러운 표현 */}
-            {idSentence.natural.id && (
-              <>
-                <Divider />
-                <SectionTitle>더 자연스러운 표현</SectionTitle>
-                <div className="rounded-lg bg-gray-50 border border-gray-200 px-3.5 py-3 min-w-0">
-                  <div className="flex items-start justify-between gap-2 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 break-words font-word leading-relaxed min-w-0">
-                      {idSentence.natural.id}
-                    </p>
-                    <button
-                      onClick={() => speak(idSentence.natural.id, "id")}
-                      className="shrink-0 text-primary/70 hover:text-primary"
-                      title="발음 듣기"
-                    >
-                      <Volume2 size={15} />
-                    </button>
-                  </div>
-                  {idSentence.natural.ko && (
-                    <p className="text-xs text-gray-600 mt-1.5 break-words font-gothic leading-relaxed">
-                      {idSentence.natural.ko}
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* 핵심 문형 */}
-            {idSentence.patterns.length > 0 && (
-              <>
-                <Divider />
-                <SectionTitle>핵심 문형</SectionTitle>
-                <div className="space-y-2.5">
-                  {idSentence.patterns.map((p, i) => (
-                    <div
-                      key={i}
-                      className="rounded-lg bg-gray-50 border border-gray-200 px-3.5 py-3 min-w-0"
-                    >
-                      <p className="text-sm font-semibold text-gray-900 break-words font-word leading-relaxed">
-                        {renderPattern(p.pattern)}
-                      </p>
-                      {p.meaning && (
-                        <p className="text-xs text-gray-600 mt-1.5 break-words font-gothic leading-relaxed">
-                          = {p.meaning}
+                {/* 더 자연스러운 표현 */}
+                {idSentence.natural.id && (
+                  <section className="flex flex-col gap-2.5">
+                    <SectionTitle>더 자연스러운 표현</SectionTitle>
+                    <div className="min-w-0 rounded-[14px] bg-[#F6F7F5] px-3.5 py-3">
+                      <div className="flex min-w-0 items-start justify-between gap-2">
+                        <p className="m-0 min-w-0 break-words font-word text-[1rem] leading-[1.45]">
+                          {idSentence.natural.id}
+                        </p>
+                        <RowSpeaker onClick={() => speak(idSentence.natural.id, "id")} title="발음 듣기" />
+                      </div>
+                      {idSentence.natural.ko && (
+                        <p className="m-0 mt-1 break-words text-[0.8125rem] leading-[1.5] text-[#5E5D57]">
+                          {idSentence.natural.ko}
                         </p>
                       )}
                     </div>
-                  ))}
-                </div>
-              </>
+                  </section>
+                )}
+
+                {/* 핵심 문형 */}
+                {idSentence.patterns.length > 0 && (
+                  <section className="flex flex-col gap-2.5">
+                    <SectionTitle>핵심 문형</SectionTitle>
+                    {idSentence.patterns.map((p, i) => (
+                      <div key={i} className="min-w-0 rounded-[14px] bg-[#F6F7F5] px-3.5 py-3">
+                        <p className="m-0 break-words font-word text-[0.9375rem] font-semibold leading-[1.5] text-[#104B60]">
+                          {renderPattern(p.pattern)}
+                        </p>
+                        {p.meaning && (
+                          <p className="m-0 mt-1 break-words font-gothic text-[0.8125rem] leading-[1.6] text-[#34332F]">
+                            = {p.meaning}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </section>
+                )}
+              </BodyCard>
             )}
-          </div>
+          </>
         )}
 
         {/* (3) 한국어 단어 결과 → 인니어 단어들 (빈도순) */}
         {!loading && koWord && (
-          <div className="bg-card border border-border/60 rounded-xl px-5 py-5 content-bump">
-            {koWord.candidates.map((c, i) => (
-              <div key={i} className={i === 0 ? "min-w-0" : "min-w-0 mt-4 pt-4 border-t border-gray-200"}>
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="shrink-0 text-gray-900 font-bold">{i + 1}</span>
-                  {/* 표제어를 누르면 그 인니어 단어로 바로 사전 검색 */}
-                  <button
-                    onClick={() => handleSearch(c.id, koWord.query)}
-                    className="text-base font-bold text-primary break-words min-w-0 text-left underline decoration-primary/30 underline-offset-4 hover:decoration-primary active:opacity-70"
-                    title={`"${c.id}" 사전 검색`}
-                  >
-                    {c.id}
-                  </button>
-                  <button
-                    onClick={() => speak(c.id, "id")}
-                    className="shrink-0 text-primary/70 hover:text-primary"
-                    title="발음 듣기"
-                  >
-                    <Volume2 size={15} />
-                  </button>
-                </div>
-                <p className="text-sm font-bold text-gray-900 mt-1 break-words pl-5">{c.meaning}</p>
-                {(c.nuance || c.situation) && (
-                  <p className="text-xs text-gray-500 mt-0.5 break-words pl-5 font-gothic">{[c.nuance, c.situation].filter(Boolean).join(", ")}</p>
-                )}
-                {c.example && (
-                  <div className="mt-1.5 pl-5">
-                    <div className="flex items-start gap-2 min-w-0">
-                      <p className="text-sm text-gray-800 flex-1 min-w-0 break-words">{c.example}</p>
+          <>
+            <HeroCard>
+              <h2 className="m-0 break-words text-[1.25rem] font-semibold leading-[1.35] text-[#104B60]">{koWord.query}</h2>
+              <p className="m-0 mt-1.5 font-gothic text-[0.75rem] text-[#4B6560]">인니어 단어를 누르면 그 단어의 풀이가 나옵니다</p>
+            </HeroCard>
+            <BodyCard>
+              <section className="flex flex-col gap-2.5">
+                {koWord.candidates.map((c, i) => (
+                  <div key={i} className="flex min-w-0 flex-col gap-[3px] rounded-[14px] border border-[#E6EAE8] px-3.5 py-3">
+                    <div className="flex min-w-0 items-baseline gap-2">
+                      <span className="w-3.5 shrink-0 font-word text-[0.9375rem] italic text-[#B59B6A]">{i + 1}</span>
+                      {/* 표제어를 누르면 그 인니어 단어로 바로 사전 검색 */}
                       <button
-                        onClick={() => speak(c.example, "id")}
-                        className="shrink-0 text-primary/70 hover:text-primary"
-                        title="예문 듣기"
+                        onClick={() => handleSearch(c.id, koWord.query)}
+                        className="min-w-0 break-words text-left font-word text-[1.125rem] font-semibold text-[#104B60] underline decoration-dotted decoration-[#104B60]/40 underline-offset-4 active:opacity-70"
+                        title={`"${c.id}" 사전 검색`}
                       >
-                        <Volume2 size={14} />
+                        {c.id}
+                      </button>
+                      <span className="flex-1" />
+                      <button
+                        onClick={() => speak(c.id, "id")}
+                        className="-my-2 -mr-2 flex h-8 w-8 shrink-0 items-center justify-center self-center text-[#1F4F4A]"
+                        title="발음 듣기"
+                        aria-label="발음 듣기"
+                      >
+                        <SpeakIcon size={15} />
                       </button>
                     </div>
-                    {c.exampleKo && <p className="text-xs text-gray-500 break-words">{c.exampleKo}</p>}
+                    <p className="m-0 break-words pl-6 text-[0.9375rem] font-semibold">{c.meaning}</p>
+                    {(c.nuance || c.situation) && (
+                      <p className="m-0 break-words pl-6 font-gothic text-[0.8125rem] leading-[1.6] text-[#5E5D57]">{[c.nuance, c.situation].filter(Boolean).join(", ")}</p>
+                    )}
+                    {c.example && (
+                      <div className="mt-1.5 flex min-w-0 items-start gap-2 pl-6">
+                        <div className="min-w-0 flex-1">
+                          <p className="m-0 break-words font-word text-[0.9375rem] leading-[1.45]">{c.example}</p>
+                          {c.exampleKo && <p className="m-0 break-words text-[0.8125rem] leading-[1.5] text-[#5E5D57]">{c.exampleKo}</p>}
+                        </div>
+                        <RowSpeaker onClick={() => speak(c.example, "id")} title="예문 듣기" />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
+                ))}
+              </section>
+            </BodyCard>
+          </>
         )}
 
         {/* (4) 한국어 문장 결과 → 인니어 (문어체/구어체) */}
         {!loading && koSentence && (
-          <div className="bg-card border border-border/60 rounded-xl px-5 py-5 content-bump">
-            <h2 className="text-xs font-medium text-gray-500 break-words">{koSentence.query}</h2>
-            {[{ label: "구어체", v: koSentence.casual }, { label: "문어체", v: koSentence.formal }].map((row, i) => (
-              row.v.id ? (
-                <div key={i} className={i === 0 ? "mt-3" : "mt-3 pt-3 border-t border-gray-200"}>
-                  <span className="inline-block text-[0.6875rem] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 mb-1.5">{row.label}</span>
-                  <div className="flex items-start gap-2 min-w-0">
-                    <p className="text-base font-semibold text-gray-900 break-words min-w-0 flex-1">{row.v.id}</p>
-                    <button
-                      onClick={() => speak(row.v.id, "id")}
-                      className="shrink-0 text-primary/70 hover:text-primary mt-0.5"
-                      title="문장 듣기"
+          <>
+            <HeroCard>
+              <p className="m-0 break-words text-[1.0625rem] font-semibold leading-[1.55]">{koSentence.query}</p>
+            </HeroCard>
+            <BodyCard>
+              {[{ label: "구어체", bg: "#DDF0EA", fg: "#245A51", v: koSentence.casual }, { label: "문어체", bg: "#DCEAF6", fg: "#24506F", v: koSentence.formal }].map((row, i) => (
+                row.v.id ? (
+                  <section key={i} className="flex flex-col gap-1.5">
+                    <span
+                      className="flex h-5 items-center self-start rounded-[10px] px-2 font-gothic text-[0.6875rem] font-semibold"
+                      style={{ background: row.bg, color: row.fg }}
                     >
-                      <Volume2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ) : null
-            ))}
+                      {row.label}
+                    </span>
+                    <div className="flex min-w-0 items-start gap-2">
+                      <p className="m-0 min-w-0 flex-1 break-words font-word text-[1.0625rem] font-semibold leading-[1.5] text-[#104B60]">{row.v.id}</p>
+                      <RowSpeaker onClick={() => speak(row.v.id, "id")} title="문장 듣기" />
+                    </div>
+                  </section>
+                ) : null
+              ))}
 
-            {koSentence.hardWords.length > 0 && (
-              <>
-                <Divider />
-                <ul className="space-y-1.5 text-xs text-gray-800 font-gothic">
-                  {koSentence.hardWords.map((h, i) => (
-                    <li key={i} className="flex gap-2 min-w-0">
-                      <span className="text-gray-400">•</span>
-                      <span className="min-w-0 break-words"><span className="font-semibold text-gray-900">{h.word}</span> <span className="text-[0.6875rem]">{h.meaning}</span></span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </div>
+              {koSentence.hardWords.length > 0 && (
+                <section className="flex flex-col gap-2.5">
+                  <SectionTitle>단어</SectionTitle>
+                  <div className="grid grid-cols-[minmax(84px,auto)_1fr] gap-x-3 gap-y-2 rounded-[14px] bg-[#F6F7F5] px-3.5 py-3 font-gothic text-[0.8125rem]">
+                    {koSentence.hardWords.map((h, i) => (
+                      <Fragment key={i}>
+                        <span className="break-words font-word text-[0.9375rem]">{h.word}</span>
+                        <span className="min-w-0 break-words text-[#34332F]">{h.meaning}</span>
+                      </Fragment>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </BodyCard>
+          </>
         )}
 
         {/* (1) 인도네시아어 단어 결과 */}
-        {!loading && result && (
-          <div className="bg-card border border-border/60 rounded-xl px-5 py-5 content-bump">
-            {/* 표제어 + 기본뜻 */}
-            <div className="flex items-start justify-between gap-2 mb-1 min-w-0">
-              <h2 className="text-xl font-bold text-gray-900 break-words min-w-0">{result.word}</h2>
-              <button
-                onClick={() => speak(result.word, "id")}
-                className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"
-                title="발음 듣기"
-              >
-                <Volume2 size={18} />
-              </button>
-            </div>
-            <p className="text-sm font-medium text-gray-900 break-words">{result.meaning}</p>
-            {result.meaningDetail && (
-              <p className="text-[0.6875rem] text-gray-500 mt-1 break-words font-gothic leading-relaxed">{result.meaningDetail}</p>
-            )}
+        {!loading && result && (() => {
+          const analysisRows = [
+            { label: "어근", value: result.root },
+            { label: "접사", value: result.affix },
+            { label: "문어·구어", value: result.register },
+          ].filter((r) => r.value);
+          const related = RELATED_KINDS.flatMap((k) =>
+            (result[k.key] || []).map((it, i) => ({ it, k, key: k.key + i }))
+          );
+          const freq = Math.max(1, Math.min(5, result.frequency || 1));
+          const diff = Math.max(1, Math.min(5, result.difficulty || 1));
+          const saveOff = saved || !saveTargetId;
+          return (
+            <>
+              {/* 표제어 + 기본뜻 (연민트 카드) */}
+              <HeroCard>
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <h2 className="m-0 min-w-0 break-words font-word text-[1.5rem] font-semibold leading-[1.25] text-[#104B60]">{result.word}</h2>
+                  <HeroSpeaker onClick={() => speak(result.word, "id")} title="발음 듣기" />
+                </div>
+                <p className="m-0 mt-2 break-words text-[1.0625rem] font-semibold">{result.meaning}</p>
+                {result.meaningDetail && (
+                  <p className="m-0 mt-1 break-words font-gothic text-[0.8125rem] leading-[1.65] text-[#3F5550]">{latinSpans(result.meaningDetail)}</p>
+                )}
+              </HeroCard>
 
-            {/* 예문 */}
-            {result.examples.length > 0 && (
-              <>
-                <Divider />
-                <SectionTitle>예문</SectionTitle>
-                <ol className="space-y-3">
-                  {result.examples.map((ex, i) => (
-                    <li key={i} className="flex gap-2 min-w-0">
-                      <span className="text-gray-400 text-sm shrink-0">{i + 1}.</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start gap-2 min-w-0">
-                          <p className="text-sm text-gray-900 flex-1 min-w-0 break-words">{ex.id}</p>
-                          <button
-                            onClick={() => speak(ex.id, "id")}
-                            className="shrink-0 text-primary/70 hover:text-primary"
-                            title="예문 듣기"
-                          >
-                            <Volume2 size={15} />
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-500 break-words">{ex.ko}</p>
+              {(result.examples.length > 0 || analysisRows.length > 0 || result.etymology.length > 0 || related.length > 0) && (
+                <BodyCard>
+                  {/* 예문 */}
+                  {result.examples.length > 0 && (
+                    <section className="flex flex-col gap-3">
+                      <SectionTitle>예문</SectionTitle>
+                      {result.examples.map((ex, i) => (
+                        <ExampleRow key={i} n={i + 1} id={ex.id} ko={ex.ko} />
+                      ))}
+                    </section>
+                  )}
+
+                  {/* 단어 분석 (회색 상자 안 2열 표) */}
+                  {analysisRows.length > 0 && (
+                    <section className="flex flex-col gap-2.5">
+                      <SectionTitle>단어 분석</SectionTitle>
+                      <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-y-2 rounded-[14px] bg-[#F6F7F5] px-3.5 py-3 font-gothic text-[0.8125rem] leading-[1.55]">
+                        {analysisRows.map((r) => (
+                          <Fragment key={r.label}>
+                            <span className="text-[#6B6A64]">{r.label}</span>
+                            <span className="min-w-0 break-words">{latinSpans(r.value, "text-[0.9375rem]")}</span>
+                          </Fragment>
+                        ))}
                       </div>
-                    </li>
-                  ))}
-                </ol>
-              </>
-            )}
+                    </section>
+                  )}
 
-            {/* 단어 분석 */}
-            {(result.root || result.affix || result.register) && (
-              <>
-                <Divider />
-                <SectionTitle>단어 분석</SectionTitle>
-                <ul className="space-y-1.5 text-xs text-foreground/80 font-gothic">
-                  {result.root && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">어근:</span> {result.root}</span></li>}
-                  {result.affix && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">접사:</span> {result.affix}</span></li>}
-                  {result.register && <li className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words"><span className="font-medium text-gray-900">문어체/구어체:</span> {result.register}</span></li>}
-                </ul>
-              </>
-            )}
+                  {/* 단어 배경 */}
+                  {result.etymology.length > 0 && (
+                    <section className="flex flex-col gap-2.5">
+                      <SectionTitle>단어 배경</SectionTitle>
+                      <div className="flex flex-col gap-2 font-gothic text-[0.8125rem] leading-[1.65] text-[#34332F]">
+                        {result.etymology.map((e, i) => (
+                          <p key={i} className="m-0 break-words">{latinSpans(e)}</p>
+                        ))}
+                      </div>
+                    </section>
+                  )}
 
-            {/* 단어 배경 */}
-            {result.etymology.length > 0 && (
-              <>
-                <Divider />
-                <SectionTitle>단어 배경</SectionTitle>
-                <ul className="space-y-1.5 text-xs text-foreground/80 font-gothic">
-                  {result.etymology.map((e, i) => (
-                    <li key={i} className="flex gap-2"><span className="text-gray-400">•</span><span className="min-w-0 break-words">{e}</span></li>
-                  ))}
-                </ul>
-              </>
-            )}
+                  {/* 형태와 관련 단어 — 능동형·수동형·반대·유사·파생을 꼬리표 카드 하나로 */}
+                  {related.length > 0 && (
+                    <section className="flex flex-col gap-2.5">
+                      <SectionTitle>형태와 관련 단어</SectionTitle>
+                      {related.map(({ it, k, key }) => (
+                        <RelatedCard key={key} it={it} title={k.title} bg={k.bg} fg={k.fg} />
+                      ))}
+                    </section>
+                  )}
+                </BodyCard>
+              )}
 
-            {/* 능동형·수동형·반대·비슷한·파생 단어 (통일 카드) */}
-            <RelatedSection title="능동형" items={result.activeForms} />
-            <RelatedSection title="수동형" items={result.passiveForms} />
-            <RelatedSection title="반대 단어" items={result.opposites} />
-            <RelatedSection title="비슷한 단어" items={result.similar} />
-            <RelatedSection title="파생 단어" items={result.derived} />
+              {/* 회화 사용빈도 / 난이도 (작은 카드 두 칸) */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="rounded-2xl bg-card px-3.5 py-3">
+                  <p className="m-0 font-gothic text-[0.75rem] text-[#5B6469]">회화 사용빈도</p>
+                  <p className="m-0 mt-1 font-gothic text-[0.9375rem] font-bold text-[#B4501F]">{FREQ_LABEL[freq]}</p>
+                  <Bars n={freq} on="#EC7F51" />
+                </div>
+                <div className="rounded-2xl bg-card px-3.5 py-3">
+                  <p className="m-0 font-gothic text-[0.75rem] text-[#5B6469]">난이도</p>
+                  <p className="m-0 mt-1 font-gothic text-[0.9375rem] font-bold text-[#2C6D63]">{DIFF_LABEL[diff]}</p>
+                  <Bars n={diff} on="#2C6D63" />
+                </div>
+              </div>
 
-            {/* 사용빈도 / 난이도 */}
-            <Divider />
-            <div className="space-y-1 text-xs text-gray-900">
-              <p><span className="font-semibold">실제 회화 사용빈도</span> <Stars n={result.frequency} /></p>
-              <p><span className="font-semibold">난이도</span> <Stars n={result.difficulty} /></p>
-            </div>
-
-            {/* 고른 단어장에 보내기 (본체=바로 담기 / ⌄=대상 고르기) */}
-            <div className="mt-6">
-              <div className="w-full flex items-stretch overflow-hidden rounded-full text-xs font-medium">
+              {/* 고른 단어장에 보내기 (본체=바로 담기 / ⌄=대상 고르기) */}
+              <div
+                className={`mt-1.5 flex overflow-hidden rounded-[26px] font-gothic text-[0.875rem] font-semibold ${
+                  saveOff ? "" : "shadow-[0_4px_14px_rgba(44,109,99,0.18)]"
+                }`}
+              >
                 <button
                   onClick={handleSaveToWordbook}
-                  disabled={saved || !saveTargetId}
-                  className={`flex-1 min-w-0 flex items-center justify-center gap-2 py-3 transition-colors ${
-                    saved || !saveTargetId
-                      ? "bg-gray-100 text-gray-400"
-                      : "bg-primary text-white hover:bg-primary/90"
+                  disabled={saveOff}
+                  className={`flex h-[52px] min-w-0 flex-1 items-center justify-center gap-1.5 px-3 ${
+                    saved
+                      ? "bg-[#E3EEEC] text-[#2C6D63]"
+                      : !saveTargetId
+                        ? "bg-gray-100 text-gray-400"
+                        : "bg-[#2C6D63] text-white active:bg-[#24594F]"
                   }`}
                 >
-                  {saved ? <Check size={14} className="shrink-0" /> : <Plus size={14} className="shrink-0" />}
+                  {saved ? <Check size={16} strokeWidth={2.2} className="shrink-0" /> : <Plus size={16} strokeWidth={2.2} className="shrink-0" />}
                   <span className="truncate">
                     {saved
                       ? "저장됨"
                       : saveTargetId
-                        ? saveTargetName
+                        ? saveTargetName + "에 담기"
                         : "단어장을 먼저 만들어 주세요"}
                   </span>
                 </button>
@@ -1053,26 +1126,31 @@ const Dictionary = () => {
                 <button
                   onClick={(e) => { e.stopPropagation(); openSaveSheet(); }}
                   title="담을 단어장 고르기"
-                  className={`shrink-0 flex items-center px-4 border-l transition-colors ${
-                    saved || !saveTargetId
-                      ? "border-gray-300 bg-gray-100 text-gray-400 hover:bg-gray-200"
-                      : "border-white/30 bg-primary text-white hover:bg-primary/90"
+                  aria-label="담을 단어장 고르기"
+                  className={`flex h-[52px] w-[54px] shrink-0 items-center justify-center border-l ${
+                    saved
+                      ? "border-[#2C6D63]/15 bg-[#E3EEEC] text-[#2C6D63]"
+                      : !saveTargetId
+                        ? "border-gray-300 bg-gray-100 text-gray-400"
+                        : "border-white/30 bg-[#2C6D63] text-white active:bg-[#24594F]"
                   }`}
                 >
-                  <ChevronDown size={14} />
+                  <ChevronDown size={16} strokeWidth={2.2} />
                 </button>
               </div>
-            </div>
 
-            {/* AI 풀이 신고 — 스토어 앱(공개판)에서만 보입니다. 담기 버튼과 떨어진 맨 끝에 둡니다 */}
-            <AiReportButton
-              feature="dictionary"
-              input={result.word}
-              output={result.meaning + (result.meaningDetail ? " / " + result.meaningDetail : "")}
-              className="mt-6 pt-3 border-t border-gray-100"
-            />
-          </div>
-        )}
+              {/* AI 풀이 신고 — 스토어 앱(공개판)에서만 보입니다. 담기 버튼 아래 가운데 작은 글자로 둡니다 */}
+              <div className="flex justify-center [&>div>button]:text-[#6B7479]">
+                <AiReportButton
+                  feature="dictionary"
+                  input={result.word}
+                  output={result.meaning + (result.meaningDetail ? " / " + result.meaningDetail : "")}
+                  className="flex flex-col items-center"
+                />
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {/* 담을 단어장 고르는 시트 (사전·단어 팝업 공용) */}

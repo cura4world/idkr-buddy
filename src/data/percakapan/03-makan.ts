@@ -36,7 +36,7 @@ export const MAKAN: PercakapanScene[] = [
     lines: [
       { s: "B", id: "Sudah mau pesan, Mas?", ko: "주문하시겠어요?" },
       { s: "A", id: "Iya. Ada nasi goreng, nggak?", ko: "네. 나시고렝 있어요?" },
-      { s: "B", id: "Ada. Mau yang biasa atau yang pakai telur?", ko: "있어요. 보통으로요, 계란 넣을까요?" },
+      { s: "B", id: "Ada. Mau yang biasa atau yang pakai telur?", ko: "있어요. 그냥 드릴까요, 계란 넣어 드릴까요?" },
       { s: "A", id: "Pakai telur aja.", ko: "계란 넣어 주세요." },
       { s: "B", id: "Mau tambah ayam atau seafood?", ko: "닭고기나 해산물 추가하시겠어요?" },
       { s: "A", id: "Ayam aja satu.", ko: "닭고기로 하나요." },
@@ -64,7 +64,7 @@ export const MAKAN: PercakapanScene[] = [
       { s: "A", id: "Bisa nggak pedas sama sekali?", ko: "아예 안 맵게 해줄 수 있어요?" },
       { s: "B", id: "Bisa, nanti sambalnya dipisah aja.", ko: "돼요, 삼발은 따로 드릴게요." },
       { s: "A", id: "Nah, itu lebih bagus.", ko: "그게 더 좋겠어요." },
-      { s: "B", id: "Nasinya mau porsi biasa atau setengah?", ko: "밥은 보통으로요, 반으로요?" },
+      { s: "B", id: "Nasinya mau porsi biasa atau setengah?", ko: "밥은 보통으로 드릴까요, 반만 드릴까요?" },
       { s: "A", id: "Setengah aja, aku nggak makan banyak.", ko: "반만 주세요, 많이 안 먹어서요." },
       { s: "B", id: "Baik. Ada pantangan lain?", ko: "네. 다른 못 드시는 거 있으세요?" },
       { s: "A", id: "Tolong jangan pakai micin kalau bisa.", ko: "가능하면 조미료 빼주세요." },

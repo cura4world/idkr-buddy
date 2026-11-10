@@ -20,9 +20,19 @@ function storeBridge(): KataStoreBridge | null {
   }
 }
 
-/** Google Play 에서 받은 스토어 앱 안인가 — 그렇다면 언제나 공개판입니다. */
+// 미리보기 빌드(VITE_PREVIEW=1)는 공개판을 검사하려고 만든 것이라, 브라우저에서 띄워도
+// 스토어 앱처럼 동작합니다(plan.ts 의 isPreviewBuild 와 같은 판단 — 이 파일은 import 하지 않으므로 직접 읽음).
+function previewBuild(): boolean {
+  try {
+    return import.meta.env.VITE_PREVIEW === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+/** Google Play 에서 받은 스토어 앱 안인가 — 그렇다면 언제나 공개판입니다. 미리보기 빌드도 여기에 듭니다. */
 export function isStoreApp(): boolean {
-  return storeBridge() !== null;
+  return storeBridge() !== null || previewBuild();
 }
 
 /** 스토어 앱 버전 ("1.0.N"). 스토어 앱이 아니면 빈 문자열. */

@@ -1,5 +1,5 @@
 // src/components/AiReportButton.tsx
-// "풀이가 이상해요" — AI 가 만든 내용을 신고합니다 (Google Play 의 AI 생성 콘텐츠 정책 요건).
+// "풀이가 이상합니다" — AI 가 만든 내용을 신고합니다 (Google Play 의 AI 생성 콘텐츠 정책 요건).
 // 스토어 앱(공개판)에서만 보입니다. 관리자판·회원판에서는 아무것도 그리지 않습니다.
 // 2026-11 게슈탈트 개선안: 주인공 버튼과 떨어진 본문 끝에, 작은 글자 버튼으로 둡니다.
 
@@ -16,7 +16,8 @@ interface Props {
   className?: string;
 }
 
-const REASONS = ["뜻·번역이 틀려요", "부적절한 내용이에요", "기타"];
+// 말투 규칙(11/10): "~해요" 대신 "~입니다". 시안(사전 안 4)의 버튼 문구 "풀이가 이상합니다"와 맞춥니다.
+const REASONS = ["뜻·번역이 틀립니다", "부적절한 내용입니다", "기타"];
 
 const AiReportButton = ({ feature, input, output, className }: Props) => {
   const [open, setOpen] = useState(false);
@@ -54,7 +55,7 @@ const AiReportButton = ({ feature, input, output, className }: Props) => {
         className="h-8 flex items-center gap-1.5 text-xs font-gothic text-muted-foreground"
       >
         <Flag size={13} />
-        풀이가 이상해요
+        풀이가 이상합니다
       </button>
       {open ? (
         <div className="mt-1 flex flex-wrap gap-2">
