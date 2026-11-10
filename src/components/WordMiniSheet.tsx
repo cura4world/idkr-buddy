@@ -5,6 +5,7 @@
 // 이야기(Story.tsx)와 회화집 읽기(PercakapanRead.tsx)가 함께 씁니다. 다른 화면은 쓰지 않습니다.
 
 import { Check, ChevronDown, Loader2, Plus, Volume1, X } from "lucide-react";
+import { useBackClose } from "@/hooks/useBackClose";
 
 interface Props {
   word: string;
@@ -44,6 +45,8 @@ const WordMiniSheet = ({
   onSpeak,
 }: Props) => {
   const grey = saved || !saveTargetId;
+  // 폰의 뒤로가기는 이 시트만 닫습니다(이야기 카드·회화 읽기 화면은 그대로). 시트는 열릴 때만 그려집니다.
+  useBackClose(true, onClose);
   return (
     <div className="fixed inset-0 z-50" onClick={onClose}>
       <div className="absolute inset-0" style={{ background: "rgba(20,30,35,0.38)" }} />
