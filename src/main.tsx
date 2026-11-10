@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import "./fonts";
 import "./index.css";
 import { applyFontScale } from "./lib/fontScale";
 import { startUsageTimer } from "./lib/usageTimer";

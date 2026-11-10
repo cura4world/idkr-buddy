@@ -3,24 +3,25 @@
 // 다섯 글자 인도네시아어 단어를 여섯 번 안에 맞힙니다. 하루 한 문제(한국 시간 자정에 바뀜),
 // 모든 사람이 같은 날 같은 단어를 받습니다. 출제·채점·기록은 src/lib/kataHariIni.ts.
 // 칸 색: 초록 = 자리까지 맞음, 노랑 = 단어 안에 있지만 자리가 다름, 회색 = 없음.
-// 입력은 아무 다섯 글자나 받습니다(단어 목록 검사는 하지 않음 — 목록이 작아 아는 단어가 거절되면 답답합니다).
+// 입력은 실제 단어만 받습니다(정답 목록 + 추가 단어 목록, kataHariIni.isKnownWord). 목록에 없는 말은
+// 시도 횟수를 쓰지 않고 줄을 흔든 뒤 격자 아래에 "단어 목록에 없는 단어입니다" 를 잠깐 띄웁니다.
 // API 호출이 없습니다. 끝나면 훈장 기록을 한 번만 남깁니다.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import {
   MAX_TRIES,
   WORD_LEN,
+  answerForDay,
   dayKeyOf,
   dayLabel,
   getDayRecord,
+  isKnownWord,
   isValidGuess,
   keyMarks,
   kstDayNumber,
   saveDayRecord,
   scoreGuess,
   currentStreak,
-  todayPuzzle,
 } from "@/lib/kataHariIni";
 import type { DayRecord, PuzzleWord, TileMark } from "@/lib/kataHariIni";
 import { medaliEngine, dateKey } from "@/lib/medali";
@@ -54,6 +55,7 @@ const KEY_ROWS: string[][] = [
 ];
 
 const SHAKE_MS = 380;
+const NOTICE_MS = 1600;
 
 const GameKata = () => {
   const navigate = useNavigate();
@@ -61,12 +63,13 @@ const GameKata = () => {
 
   // 화면을 연 날을 기준으로 합니다 (자정을 넘겨 풀고 있어도 문제가 바뀌지 않게)
   const [dayNum] = useState(() => kstDayNumber(Date.now()));
-  const [answer] = useState<PuzzleWord | null>(() => todayPuzzle());
+  const [answer] = useState<PuzzleWord | null>(() => answerForDay(dayNum));
   const dayKey = dayKeyOf(dayNum);
 
   const [rec, setRec] = useState<DayRecord>(() => getDayRecord(dayKey));
   const [typed, setTyped] = useState("");
   const [shake, setShake] = useState(false);
+  const [notice, setNotice] = useState("");       // 격자 아래 짧은 알림 (잘못 낸 줄)
   const [freshRow, setFreshRow] = useState(-1);   // 방금 낸 줄 (색이 차례로 칠해지는 연출)
   const [streak, setStreak] = useState(() => currentStreak());
   const [gained, setGained] = useState(0);
@@ -78,6 +81,7 @@ const GameKata = () => {
   typedRef.current = typed;
   const aliveRef = useRef(true);
   const shakeTimerRef = useRef<number | null>(null);
+  const noticeTimerRef = useRef<number | null>(null);
   const floatTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -85,6 +89,7 @@ const GameKata = () => {
     return () => {
       aliveRef.current = false;
       if (shakeTimerRef.current) window.clearTimeout(shakeTimerRef.current);
+      if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
       if (floatTimerRef.current) window.clearTimeout(floatTimerRef.current);
       stopSpeak();
     };
@@ -131,7 +136,12 @@ const GameKata = () => {
     shakeTimerRef.current = window.setTimeout(() => {
       if (aliveRef.current) setShake(false);
     }, SHAKE_MS);
-    if (msg) toast(msg);
+    if (!msg) return;
+    setNotice(msg);
+    if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = window.setTimeout(() => {
+      if (aliveRef.current) setNotice("");
+    }, NOTICE_MS);
   };
 
   const submit = useCallback(() => {
@@ -146,6 +156,13 @@ const GameKata = () => {
       bump();
       return;
     }
+    // 목록에 없는 말은 시도 횟수를 쓰지 않습니다 (친 글자는 그대로 두어 고쳐 칠 수 있게)
+    if (!isKnownWord(g)) {
+      bump("단어 목록에 없는 단어입니다");
+      return;
+    }
+    if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+    setNotice("");
     const guesses = r.guesses.concat([g]);
     const won = g === answer.word;
     const done = won || guesses.length >= MAX_TRIES;
@@ -238,8 +255,8 @@ const GameKata = () => {
         ) : null}
       </div>
 
-      {/* 6 × 5 칸 */}
-      <div className="mt-2.5 flex flex-col gap-1.5 items-center">
+      {/* 6 × 5 칸 — 알림은 격자 바로 아래에 겹쳐 띄워 자판 위치가 움직이지 않게 합니다 */}
+      <div className="relative mt-2.5 flex flex-col gap-1.5 items-center">
         {rows.map((r) => {
           const submitted = r < rec.guesses.length;
           const isCurrent = !rec.done && r === rec.guesses.length;
@@ -282,6 +299,20 @@ const GameKata = () => {
             </div>
           );
         })}
+        <div
+          className="absolute left-0 right-0 top-full mt-3 flex justify-center pointer-events-none"
+          role="status"
+          aria-live="polite"
+        >
+          {notice ? (
+            <span
+              className="px-3.5 py-1.5 rounded-full font-gothic text-[13px] font-semibold text-white"
+              style={{ background: G.text, boxShadow: CARD_SHADOW }}
+            >
+              {notice}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {rec.done ? (
