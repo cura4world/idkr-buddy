@@ -36,8 +36,41 @@ interface IllustBook {
  * 키는 영문 소문자·숫자·하이픈만 (파일 이름 illust-<key>.json 과 같게).
  */
 export const ILLUST_BOOK_KEYS: Record<string, string> = {
-  "동물": "hewan",
+  // 공개 단어장 01~34. 파일(illust-<key>.json)이 아직 없는 권은 그림 없이 보입니다.
+  "인사·기본 표현": "salam",
+  "인칭·지시·의문": "kata-ganti",
   "전치사·접속사": "preposisi",
+  "수량·숫자·단위": "angka",
+  "시간·날짜·순서": "waktu",
+  "입말·구어": "gaul",
+  "이동·존재": "gerak",
+  "행위·조작": "tindakan",
+  "인지·소통": "komunikasi",
+  "접사 가족": "imbuhan",
+  "상태·성질": "sifat",
+  "평가·정도": "penilaian",
+  "빈도·양태": "frekuensi",
+  "가족·호칭": "keluarga",
+  "신체·건강": "tubuh",
+  "감정·성격": "perasaan",
+  "음식·요리": "makanan",
+  "집·생활용품": "rumah",
+  "옷·외모": "pakaian",
+  "쇼핑·돈": "belanja",
+  "취미·운동·여가": "hobi",
+  "직업·직장": "pekerjaan",
+  "교육·학교": "sekolah",
+  "의료·병원": "rumah-sakit",
+  "행정·법률": "hukum",
+  "긴급·안전": "darurat",
+  "사회·경제·뉴스": "ekonomi",
+  "동물": "hewan",
+  "식물·농업": "tanaman",
+  "날씨·지형": "cuaca",
+  "교통": "transportasi",
+  "장소·여행": "wisata",
+  "기술·인터넷": "teknologi",
+  "인도네시아 문화": "budaya",
 };
 
 // 파일 주소만 미리 모아 둡니다(내용은 열 때 받음).
