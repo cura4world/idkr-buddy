@@ -134,6 +134,11 @@ export async function queryOffers(productIds: string[] = [PLUS_PRODUCT_ID]): Pro
   return ev.type === "products" && Array.isArray(ev.products) ? ev.products : [];
 }
 
+/** 구독이 붙은 플랜인지 — 7일 무료 체험(trial)도 구독이 시작된 것입니다. Special·관리자는 계정에 준 등급이라 아님. */
+export function isPaidPlan(plan: PublicPlan): boolean {
+  return (plan.tier === "plus" || plan.tier === "trial") && plan.until > Date.now();
+}
+
 async function verify(p: PurchaseInfo): Promise<PublicPlan | null> {
   const res = await publicPost("/billing/verify", { productId: p.productId, purchaseToken: p.purchaseToken });
   if (!res.ok) return null;
@@ -174,7 +179,7 @@ export async function purchase(offer: PlanOffer): Promise<PurchaseOutcome> {
     if (p.state !== "PURCHASED") continue;
     try {
       const plan = await verify(p);
-      if (plan && plan.tier === "plus") return { status: "plus", plan };
+      if (plan && isPaidPlan(plan)) return { status: "plus", plan };
     } catch (e) {}
   }
   return { status: "error", code: "VERIFY_FAILED" };
@@ -196,7 +201,7 @@ export async function restorePurchases(): Promise<PublicPlan | null> {
     if (p.state !== "PURCHASED") continue;
     try {
       const plan = await verify(p);
-      if (plan && plan.tier === "plus") return plan;
+      if (plan && isPaidPlan(plan)) return plan;
     } catch (e) {}
   }
   return null;
