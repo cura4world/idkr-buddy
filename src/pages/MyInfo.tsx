@@ -762,7 +762,11 @@ const MyInfo = () => {
         ) : null}
         <p className="text-center font-gothic" style={{ margin: "6px 0 0", fontSize: rem(11.5), color: FAINT }}>
           Kata kata {version} · <a href={TERMS_URL} className="underline-offset-2">이용약관</a> ·{" "}
-          <a href={PRIVACY_URL} className="underline-offset-2">개인정보처리방침</a>
+          <a href={PRIVACY_URL} className="underline-offset-2">개인정보처리방침</a> ·{" "}
+          {/* 사진 출처(S55) — 지도 사진의 작가·라이선스는 여기 한곳에 모읍니다. 경로는 PhotoCredits.tsx 의 PHOTO_CREDITS_PATH */}
+          <button type="button" onClick={() => navigate("/about/photos")} className="underline-offset-2">
+            사진 출처
+          </button>
         </p>
       </div>
 
