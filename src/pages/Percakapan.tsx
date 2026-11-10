@@ -26,6 +26,7 @@ import { builtinScenesOf } from "@/data/percakapan";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { isStoreApp } from "@/lib/platform";
 import LevelCircles from "@/components/LevelCircles";
+import { useCompactPill } from "@/lib/useCompactPill";
 
 const RESTORE_ASKED_KEY = "percakapan-restore-asked";
 const NEW_CAT = "__new__";
@@ -100,6 +101,12 @@ const Percakapan = () => {
   const [restoring, setRestoring] = useState(false);
 
   const askedRef = useRef(false);
+
+  // 헤더 "PERCAKAPAN" 을 자르지 않도록 (QA Q09)
+  const headTitleRef = useRef<HTMLHeadingElement>(null);
+  const makePillRef = useRef<HTMLButtonElement>(null);
+  const makeLabelRef = useRef<HTMLSpanElement>(null);
+  const makeCompact = useCompactPill(headTitleRef, makePillRef, makeLabelRef);
 
   const refresh = () => {
     listCategories()
@@ -300,17 +307,27 @@ const Percakapan = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">
+        {/* 제목은 자르지 않습니다(QA Q09). 자리가 모자라면 "회화집 만들기" 알약이 아이콘만 남은 동그라미로 줄어듭니다. */}
+        <h1
+          ref={headTitleRef}
+          className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]"
+          style={{ minWidth: "fit-content" }}
+        >
           PERCAKAPAN
         </h1>
         <button
+          ref={makePillRef}
           type="button"
           onClick={openMake}
-          className="shrink-0 -mr-1 h-9 pl-[11px] pr-[13px] rounded-full flex items-center gap-[5px] font-gothic text-[0.8125rem] font-semibold active:opacity-80"
+          aria-label="회화집 만들기"
+          className={
+            "-mr-1 h-9 rounded-full flex items-center font-gothic text-[0.8125rem] font-semibold active:opacity-80 " +
+            (makeCompact ? "w-9 shrink-0 justify-center" : "min-w-9 overflow-hidden pl-[11px] pr-[13px] gap-[5px]")
+          }
           style={{ background: C.tealBg, color: C.teal }}
         >
-          {plan.plus ? <Plus size={15} strokeWidth={2.4} /> : <Lock size={13} strokeWidth={2.2} />}
-          회화집 만들기
+          {plan.plus ? <Plus size={15} strokeWidth={2.4} className="shrink-0" /> : <Lock size={13} strokeWidth={2.2} className="shrink-0" />}
+          {makeCompact ? null : <span ref={makeLabelRef} className="whitespace-nowrap">회화집 만들기</span>}
         </button>
       </header>
 
