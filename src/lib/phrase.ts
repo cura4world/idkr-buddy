@@ -3,6 +3,7 @@
 // 한 번 만든 문장은 다시 만들지 않으므로 재과금이 0입니다.
 
 import { callGeminiJSON } from "@/lib/geminiText";
+import type { AiKind } from "@/lib/aiProxy";
 
 const DB_NAME = "kata-phrases";
 const DB_VERSION = 1;
@@ -202,7 +203,7 @@ function parseExamples(v: unknown): PhraseExample[] {
 
 /** 문장 뽑기 쪽에서 쓰는 범용 JSON 호출 (성경 구절 고르기 등) */
 export async function askPhraseJSON(prompt: string): Promise<Record<string, unknown>> {
-  return callGeminiJSON(prompt);
+  return callGeminiJSON(prompt, { kind: "phrase" });
 }
 
 export interface GeneratedPhrase {
@@ -218,7 +219,8 @@ export async function generateNewPhrase(
   guide: string,
   recent: string[]
 ): Promise<GeneratedPhrase> {
-  const raw = await callGeminiJSON(buildCreatePrompt(guide, recent));
+  // 오늘의 문장 새로 만들기 — 공개판 서버의 "오늘의 문장" 한도(무료 하루 1)로 셉니다.
+  const raw = await callGeminiJSON(buildCreatePrompt(guide, recent), { kind: "phrase" });
   const id = asString(raw.id);
   if (id === "") throw new Error("EMPTY_RESPONSE");
   const ko = asString(raw.ko);
@@ -240,12 +242,15 @@ export async function generateNewPhrase(
  * 캐시에 있으면 즉시 돌려주고, 없으면 생성한 뒤 저장합니다.
  * force가 true면 캐시를 무시하고 새로 만듭니다.
  * kind가 "alkitab"이면 문장분석 프롬프트를 사용합니다.
+ * aiKind: 공개판 서버가 셀 기능 이름. 새 문장을 미리 만드는 길(peribahasa.ts)은 "phrase",
+ *         상세 화면에서 처음 여는 해설은 기본값 "text".
  */
 export async function getPhraseDetail(
   sentence: string,
   ko: string,
   force = false,
-  kind = ""
+  kind = "",
+  aiKind: AiKind = "text"
 ): Promise<PhraseDetail> {
   const isAyat = kind === "alkitab";
   if (!force) {
@@ -254,7 +259,7 @@ export async function getPhraseDetail(
     if (cached && !(isAyat && cached.analysis === undefined)) return cached;
   }
 
-  const raw = await callGeminiJSON(isAyat ? buildPromptAyat(sentence, ko) : buildPrompt(sentence, ko));
+  const raw = await callGeminiJSON(isAyat ? buildPromptAyat(sentence, ko) : buildPrompt(sentence, ko), { kind: aiKind });
 
   const words: PhraseWord[] = isAyat && Array.isArray(raw.words)
     ? (raw.words as Record<string, unknown>[])
