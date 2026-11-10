@@ -2063,13 +2063,22 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
 };
 // @generated-end
 
+// 네덜란드 식민지 시대 기록 사진(트로펜 박물관·KITLV·세계문화박물관 소장)은 오늘의 모습이 아니어서 보여 주지 않습니다.
+// 목록(위 @generated 구간)에는 남겨 두어, 나중에 사람이 고를 때 참고할 수 있게 합니다. (2026-11-11 결정)
+const ARCHIVE = new RegExp("tropenmuseum|kitlv|wereldculturen", "i");
+
+/** 화면에 보여 줄 사진인지 — 지도 시트와 사진 출처 화면이 같은 기준을 씁니다. */
+export function isShownPhoto(ph: MapPhoto): boolean {
+  return !ARCHIVE.test(ph.file);
+}
+
 /** 그 지점의 사진(최대 2장). 없으면 빈 배열. */
 export function getPlacePhotos(id: string): MapPhoto[] {
   const p = MAP_PHOTOS[id];
-  return p ? p.photos.slice(0, 2) : [];
+  return p ? p.photos.filter(isShownPhoto).slice(0, 2) : [];
 }
 
 /** 사진이 한 장 이상 있는 지점 수 (확인용) */
 export function photoPlaceCount(): number {
-  return Object.keys(MAP_PHOTOS).filter((k) => MAP_PHOTOS[k].photos.length > 0).length;
+  return Object.keys(MAP_PHOTOS).filter((k) => getPlacePhotos(k).length > 0).length;
 }
