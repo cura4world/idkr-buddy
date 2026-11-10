@@ -48,8 +48,13 @@ import Plus from "./pages/Plus";
 import LoginGate from "@/components/LoginGate";
 import HiddenInPublic from "@/components/HiddenInPublic";
 import { installStoreTtsShim } from "@/lib/storeTtsShim";
+import PreviewPanel from "@/components/PreviewPanel";
+import { isPreview } from "@/lib/preview";
 
 const queryClient = new QueryClient();
+
+// 미리보기 APK(VITE_PREVIEW=1)에만 오른쪽 아래 "미리보기 · 등급" 알약을 붙입니다.
+const showPreviewPanel = isPreview();
 
 // 스토어 앱(공개판)에는 폰 내장 음성이 없습니다. 발음 듣기를 Gemini 음성으로 대신합니다.
 installStoreTtsShim();
@@ -122,6 +127,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
         </LoginGate>
+        {showPreviewPanel ? <PreviewPanel /> : null}
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
