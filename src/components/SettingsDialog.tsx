@@ -37,6 +37,7 @@ import { getEdition, Edition, EDITION_LABEL, activateAndSync, syncMemberContent,
 import { getMemberProfile, MemberProfile } from "@/lib/member";
 import { isStoreApp, hasNativeFileSave, saveFileNative } from "@/lib/platform";
 import AccountSection from "@/components/AccountSection";
+import { useBackClose } from "@/hooks/useBackClose";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -88,6 +89,8 @@ const MEMBER_SECTION_ID = "settings-member-section";
 
 export default function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const navigate = useNavigate();
+  // 폰의 뒤로가기는 설정 창만 닫습니다(화면을 떠나지 않음)
+  const settingsBack = useBackClose(open, () => onOpenChange(false));
   const [apiKey, setApiKey] = useState("");
   const [claudeKey, setClaudeKey] = useState("");
   const [importOpen, setImportOpen] = useState(false);
@@ -240,10 +243,12 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const storeApp = isStoreApp();
 
   // 설정 창을 닫고 다른 화면으로 갑니다. 뒤로 돌아오면 Index 가 설정 창을 다시 엽니다.
+  // 설정 창이 쌓아 둔 히스토리 칸(뒤로가기로 창만 닫는 칸)은 새 화면으로 바꿔 끼웁니다.
   const goFromSettings = (path: string) => {
     try { sessionStorage.setItem(REOPEN_SETTINGS_KEY, String(Date.now())); } catch (e) {}
+    const replace = settingsBack.onTop();
     onOpenChange(false);
-    navigate(path);
+    navigate(path, { replace });
   };
 
   const handleMemberActivate = async () => {
@@ -855,8 +860,9 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs"
                 onClick={() => {
                   try { sessionStorage.setItem(REOPEN_SETTINGS_KEY, String(Date.now())); } catch (e) {}
+                  const replace = settingsBack.onTop();
                   onOpenChange(false);
-                  navigate("/members");
+                  navigate("/members", { replace });
                 }}
               >
                 <KeyRound className="w-4 h-4 mr-1.5" />
