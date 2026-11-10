@@ -1,9 +1,19 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, getSavedWordIds, toggleSavedWord, Word } from "@/lib/store";
+import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { groupOf } from "@/lib/wordbookGroups";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
 import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Play, Square, Bookmark, RefreshCw, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
+import { displayMeaning } from "@/lib/wordbookGroups";
+
+
+// 아래 동그라미 버튼 (시안: 카드로 외우기 — 켜진 버튼만 연한 청록)
+const BTN = "w-12 h-12 flex items-center justify-center rounded-full border transition-colors disabled:opacity-30";
+const BTN_OFF = "bg-white text-[#1D1F1E] border-[#DDE3E6]";
+const BTN_ON = "bg-[#E3EEEC] text-[#2C6D63] border-[#2C6D63]";
+const FACE = "absolute inset-0 backface-hidden rounded-[20px] bg-white border border-[#E6EAEC] shadow-[0_1px_4px_rgba(16,40,50,0.05)] flex flex-col items-center justify-center p-8 text-card-foreground";
 
 export default function StudyMode() {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +41,7 @@ export default function StudyMode() {
   const isLoopingRef = useRef(false);
   const isAutoPlayingRef = useRef(false);
   const autoRandomRef = useRef(false);
+  const plan = usePlan();
 
   const shuffledWords = useMemo(() => {
     if (!isRandom) return words;
@@ -248,6 +259,12 @@ export default function StudyMode() {
     setTouchStart(null);
   };
 
+  // 기본 단어장 잠금 (무료 → 구독 화면, 성경과 신앙 → 관리자·Special Member 만)
+  if (category && category.isShared && !plan.plus) return <Navigate to={PAYWALL_PATH} replace />;
+  if (category && category.isShared && !plan.staff && groupOf(category, categories) === "faith") {
+    return <Navigate to="/wordbooks" replace />;
+  }
+
   if (!category || words.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
@@ -268,99 +285,101 @@ export default function StudyMode() {
           </div>
         </div>
       )}
-      <div className="flex items-center justify-between px-4 py-4">
-        <button onClick={handleBack} className="text-foreground hover:text-foreground/80">
+      <div className="h-14 shrink-0 flex items-center justify-between px-4">
+        <button onClick={handleBack} className="w-10 h-10 -ml-2 flex items-center justify-center text-foreground" aria-label="\uB4A4\uB85C">
           <ArrowLeft size={20} />
         </button>
-        <span className="text-sm text-foreground font-body">
+        <span className="font-word text-[0.90625rem] text-[#1D1F1E]">
           {currentIndex + 1} / {displayWords.length}
-          {isAutoPlaying && <span className="ml-2 text-primary animate-pulse">{"\u25B6"}</span>}
+          {isAutoPlaying && <span className="ml-2 text-[#2C6D63] animate-pulse">{"\u25B6"}</span>}
         </span>
         {isAutoPlaying ? (
-          <button onClick={() => setIsScreenLocked(true)} className="text-foreground hover:text-foreground/80"><Lock size={20} /></button>
+          <button onClick={() => setIsScreenLocked(true)} className="w-8 h-10 flex items-center justify-center text-foreground" aria-label="\uD654\uBA74 \uC7A0\uAE08"><Lock size={20} /></button>
         ) : (
-          <div className="w-5" />
+          <span className="w-8" />
         )}
       </div>
       <div className="flex-1 flex items-center justify-center px-6" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         <div key={isAutoPlaying ? "autoplay-card" : ((currentWord && currentWord.id) || "empty")} className={`perspective w-full max-w-sm aspect-[3/4] cursor-pointer ${isAutoPlaying ? "" : slideDir === 1 ? "card-enter-next" : "card-enter-prev"}`} onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}>
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
-            <div className={`absolute inset-0 backface-hidden rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm transition-shadow duration-1000 text-card-foreground ${isBreathing ? "animate-breathe" : ""}`}>
+            <div className={`${FACE} transition-shadow duration-1000 ${isBreathing ? "animate-breathe" : ""}`}>
               <button
                 onClick={(e) => { e.stopPropagation(); handleToggleMark(); }}
-                className={`absolute top-2 right-2 p-2 transition-colors ${isMarked ? "text-yellow-500" : "text-muted-foreground/50"}`}
+                aria-label="\uB2E4\uC2DC \uC678\uC6B8 \uB2E8\uC5B4"
+                className={`absolute top-2.5 right-2.5 w-10 h-10 flex items-center justify-center transition-colors ${isMarked ? "text-[#D4A72C]" : "text-[#C2C7CB]"}`}
               >
-                <Bookmark size={22} fill={isMarked ? "currentColor" : "none"} />
+                <Bookmark size={20} strokeWidth={1.8} fill={isMarked ? "currentColor" : "none"} />
               </button>
-              <p className={`text-center leading-relaxed text-gray-900 ${frontLang === "id" ? "font-word text-2xl" : "font-gothic text-lg font-bold"}`}>
-                {frontLang === "id" ? currentWord?.word : currentWord?.meaning}
+              <p className={`m-0 text-center ${frontLang === "id" ? "font-word text-[1.875rem] font-semibold leading-snug text-[#104B60]" : "font-gothic text-lg font-bold leading-relaxed text-[#1D1F1E]"}`}>
+                {frontLang === "id" ? currentWord?.word : (currentWord ? displayMeaning(currentWord.meaning) : "")}
               </p>
               {frontLang === "id" && currentWord?.example && (
-                <p className="text-base text-muted-foreground font-word mt-4 text-center leading-relaxed">{currentWord.example}</p>
+                <p className="mt-4 text-center font-word text-base leading-[1.6] text-[#6B6A63]">{currentWord.example}</p>
               )}
               {frontLang === "ko" && currentWord?.exampleMeaning && (
-                <p className="text-sm text-muted-foreground font-gothic mt-4 text-center leading-relaxed">{currentWord.exampleMeaning}</p>
+                <p className="mt-4 text-center font-gothic text-sm leading-relaxed text-[#6B6A63]">{currentWord.exampleMeaning}</p>
               )}
             </div>
-            <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center p-8 shadow-sm text-card-foreground">
+            <div className={`${FACE} rotate-y-180`}>
               <button
                 onClick={(e) => { e.stopPropagation(); handleToggleMark(); }}
-                className={`absolute top-2 right-2 p-2 transition-colors ${isMarked ? "text-yellow-500" : "text-muted-foreground/50"}`}
+                aria-label="\uB2E4\uC2DC \uC678\uC6B8 \uB2E8\uC5B4"
+                className={`absolute top-2.5 right-2.5 w-10 h-10 flex items-center justify-center transition-colors ${isMarked ? "text-[#D4A72C]" : "text-[#C2C7CB]"}`}
               >
-                <Bookmark size={22} fill={isMarked ? "currentColor" : "none"} />
+                <Bookmark size={20} strokeWidth={1.8} fill={isMarked ? "currentColor" : "none"} />
               </button>
-              <p className={`font-normal text-center mb-3 text-gray-900 ${frontLang === "id" ? "font-gothic text-lg font-bold" : "font-word text-2xl"}`}>
-                {frontLang === "id" ? currentWord?.meaning : currentWord?.word}
+              <p className={`mb-3 text-center ${frontLang === "id" ? "font-gothic text-lg font-bold text-[#1D1F1E]" : "font-word text-[1.875rem] font-semibold leading-snug text-[#104B60]"}`}>
+                {frontLang === "id" ? (currentWord ? displayMeaning(currentWord.meaning) : "") : currentWord?.word}
               </p>
               {frontLang === "id" && currentWord?.exampleMeaning && (
-                <p className="text-sm text-muted-foreground font-gothic text-center leading-relaxed">{currentWord.exampleMeaning}</p>
+                <p className="text-center font-gothic text-sm leading-relaxed text-[#6B6A63]">{currentWord.exampleMeaning}</p>
               )}
               {frontLang === "ko" && currentWord?.example && (
-                <p className="text-base text-muted-foreground font-word text-center leading-relaxed">{currentWord.example}</p>
+                <p className="text-center font-word text-base leading-[1.6] text-[#6B6A63]">{currentWord.example}</p>
               )}
             </div>
           </div>
         </div>
       </div>
-      <div className="flex justify-center gap-3 py-2">
+      <div className="shrink-0 pt-3.5 flex justify-center gap-3">
         <button onClick={() => { if (isAutoPlaying) return; setFrontLang((l) => (l === "id" ? "ko" : "id")); setIsFlipped(false); setCurrentIndex(0); }}
           disabled={isAutoPlaying}
-          className={`w-12 h-12 flex items-center justify-center rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 bg-card text-gray-900 border-border/50 hover:border-primary/50 ${frontLang === "ko" ? "border-primary" : ""}`}>
-          {frontLang === "id" ? "IN" : "KO"}
+          className={`${BTN} ${frontLang === "ko" ? BTN_ON : BTN_OFF}`}>
+          <span className="font-word text-sm font-semibold">{frontLang === "id" ? "IN" : "KO"}</span>
         </button>
         <button onClick={() => { setIsRandom((r) => !r); setCurrentIndex(0); setIsFlipped(false); }} disabled={isAutoPlaying}
-          className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isRandom ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"} disabled:opacity-30`}>
+          className={`${BTN} ${isRandom ? BTN_ON : BTN_OFF}`}>
           <Shuffle size={20} />
         </button>
         <button onClick={() => { if (!currentWord) return; const { text, lang } = getSpeakTarget(currentWord, isFlipped); speak(text, lang); }}
           disabled={!currentWord || isAutoPlaying}
-          className="w-12 h-12 flex items-center justify-center rounded-full transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30">
+          className={`${BTN} ${BTN_OFF}`}>
           <Volume2 size={20} />
         </button>
         <button onClick={handleToggleFilter} disabled={isAutoPlaying}
-          className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border disabled:opacity-30 ${reviewFilter ? "bg-card text-yellow-500 border-yellow-500" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"}`}>
+          className={`${BTN} ${reviewFilter ? BTN_ON : BTN_OFF}`}>
           <Bookmark size={20} fill={reviewFilter ? "currentColor" : "none"} />
         </button>
       </div>
-      <div className="flex items-center justify-center gap-3 py-4">
+      <div className="shrink-0 pt-3.5 pb-[30px] flex items-center justify-center gap-3">
         <button onClick={goPrev} disabled={currentIndex === 0 || isAutoPlaying}
-          className="w-12 h-12 flex items-center justify-center rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity">
+          className={`${BTN} ${BTN_OFF}`}>
           <ChevronLeft size={20} />
         </button>
         <button onClick={() => startAutoPlay(false)}
-          className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isAutoPlaying && !isAutoRandom ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"}`}>
-          {isAutoPlaying && !isAutoRandom ? <Square size={20} /> : <Play size={20} />}
+          className={`${BTN} ${isAutoPlaying && !isAutoRandom ? BTN_ON : BTN_OFF}`}>
+          {isAutoPlaying && !isAutoRandom ? <Square size={18} /> : <Play size={20} fill="currentColor" strokeWidth={0} />}
         </button>
         <button onClick={toggleLoop}
-          className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isLooping ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"}`}>
+          className={`${BTN} ${isLooping ? BTN_ON : BTN_OFF}`}>
           <RefreshCw size={20} />
         </button>
         <button onClick={() => startAutoPlay(true)}
-          className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isAutoPlaying && isAutoRandom ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"}`}>
-          {isAutoPlaying && isAutoRandom ? <Square size={20} /> : <Shuffle size={20} />}
+          className={`${BTN} ${isAutoPlaying && isAutoRandom ? BTN_ON : BTN_OFF}`}>
+          {isAutoPlaying && isAutoRandom ? <Square size={18} /> : <Shuffle size={20} />}
         </button>
         <button onClick={goNext} disabled={currentIndex === displayWords.length - 1 || isAutoPlaying}
-          className="w-12 h-12 flex items-center justify-center rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity">
+          className={`${BTN} ${BTN_OFF}`}>
           <ChevronRight size={20} />
         </button>
       </div>
