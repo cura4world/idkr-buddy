@@ -192,7 +192,7 @@ const InsightOverview = () => {
 
   return (
     <div className="min-h-screen bg-background px-4 pt-4 pb-8 max-w-lg mx-auto">
-      <header className="flex items-center gap-2 mb-4">
+      <header className="sticky top-0 z-30 -mx-4 -mt-4 mb-4 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => goBackOr(navigate, location.key, "/insight")}
           className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-black/5 active:bg-black/10 -ml-1"
