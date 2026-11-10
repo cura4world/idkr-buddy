@@ -349,4 +349,49 @@ export const JAWA_BARAT: MapContentTable = {
       },
     ],
   },
+
+  // ---------------- 종교·역사 (2026-11-10 추가, 공개판에서 여러 종교를 고르게) ----------------
+  "Istiqlal": {
+    desc:
+      "이스티크랄은 아랍어로 독립이라는 뜻입니다. 독립을 기념해 세운 국가 모스크로, 1961년에 공사를 시작해 1978년에 문을 열었습니다. 동남아시아에서 가장 큰 모스크이며, 지름 45미터의 큰 돔은 독립을 선언한 1945년을 뜻합니다.\n\n" +
+      "설계 공모에서 뽑힌 사람은 북수마트라 출신의 개신교인 건축가 프리드리히 실라반이었습니다. 그리고 길 하나를 사이에 두고 1901년에 봉헌된 신고딕 양식의 자카르타 대성당이 마주 서 있습니다.\n\n" +
+      "두 곳은 큰 명절마다 서로 주차장을 내어 주는 사이입니다. 2020년대 들어서는 두 건물을 땅 밑으로 잇는 '우정의 터널'이 놓였습니다.",
+    words: [
+      {
+        word: "kubah",
+        meaning: "돔, 둥근 지붕",
+        example: "Kubah masjid ini berdiameter empat puluh lima meter.",
+        exampleKo: "이 모스크의 돔은 지름이 45미터입니다.",
+      },
+      {
+        word: "toleransi",
+        meaning: "관용, 서로 존중함",
+        example: "Masjid dan gereja ini menjadi lambang toleransi.",
+        exampleKo: "이 모스크와 성당은 관용의 상징이 되었습니다.",
+      },
+    ],
+    wiki: "Istiqlal Mosque, Jakarta",
+  },
+
+  "Gereja Tugu": {
+    desc:
+      "북자카르타 칠린칭의 투구 마을에 있는 오래된 개신교 교회입니다. 17세기 네덜란드 동인도회사가 포르투갈어를 쓰던 포로와 노예 일부를 풀어 주고 이 땅에 살게 했는데, 그 후손이 지금도 이 마을에 삽니다. 지금 교회 건물은 1740년대에 지어졌습니다.\n\n" +
+      "이들을 부르던 이름 마르데이커는 말레이어 머르데카, 곧 자유로운 사람에서 왔습니다. 오랫동안 포르투갈어가 섞인 말을 썼고, 이름에도 그 흔적이 남아 있습니다.\n\n" +
+      "이 마을은 크론총 음악의 고향 가운데 하나로 꼽힙니다. 포르투갈 기타에서 온 작은 현악기로 연주하는 크론총 투구 악단이 지금도 활동하고, 새해가 되면 악단이 집집을 돌며 연주하는 풍습이 이어집니다.",
+    words: [
+      {
+        word: "keroncong",
+        meaning: "크론총 (인도네시아 전통 대중음악)",
+        example: "Musik keroncong Tugu masih dimainkan sampai sekarang.",
+        exampleKo: "크론총 투구 음악은 지금도 연주됩니다.",
+      },
+      {
+        word: "merdeka",
+        meaning: "자유로운, 독립한",
+        example: "Nama Mardijker berasal dari kata merdeka.",
+        exampleKo: "마르데이커라는 이름은 머르데카라는 말에서 왔습니다.",
+      },
+    ],
+    wiki: "Tugu Church",
+  },
 };
