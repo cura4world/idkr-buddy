@@ -1,16 +1,28 @@
 // src/pages/GameOX.tsx
-// 스피드 O/X (Cepat O/X). 30초 동안 "이 단어의 뜻이 맞나?"를 O/X로 고릅니다.
+// 스피드 O/X (Cepat O/X) — 시안 GM-OX. 30초 동안 "이 단어의 뜻이 맞나?"를 O/X로 고릅니다.
 // 재료는 전부 로컬(gamePool) — API 호출이 없습니다.
 // 30초를 채워야 점수·단어 기록이 남습니다. 중간에 나가면 아무것도 남지 않습니다.
-// 화면 구성·종료 연출은 짝맞추기(GameMatch.tsx)와 같은 모양으로 맞췄습니다.
+// 화면 조각(머리·상태 줄·결과)은 GameKit 하나를 같이 씁니다.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Star } from "lucide-react";
-import { goBackOr } from "@/lib/nav";
 import { drawPool } from "@/lib/gamePool";
 import type { PoolWord } from "@/lib/gamePool";
-import { medaliEngine, listRounds, dateKey, MEDALI_COLORS } from "@/lib/medali";
+import { medaliEngine, listRounds, dateKey } from "@/lib/medali";
+import {
+  G,
+  CARD_SHADOW,
+  GameScreen,
+  GameLoading,
+  GameEmpty,
+  GameReady,
+  GameResult,
+  StatusRow,
+  Stat,
+  TimeBar,
+  speakWord,
+  stopSpeak,
+} from "@/components/game/GameKit";
+import type { ResultRow } from "@/components/game/GameKit";
 
 const ROUND_SEC = 30;         // 한 판 길이
 const MIN_WORDS = 6;          // 이보다 적으면 게임을 못 엽니다
@@ -32,20 +44,14 @@ interface WordResult {
   meaning: string;
   source: PoolWord["source"];
   correct: boolean;           // 그 단어의 "첫 응답" 기준
-  becameConfirmed: boolean;
 }
 
 interface RoundResult {
   score: number;
   bestBefore: number;         // 이번 판 이전의 최고 점수. 없으면 0
-  words: WordResult[];
+  rows: ResultRow[];
+  starWords: string[];
 }
-
-const SOURCE_LABEL: Record<PoolWord["source"], string> = {
-  wordbook: "단어장",
-  lookup: "찾아본",
-  seed: "기본",
-};
 
 const meaningKey = (m: string): string =>
   String(m || "").replace(new RegExp("\\s+", "g"), " ").trim().toLowerCase();
@@ -85,60 +91,7 @@ function shuffledQueue(n: number): number[] {
   return a;
 }
 
-/* 문제가 바뀔 때마다 단어를 읽어 줍니다.
-   폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 (GameEja와 같은 방식).
-   이전 발음은 끊고 새로 재생하며, 실패해도 게임은 그대로 진행됩니다. */
-const speak = (text: string) => {
-  const w = window as any;
-  if (w.AndroidTTS) {
-    try {
-      try { w.AndroidTTS.stop?.(); } catch (e) {}
-      w.AndroidTTS.speak(text, "id-ID");
-      return;
-    } catch (e) { /* 폴백으로 넘어갑니다 */ }
-  }
-  try {
-    window.speechSynthesis?.cancel?.();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "id-ID";
-    u.rate = 1;
-    window.speechSynthesis?.speak?.(u);
-  } catch (e) { /* 지원하지 않는 기기는 조용히 넘어갑니다 */ }
-};
-
-// "+3" 같은 점수 표시가 위로 떠오르며 사라집니다. (효과음 없음)
-const FloatPoint = ({ text }: { text: string }) => {
-  const [on, setOn] = useState(false);
-  useEffect(() => {
-    // 마운트 직후 값이 바뀌어야 transition이 걸립니다 (rAF 2번)
-    let inner = 0;
-    const outer = requestAnimationFrame(() => {
-      inner = requestAnimationFrame(() => setOn(true));
-    });
-    return () => {
-      cancelAnimationFrame(outer);
-      if (inner) cancelAnimationFrame(inner);
-    };
-  }, []);
-  return (
-    <span
-      className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-1 font-gothic text-sm font-semibold"
-      style={{
-        color: MEDALI_COLORS.emas,
-        opacity: on ? 0 : 1,
-        transform: on ? "translate(-50%, -12px)" : "translate(-50%, 0)",
-        transition: "opacity 1s linear, transform 1s ease-out",
-      }}
-    >
-      {text}
-    </span>
-  );
-};
-
 const GameOX = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
   const [phase, setPhase] = useState<Phase>("loading");
   const [question, setQuestion] = useState<Question | null>(null);
   const [left, setLeft] = useState(ROUND_SEC);
@@ -158,6 +111,7 @@ const GameOX = () => {
   const tickRef = useRef<number | null>(null);
   const revealTimerRef = useRef<number | null>(null);
   const floatTimerRef = useRef<number | null>(null);
+  const aliveRef = useRef(true);
 
   // 다음 문제 꺼내기 (큐가 비면 다시 섞어 이어감 — 반복 등장 허용)
   const nextQuestion = useCallback(() => {
@@ -167,7 +121,7 @@ const GameOX = () => {
     const idx = queueRef.current.shift();
     const q = makeQuestion(pool, typeof idx === "number" ? idx : 0);
     setQuestion(q);
-    speak(q.word);   // 발음은 그냥 흘려보냅니다 — 기다리지 않으므로 진행이 막히지 않습니다
+    speakWord(q.word);   // 발음은 그냥 흘려보냅니다 — 기다리지 않으므로 진행이 막히지 않습니다
   }, []);
 
   // 판 종료 — finishedRef 가드로 정확히 1회만 실행됩니다
@@ -179,23 +133,20 @@ const GameOX = () => {
       tickRef.current = null;
     }
     setLeft(0);
+    stopSpeak();
 
     const words = Array.from(answeredRef.current.values());
     const finalScore = scoreRef.current;
 
     // 1) 노력 점수
     const got = await medaliEngine.addPoints("game", 3);
-    if (got > 0) {
-      setGained(got);
-      setFloatOn(true);
-      floatTimerRef.current = window.setTimeout(() => setFloatOn(false), 1200);
-    }
 
     // 2) 단어별 기록 (첫 응답 기준) → 이번에 별이 된 단어
+    const starWords: string[] = [];
     for (const w of words) {
       // OX는 찍어도 절반은 맞으므로 증거를 0.5만 인정합니다
       const r = await medaliEngine.recordWordResult(w.word, w.correct, w.source, 0.5);
-      w.becameConfirmed = r.becameConfirmed;
+      if (r.becameConfirmed) starWords.push(w.word);
     }
 
     // 3) 이전 최고 점수(이번 판 제외) → 저장
@@ -217,7 +168,20 @@ const GameOX = () => {
       words: words.map((w) => ({ word: w.word, correct: w.correct, source: w.source })),
     });
 
-    setResult({ score: finalScore, bestBefore, words });
+    if (!aliveRef.current) return;
+    if (got > 0) {
+      setGained(got);
+      setFloatOn(true);
+      floatTimerRef.current = window.setTimeout(() => {
+        if (aliveRef.current) setFloatOn(false);
+      }, 1200);
+    }
+    setResult({
+      score: finalScore,
+      bestBefore,
+      rows: words.map((w) => ({ word: w.word, meaning: w.meaning, source: w.source, correct: w.correct })),
+      starWords,
+    });
     setPhase("done");
   }, []);
 
@@ -245,6 +209,7 @@ const GameOX = () => {
       setPhase("loading");
       drawPool(14, 6)
         .then((list) => {
+          if (!aliveRef.current) return;
           if (list.length < MIN_WORDS) {
             poolRef.current = [];
             setPhase("empty");
@@ -255,6 +220,7 @@ const GameOX = () => {
           else setPhase("ready");
         })
         .catch(() => {
+          if (!aliveRef.current) return;
           poolRef.current = [];
           setPhase("empty");
         });
@@ -288,12 +254,13 @@ const GameOX = () => {
 
   // 화면을 벗어날 때 남은 타이머 정리 (setState 없이 정리만)
   useEffect(() => {
+    aliveRef.current = true;
     return () => {
+      aliveRef.current = false;
       if (tickRef.current) window.clearInterval(tickRef.current);
       if (revealTimerRef.current) window.clearTimeout(revealTimerRef.current);
       if (floatTimerRef.current) window.clearTimeout(floatTimerRef.current);
-      try { (window as any).AndroidTTS?.stop?.(); } catch (e) {}
-      try { window.speechSynthesis?.cancel?.(); } catch (e) {}
+      stopSpeak();
     };
   }, []);
 
@@ -306,13 +273,7 @@ const GameOX = () => {
     // 그 단어의 첫 응답만 기록에 남깁니다 (반복 등장해도 판정은 처음 것)
     const key = wordKey(q.word);
     if (p && !answeredRef.current.has(key)) {
-      answeredRef.current.set(key, {
-        word: p.word,
-        meaning: p.meaning,
-        source: p.source,
-        correct: ok,
-        becameConfirmed: false,
-      });
+      answeredRef.current.set(key, { word: p.word, meaning: p.meaning, source: p.source, correct: ok });
     }
 
     if (ok) {
@@ -326,6 +287,7 @@ const GameOX = () => {
     lockedRef.current = true;
     setReveal(q.truth);
     revealTimerRef.current = window.setTimeout(() => {
+      if (!aliveRef.current) return;
       lockedRef.current = false;
       setReveal(null);
       if (finishedRef.current) return; // 노출 중에 30초가 끝났으면 그대로 둡니다
@@ -333,199 +295,87 @@ const GameOX = () => {
     }, REVEAL_MS);
   };
 
-  const pct = Math.max(0, Math.min(100, (left / ROUND_SEC) * 100));
-
   return (
-    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-clip bg-background pb-9">
-      <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => goBackOr(navigate, location.key, "/permainan")}
-          className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
-          title="뒤로"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">
-          CEPAT O/X
-        </h1>
-      </header>
+    <GameScreen id="ox">
+      {phase === "loading" ? <GameLoading /> : null}
+      {phase === "empty" ? <GameEmpty text="단어가 아직 부족합니다" /> : null}
+      {phase === "ready" ? (
+        <GameReady id="ox" lines={["뜻이 맞으면 O, 아니면 X", "30초 동안 최대한 많이"]} onStart={beginPlay} />
+      ) : null}
 
-      <div className="px-4">
-        {phase === "loading" ? (
-          <p className="pt-16 text-center font-gothic text-[0.875rem] text-muted-foreground">
-            준비 중...
+      {phase === "playing" && question ? (
+        <>
+          <StatusRow
+            left={<Stat icon="clock" label="남은 시간" value={left + "초"} />}
+            right={<Stat icon="check" label="맞힌 수" value={score} />}
+          />
+          <TimeBar pct={(left / ROUND_SEC) * 100} />
+
+          <div
+            className="mt-5 h-[260px] rounded-[20px] px-6 flex flex-col items-center justify-center text-center"
+            style={{
+              background: reveal ? G.badBg : "#FFFFFF",
+              boxShadow: reveal ? "inset 0 0 0 1.5px " + G.badBd : CARD_SHADOW,
+              transition: "background-color 150ms ease",
+            }}
+          >
+            <p className="font-word text-[26px] font-semibold leading-tight break-words" style={{ color: G.deep }}>
+              {question.word}
+            </p>
+            <span className="w-8 h-0.5 rounded-[1px] my-[18px]" style={{ background: G.track }} />
+            <p
+              className="font-gothic text-[18px] font-semibold leading-snug break-keep"
+              style={{ color: G.text, textDecoration: reveal ? "line-through" : "none", opacity: reveal ? 0.55 : 1 }}
+            >
+              {question.shown}
+            </p>
+            {reveal ? (
+              <p className="mt-2.5 font-gothic text-[16px] font-semibold leading-snug break-keep" style={{ color: G.ok }}>
+                {reveal}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="mt-3.5 flex gap-3">
+            <button
+              type="button"
+              aria-label="맞음"
+              onClick={() => answer(true)}
+              className="flex-1 h-[60px] rounded-[18px] font-word text-[18px] font-semibold text-white active:opacity-90"
+              style={{ background: G.teal }}
+            >
+              O
+            </button>
+            <button
+              type="button"
+              aria-label="아님"
+              onClick={() => answer(false)}
+              className="flex-1 h-[60px] rounded-[18px] box-border bg-white font-word text-[18px] font-semibold active:bg-[#F1F4F5]"
+              style={{ border: "1px solid " + G.line, color: G.text }}
+            >
+              X
+            </button>
+          </div>
+          <p className="mt-3.5 text-center font-gothic text-[12px]" style={{ color: G.mute }}>
+            뜻이 맞으면 O, 아니면 X
           </p>
-        ) : null}
+        </>
+      ) : null}
 
-        {phase === "empty" ? (
-          <div className="mt-6 rounded-2xl border border-border bg-card px-4 py-10 text-center">
-            <p className="text-[0.9375rem] text-foreground">단어가 아직 부족해요</p>
-            <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
-              사전에서 단어를 만나고 오세요
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate("/dictionary")}
-              className="mt-5 h-10 px-4 rounded-full bg-primary text-[0.8125rem] font-gothic font-medium text-white active:opacity-90"
-            >
-              사전으로 가기
-            </button>
-          </div>
-        ) : null}
-
-        {phase === "ready" ? (
-          <div className="mt-6 rounded-2xl border border-border bg-card px-4 py-10 text-center">
-            <p className="text-[0.9375rem] text-foreground">뜻이 맞으면 O, 아니면 X</p>
-            <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
-              30초 동안 최대한 많이
-            </p>
-            <button
-              type="button"
-              onClick={beginPlay}
-              className="mt-6 h-12 w-full max-w-[16rem] rounded-[13px] bg-primary text-[0.9375rem] font-medium text-white active:opacity-90"
-            >
-              시작
-            </button>
-          </div>
-        ) : null}
-
-        {phase === "playing" && question ? (
-          <div className="pt-3">
-            <div className="relative flex items-center justify-between">
-              <span className="font-word text-[0.9375rem] tabular-nums text-foreground">
-                {left}초
-              </span>
-              <span className="relative font-gothic text-[0.75rem] text-muted-foreground">
-                {score}개
-              </span>
-            </div>
-            <div className="mt-2 h-1 w-full rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-1 rounded-full bg-primary"
-                style={{ width: pct + "%", transition: "width 200ms linear" }}
-              />
-            </div>
-
-            <div
-              className={
-                "mt-4 min-h-[190px] rounded-2xl border px-4 py-8 flex flex-col items-center justify-center text-center transition-colors " +
-                (reveal ? "border-destructive bg-destructive/10" : "border-border bg-card")
-              }
-            >
-              <p className="font-word text-[1.375rem] leading-tight text-foreground break-words">
-                {question.word}
-              </p>
-              <p className="mt-3 font-gothic text-[0.875rem] leading-snug text-foreground/90 break-words">
-                {question.shown}
-              </p>
-              {reveal ? (
-                <p className="mt-3 font-gothic text-[1.0625rem] font-medium leading-snug text-emerald-500 break-words">
-                  {reveal}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="mt-4 flex gap-2.5">
-              <button
-                type="button"
-                onClick={() => answer(true)}
-                className="flex-1 py-5 rounded-2xl bg-primary text-[0.875rem] font-medium text-white active:opacity-90"
-              >
-                O 맞아요
-              </button>
-              <button
-                type="button"
-                onClick={() => answer(false)}
-                className="flex-1 py-5 rounded-2xl border border-border bg-card text-[0.875rem] font-medium text-foreground active:bg-muted/60"
-              >
-                X 아니에요
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {phase === "done" && result ? (
-          <div className="mt-4">
-            <div className="relative rounded-2xl border border-border bg-card px-4 py-6 text-center">
-              <p className="relative inline-block font-word text-[1.375rem] font-medium leading-snug text-foreground">
-                <span className="tabular-nums text-primary">{result.score}</span>개
-                {floatOn ? <FloatPoint text={"+" + gained} /> : null}
-              </p>
-              <p className="mt-2 font-gothic text-[0.8125rem] text-muted-foreground">
-                {result.bestBefore === 0 || result.score > result.bestBefore
-                  ? "최고 기록!"
-                  : "최고 " + result.bestBefore + "개"}
-              </p>
-            </div>
-
-            {result.words.some((w) => w.becameConfirmed) ? (
-              <div className="mt-3 rounded-2xl border border-border bg-card px-4 py-3.5">
-                <p className="flex items-center gap-1.5 font-gothic text-[0.75rem] font-semibold text-muted-foreground">
-                  <Star
-                    size={13}
-                    color={MEDALI_COLORS.emas}
-                    fill={MEDALI_COLORS.emas}
-                    className="shrink-0"
-                  />
-                  별이 된 단어
-                </p>
-                <p className="mt-1.5 font-word text-[0.9375rem] text-foreground break-words">
-                  {result.words
-                    .filter((w) => w.becameConfirmed)
-                    .map((w) => w.word)
-                    .join(", ")}
-                </p>
-              </div>
-            ) : null}
-
-            {result.words.length > 0 ? (
-              <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-card">
-                {result.words.map((w, i) => (
-                  <div
-                    key={w.word + i}
-                    className={
-                      "flex items-center gap-3 px-4 py-3 " +
-                      (i === result.words.length - 1 ? "" : "border-b border-border") +
-                      (w.correct ? "" : " opacity-50")
-                    }
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-word text-[0.9375rem] leading-tight text-foreground truncate">
-                        {w.word}
-                      </p>
-                      <p className="mt-0.5 text-[0.78125rem] text-muted-foreground truncate">
-                        {w.meaning}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-full border border-border px-2 py-0.5 font-gothic text-[0.6875rem] text-muted-foreground">
-                      {SOURCE_LABEL[w.source]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => goBackOr(navigate, location.key, "/permainan")}
-                className="flex-1 h-11 rounded-[13px] border border-border text-[0.875rem] font-gothic text-foreground/80 active:bg-muted"
-              >
-                게임방으로
-              </button>
-              <button
-                type="button"
-                onClick={() => loadPool(true)}
-                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-gothic font-medium text-white active:opacity-90"
-              >
-                한 판 더
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </div>
-    </div>
+      {phase === "done" && result ? (
+        <GameResult
+          label="맞힌 수"
+          value={result.score}
+          best={result.score > 0 && result.score > result.bestBefore}
+          bestText={result.bestBefore > 0 ? "최고 " + result.bestBefore + "개" : undefined}
+          gained={gained}
+          floatOn={floatOn}
+          starWords={result.starWords}
+          rows={result.rows}
+          onAgain={() => loadPool(true)}
+        />
+      ) : null}
+    </GameScreen>
   );
 };
 
