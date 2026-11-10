@@ -46,7 +46,7 @@ const AccountSection = ({ onGo }: Props) => {
   }, []);
 
   if (!session) return null;
-  const plus = session.plan.tier === "plus" && session.plan.until > Date.now();
+  const plus = (session.plan.tier === "plus" || session.plan.tier === "trial") && session.plan.until > Date.now();
 
   const handleSignOut = async () => {
     if (busy) return;
@@ -83,7 +83,7 @@ const AccountSection = ({ onGo }: Props) => {
       <p className="mt-1 text-xs font-gothic text-gray-900 break-all">{session.user.email}</p>
       <p className="mt-0.5 text-xs font-gothic text-muted-foreground">
         {plus ? "Kata kata Plus 이용 중" : "무료 이용 중"}
-        {usage && limits ? " · 오늘 AI 풀이 " + usage.text + "/" + limits.text + " · 음성 " + usage.tts + "/" + limits.tts : ""}
+        {usage && limits && limits.text !== null && limits.tts !== null ? " · 오늘 AI 풀이 " + usage.text + "/" + limits.text + " · 음성 " + usage.tts + "/" + limits.tts : ""}
       </p>
 
       <Button
