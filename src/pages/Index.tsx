@@ -655,7 +655,7 @@ const Index = () => {
       />
       <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
         <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border" />
-        <h2 className="px-4 text-base font-semibold text-foreground">어떤 문장을 보시겠어요?</h2>
+        <h2 className="px-4 text-base font-semibold text-foreground">볼 문장을 고르세요</h2>
         <p className="px-4 pb-3.5 pt-1.5 text-[0.78125rem] leading-relaxed text-muted-foreground">
           여러 개를 고르면 그중 하나가 무작위로 나옵니다.
         </p>
