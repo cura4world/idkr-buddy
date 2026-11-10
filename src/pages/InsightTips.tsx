@@ -9,6 +9,7 @@ import { ArrowLeft, Lightbulb, Sparkles, Loader2, Volume2, Trash2, BookOpen, Che
 import { toast } from "sonner";
 import { generateTip, saveTip, listTips, deleteTip, TipRecord } from "@/lib/tips";
 import { hasGeminiApiKey } from "@/lib/gemini";
+import { aiErrorToast } from "@/lib/aiErrors";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 
 const InsightTips = () => {
@@ -104,7 +105,7 @@ const InsightTips = () => {
   const handleGenerate = async () => {
     if (loading) return;
     if (!hasGeminiApiKey()) {
-      toast("설정에서 Gemini API 키를 입력하세요");
+      aiErrorToast("NO_API_KEY", "설정에서 Gemini API 키를 입력하세요");
       return;
     }
     setLoading(true);
@@ -117,7 +118,11 @@ const InsightTips = () => {
     } catch (e) {
       const msg = (e as Error).message;
       if (msg === "RATE_LIMIT") toast("잠시 뒤 다시 시도하세요 (사용량 초과)");
-      else if (msg === "INVALID_API_KEY") toast("API 키를 확인하세요");
+      else if (msg === "INVALID_API_KEY" || msg === "NOT_AVAILABLE" || msg === "SESSION_EXPIRED" || msg === "NO_API_KEY") {
+        aiErrorToast(msg, "API 키를 확인하세요");
+      } else if (msg.indexOf("QUOTA") === 0) {
+        // 한도·Plus 안내는 aiProxy 가 이미 띄웠습니다
+      }
       else toast("정보를 불러오지 못했습니다. 다시 시도하세요");
     } finally {
       setLoading(false);
