@@ -116,6 +116,19 @@ async function trimOldest(): Promise<void> {
 
 /* ── Gemini ── */
 
+// "알아두기"(note)는 "어떤 뜻인가요"(meaning)와 겹치지 않는 내용만 씁니다 (2026-11-10 결정).
+// 쓸 것이 없으면 빈 문자열로 받아 화면에서 구역째 숨깁니다.
+const NOTE_RULE = [
+  "- note(알아두기)에는 meaning 에 이미 쓴 뜻풀이·쓰는 때를 다시 쓰지 않습니다.",
+  "  아래 셋 가운데 이 문장에 실제로 있는 것만 1~2문장으로 씁니다.",
+  "  (1) 단어 구조: 어근과 접사가 어떻게 붙어 뜻이 되는지",
+  "  (2) 비슷하거나 반대인 인도네시아어 표현",
+  "  (3) 쓸 때 주의할 점: 말투·상대·상황 제한, 한국인이 자주 틀리는 점",
+  '  덧붙일 내용이 없으면 note 는 빈 문자열("")로 둡니다. 억지로 채우지 않습니다.',
+].join("\n");
+
+const NOTE_FIELD = '  "note": "단어 구조·비슷하거나 반대인 표현·쓸 때 주의할 점 가운데 meaning 에 없는 것 1~2문장 (한국어). 없으면 빈 문자열"';
+
 function buildPromptAyat(sentence: string, ko: string): string {
   return [
     "당신은 한국인에게 인도네시아어를 가르치는 선생님입니다.",
@@ -152,12 +165,13 @@ function buildPrompt(sentence: string, ko: string): string {
     "- 설명은 모두 한국어로, 존댓말로 씁니다.",
     "- 예문은 실제 인도네시아 사람이 일상에서 쓰는 자연스러운 문장으로 3개 만듭니다.",
     "- 예문은 쉬운 단어를 쓰고, 각 예문이 어떤 상황인지 한국어로 짧게 덧붙입니다.",
+    NOTE_RULE,
     "",
     "아래 JSON 형식으로만 답하세요.",
     '{',
     '  "meaning": "이 표현이 실제로 뜻하는 바와 언제 쓰는지 2~3문장 (한국어)",',
     '  "examples": [{"id": "인니어 예문", "ko": "한국어 해석", "situasi": "어떤 상황인지 한국어로 짧게"}],',
-    '  "note": "함께 알아두면 좋은 점 1~2문장 (한국어)"',
+    NOTE_FIELD,
     '}',
   ].join("\n");
 }
@@ -177,6 +191,7 @@ function buildCreatePrompt(guide: string, recent: string[]): string {
     "- 예문은 쉬운 단어를 쓰고, 각 예문이 어떤 상황인지 한국어로 짧게 덧붙입니다.",
     "- 아래 문장은 최근에 이미 다뤘으니 반드시 피하고, 겹치지 않는 새 문장을 고르세요.",
     "  최근 문장: " + (recent.length > 0 ? recent.join(" / ") : "없음"),
+    NOTE_RULE,
     "",
     "아래 JSON 형식으로만 답하세요.",
     '{',
@@ -184,7 +199,7 @@ function buildCreatePrompt(guide: string, recent: string[]): string {
     '  "ko": "이 문장의 한국어 뜻 한 줄",',
     '  "meaning": "이 표현이 실제로 뜻하는 바와 언제 쓰는지 2~3문장 (한국어)",',
     '  "examples": [{"id": "인니어 예문", "ko": "한국어 해석", "situasi": "어떤 상황인지 한국어로 짧게"}],',
-    '  "note": "함께 알아두면 좋은 점 1~2문장 (한국어)"',
+    NOTE_FIELD,
     '}',
   ].join("\n");
 }

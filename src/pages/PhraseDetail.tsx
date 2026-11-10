@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Volume2, Loader2, RotateCcw, Plus, Check, X, Bookmark, ChevronDown } from "lucide-react";
+import { ArrowLeft, Volume1, Volume2, Loader2, RotateCcw, Plus, Check, X, Bookmark, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import { getPhraseDetail, PhraseDetail as PhraseDetailData } from "@/lib/phrase";
@@ -18,6 +18,7 @@ import PointFloat from "@/components/PointFloat";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
+import AiReportButton from "@/components/AiReportButton";
 
 /* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 */
 const speak = (text: string, lang: "id" | "ko") => {
@@ -37,10 +38,49 @@ const speak = (text: string, lang: "id" | "ko") => {
   } catch (e) { /* 지원하지 않는 기기는 조용히 넘어갑니다 */ }
 };
 
+// 시안 "오늘의 문장 안 1 · 민트" — 사전 결과(사전 안 4)와 같은 소제목·카드 모양을 씁니다.
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <p className="mb-2 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-    {children}
-  </p>
+  <h3 className="m-0 font-gothic text-[0.8125rem] font-bold text-[#1F4F4A]">{children}</h3>
+);
+
+// 표제 카드 왼쪽 위 꼬리표 — 문장 종류에 따라 바뀝니다.
+const KIND_TAG: Record<string, string> = {
+  peribahasa: "속담",
+  ungkapan: "관용구",
+  alkitab: "성경 말씀",
+  kosakataku: "내 단어장",
+  kosakata: "단어장",
+  percakapan: "회화",
+};
+
+// 한국어 설명 속 인니어(로마자) 낱말만 Lora 로 보여 줍니다 (사전과 같은 방식).
+function latinSpans(text: string, sizeClass?: string): React.ReactNode[] {
+  const parts = (text || "").split(new RegExp("([A-Za-z\\u00C0-\\u024F][A-Za-z\\u00C0-\\u024F'\\-]*(?:\\s+[A-Za-z\\u00C0-\\u024F][A-Za-z\\u00C0-\\u024F'\\-]*)*)"));
+  return parts.filter((x) => x !== "").map((part, i) =>
+    new RegExp("^[A-Za-z\\u00C0-\\u024F]").test(part) ? (
+      <span key={i} className={"font-word " + (sizeClass || "")}>{part}</span>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  );
+}
+
+// 낱말 앞뒤의 문장부호는 점선 밑줄에서 뺍니다 ("menghanyutkan." → 밑줄은 낱말까지만).
+const TOKEN_EDGE = new RegExp("^([^A-Za-z0-9\\u00C0-\\u024F]*)(.*?)([^A-Za-z0-9\\u00C0-\\u024F]*)$");
+
+const RowSpeaker = ({ onClick, className }: { onClick: () => void; className?: string }) => (
+  <button
+    onClick={onClick}
+    className={"-mr-1.5 flex h-8 w-8 shrink-0 items-center justify-center text-[#1F4F4A] " + (className || "-mt-1")}
+    title="발음 듣기"
+    aria-label="발음 듣기"
+  >
+    <Volume1 size={16} strokeWidth={2} />
+  </button>
+);
+
+const StateCard = ({ children }: { children: React.ReactNode }) => (
+  <div className="rounded-[20px] bg-card px-5 py-10 text-center shadow-[0_1px_3px_rgba(16,40,50,0.06)]">{children}</div>
 );
 
 const PhraseDetail = () => {
@@ -96,14 +136,12 @@ const PhraseDetail = () => {
     <button
       type="button"
       onClick={toggleSave}
-      className={
-        "shrink-0 w-8 h-8 flex items-center justify-center transition-colors " +
-        (saved ? "text-yellow-500" : "text-muted-foreground/50")
-      }
-      title={saved ? "저장 해제" : "이 문장 저장하기"}
-      aria-label={saved ? "저장 해제" : "이 문장 저장하기"}
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/70 text-[#2C6D63] transition-colors"
+      title={saved ? "저장 해제" : "이 문장 저장"}
+      aria-label={saved ? "저장 해제" : "이 문장 저장"}
+      aria-pressed={saved}
     >
-      <Bookmark size={18} fill={saved ? "currentColor" : "none"} />
+      <Bookmark size={17} strokeWidth={1.9} fill={saved ? "currentColor" : "none"} />
     </button>
   );
 
@@ -206,7 +244,8 @@ const PhraseDetail = () => {
       const msg = String(e?.message || "");
       if (msg === "NO_API_KEY" || msg === "INVALID_API_KEY") setError("API_KEY");
       else if (msg === "RATE_LIMIT") setError("잠시 뒤에 다시 시도해 주세요");
-      else setError("설명을 불러오지 못했어요");
+      else if (msg.indexOf("QUOTA") === 0) setError("오늘 볼 수 있는 해설을 모두 보았습니다. 내일 다시 볼 수 있습니다");
+      else setError("설명을 불러오지 못했습니다");
     } finally {
       setLoading(false);
     }
@@ -215,7 +254,7 @@ const PhraseDetail = () => {
   useEffect(() => {
     if (!item.id) {
       setLoading(false);
-      setError("문장을 찾을 수 없어요");
+      setError("문장을 찾을 수 없습니다");
       return;
     }
     if (!hasGeminiApiKey()) {
@@ -330,7 +369,7 @@ const PhraseDetail = () => {
       await navigator.clipboard.writeText(popupWord);
       toast("복사되었습니다");
     } catch (e) {
-      toast("복사에 실패했어요");
+      toast("복사하지 못했습니다");
     }
   };
 
@@ -356,17 +395,28 @@ const PhraseDetail = () => {
   };
 
   // 표제 문장을 단어 단위로 쪼개 탭 가능하게 렌더링
+  // 낱말에는 점선 밑줄을 긋습니다(시안: 누르면 뜻이 나온다는 표시). 앞뒤 문장부호는 밑줄 밖에 둡니다.
   const renderTokens = (text: string) =>
-    text.split(" ").map((tok, ti) => (
-      <span key={"t" + ti} data-idw="1">
-        <span
-          onClick={(e) => { e.stopPropagation(); openWordPopup(tok); }}
-          className="cursor-pointer rounded active:bg-primary/20"
-        >
-          {tok}
-        </span>{" "}
-      </span>
-    ));
+    text.split(" ").map((tok, ti) => {
+      const m = TOKEN_EDGE.exec(tok);
+      const pre = m ? m[1] : "";
+      const core = m ? m[2] : tok;
+      const post = m ? m[3] : "";
+      return (
+        <span key={"t" + ti} data-idw="1">
+          <span
+            onClick={(e) => { e.stopPropagation(); openWordPopup(tok); }}
+            className="cursor-pointer rounded active:bg-primary/20"
+          >
+            {pre}
+            {core ? (
+              <span className="pb-px" style={{ borderBottom: "1.5px dotted rgba(16,75,96,0.35)" }}>{core}</span>
+            ) : null}
+            {post}
+          </span>{" "}
+        </span>
+      );
+    });
 
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto pb-10">
@@ -382,159 +432,164 @@ const PhraseDetail = () => {
         <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">Bahasa Hari Ini</h1>
       </header>
 
-      <div className="px-4 pt-5">
-        {/* 문장 */}
-        <div className="rounded-2xl border border-border bg-card px-4 pt-2.5 pb-5">
-          {/* 아이콘 줄: 오른쪽 끝 스피커, 그 왼쪽 저장 리본 */}
-          <div className="flex items-center justify-end gap-1">
+      <div className="flex flex-col gap-3 px-4 pt-4">
+        {/* 문장 (연민트 표제 카드 — 사전 결과의 표제어 카드와 같은 색) */}
+        <section className="rounded-[20px] bg-[#E2F1EC] pb-5 pl-5 pr-4 pt-3.5">
+          {/* 아이콘 줄: 왼쪽 꼬리표, 오른쪽 저장 · 스피커 */}
+          <div className="flex items-center gap-1.5">
+            {KIND_TAG[kind] ? (
+              <span className="flex h-[22px] items-center rounded-[11px] bg-white px-[9px] font-gothic text-[0.71875rem] font-semibold text-[#9A4419]">
+                {KIND_TAG[kind]}
+              </span>
+            ) : null}
+            <span className="flex-1" />
             {saveRibbon}
             <button
               onClick={() => speak(item.id, "id")}
-              className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-primary active:bg-muted"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#2C6D63]"
               title="발음 듣기"
+              aria-label="발음 듣기"
             >
-              <Volume2 size={18} />
+              <Volume1 size={19} strokeWidth={2} />
             </button>
           </div>
           <p
             className={
-              "mt-0.5 font-word font-medium text-foreground " +
-              (isAyat ? "text-[1.0625rem] leading-[1.65]" : "text-[1.1875rem] leading-[1.5]")
+              "m-0 mt-2.5 font-word font-semibold text-[#104B60] " +
+              (isAyat ? "text-[1.1875rem] leading-[1.6]" : "text-[1.375rem] leading-[1.5]")
             }
           >
             {renderTokens(item.id)}
           </p>
           {item.ko ? (
-            <p className="mt-2.5 text-[0.84375rem] leading-[1.65] text-muted-foreground">{item.ko}</p>
+            <p className="m-0 mt-2 text-[0.9375rem] leading-[1.6] text-[#2E3E3A]">{item.ko}</p>
           ) : null}
           {refLabel ? (
-            <p className="mt-3 font-word text-[0.84375rem] text-muted-foreground">{refLabel}</p>
+            <p className="m-0 mt-2 font-word text-[0.84375rem] text-[#4B6560]">{refLabel}</p>
           ) : null}
-        </div>
+          <p className="m-0 mt-2.5 font-gothic text-[0.71875rem] text-[#4B6560]">점선 단어를 누르면 뜻이 나옵니다</p>
+        </section>
 
         {loading ? (
-          <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-10 text-center">
-            <Loader2 size={22} className="mx-auto mb-2.5 animate-spin text-primary" />
-            <p className="text-sm font-gothic text-muted-foreground">설명을 만드는 중이에요...</p>
-          </div>
+          <StateCard>
+            <Loader2 size={22} className="mx-auto mb-2.5 animate-spin text-[#2C6D63]" />
+            <p className="m-0 font-gothic text-[0.875rem] text-muted-foreground">설명을 만드는 중입니다</p>
+          </StateCard>
         ) : error === "API_KEY" ? (
-          <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-10 text-center">
-            <p className="mb-4 text-sm font-gothic text-foreground">설명을 보려면 Gemini API 키가 필요해요</p>
+          <StateCard>
+            <p className="m-0 mb-4 font-gothic text-[0.875rem] text-foreground">설명을 보려면 Gemini API 키가 필요합니다</p>
             <button
               onClick={() => setSettingsOpen(true)}
-              className="rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white"
+              className="rounded-full bg-[#2C6D63] px-5 py-2.5 font-gothic text-[0.875rem] font-semibold text-white"
             >
               설정 열기
             </button>
-          </div>
+          </StateCard>
         ) : error ? (
-          <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-10 text-center">
-            <p className="mb-4 text-sm font-gothic text-foreground">{error}</p>
+          <StateCard>
+            <p className="m-0 mb-4 font-gothic text-[0.875rem] leading-[1.6] text-foreground break-keep">{error}</p>
             <button
               onClick={() => load(false)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#2C6D63] px-5 py-2.5 font-gothic text-[0.875rem] font-semibold text-white"
             >
               <RotateCcw size={14} /> 다시 시도
             </button>
-          </div>
-        ) : data ? (
-          <>
-            {isAyat ? (
-              koVerse ? (
-                <section className="mt-5">
-                  <Label>어떤 뜻인가요</Label>
-                  <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-                    <p className="font-gothic text-[0.84375rem] leading-[1.45] text-foreground/85">{koVerse}</p>
-                    <p className="mt-2.5 text-[0.71875rem] font-gothic text-muted-foreground">
+          </StateCard>
+        ) : data ? (() => {
+          // 알아두기는 "어떤 뜻인가요"와 같은 말이면 숨깁니다(예전 캐시 대비). 비어 있어도 숨깁니다.
+          const note = (data.note || "").trim();
+          const showNote = note !== "" && note !== (data.meaning || "").trim();
+          const showMeaning = isAyat ? !!koVerse : !!data.meaning;
+          const showExamples = isAyat ? !!(data.analysis && data.analysis.length > 0) : data.examples.length > 0;
+          if (!showMeaning && !showExamples && !showNote) return null;
+          return (
+            <div className="flex flex-col gap-[26px] rounded-[20px] bg-card px-5 pb-[22px] pt-5 shadow-[0_1px_3px_rgba(16,40,50,0.06)]">
+              {isAyat ? (
+                koVerse ? (
+                  <section className="flex flex-col gap-2.5">
+                    <Label>어떤 뜻인가요</Label>
+                    <p className="m-0 font-gothic text-[0.84375rem] leading-[1.7] text-[#34332F]">{koVerse}</p>
+                    <p className="m-0 font-gothic text-[0.71875rem] text-muted-foreground">
                       {koRefLabel ? koRefLabel + " · 새번역" : "새번역"}
                     </p>
-                  </div>
+                  </section>
+                ) : null
+              ) : data.meaning ? (
+                <section className="flex flex-col gap-2.5">
+                  <Label>어떤 뜻인가요</Label>
+                  <p className="m-0 font-gothic text-[0.84375rem] leading-[1.7] text-[#34332F]">{latinSpans(data.meaning)}</p>
                 </section>
-              ) : null
-            ) : data.meaning ? (
-              <section className="mt-5">
-                <Label>어떤 뜻인가요</Label>
-                <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-                  <p className="font-gothic text-[0.8125rem] leading-[1.45] text-foreground/85">{data.meaning}</p>
-                </div>
-              </section>
-            ) : null}
+              ) : null}
 
-            {isAyat ? (
-              data.analysis && data.analysis.length > 0 ? (
-                <section className="mt-5">
-                  <Label>문장분석</Label>
-                  <div className="overflow-hidden rounded-2xl border border-border bg-card">
+              {isAyat ? (
+                data.analysis && data.analysis.length > 0 ? (
+                  <section className="flex flex-col gap-3.5">
+                    <Label>문장분석</Label>
                     {data.analysis.map((a, i) => (
-                      <div
-                        key={i}
-                        className={
-                          "px-4 py-3.5 " + (i === data.analysis!.length - 1 ? "" : "border-b border-border")
-                        }
-                      >
-                        <div className="flex items-start gap-2">
-                          <p className="flex-1 font-word text-[15px] leading-[1.6] text-foreground">{a.part}</p>
-                          <button
-                            onClick={() => speak(a.part, "id")}
-                            className="mt-0.5 shrink-0 text-muted-foreground active:text-primary"
-                            title="발음 듣기"
-                          >
-                            <Volume2 size={15} />
-                          </button>
+                      <div key={i} className="flex min-w-0 items-start gap-2.5">
+                        <span className="w-3.5 shrink-0 font-word text-[0.9375rem] italic leading-[1.5] text-[#B59B6A]">{i + 1}</span>
+                        <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                          <p className="m-0 break-words font-word text-[1rem] leading-[1.5]">{a.part}</p>
+                          <p className="m-0 break-words text-[0.8125rem] leading-[1.55] text-[#5E5D57]">{a.ko}</p>
+                          {a.note ? (
+                            <p className="m-0 mt-0.5 break-words font-gothic text-[0.75rem] leading-[1.6] text-[#6B6A64]">{latinSpans(a.note)}</p>
+                          ) : null}
                         </div>
-                        <p className="mt-1 text-[13.5px] leading-snug text-foreground/85">{a.ko}</p>
-                        {a.note ? (
-                          <p className="mt-1 font-gothic text-[12px] leading-snug text-muted-foreground">{a.note}</p>
-                        ) : null}
+                        <RowSpeaker onClick={() => speak(a.part, "id")} />
                       </div>
                     ))}
-                  </div>
-                </section>
-              ) : null
-            ) : data.examples.length > 0 ? (
-              <section className="mt-5">
-                <Label>이렇게 씁니다</Label>
-                <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                  </section>
+                ) : null
+              ) : data.examples.length > 0 ? (
+                <section className="flex flex-col gap-3.5">
+                  <Label>이렇게 씁니다</Label>
                   {data.examples.map((ex, i) => (
-                    <div
-                      key={i}
-                      className={
-                        "px-4 py-4 " + (i === data.examples.length - 1 ? "" : "border-b border-border")
-                      }
-                    >
-                      {ex.situasi ? (
-                        <p className="mb-2 text-[0.71875rem] font-gothic font-semibold text-muted-foreground">
-                          {ex.situasi}
-                        </p>
-                      ) : null}
-                      <div className="flex items-start gap-2">
-                        <p className="flex-1 font-word text-[0.9375rem] leading-[1.6] text-foreground">
-                          {ex.id}
-                        </p>
-                        <button
-                          onClick={() => speak(ex.id, "id")}
-                          className="mt-0.5 shrink-0 text-muted-foreground active:text-primary"
-                          title="발음 듣기"
-                        >
-                          <Volume2 size={15} />
-                        </button>
+                    <div key={i} className="flex min-w-0 items-start gap-2.5">
+                      <span
+                        className="w-3.5 shrink-0 font-word text-[0.9375rem] italic leading-[1.45] text-[#B59B6A]"
+                        style={{ paddingTop: ex.situasi ? 26 : 0 }}
+                      >
+                        {i + 1}
+                      </span>
+                      <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                        {ex.situasi ? (
+                          <span className="mb-1 self-start rounded-[10px] bg-[#F1EEE7] px-2 py-[3px] font-gothic text-[0.6875rem] font-semibold leading-[1.3] text-[#5E5541]">
+                            {ex.situasi}
+                          </span>
+                        ) : null}
+                        <p className="m-0 break-words font-word text-[1rem] leading-[1.5]">{ex.id}</p>
+                        {ex.ko ? (
+                          <p className="m-0 break-words text-[0.8125rem] leading-[1.55] text-[#5E5D57]">{ex.ko}</p>
+                        ) : null}
                       </div>
-                      <p className="mt-1.5 text-[0.8125rem] leading-[1.6] text-muted-foreground">{ex.ko}</p>
+                      <RowSpeaker onClick={() => speak(ex.id, "id")} className={ex.situasi ? "mt-[22px]" : "-mt-1"} />
                     </div>
                   ))}
-                </div>
-              </section>
-            ) : null}
+                </section>
+              ) : null}
 
-            {data.note ? (
-              <section className="mt-5">
-                <Label>알아두기</Label>
-                <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-                  <p className="font-gothic text-[0.8125rem] leading-[1.45] text-foreground/85">{data.note}</p>
-                </div>
-              </section>
-            ) : null}
-          </>
+              {showNote ? (
+                <section className="flex flex-col gap-2.5">
+                  <Label>알아두기</Label>
+                  <div className="rounded-[14px] bg-[#F6F7F5] px-3.5 py-3 font-gothic text-[0.8125rem] leading-[1.7] text-[#34332F]">
+                    {latinSpans(note, "text-[0.90625rem]")}
+                  </div>
+                </section>
+              ) : null}
+            </div>
+          );
+        })() : null}
+
+        {/* AI 풀이 신고 — 스토어 앱(공개판)에서만 보입니다(Google Play AI 생성 콘텐츠 요건) */}
+        {!loading && data ? (
+          <div className="flex justify-center [&>div>button]:text-[#6B7479]">
+            <AiReportButton
+              feature="phrase"
+              input={item.id}
+              output={(data.meaning || "") + (data.note ? " / " + data.note : "")}
+              className="flex flex-col items-center"
+            />
+          </div>
         ) : null}
       </div>
 
@@ -567,7 +622,7 @@ const PhraseDetail = () => {
             </div>
             {popupLoading ? (
               <div className="flex items-center gap-2 text-muted-foreground mt-2 text-sm">
-                <Loader2 size={15} className="animate-spin" /> 뜻을 찾고 있어요...
+                <Loader2 size={15} className="animate-spin" /> 뜻을 찾는 중입니다
               </div>
             ) : (
               <>

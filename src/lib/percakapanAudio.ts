@@ -274,12 +274,18 @@ async function generateLineAudio(text: string, speakerName: string): Promise<str
 }
 
 // ── 캐시 키 ───────────────────────────────────────────────────
+// 기본 장면의 인도네시아어 대사를 고치면 그 장면에 rev 를 올립니다.
+// rev 가 없는 장면은 예전과 같은 키라 이미 받아 둔 소리를 그대로 씁니다.
+function revPart(scene: PercakapanScene): string {
+  return scene.rev ? "::r" + scene.rev : "";
+}
+
 function allKey(scene: PercakapanScene): string {
-  return "all::" + scene.id + "::" + scene.lines.length;
+  return "all::" + scene.id + revPart(scene) + "::" + scene.lines.length;
 }
 
 function lineKey(scene: PercakapanScene, index: number, speakerName: string): string {
-  return "line::" + scene.id + "::" + index + "::" + speakerName;
+  return "line::" + scene.id + revPart(scene) + "::" + index + "::" + speakerName;
 }
 
 // ── 재생기 (전역 단일 인스턴스) ────────────────────────────────
@@ -315,6 +321,19 @@ class PercakapanAudioPlayer {
 
   getSnapshot(): PcAudioSnapshot {
     return this.snap;
+  }
+
+  /**
+   * 지금 소리의 재생 위치와 길이(초). 소리가 없거나 길이를 아직 모르면 null.
+   * 전체 듣기는 파일 하나라 몇 번째 줄인지 알 수 없으므로, 읽기 화면이 이 값으로 줄을 짐작합니다.
+   * (읽기 전용 — 재생 상태는 바꾸지 않습니다)
+   */
+  progress(): { time: number; duration: number } | null {
+    const a = this.audio;
+    if (!a) return null;
+    const d = a.duration;
+    if (!isFinite(d) || d <= 0) return null;
+    return { time: a.currentTime || 0, duration: d };
   }
 
   private emit(patch: Partial<PcAudioSnapshot>) {

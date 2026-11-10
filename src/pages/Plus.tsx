@@ -14,6 +14,7 @@ import { goBackOr } from "@/lib/nav";
 import { PRIVACY_URL, TERMS_URL } from "@/lib/platform";
 import { getSession, onSessionChange, PublicSession } from "@/lib/account";
 import { isPreviewBuild, usePlan } from "@/lib/plan";
+import { previewTrialUsed } from "@/lib/preview";
 import {
   billingAvailable,
   manageSubscription,
@@ -80,18 +81,7 @@ const C = {
 };
 
 const DEFAULT_TRIAL_TEXT = "7일";
-
-// 미리보기 APK 의 "체험 이미 사용" 스위치 (src/lib/preview.ts 가 같은 키에 씁니다).
-// 그 파일을 import 하지 않고 키를 직접 읽습니다 — 다른 작업과 병합 순서에 묶이지 않게.
-const PREVIEW_TRIAL_USED_KEY = "kata-preview-trial-used";
-function previewTrialUsed(): boolean {
-  try {
-    const v = localStorage.getItem(PREVIEW_TRIAL_USED_KEY);
-    return !!v && v !== "0" && v !== "false";
-  } catch (e) {
-    return false;
-  }
-}
+// 미리보기 APK 의 "체험 이미 사용" 스위치는 src/lib/preview.ts 의 previewTrialUsed() 를 씁니다(병합 후 한 곳으로).
 
 type PlanKey = "yearly" | "monthly";
 

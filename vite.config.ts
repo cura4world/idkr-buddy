@@ -37,6 +37,9 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     copyWellKnown(),
     VitePWA({
+      // 미리보기 APK(VITE_PREVIEW=1)는 APK 안의 파일을 바로 엽니다. 서비스워커를 만들지도,
+      // 등록하지도 않습니다(registerSW.js 가 index.html 에 들어가지 않음).
+      disable: process.env.VITE_PREVIEW === "1",
       registerType: "autoUpdate",
       workbox: {
         globPatterns: ["**/*.{js,mjs,css,html,ico,png,svg,woff2,json}"],

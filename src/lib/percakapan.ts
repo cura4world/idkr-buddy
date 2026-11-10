@@ -9,8 +9,10 @@
 import { pickServerAuth, isMemberActive } from "@/lib/member";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { callGeminiText } from "@/lib/geminiText";
+import { isStaffTier } from "@/lib/plan";
 import {
   BUILTIN_CATEGORIES,
+  PERCAKAPAN_LEVELS,
   builtinScenesOf,
   findBuiltinScene,
   findBuiltinCategory,
@@ -187,8 +189,19 @@ export async function deleteCustomCat(id: string): Promise<void> {
 // ---------- 합쳐 보기 ----------
 
 /**
+ * 이 사람에게 보이는 카테고리인지.
+ * staffOnly 기본 카테고리(교회와 신앙)는 공개판에서 Special Member·관리자에게만 보입니다.
+ * 관리자판·회원판은 getTier() 가 "admin" 이라 늘 true 입니다.
+ */
+export function isCategoryVisible(catId: string): boolean {
+  const c = findBuiltinCategory(catId);
+  if (!c || !c.staffOnly) return true;
+  return isStaffTier();
+}
+
+/**
  * 기본 카테고리 + 사용자 카테고리.
- * 기본 카테고리 중 장면이 하나도 없는 것(아직 데이터가 없는 6개)은 숨깁니다.
+ * 기본 카테고리 중 장면이 하나도 없는 것과, 이 등급에 안 보이는 것(staffOnly)은 숨깁니다.
  * 사용자 카테고리는 장면이 0개여도 남깁니다 — 방금 만들어 놓고 채우는 중일 수 있어서입니다.
  */
 export async function listCategories(): Promise<Array<PercakapanCategory & { count: number }>> {
@@ -207,6 +220,7 @@ export async function listCategories(): Promise<Array<PercakapanCategory & { cou
 
   for (let i = 0; i < BUILTIN_CATEGORIES.length; i++) {
     const c = BUILTIN_CATEGORIES[i];
+    if (!isCategoryVisible(c.id)) continue;
     const count = countOf(c.id);
     if (count === 0) continue;
     out.push({ ...c, count });
@@ -223,6 +237,7 @@ export async function listCategories(): Promise<Array<PercakapanCategory & { cou
 
 /** 카테고리 하나 찾기 (사용자 것이 우선) */
 export async function findCategory(catId: string): Promise<PercakapanCategory | null> {
+  if (!isCategoryVisible(catId)) return null;
   const builtin = findBuiltinCategory(catId);
   if (builtin) return builtin;
   const customCats = await getCustomCats();
@@ -234,6 +249,7 @@ export async function findCategory(catId: string): Promise<PercakapanCategory | 
 
 /** 기본 장면이 먼저, 사용자 장면은 만든 순서대로 뒤에 붙습니다. */
 export async function listScenes(catId: string): Promise<PercakapanScene[]> {
+  if (!isCategoryVisible(catId)) return [];
   const builtin = builtinScenesOf(catId);
   const customScenes = await getCustomScenes();
   const mine = customScenes
@@ -245,10 +261,16 @@ export async function listScenes(catId: string): Promise<PercakapanScene[]> {
 /** 사용자 장면을 먼저 보고, 없으면 기본에서 찾습니다. */
 export async function findScene(id: string): Promise<PercakapanScene | null> {
   const customScenes = await getCustomScenes();
+  let found: PercakapanScene | null = null;
   for (let i = 0; i < customScenes.length; i++) {
-    if (customScenes[i].id === id) return customScenes[i];
+    if (customScenes[i].id === id) {
+      found = customScenes[i];
+      break;
+    }
   }
-  return findBuiltinScene(id);
+  if (!found) found = findBuiltinScene(id);
+  if (found && !isCategoryVisible(found.cat)) return null;
+  return found;
 }
 
 // ---------- 백업 / 복원 ----------
@@ -399,7 +421,21 @@ function buildScenePrompt(opts: {
   const levelRule =
     opts.level === "상"
       ? "난이도 상: 문장이 길고 화제 전환이 있으며, 되묻기·끼어들기를 포함하세요. 축약형·관용 표현·수동태(di-)를 섞어 쓰세요."
-      : "난이도 중: 짧고 명확한 문장으로, 한 문장에 한 가지 뜻만 담으세요.";
+      : opts.level === "하"
+        ? "난이도 하: 한 문장 5~6단어, 기초 단어만, 대화 6~8줄, 기본 존댓말(Bapak/Ibu, saya)."
+        : "난이도 중: 짧고 명확한 문장으로, 한 문장에 한 가지 뜻만 담으세요.";
+
+  // 하는 기초 학습자용이라 기본 존댓말로 씁니다. 중·상은 지금처럼 현지 구어체입니다.
+  const styleRules =
+    opts.level === "하"
+      ? "- 기초 학습자용입니다. 기본 존댓말로 쓰세요: 나는 saya, 상대는 Bapak / Ibu (줄여서 Pak / Bu).\n" +
+        "- 구어 축약(nggak / udah / aja / gimana)과 속어는 쓰지 말고, 쉬운 표준어(tidak / sudah / saja / bagaimana)로 쓰세요.\n"
+      : "- 인도네시아 현지에서 실제로 쓰는 구어체로 쓰세요.\n" +
+        "- 교재체(tidak / saja / terima kasih / apakah)는 쓰지 말고, " +
+        "실제 회화체(nggak / aja / makasih / gimana / udah / banget / kok / sih / dong / deh / yuk)를 쓰세요.\n" +
+        "- 호칭은 상황에 맞게 Mas / Mbak / Bang / Pak / Bu 를 쓰세요.\n";
+
+  const lineCount = opts.level === "하" ? "6~8" : "10~14";
 
   const situationLine = (opts.situation || "").trim()
     ? '상황: "' + (opts.situation || "").trim() + '"\n'
@@ -415,17 +451,16 @@ function buildScenePrompt(opts: {
     situationLine +
     "\n" +
     "작성 규칙:\n" +
-    "- 인도네시아 현지에서 실제로 쓰는 구어체로 쓰세요.\n" +
-    "- 교재체(tidak / saja / terima kasih / apakah)는 쓰지 말고, " +
-    "실제 회화체(nggak / aja / makasih / gimana / udah / banget / kok / sih / dong / deh / yuk)를 쓰세요.\n" +
-    "- 호칭은 상황에 맞게 Mas / Mbak / Bang / Pak / Bu 를 쓰세요.\n" +
+    styleRules +
     "- " +
     levelRule +
     "\n" +
     "- 한국어 해석은 자연스러운 구어체로 쓰고, 직역투를 피하세요.\n" +
     "- 화자는 A 와 B 두 명뿐입니다. C 는 쓰지 마세요.\n" +
     "- A 와 B 는 반드시 서로 다른 성별로 정하세요 (m = 남자, f = 여자).\n" +
-    "- 대화는 A 로 시작해 A 와 B 가 번갈아 주고받고, 전체 문장 수는 10~14 문장입니다.\n" +
+    "- 대화는 A 로 시작해 A 와 B 가 번갈아 주고받고, 전체 문장 수는 " +
+    lineCount +
+    " 문장입니다.\n" +
     "- roles 는 각 화자가 누구인지 한국어로 짧게 적으세요 (예: 손님, 점원).\n" +
     "- titleId 는 이 대화의 인도네시아어 제목입니다.\n\n" +
     "출력 형식:\n" +
@@ -532,6 +567,8 @@ export type {
   PercakapanSpeaker,
   PercakapanGender,
 };
+
+export { PERCAKAPAN_LEVELS };
 
 /** 이 기기의 사용자 회화집·카테고리를 모두 지웁니다(회원키가 끊겼을 때). 내장 회화집은 남습니다. */
 export async function clearCustomPercakapan(): Promise<void> {
