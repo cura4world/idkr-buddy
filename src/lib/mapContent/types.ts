@@ -22,10 +22,9 @@ export interface MapContentEntry {
   // 마땅한 단어가 없으면 빈 배열로 두고, 시트는 단어 칸을 그리지 않습니다.
   words: MapWord[];
   // 영문 위키피디아 문서 제목. 핀 id 를 그대로 쓰면 엉뚱한 문서에 걸리는 곳만 적습니다.
+  // 지도 사진 고정 목록을 만드는 scripts/build-map-photos.mjs 가 읽습니다(앱은 쓰지 않음).
   wiki?: string;
-  // 위키 자동 검색 결과가 나쁜 지점만 이미지 주소를 직접 지정합니다 (upload.wikimedia.org).
-  // 재호스팅하지 않는 이유: 위키미디어 사진은 대부분 CC BY-SA 라 직접 올리면
-  // 저작자 표시 의무가 우리 쪽에 붙습니다.
+  // 쓰지 않습니다(예전 실시간 사진 검색용). 사진은 src/lib/mapPhotos.ts 고정 목록만 씁니다.
   photos?: string[];
 }
 

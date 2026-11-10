@@ -379,12 +379,7 @@ const InsightHistory = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <div className="flex items-center gap-2.5">
-          <span className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center shadow-lg shadow-black/30">
-            <Hourglass size={18} className="text-white" />
-          </span>
-          <h1 className="text-lg font-semibold text-foreground leading-none">인도네시아 역사</h1>
-        </div>
+        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">SEJARAH</h1>
       </header>
 
       <p className="mb-5 text-[0.8125rem] font-gothic text-muted-foreground leading-relaxed px-1">

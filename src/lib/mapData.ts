@@ -1,9 +1,10 @@
 // src/lib/mapData.ts
-// 인도네시아 지도 데이터: Natural Earth 50m 해안선(메르카토르 투영, viewBox 1000x460) + 학습 지점 131곳.
+// 인도네시아 지도 데이터: Natural Earth 50m 해안선(메르카토르 투영, viewBox 1000x460) + 학습 지점 136곳.
 // tier 1=대도시(낮은 줌부터 표시), 2=중소도시, 3=관광지, 4=종교·역사/민족·문화(가장 깊은 줌).
 // x/y는 경위도가 아니라 viewBox 좌표입니다.
+// staff=true 인 지점은 관리자·Special Member 에게만 보입니다(공개판 선교 역사 핀).
 
-export interface MapPlace { id: string; ko: string; x: number; y: number; hint: string; tier: number; }
+export interface MapPlace { id: string; ko: string; x: number; y: number; hint: string; tier: number; staff?: boolean; }
 export interface MapIslandLabel { id: string; ko: string; x: number; y: number; }
 
 export const MAP_VIEW = { w: 1000, h: 460 };
@@ -121,21 +122,31 @@ export const MAP_SPOTS: MapPlace[] = [
 ];
 
 // tier 4 — 종교·역사. 가장 깊은 줌에서만 보입니다.
+// 공개판은 여러 종교를 고르게 보여 줍니다(2026-11-10 결정). "staff":true 인 선교 역사 10곳은
+// 관리자·Special Member 에게만 보입니다(isStaffTier — 관리자판·회원판은 늘 보임).
+// 2026-11-10 에 더한 5곳(Istiqlal ~ Lasem)의 좌표는 실제 경위도를 이 지도의 투영으로 옮긴 값입니다:
+//   x = 21.1981 × 경도 − 2003.27,  y = −1216.16 × ln(tan(π/4 + 위도/2)) + 176.17
+//   (기존 도시 18곳의 경위도로 맞춘 식, 그 18곳에서 오차 최대 2.4 · 대부분 0.6 이하)
 export const MAP_FAITH: MapPlace[] = [
   {"id":"Demak","ko":"드막","x":341.9,"y":323.1,"hint":"자바 최초의 이슬람 왕국, 대모스크","tier":4},
   {"id":"Kudus","ko":"쿠두스","x":346.1,"y":321.2,"hint":"힌두를 존중해 소를 잡지 않는 전통","tier":4},
   {"id":"Tuban","ko":"투반","x":372.0,"y":323.4,"hint":"왈리송오 전승이 남은 북부 해안","tier":4},
   {"id":"Banten Lama","ko":"반텐 라마","x":247.0,"y":303.8,"hint":"반텐 술탄국의 옛 수도","tier":4},
-  {"id":"Muntilan","ko":"문틸란","x":334.5,"y":337.8,"hint":"판 리트 신부가 세운 자바 가톨릭의 요람","tier":4},
-  {"id":"Tarutung","ko":"타루퉁","x":94.7,"y":133.5,"hint":"바탁 개신교(HKBP) 본부 페아라자가 있는 도시","tier":4},
-  {"id":"Tomohon","ko":"토모혼","x":642.7,"y":148.2,"hint":"GMIM 총회 본부, 주민 96%가 기독교인","tier":4},
-  {"id":"Tobelo","ko":"토벨로","x":709.8,"y":139.7,"hint":"할마헤라 기독교의 중심 도시","tier":4},
-  {"id":"Saparua","ko":"사파루아","x":723.6,"y":252.7,"hint":"말루쿠 기독교와 파티무라 항쟁의 섬","tier":4},
-  {"id":"Pulau Mansinam","ko":"만시남 섬","x":841.0,"y":197.5,"hint":"1855년 파푸아 선교가 시작된 섬","tier":4},
-  {"id":"Larantuka","ko":"라란투카","x":603.3,"y":354.0,"hint":"포르투갈이 남긴 성주간 행렬 스마나 산타","tier":4},
-  {"id":"Maumere","ko":"마우메레","x":587.0,"y":360.0,"hint":"플로레스 가톨릭의 중심 도시","tier":4},
-  {"id":"Pulau Sabu","ko":"사부 섬","x":579.3,"y":400.0,"hint":"초기 선교가 뿌리내린 건조한 섬","tier":4},
-  {"id":"Soe","ko":"소에","x":630.8,"y":386.4,"hint":"서티모르 개신교의 고원 도시","tier":4}
+  {"id":"Istiqlal","ko":"이스티크랄 모스크와 대성당","x":261.3,"y":307.4,"hint":"독립을 기념한 국가 모스크, 길 건너 대성당","tier":4},
+  {"id":"Gereja Tugu","ko":"투구 교회","x":263.4,"y":306.5,"hint":"포르투갈어를 쓰던 해방민 후손의 옛 교회","tier":4},
+  {"id":"Pura Besakih","ko":"브사키 사원","x":444.1,"y":354.6,"hint":"아궁 산 기슭, 발리 힌두의 어머니 사원","tier":4},
+  {"id":"Brahmavihara-Arama","ko":"브라마비하라 아라마","x":433.9,"y":351.0,"hint":"북부 발리의 상좌부 불교 사원","tier":4},
+  {"id":"Lasem","ko":"라셈","x":359.0,"y":318.7,"hint":"클렌텡과 바틱의 '작은 중국'","tier":4},
+  {"id":"Muntilan","ko":"문틸란","x":334.5,"y":337.8,"hint":"판 리트 신부가 세운 자바 가톨릭의 요람","tier":4,"staff":true},
+  {"id":"Tarutung","ko":"타루퉁","x":94.7,"y":133.5,"hint":"바탁 개신교(HKBP) 본부 페아라자가 있는 도시","tier":4,"staff":true},
+  {"id":"Tomohon","ko":"토모혼","x":642.7,"y":148.2,"hint":"GMIM 총회 본부, 주민 96%가 기독교인","tier":4,"staff":true},
+  {"id":"Tobelo","ko":"토벨로","x":709.8,"y":139.7,"hint":"할마헤라 기독교의 중심 도시","tier":4,"staff":true},
+  {"id":"Saparua","ko":"사파루아","x":723.6,"y":252.7,"hint":"말루쿠 기독교와 파티무라 항쟁의 섬","tier":4,"staff":true},
+  {"id":"Pulau Mansinam","ko":"만시남 섬","x":841.0,"y":197.5,"hint":"1855년 파푸아 선교가 시작된 섬","tier":4,"staff":true},
+  {"id":"Larantuka","ko":"라란투카","x":603.3,"y":354.0,"hint":"포르투갈이 남긴 성주간 행렬 스마나 산타","tier":4,"staff":true},
+  {"id":"Maumere","ko":"마우메레","x":587.0,"y":360.0,"hint":"플로레스 가톨릭의 중심 도시","tier":4,"staff":true},
+  {"id":"Pulau Sabu","ko":"사부 섬","x":579.3,"y":400.0,"hint":"초기 선교가 뿌리내린 건조한 섬","tier":4,"staff":true},
+  {"id":"Soe","ko":"소에","x":630.8,"y":386.4,"hint":"서티모르 개신교의 고원 도시","tier":4,"staff":true}
 ];
 
 // tier 4 — 민족·문화. 가장 깊은 줌에서만 보입니다.

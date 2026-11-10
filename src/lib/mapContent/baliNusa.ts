@@ -449,4 +449,49 @@ export const BALI_NUSA: MapContentTable = {
     ],
     wiki: "Savu",
   },
+
+  // ---------------- 종교·역사 (2026-11-10 추가, 공개판에서 여러 종교를 고르게) ----------------
+  "Pura Besakih": {
+    desc:
+      "발리에서 가장 높은 아궁 산의 남서쪽 기슭, 해발 1,000미터쯤에 자리한 사원입니다. 발리 힌두교에서 가장 크고 중요한 곳이라 '어머니 사원'이라고 부르며, 스물이 넘는 사원이 계단식 언덕을 따라 이어져 한 무리를 이룹니다. 중심은 프나타란 아궁 사원입니다.\n\n" +
+      "1963년 아궁 산이 크게 분화했을 때, 마침 이곳에서는 백 년에 한 번 치르는 큰 의식이 준비되고 있었습니다. 용암은 사원 바로 옆을 비켜 흘러갔고, 발리 사람들은 이 일을 오래 이야기합니다.\n\n" +
+      "지금도 섬 곳곳의 마을이 철마다 이곳에 올라와 제물을 바칩니다. 방문자는 허리에 천을 두르고, 기도하는 사람들의 자리는 비켜 걷습니다.",
+    words: [
+      {
+        word: "lereng",
+        meaning: "산비탈, 기슭",
+        example: "Pura ini berdiri di lereng Gunung Agung.",
+        exampleKo: "이 사원은 아궁 산 기슭에 서 있습니다.",
+      },
+      {
+        word: "upacara",
+        meaning: "의식, 예식",
+        example: "Upacara besar diadakan di pura ini.",
+        exampleKo: "이 사원에서 큰 의식이 열립니다.",
+      },
+    ],
+    wiki: "Besakih",
+  },
+
+  "Brahmavihara-Arama": {
+    desc:
+      "북부 발리 불렐렝의 반자르 마을 언덕에 있는 불교 사원입니다. 주민 대부분이 힌두교인인 발리에서 가장 큰 불교 사원으로, 1970년 무렵 문을 연 상좌부 불교 수도원입니다.\n\n" +
+      "건물은 발리식 돌 조각과 붉은 지붕으로 지었고, 위쪽 마당에는 보로부두르의 탑을 작게 본뜬 탑이 있습니다. 발리의 힌두 사원과 생김새가 비슷해 언뜻 보면 구별하기 어렵습니다.\n\n" +
+      "지금도 승려들이 살며 수행하고, 명상 수련을 하러 오는 사람도 많습니다. 방문자는 다리를 가리는 천을 두르고 조용히 걷습니다.",
+    words: [
+      {
+        word: "biksu",
+        meaning: "승려 (불교)",
+        example: "Para biksu tinggal dan belajar di vihara ini.",
+        exampleKo: "승려들이 이 사원에서 살며 공부합니다.",
+      },
+      {
+        word: "bermeditasi",
+        meaning: "명상하다",
+        example: "Pengunjung boleh bermeditasi dengan tenang.",
+        exampleKo: "방문자는 조용히 명상할 수 있습니다.",
+      },
+    ],
+    wiki: "Brahmavihara-Arama",
+  },
 };

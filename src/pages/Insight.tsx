@@ -1,59 +1,170 @@
 // src/pages/Insight.tsx
-// "인도네시아 이해" 허브: 개관 / 지도 / 종족 / 종교 / 기독교 / 역사 / 정보 7개 하위 메뉴.
-// 메인화면·기도 화면과 같은 목록 어법 (섹션 라벨 + 흰 카드 안의 행).
+// "인도네시아 이해" 허브 (시안 IN1-Plus · IN2-Free, 2026-11-10).
+//   · 맨 위에 지도를 큰 카드로 (실제 지도 모양 + 대도시 점)
+//   · 개관 / 종족 / 종교 / (관리자판: 기독교) / 역사 / 생활 정보 — 차분한 색 타일 목록
+//   · 공개판 무료 사용자: 메뉴는 보이되 잠기고, 위에 귤색 안내 상자. 누르면 구독 화면(PAYWALL_PATH)
+//   · 하위 화면과 /map 은 App.tsx 에서 InsightGate 로 한 번 더 막습니다(주소로 바로 들어오는 경우)
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import { isStoreApp } from "@/lib/platform";
-import {
-  ArrowLeft,
-  Globe,
-  Landmark,
-  Users,
-  Cross,
-  Hourglass,
-  Map as MapIcon,
-  Lightbulb,
-  ChevronRight,
-} from "lucide-react";
+import { PAYWALL_PATH, usePlan } from "@/lib/plan";
+import { INDONESIA_PATH, MAP_CITIES, NEIGHBOR_SHAPES } from "@/lib/mapData";
+import { ArrowLeft, Globe, Landmark, Users, Cross, Hourglass, Lightbulb, ChevronRight, Lock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-interface RowProps {
+interface RowItem {
   icon: LucideIcon;
+  bg: string;
+  fg: string;
   title: string;
   sub: string;
-  onClick: () => void;
-  last?: boolean;
+  to: string;
 }
 
-const Row = ({ icon: Icon, title, sub, onClick, last }: RowProps) => (
+const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+  <p className="mx-1 mb-2 font-gothic text-[0.875rem] font-bold tracking-[0.02em] text-[#3B4245]">{children}</p>
+);
+
+const CARD_SHADOW = { boxShadow: "0 1px 3px rgba(16,40,50,0.06)" };
+
+const Rows = ({ items, locked, go }: { items: RowItem[]; locked: boolean; go: (to: string) => void }) => (
+  <div className="bg-card rounded-[18px] overflow-hidden" style={{ ...CARD_SHADOW, opacity: locked ? 0.72 : 1 }}>
+    {items.map((it, i) => {
+      const Icon = it.icon;
+      return (
+        <button
+          key={it.to}
+          type="button"
+          onClick={() => go(it.to)}
+          className={
+            "w-full flex items-center gap-3 py-3 pl-3.5 pr-3 text-left active:bg-muted/60 transition-colors " +
+            (i < items.length - 1 ? "border-b border-[#EEF1F3]" : "")
+          }
+        >
+          <span
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: it.bg, color: it.fg }}
+          >
+            <Icon size={20} strokeWidth={1.8} />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-gothic text-[0.96875rem] leading-tight text-foreground truncate">{it.title}</span>
+            <span className="block mt-px font-word text-[0.75rem] text-[#646C72] truncate">{it.sub}</span>
+          </span>
+          {locked ? (
+            <Lock size={16} strokeWidth={2} className="shrink-0 text-[#A9B0B4]" />
+          ) : (
+            <ChevronRight size={16} strokeWidth={2} className="shrink-0 text-[#B7BDC1]" />
+          )}
+        </button>
+      );
+    })}
+  </div>
+);
+
+// 지도 카드의 작은 지도 — 지도 화면과 같은 해안선 데이터, 대도시(tier 1)만 점으로.
+const MiniMap = () => (
+  <svg
+    viewBox="0 60 1000 380"
+    width="100%"
+    height={118}
+    preserveAspectRatio="xMidYMid slice"
+    className="block"
+    aria-hidden="true"
+  >
+    <rect x="0" y="0" width="1000" height="460" fill="#0b2f37" />
+    {NEIGHBOR_SHAPES.map((c) => (
+      <path key={c.id} d={c.d} fill="#123c42" stroke="#2c5860" strokeWidth={1.2} />
+    ))}
+    <path d={INDONESIA_PATH} fill="#17555c" stroke="#3e8d95" strokeWidth={1.4} />
+    {MAP_CITIES.filter((c) => c.tier === 1).map((c) => (
+      <circle key={c.id} cx={c.x} cy={c.y} r={7} fill="#f97316" stroke="#fff" strokeWidth={2.4} />
+    ))}
+  </svg>
+);
+
+const MapCard = ({ locked, onClick }: { locked: boolean; onClick: () => void }) => (
   <button
     type="button"
     onClick={onClick}
-    className={
-      "w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-muted/60 transition-colors " +
-      (last ? "" : "border-b border-border")
-    }
+    className="block w-full text-left rounded-[18px] overflow-hidden bg-[#0b2f37] active:opacity-90"
+    style={{ boxShadow: "0 1px 3px rgba(16,40,50,0.10)", opacity: locked ? 0.8 : 1 }}
   >
-    <Icon size={20} strokeWidth={1.6} className="text-muted-foreground shrink-0" />
-    <div className="flex-1 min-w-0">
-      <p className="text-[0.9375rem] leading-tight text-foreground truncate">{title}</p>
-      <p className="mt-0.5 font-word text-[0.71875rem] text-muted-foreground truncate">{sub}</p>
-    </div>
-    <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
+    <MiniMap />
+    <span className="flex items-center gap-3 pt-3 pb-3.5 pl-4 pr-3.5">
+      <span className="flex-1 min-w-0">
+        <span className="flex items-baseline gap-[7px]">
+          <span className="font-gothic text-base font-semibold text-white">인도네시아 지도</span>
+          <span className="font-word text-[0.75rem] text-[#9CC3C8]">Peta</span>
+        </span>
+        <span className="block mt-[3px] font-gothic text-[0.78125rem] text-[#B9D4D7]">
+          섬과 도시를 눌러 그 지역 이야기를 읽어 보세요
+        </span>
+      </span>
+      <span
+        className="w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0"
+        style={{ background: "rgba(255,255,255,0.14)" }}
+      >
+        {locked ? (
+          <Lock size={15} strokeWidth={2} className="text-[#E6EEF0]" />
+        ) : (
+          <ChevronRight size={16} strokeWidth={2.2} className="text-white" />
+        )}
+      </span>
+    </span>
   </button>
 );
 
-const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="mb-2.5 px-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-    {children}
-  </p>
+// Plus 안내 상자 (무료 사용자). 색은 다듬기 스토리 공통 규칙의 귤색 상자.
+const PlusBox = ({ onClick }: { onClick: () => void }) => (
+  <div className="rounded-[18px] border border-[#F1E0AE] bg-[#FFF6DC] py-3.5 pr-3.5 pl-[22px]">
+    <p className="font-gothic text-[0.9375rem] font-semibold text-foreground whitespace-nowrap">
+      인도네시아 이해는 Plus 회원 기능입니다
+    </p>
+    <div className="mt-1.5 flex items-stretch gap-3">
+      <span className="flex-1 min-w-0 font-gothic text-[0.75rem] leading-[1.55] text-[#6E5612] whitespace-nowrap">
+        Plus로 지도와 읽을거리를 열고,
+        <br />
+        지역마다 단어를 담을 수 있습니다
+      </span>
+      <button
+        type="button"
+        onClick={onClick}
+        className="px-3.5 rounded-xl bg-[#8A6A12] text-white font-gothic text-[0.71875rem] font-bold leading-[1.25] shrink-0 active:opacity-90"
+      >
+        Plus
+        <br />
+        7일 무료 체험
+      </button>
+    </div>
+  </div>
 );
 
 const Insight = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const publicEdition = isStoreApp();
+  const { plus } = usePlan();
+  const locked = !plus;
+
+  const go = (to: string) => navigate(locked ? PAYWALL_PATH : to);
+
+  const overview: RowItem[] = [
+    { icon: Globe, bg: "#E4EEF6", fg: "#2B5F86", title: "인도네시아 개관", sub: "Ikhtisar", to: "/insight/overview" },
+  ];
+  const people: RowItem[] = [
+    { icon: Users, bg: "#FCEFE3", fg: "#9A5B1E", title: "인도네시아 종족", sub: "Suku Bangsa", to: "/insight/ethnic" },
+    { icon: Landmark, bg: "#ECE8F6", fg: "#5B4A8C", title: "인도네시아 종교", sub: "Agama", to: "/insight/religion" },
+  ];
+  // 공개판(스토어 앱)에는 기독교 항목을 두지 않습니다
+  if (!publicEdition) {
+    people.push({ icon: Cross, bg: "#F4E8EC", fg: "#8A3E52", title: "인도네시아 기독교", sub: "Kekristenan", to: "/insight/christian" });
+  }
+  const life: RowItem[] = [
+    { icon: Hourglass, bg: "#EAF2DF", fg: "#4E6A2A", title: "인도네시아 역사", sub: "Sejarah", to: "/insight/history" },
+    { icon: Lightbulb, bg: "#FFF3D6", fg: "#8A6A12", title: "생활 정보", sub: "Info dan Tips", to: "/insight/tips" },
+  ];
 
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto pb-9">
@@ -68,75 +179,28 @@ const Insight = () => {
         <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">WAWASAN INDONESIA</h1>
       </header>
 
-      <div className="px-4 pt-4">
+      <div className="px-4 pt-4 flex flex-col gap-2.5">
+        {locked ? <PlusBox onClick={() => navigate(PAYWALL_PATH)} /> : null}
+
         {/* 한눈에 보기 */}
         <section>
-          <SectionLabel>한눈에 보기</SectionLabel>
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            <Row
-              icon={Globe}
-              title="인도네시아 개관"
-              sub="Ikhtisar"
-              onClick={() => navigate("/insight/overview")}
-            />
-            <Row
-              icon={MapIcon}
-              title="인도네시아 지도"
-              sub="Peta"
-              onClick={() => navigate("/map")}
-              last
-            />
+          <SectionTitle>한눈에 보기</SectionTitle>
+          <div className="flex flex-col gap-2.5">
+            <MapCard locked={locked} onClick={() => go("/map")} />
+            <Rows items={overview} locked={locked} go={go} />
           </div>
         </section>
 
         {/* 사람과 믿음 */}
-        <section className="mt-6">
-          <SectionLabel>사람과 믿음</SectionLabel>
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            <Row
-              icon={Users}
-              title="인도네시아 종족"
-              sub="Suku Bangsa"
-              onClick={() => navigate("/insight/ethnic")}
-            />
-            <Row
-              icon={Landmark}
-              title="인도네시아 종교"
-              sub="Agama"
-              onClick={() => navigate("/insight/religion")}
-              last={publicEdition}
-            />
-            {/* 공개판(스토어 앱)에는 기독교 항목을 두지 않습니다 */}
-            {publicEdition ? null : (
-              <Row
-                icon={Cross}
-                title="인도네시아 기독교"
-                sub="Kekristenan"
-                onClick={() => navigate("/insight/christian")}
-                last
-              />
-            )}
-          </div>
+        <section className="mt-2">
+          <SectionTitle>사람과 믿음</SectionTitle>
+          <Rows items={people} locked={locked} go={go} />
         </section>
 
         {/* 역사와 생활 */}
-        <section className="mt-6">
-          <SectionLabel>역사와 생활</SectionLabel>
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            <Row
-              icon={Hourglass}
-              title="인도네시아 역사"
-              sub="Sejarah"
-              onClick={() => navigate("/insight/history")}
-            />
-            <Row
-              icon={Lightbulb}
-              title="인도네시아 정보"
-              sub="Info dan Tips"
-              onClick={() => navigate("/insight/tips")}
-              last
-            />
-          </div>
+        <section className="mt-2">
+          <SectionTitle>역사와 생활</SectionTitle>
+          <Rows items={life} locked={locked} go={go} />
         </section>
       </div>
     </div>
