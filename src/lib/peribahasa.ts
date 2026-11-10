@@ -14,6 +14,7 @@ import {
   isUsableVerseText,
 } from "@/lib/bible";
 import { getWordsByCategory, getCategories, Category, Word } from "@/lib/store";
+import { isWordbookVisible } from "@/lib/wordbookAccess";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { askPhraseJSON, generateNewPhrase, getPhraseDetail } from "@/lib/phrase";
 import { BUILTIN_SCENES } from "@/data/percakapan";
@@ -374,9 +375,9 @@ function pickFromMyWordbook(): Phrase | null {
   return pickFromCategories(cats, "kosakataku");
 }
 
-// 단어장 폴더 = 시드에서 온 공용 단어장 36권.
+// 단어장 폴더 = 시드에서 온 공용 단어장 41권 (성경과 신앙 35~41은 staff 만).
 function pickFromSharedWordbooks(): Phrase | null {
-  const cats = getCategories().filter((c) => c.isShared);
+  const cats = getCategories().filter((c) => c.isShared && isWordbookVisible(c));
   return pickFromCategories(cats, "kosakata");
 }
 

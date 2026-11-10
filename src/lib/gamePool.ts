@@ -4,6 +4,7 @@
 // 같은 단어가 여러 층에 있으면 단어장 > 찾아본 > 시드 순으로 하나만 씁니다.
 
 import { getCategories, getWordsByCategory } from "@/lib/store";
+import { isWordbookVisible } from "@/lib/wordbookAccess"; // 성경과 신앙 단어장은 staff 만 출제
 import { listLookupWords } from "@/lib/wordStore";
 import { listWordRecords, effectiveStatus, CONFIRM_EVIDENCE, CONFIRM_GAP_MS } from "@/lib/medali";
 import type { WordRecord } from "@/lib/medali";
@@ -84,7 +85,7 @@ export async function collectCandidates(): Promise<PoolWord[]> {
   }
 
   // ③ 공용 시드 단어장
-  for (const c of cats.filter((x) => x.isShared)) {
+  for (const c of cats.filter((x) => x.isShared && isWordbookVisible(x))) {
     try {
       for (const w of getWordsByCategory(c.id)) push(w.word, w.meaning, "seed");
     } catch {
@@ -327,7 +328,7 @@ export async function drawSentences(n: number): Promise<PoolSentence[]> {
       // 한 단어장이 깨져도 나머지는 계속
     }
   }
-  for (const c of cats.filter((x) => x.isShared)) {
+  for (const c of cats.filter((x) => x.isShared && isWordbookVisible(x))) {
     try {
       for (const w of getWordsByCategory(c.id)) push(w.word, w.meaning, w.example, w.exampleMeaning, "seed");
     } catch {

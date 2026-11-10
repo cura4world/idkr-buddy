@@ -277,6 +277,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   };
 
   const categories = getCategories();
+  // 성경과 신앙 단어장을 staff 가 아닌 등급이 주소로 열면 아래(S48)에서 /wordbooks 로 돌려보냅니다.
   const category = categories.find((c) => c.id === id);
   const words = id ? getWordsByCategory(id) : [];
   // 공용 단어장(시드에서 온 것)은 읽기 전용 "책"이다.

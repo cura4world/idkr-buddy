@@ -5,7 +5,7 @@ import { getCategories, getWordsByCategory, Category } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import { ArrowLeft } from "lucide-react";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
-import { GROUP_ORDER, GROUP_STYLES, GroupKey, groupOf } from "@/lib/wordbookGroups";
+import { GROUP_ORDER, GROUP_STYLES, GroupKey, groupOf, bookNumber } from "@/lib/wordbookGroups";
 
 /* 기본 단어장 폴더 (시안: 단어장 폴더 · 추천안).
    이 화면은 완성된 "책"이라 읽기 전용입니다. 단어장 추가·이름 변경·삭제·순서 이동은
@@ -26,10 +26,15 @@ const Wordbooks = () => {
   const all = getCategories();
   const shared = all.filter((c) => c.isShared);
 
-  // 화면에 보일 묶음들. 시드 순서를 그대로 쓰므로 별도 정렬은 하지 않습니다.
+  // 화면에 보일 묶음들. 저장 순서는 새로 생긴 단어장이 끝에 붙으므로(2026-11 재분류 뒤 01·06·21·26·27)
+  // 이름 앞 번호로 다시 줄 세웁니다. 번호가 같거나 없으면 저장 순서 그대로.
   const grouped = useMemo(() => {
     const bucket = new Map<GroupKey, Category[]>();
-    shared.forEach((cat) => {
+    const ordered = shared
+      .map((c, i) => ({ c, i, n: bookNumber(c.name) ?? 999 }))
+      .sort((a, b) => a.n - b.n || a.i - b.i)
+      .map((x) => x.c);
+    ordered.forEach((cat) => {
       const key = groupOf(cat, shared);
       if (key === "faith" && !plan.staff) return;
       if (!bucket.has(key)) bucket.set(key, []);
