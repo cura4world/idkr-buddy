@@ -27,6 +27,7 @@ import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } 
 import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { isBackCloseEntry } from "@/hooks/useBackClose";
 
 const TEAL = "#2C6D63";
 const CARD_STYLE = { background: "#FFFFFF", borderRadius: 18, boxShadow: "0 1px 3px rgba(16,40,50,0.06)" };
@@ -359,7 +360,8 @@ const PercakapanRead = () => {
   const openInDictionary = () => {
     if (!popupWord) return;
     writeReturnTicket("percakapan", id, currentScrollY(), false);
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=percakapan");
+    // 단어 시트가 뒤로가기용으로 쌓은 칸은 사전 화면으로 바꿔 끼웁니다(사전에서 한 번 뒤로 = 이 회화).
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=percakapan", { replace: isBackCloseEntry() });
   };
 
   const savePopupWord = () => {
