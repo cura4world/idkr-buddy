@@ -1,0 +1,47 @@
+{
+ "book": "동물",
+ "scenes": {
+  "kucing": {
+   "vb": "0 0 120 72",
+   "h": 66,
+   "r": 52,
+   "t": -12,
+   "art": "<rect x=\"10\" y=\"30\" width=\"100\" height=\"20\" rx=\"8\" fill=\"#9CCBDA\"></rect><rect x=\"4\" y=\"38\" width=\"16\" height=\"24\" rx=\"6\" fill=\"#7FB7C9\"></rect><rect x=\"100\" y=\"38\" width=\"16\" height=\"24\" rx=\"6\" fill=\"#7FB7C9\"></rect><rect x=\"16\" y=\"46\" width=\"88\" height=\"14\" rx=\"5\" fill=\"#B7DCE7\"></rect><path d=\"M18 62v5M102 62v5\" stroke=\"#8A6A50\" stroke-width=\"3\" stroke-linecap=\"round\"></path><path d=\"M80 44c10 0 12-8 6-10\" stroke=\"#F2A65A\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"></path><ellipse cx=\"64\" cy=\"41\" rx=\"17\" ry=\"7.5\" fill=\"#F2A65A\"></ellipse><path d=\"M58 35q2 4 0 8M65 34q2 5 0 9\" stroke=\"#D9833A\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\"></path><polygon points=\"42,36 44,27 49,33\" fill=\"#F2A65A\"></polygon><polygon points=\"50,33 54,26 56,35\" fill=\"#F2A65A\"></polygon><circle cx=\"49\" cy=\"39\" r=\"7.5\" fill=\"#F2A65A\"></circle><path d=\"M45 39q1.6 1.4 3.2 0M50.5 39q1.6 1.4 3.2 0\" stroke=\"#2E2A27\" stroke-width=\"1\" fill=\"none\" stroke-linecap=\"round\"></path><path d=\"M32 16h6l-6 6h6M24 8h4l-4 4h4\" stroke=\"#9BB3BF\" stroke-width=\"1.6\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path>"
+  },
+  "anjing": {
+   "vb": "0 0 120 72",
+   "h": 68,
+   "r": 60,
+   "t": -12,
+   "art": "<rect x=\"78\" y=\"6\" width=\"34\" height=\"62\" rx=\"2\" fill=\"#E8D6BF\"></rect><rect x=\"82\" y=\"10\" width=\"26\" height=\"58\" fill=\"#C99A6B\"></rect><circle cx=\"103\" cy=\"40\" r=\"1.8\" fill=\"#8A6A50\"></circle><path d=\"M63 38l-8 4M77 38l8 4\" stroke=\"#F3D2B5\" stroke-width=\"3.2\" fill=\"none\" stroke-linecap=\"round\"></path><path d=\"M67 51v10M73 51v10\" stroke=\"#4A5A6A\" stroke-width=\"3.4\" stroke-linecap=\"round\"></path><rect x=\"63\" y=\"34\" width=\"14\" height=\"18\" rx=\"6\" fill=\"#7FA8D9\"></rect><circle cx=\"70\" cy=\"26\" r=\"7\" fill=\"#F3D2B5\"></circle><path d=\"M63 25C63 16 77 16 77 25C73 21 67 21 63 25Z\" fill=\"#5B4636\"></path><circle cx=\"67.4\" cy=\"27\" r=\"1.1\" fill=\"#2E2A27\"></circle><circle cx=\"72.6\" cy=\"27\" r=\"1.1\" fill=\"#2E2A27\"></circle><path d=\"M67 29.4h6q-3 4-6 0z\" fill=\"#B5524A\"></path><path d=\"M18 38l-6-6M16 44l-7-1\" stroke=\"#D9A066\" stroke-width=\"3\" stroke-linecap=\"round\"></path><ellipse cx=\"34\" cy=\"48\" rx=\"14\" ry=\"8\" fill=\"#D9A066\" transform=\"rotate(-20 34 48)\"></ellipse><path d=\"M26 56l-2 9M34 54l0 10\" stroke=\"#C98B54\" stroke-width=\"4\" stroke-linecap=\"round\"></path><path d=\"M44 42l6-6M46 46l7-3\" stroke=\"#C98B54\" stroke-width=\"4\" stroke-linecap=\"round\"></path><circle cx=\"47\" cy=\"34\" r=\"8\" fill=\"#D9A066\"></circle><path d=\"M42 28c-6 0-7 8-4 11 3-1 4-6 4-9z\" fill=\"#8E5A35\"></path><circle cx=\"50\" cy=\"33\" r=\"1.2\" fill=\"#2E2A27\"></circle><ellipse cx=\"55\" cy=\"35.5\" rx=\"1.8\" ry=\"1.4\" fill=\"#2E2A27\"></ellipse><path d=\"M50 17c-2-3-6-1-4 2l4 4 4-4c2-3-2-5-4-2z\" fill=\"#F29BB0\"></path><path d=\"M8 30q-3 3 0 6\" stroke=\"#E0B88A\" stroke-width=\"1.6\" fill=\"none\" stroke-linecap=\"round\"></path>"
+  },
+  "gajah": {
+   "vb": "0 0 80 64",
+   "h": 66,
+   "r": 74,
+   "t": -12,
+   "art": "<g><path d=\"M14 32q-6 4-4 10\" stroke=\"#A9B4BE\" stroke-width=\"2.5\" fill=\"none\" stroke-linecap=\"round\"></path><rect x=\"18\" y=\"40\" width=\"7\" height=\"16\" rx=\"3\" fill=\"#97A3AE\"></rect><rect x=\"28\" y=\"41\" width=\"7\" height=\"15\" rx=\"3\" fill=\"#A9B4BE\"></rect><rect x=\"40\" y=\"41\" width=\"7\" height=\"15\" rx=\"3\" fill=\"#97A3AE\"></rect><rect x=\"48\" y=\"40\" width=\"7\" height=\"16\" rx=\"3\" fill=\"#A9B4BE\"></rect><ellipse cx=\"34\" cy=\"34\" rx=\"20\" ry=\"14\" fill=\"#A9B4BE\"></ellipse><circle cx=\"54\" cy=\"26\" r=\"12\" fill=\"#A9B4BE\"></circle><path d=\"M62 30C70 30 72 20 70 12C69 9 66 10 66 12C67 18 66 23 60 24Z\" fill=\"#A9B4BE\"></path><ellipse cx=\"49\" cy=\"28\" rx=\"7\" ry=\"9.5\" fill=\"#C3CCD4\"></ellipse><ellipse cx=\"49\" cy=\"28\" rx=\"4\" ry=\"6\" fill=\"#E9C6CC\"></ellipse><path d=\"M60 31q4 3 7 2\" stroke=\"#FBF5E6\" stroke-width=\"2.5\" fill=\"none\" stroke-linecap=\"round\"></path><circle cx=\"58\" cy=\"22\" r=\"1.8\" fill=\"#2E2A27\"></circle></g>"
+  },
+  "monyet": {
+   "vb": "0 0 64 72",
+   "h": 70,
+   "r": 90,
+   "t": -14,
+   "art": "<path d=\"M2 9C20 4 44 6 62 11\" stroke=\"#8B6B4A\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"></path><ellipse cx=\"52\" cy=\"5\" rx=\"6\" ry=\"3\" fill=\"#8FC27A\" transform=\"rotate(-20 52 5)\"></ellipse><path d=\"M38 9C39 18 39 28 37 36\" stroke=\"#9C6B4A\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"></path><g transform=\"translate(32 30) scale(1.05)\"><path d=\"M-4 22C-14 30-18 20-12 16\" stroke=\"#9C6B4A\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"></path><path d=\"M-4 24l-2 8M5 24l2 8\" stroke=\"#9C6B4A\" stroke-width=\"3.6\" stroke-linecap=\"round\"></path><ellipse cx=\"0\" cy=\"16\" rx=\"8\" ry=\"10\" fill=\"#9C6B4A\"></ellipse><ellipse cx=\"0\" cy=\"18\" rx=\"4.5\" ry=\"6\" fill=\"#EBC9A3\"></ellipse><circle cx=\"-8\" cy=\"0\" r=\"3\" fill=\"#9C6B4A\"></circle><circle cx=\"8\" cy=\"0\" r=\"3\" fill=\"#9C6B4A\"></circle><circle cx=\"0\" cy=\"0\" r=\"8\" fill=\"#9C6B4A\"></circle><ellipse cx=\"0\" cy=\"2\" rx=\"5.5\" ry=\"5\" fill=\"#EBC9A3\"></ellipse><circle cx=\"-2\" cy=\"0.6\" r=\"1.1\" fill=\"#2E2A27\"></circle><circle cx=\"2\" cy=\"0.6\" r=\"1.1\" fill=\"#2E2A27\"></circle><path d=\"M-2 4q2 1.4 4 0\" stroke=\"#6B4530\" stroke-width=\"1\" fill=\"none\" stroke-linecap=\"round\"></path></g>"
+  },
+  "burung": {
+   "vb": "0 0 90 56",
+   "h": 58,
+   "r": 60,
+   "t": -10,
+   "art": "<path d=\"M4 40C30 34 56 36 86 44\" stroke=\"#9A7350\" stroke-width=\"3.4\" fill=\"none\" stroke-linecap=\"round\"></path><ellipse cx=\"72\" cy=\"36\" rx=\"6\" ry=\"2.8\" fill=\"#8DC07A\" transform=\"rotate(-20 72 36)\"></ellipse><ellipse cx=\"16\" cy=\"34\" rx=\"5\" ry=\"2.4\" fill=\"#9CCB88\" transform=\"rotate(20 16 34)\"></ellipse><g transform=\"translate(42 28) scale(1.5 1.5)\"><ellipse cx=\"0\" cy=\"0\" rx=\"7\" ry=\"5\" fill=\"#F4C542\"></ellipse><circle cx=\"6\" cy=\"-4\" r=\"4\" fill=\"#F4C542\"></circle><polygon points=\"9.5,-5 14,-3.6 9.5,-2.4\" fill=\"#F08A3C\"></polygon><circle cx=\"7\" cy=\"-4.6\" r=\"0.9\" fill=\"#2E2A27\"></circle><path d=\"M-3 -1c-2-5 2-7 5-6\" fill=\"#E0A82E\"></path><path d=\"M-6 0l-5-3 1 6z\" fill=\"#E0A82E\"></path></g><path d=\"M64 14v-9l6-2v9\" stroke=\"#7FB0C4\" stroke-width=\"1.6\" fill=\"none\" stroke-linecap=\"round\"></path><ellipse cx=\"62.4\" cy=\"14\" rx=\"2.2\" ry=\"1.7\" fill=\"#7FB0C4\"></ellipse><ellipse cx=\"68.4\" cy=\"12\" rx=\"2.2\" ry=\"1.7\" fill=\"#7FB0C4\"></ellipse>"
+  },
+  "kupu-kupu": {
+   "vb": "0 0 64 72",
+   "h": 70,
+   "r": 104,
+   "t": -14,
+   "art": "<path d=\"M22 70v-22\" stroke=\"#7DB36A\" stroke-width=\"2.4\"></path><ellipse cx=\"28\" cy=\"62\" rx=\"6\" ry=\"2.6\" fill=\"#8DC07A\" transform=\"rotate(-30 28 62)\"></ellipse><ellipse cx=\"22\" cy=\"42\" rx=\"4.4\" ry=\"7\" fill=\"#F2A7C3\" transform=\"rotate(0 22 48)\"></ellipse><ellipse cx=\"22\" cy=\"42\" rx=\"4.4\" ry=\"7\" fill=\"#F2A7C3\" transform=\"rotate(72 22 48)\"></ellipse><ellipse cx=\"22\" cy=\"42\" rx=\"4.4\" ry=\"7\" fill=\"#F2A7C3\" transform=\"rotate(144 22 48)\"></ellipse><ellipse cx=\"22\" cy=\"42\" rx=\"4.4\" ry=\"7\" fill=\"#F2A7C3\" transform=\"rotate(216 22 48)\"></ellipse><ellipse cx=\"22\" cy=\"42\" rx=\"4.4\" ry=\"7\" fill=\"#F2A7C3\" transform=\"rotate(288 22 48)\"></ellipse><circle cx=\"22\" cy=\"48\" r=\"4\" fill=\"#F5C26B\"></circle><g transform=\"translate(26 2) scale(0.5) rotate(20 32 32)\"><path d=\"M31 30C24 14 8 10 8 22C8 32 20 34 31 32Z\" fill=\"#B98BE0\"></path><path d=\"M33 30C40 14 56 10 56 22C56 32 44 34 33 32Z\" fill=\"#B98BE0\"></path><path d=\"M31 34C22 36 12 42 16 50C20 56 28 48 31 38Z\" fill=\"#F2A7C3\"></path><path d=\"M33 34C42 36 52 42 48 50C44 56 36 48 33 38Z\" fill=\"#F2A7C3\"></path><rect x=\"30\" y=\"24\" width=\"4\" height=\"26\" rx=\"2\" fill=\"#4A3B5C\"></rect><path d=\"M31 25C29 18 26 15 23 14M33 25C35 18 38 15 41 14\" stroke=\"#4A3B5C\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\"></path></g>"
+  }
+ }
+}

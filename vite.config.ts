@@ -46,6 +46,19 @@ export default defineConfig(({ mode }) => ({
         // 메인 번들이 기본 한도(2MiB)에 닿아 넘으면 캐시에서 빠지고 빌드가 실패합니다.
         // 오프라인에서도 앱이 열리도록 메인 번들은 반드시 캐시돼야 하므로 한도를 올립니다.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // 단어장 색연필 그림(src/data/illust → assets/illust-*.json)은 설치 때 한꺼번에 받지 않고,
+        // 그 단어장을 열 때 받은 것만 폰에 남깁니다(src/lib/illust.ts).
+        globIgnores: ["**/illust-*.json"],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes("/assets/illust-") && url.pathname.endsWith(".json"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "kata-illust",
+              expiration: { maxEntries: 80 },
+            },
+          },
+        ],
         navigateFallbackDenylist: [/^\/~oauth/, /^\/.well-known\//],
       },
       manifest: {
