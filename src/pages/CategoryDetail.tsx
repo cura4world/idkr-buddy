@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getCategories, getWordsByCategory, Word, Category, reorderWords, deleteWord, archiveMyWordbook, nextArchiveName, moveWordsToCategory } from "@/lib/store";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
+import { isWordbookVisible } from "@/lib/wordbookAccess";
 import AddWordDialog from "@/components/AddWordDialog";
 import EditWordDialog from "@/components/EditWordDialog";
 import CSVImportDialog from "@/components/CSVImportDialog";
@@ -138,7 +139,8 @@ export default function CategoryDetail() {
   };
 
   const categories = getCategories();
-  const category = categories.find((c) => c.id === id);
+  // 성경과 신앙 단어장은 staff 등급이 아니면 없는 단어장처럼 다룹니다 (주소로 바로 들어와도)
+  const category = categories.find((c) => c.id === id && isWordbookVisible(c));
   const words = id ? getWordsByCategory(id) : [];
   // 공용 단어장(시드에서 온 것)은 읽기 전용 "책"이다.
   // 고쳐도 다음 배포 때 시드로 되돌아가므로 편집 기능을 아예 노출하지 않는다.

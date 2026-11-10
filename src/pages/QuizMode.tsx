@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getCategories, getWordsByCategory, Word } from "@/lib/store";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
+import { isWordbookVisible } from "@/lib/wordbookAccess";
 import { ArrowLeft, RotateCcw, Shuffle, Volume2, VolumeX } from "lucide-react";
 import { medaliEngine } from "@/lib/medali";
 import { displayWord } from "@/lib/wordCase";
@@ -63,7 +64,7 @@ export default function QuizMode() {
   const categories = getCategories();
   // 뒤로가기: 직전 화면으로 한 단계만
   const handleBack = () => goBackOr(navigate, location.key, wordbookFallback(id));
-  const category = categories.find((c) => c.id === id);
+  const category = categories.find((c) => c.id === id && isWordbookVisible(c)); // 성경과 신앙은 staff 만
   const allWords = id ? getWordsByCategory(id) : [];
 
   const [questionIndex, setQuestionIndex] = useState(0);

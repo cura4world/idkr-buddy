@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getCategories, getWordsByCategory, getSavedWordIds, toggleSavedWord, Word } from "@/lib/store";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
+import { isWordbookVisible } from "@/lib/wordbookAccess";
 import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Play, Square, Bookmark, RefreshCw, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,7 +11,7 @@ export default function StudyMode() {
   const navigate = useNavigate();
   const location = useLocation();
   const categories = getCategories();
-  const category = categories.find((c) => c.id === id);
+  const category = categories.find((c) => c.id === id && isWordbookVisible(c)); // 성경과 신앙은 staff 만
   const words = id ? getWordsByCategory(id) : [];
   const [isRandom, setIsRandom] = useState(false);
   const [reviewFilter, setReviewFilter] = useState(false);
