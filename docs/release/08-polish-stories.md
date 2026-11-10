@@ -41,8 +41,8 @@ export const PAYWALL_PATH = "/plus";        // 잠긴 메뉴를 누르면 여기
 | # | 스토리 | 상태 | 받아들임 조건 |
 |---|---|---|---|
 | S40 | **미리보기 APK + 등급 전환** | ⬜ | 아래 "S40 상세" |
-| S41 | 한도 확정 반영 (서버) | ⬜ | 무료·Plus·체험·Special 한도가 결정 문서 표와 같음(아래). 하루·한 달 둘 다. 테스트 추가·통과 |
-| S42 | 구독 화면 (PW1·PW2) + `plusCopy.ts` | ⬜ | 문구·혜택 5줄·요금제 2칸·버튼·안내 시안 그대로. 가격은 Play 값, 없으면(미리보기) 고정 표시 |
+| S41 | 한도 확정 반영 (서버) | ✅ | 무료·Plus·체험·Special 한도가 결정 문서 표와 같음(아래). 하루·한 달 둘 다. 테스트 추가·통과 — 서버 배포는 아직(Cloudflare 에 붙여 넣기 필요) |
+| S42 | 구독 화면 (PW1·PW2) + `plusCopy.ts` | ✅ | 문구·혜택 5줄·요금제 2칸·버튼·안내 시안 그대로. 가격은 Play 값, 없으면(미리보기) 고정 표시 — 폰 확인 🔍 |
 | S43 | 단어장 재분류·검토·새 5권 | 🔍 | 01~34 공개, 35~41 성경과 신앙. 34권 합계 3,000단어 안팎. 보관함 ID 이전. WORDLIST-PLAN 갱신 |
 | S44 | 회화집 채우기 + 난이도 하 | 🔍 | 공개 14개 폴더 86장면, 교회와 신앙은 staff 만. `PercakapanLevel` 에 "하" 추가, 만들기 기본 "중" |
 | S45 | 홈 (H5·H6) + 하단 탭 | ⬜ | 시안 그대로. 무료는 잠긴 메뉴 눌러 구독 화면 |
@@ -95,3 +95,14 @@ export const PAYWALL_PATH = "/plus";        // 잠긴 메뉴를 누르면 여기
 ## 작업 기록
 
 (각 스토리가 끝날 때 아래에 한 줄씩: 커밋 해시, 바꾼 파일, 검증 결과, 폰에서 볼 것)
+
+- **S41** (2026-11-11) `ea97d8e`·`6386eaa`·`352fe7e` 서버(`workers/kata-public/worker.js`·`test.mjs`·`wrangler.toml`), `d9603a6`~`d3f522d` 앱(aiProxy·geminiText·tts·percakapanAudio·story·dictionary·percakapan·phrase·peribahasa·account·plan·billing·AccountSection·Story·Percakapan·Dictionary).
+  기능 이름(`x-kata-kind`): story · percakapan-make · longread · dict-new · phrase · word-audio · shared-audio · text · tts(예전). 하루·한 달·체험 합계, 긴 읽기는 `x-kata-unit` 한 편 = 한 번.
+  `/me` 에 `features`, 관리자 `POST/GET /admin/special`. 계약·표는 `03-architecture.md`.
+  검증: `node --test workers/kata-public/test.mjs` 16/16(기존 8 그대로 통과 + 새 8), esbuild 바꾼 파일 전부, `tsc` 0, `npm run build` 0.
+  판단: 체험 사전은 절반(25)이 무료(50)보다 적어 무료 값으로 올림 · Plus 의 "제한 없음/안 셈" 기능에 숨은 안전 상한 · Plus 필요(403)는 자동 이동 대신 "Plus 보기" 버튼 달린 알림.
+  남은 일: **Worker 배포 전에는 폰에 반영 안 됨**(코드만). 폰에서 볼 것: 무료로 이야기 2편째 → "오늘 불러올 수 있는 이야기를 모두 불러왔습니다…", 무료로 이야기 듣기 → "Plus 보기" 알림.
+- **S42** (2026-11-11) `800e13a` `src/pages/Plus.tsx` + `src/lib/plusCopy.ts`(내보내는 이름이 바뀌어 한 커밋).
+  시안 PW1·PW2 와 390×844 렌더 비교(미리보기 빌드 + Playwright): 두 장 모두 픽셀 차 40 넘는 점 0개. "이용 중" 상자도 확인.
+  가격: Play `formattedPrice`(원화 "₩34,800" → "34,800원", 월 환산·할인율은 원화만 계산), 없으면 고정 34,800/3,900원. 체험: Play `freeTrialPeriod`, Play 가 없으면 미리보기 `kata-preview-trial-used` 키(없으면 체험 가능).
+  폰에서 볼 것: 글꼴(Pretendard/Gowun Dodum) 실제 모양, 아래 안전 영역 여백, 연간↔월간 눌렀을 때 버튼·안내 문구 바뀜, 미리보기 패널 "체험 이미 사용" 켜면 PW2 문구.
