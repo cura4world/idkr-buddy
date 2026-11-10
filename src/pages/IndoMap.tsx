@@ -1,13 +1,22 @@
 // src/pages/IndoMap.tsx
 // 인도네시아 학습 지도: 실제 해안선 SVG + 핀치줌/팬 + 3단 줌(섬→도시→관광지)
-// 핀 탭 → 하단 시트: 위키 사진 + 미리 써 둔 지점 내용(mapContent) + 그 지역 단어
+// 핀 탭 → 하단 시트: 고정 사진 목록(mapPhotos) + 미리 써 둔 지점 내용(mapContent) + 그 지역 단어
 // 원고가 없는 지점만 예전처럼 Gemini 설명을 생성합니다 (IndexedDB 캐싱)
+//
+// 2026-11-10 시안(MP1-Map · MP2-Sheet) 반영
+//   · 헤더는 화면 헤더 규칙대로 뒤로가기 + PETA INDONESIA
+//   · 범례 칩 왼쪽 아래, +/− 오른쪽 아래, 그 밑에 조금 띄워 가로로 보기 버튼
+//   · 가로로 보기: 먼저 screen.orientation.lock("landscape") (전체 화면이 필요한 웹뷰가 많음).
+//     안 되면 지도 화면 전체를 CSS 로 90° 돌려 가로로 보여 줍니다(닫기 버튼, 뒤로가기로도 닫힘).
+//     돌린 화면에서는 손가락 좌표를 지도 좌표로 바꿀 때 회전을 되돌립니다(localPt).
+//   · 시트: 사진 출처 문구 없음(설정 > 앱 정보 > 사진 출처), 사진 4:3, 차분한 종류 칩, 청록 스피커
+//   · 공개판: 선교 역사 핀(staff)은 관리자·Special Member 에게만
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { goBackOr } from "@/lib/nav";
-import { ArrowLeft, Plus, Minus, Volume2, Loader2, Map, X, Check } from "lucide-react";
+import { ArrowLeft, Plus, Minus, Volume2, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import {
   MAP_VIEW,
@@ -21,25 +30,34 @@ import {
   INDONESIA_PATH,
   MapPlace,
 } from "@/lib/mapData";
-import { fetchPlaceInfo, fetchPlacePhotos, fetchPhotoCredits, MapPlaceInfo, PhotoCredit } from "@/lib/map";
+import { fetchPlaceInfo, MapPlaceInfo } from "@/lib/map";
+import { getPlacePhotos } from "@/lib/mapPhotos";
 import type { MapContentEntry, MapWord } from "@/lib/mapContent";
 import { hasGeminiApiKey } from "@/lib/gemini";
+import { isStoreApp } from "@/lib/platform";
+import { usePlan } from "@/lib/plan";
 import { addWordIfAbsent, hasWordInCategory, ensureMapWordbook, MAP_WORDBOOK_ID } from "@/lib/store";
 
 const KMIN = 1;
 // 최대 64배. 탭 허용 반경이 56px이라 32배에서는 지도 좌표 4.5 이내의 두 핀을
 // 손가락으로 구분해 누를 수 없었습니다 (자카르타–브카시 3.4, 스마랑–드막 4.7).
 const KMAX = 64;
+// 탭 판정에서 tier 4(종교·역사 / 민족·문화) 핀에 주는 덤(px). 이 핀들은 깊이 확대해야만 보이고,
+// 큰 도시 바로 옆에 있는 곳이 많아(이스티크랄–자카르타 0.9) 거의 같은 거리면 tier 4 를 고릅니다.
+const DEEP_PIN_BONUS_PX = 12;
 
 type PinType = "city" | "spot" | "faith" | "culture";
 interface Pin extends MapPlace {
   type: PinType;
 }
 
+type LandMode = "off" | "native" | "css";
+
 // tier별로 핀이 나타나기 시작하는 줌 배율. render와 findPin이 같은 값을 써야
 // "보이는데 안 눌리는" 핀이 생기지 않습니다.
+// 대도시(tier 1)는 1.05 부터 — 처음 여는 배율(1.55)에서 흐리지 않고 또렷하게 보이도록(시안 MP1, 0.5 구간에 걸쳐 나타남).
 const tierStart = (tier: number): number =>
-  tier === 1 ? 1.35 : tier === 2 ? 2.4 : tier === 3 ? 3.0 : 4.5;
+  tier === 1 ? 1.05 : tier === 2 ? 2.4 : tier === 3 ? 3.0 : 4.5;
 
 const PINS: Pin[] = [
   ...MAP_CITIES.map((p) => ({ ...p, type: "city" as PinType })),
@@ -47,6 +65,20 @@ const PINS: Pin[] = [
   ...MAP_FAITH.map((p) => ({ ...p, type: "faith" as PinType })),
   ...MAP_CULTURE.map((p) => ({ ...p, type: "culture" as PinType })),
 ];
+
+const TYPE_LABEL: Record<PinType, string> = {
+  city: "도시",
+  spot: "관광지",
+  faith: "종교·역사",
+  culture: "민족·문화",
+};
+// 시트의 종류 칩 — 지도 점 색을 옅게 누른 차분한 색
+const TYPE_CHIP: Record<PinType, { bg: string; fg: string }> = {
+  city: { bg: "#FCEEE2", fg: "#9A4A12" },
+  spot: { bg: "#FBF1D9", fg: "#8A6A12" },
+  faith: { bg: "#E4EEF6", fg: "#2B5F86" },
+  culture: { bg: "#EFE9F6", fg: "#5B4A8C" },
+};
 
 // TTS (앱 공통 패턴: AndroidTTS 우선 + speechSynthesis 폴백)
 const speak = (text: string, lang: "id" | "ko") => {
@@ -69,9 +101,44 @@ const speak = (text: string, lang: "id" | "ko") => {
   } catch (e) {}
 };
 
+// 가로로 보기 아이콘 (시안 MP1 — 가로 화면 + 도는 화살표)
+const RotateIcon = () => (
+  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="5.2" y="8.7" width="13.6" height="6.6" rx="1.5" />
+    <g transform="rotate(12 12 12)">
+      <path d="M3.2 10.2A9 9 0 0 1 12.6 3" />
+      <path d="m10.4 1.4 2.2 1.6-1.6 2.2" />
+      <path d="M20.8 13.8A9 9 0 0 1 11.4 21" />
+      <path d="m13.6 22.6-2.2-1.6 1.6-2.2" />
+    </g>
+  </svg>
+);
+
+// 약속(Promise)이 끝나지 않는 웹뷰가 있어 마감을 둡니다. 마감이 지나면 실패로 봅니다.
+function withDeadline<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("TIMEOUT")), ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      }
+    );
+  });
+}
+
+const ZB = "w-10 h-10 rounded-full flex items-center justify-center text-white active:opacity-80";
+const ZB_STYLE = { background: "rgba(9,34,40,0.72)" };
+
 const IndoMap = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { staff } = usePlan();
+  const publicEdition = isStoreApp();
 
   // ---------- 탐험 점수 (보이지 않음) ----------
   // 2분 구경 = 1점. 화면에는 아무 표시도 없고 플로팅도 띄우지 않습니다.
@@ -128,13 +195,19 @@ const IndoMap = () => {
   const islandRefs = useRef<(SVGGElement | null)[]>([]);
   const pinRefs = useRef<(SVGGElement | null)[]>([]);
 
-  // 제스처 상태는 ref로 관리 (매 프레임 리렌더 방지)
+  // 제스처 상태는 ref로 관리 (매 프레임 리렌더 방지). 좌표는 모두 지도 상자 안쪽 좌표(localPt)입니다.
   const vs = useRef({ k: 1, tx: 0, ty: 0 });
+  const initViewDone = useRef(false);
   const pointers = useRef<Record<number, { x: number; y: number }>>({});
   const gesture = useRef<{ mode: "pan" | "pinch"; d?: number; t?: number; moved?: number; sx?: number; sy?: number } | null>(null);
   const multiTouched = useRef(false); // 이번 제스처 동안 두 손가락이 닿은 적이 있는지 (핀치)
   const lastTap = useRef(0);
   const pinVisible = useRef<boolean[]>(PINS.map(() => false));
+
+  // 선교 역사 핀(staff)은 관리자·Special Member 에게만. render/findPin 이 같은 값을 보도록 ref 로도 둡니다.
+  const staffRef = useRef(staff);
+  staffRef.current = staff;
+  const pinShown = (p: Pin) => !p.staff || staffRef.current;
 
   const toggleCities = () => {
     const v = !showCitiesRef.current;
@@ -169,9 +242,6 @@ const IndoMap = () => {
   // 이 시트의 단어가 이미 단어장에 담겨 있는지 (단어 → true)
   const [savedWords, setSavedWords] = useState<Record<string, boolean>>({});
   const [infoState, setInfoState] = useState<"idle" | "loading" | "error">("idle");
-  const [photos, setPhotos] = useState<string[]>([]);
-  const [credits, setCredits] = useState<PhotoCredit[]>([]);
-  const [photoState, setPhotoState] = useState<"idle" | "loading" | "error">("idle");
   const [lightbox, setLightbox] = useState<string | null>(null);
   // 처음에는 도시만 켜 둡니다. 나머지는 범례 버튼으로 켭니다.
   // state(버튼 색)와 ref(렌더 루프)는 반드시 같은 값으로 짝을 맞춰야 합니다.
@@ -184,24 +254,47 @@ const IndoMap = () => {
   const showFaithRef = useRef(false);
   const showCultureRef = useRef(false);
   const sheetOpenRef = useRef(false);
+  // 우리가 직접 부른 history.back() 이 일으킨 popstate 는 건너뜁니다.
+  // (가로 보기 중 시트를 닫을 때 그 뒤로가기가 가로 보기까지 닫지 않도록)
+  const ignorePopRef = useRef(0);
   const sheetOpenedAt = useRef(0);
   const reqIdRef = useRef(0);
   const openSheetRef = useRef<(pin: Pin) => void>(() => {});
 
+  // 가로로 보기
+  const [land, setLand] = useState<LandMode>("off");
+  const landRef = useRef<LandMode>("off");
+  const landPushedRef = useRef(false);
+  const landBusyRef = useRef(false);
+  const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight });
+
   // ---------- 좌표 변환 ----------
+  // 화면(client) 좌표 → 지도 상자 안쪽 좌표. CSS 로 90° 돌린 가로 보기에서는 회전을 되돌립니다:
+  //   돌린 상자 안의 점 (lx, ly) 는 화면의 (innerWidth − ly, lx) 에 그려지므로 lx = cy, ly = innerWidth − cx.
+  //   (가로 보기에서는 헤더를 숨기므로 지도 상자의 왼쪽 위가 돌린 화면의 원점입니다.)
+  const localPt = useCallback((cx: number, cy: number) => {
+    if (landRef.current === "css") return { x: cy, y: window.innerWidth - cx };
+    const w = wrapRef.current;
+    if (!w) return { x: cx, y: cy };
+    const r = w.getBoundingClientRect();
+    return { x: cx - r.left, y: cy - r.top };
+  }, []);
+
+  // 지도 상자 안쪽 px → viewBox 배율과 여백. 크기는 회전의 영향을 받지 않는 레이아웃 크기를 씁니다.
   const pxToVb = useCallback(() => {
-    const svg = svgRef.current!;
-    const r = svg.getBoundingClientRect();
-    const scale = Math.min(r.width / MAP_VIEW.w, r.height / MAP_VIEW.h);
-    const ox = r.left + (r.width - MAP_VIEW.w * scale) / 2;
-    const oy = r.top + (r.height - MAP_VIEW.h * scale) / 2;
+    const w = wrapRef.current;
+    const W = w ? w.clientWidth : MAP_VIEW.w;
+    const H = w ? w.clientHeight : MAP_VIEW.h;
+    const scale = Math.min(W / MAP_VIEW.w, H / MAP_VIEW.h) || 1;
+    const ox = (W - MAP_VIEW.w * scale) / 2;
+    const oy = (H - MAP_VIEW.h * scale) / 2;
     return { scale, ox, oy };
   }, []);
 
   const toVb = useCallback(
-    (cx: number, cy: number) => {
+    (lx: number, ly: number) => {
       const m = pxToVb();
-      return { x: (cx - m.ox) / m.scale, y: (cy - m.oy) / m.scale };
+      return { x: (lx - m.ox) / m.scale, y: (ly - m.oy) / m.scale };
     },
     [pxToVb]
   );
@@ -232,12 +325,15 @@ const IndoMap = () => {
     });
 
     // 핀: 부분 역스케일(1/k^0.65 — 확대할수록 화면상 글자가 커짐)
-    // tier별 표시 시점: 1=대도시 k≥1.35, 2=중소도시 k≥2.4, 3=관광지 k≥3.0,
+    // tier별 표시 시점: 1=대도시 k≥1.05, 2=중소도시 k≥2.4, 3=관광지 k≥3.0,
     //                   4=종교·역사/민족·문화 k≥4.5 (tierStart 참조)
     const pinScale = 1 / Math.pow(s.k, 0.65);
     PINS.forEach((p, i) => {
       const el = pinRefs.current[i];
-      if (!el) return;
+      if (!el) {
+        pinVisible.current[i] = false;
+        return;
+      }
       const start = tierStart(p.tier);
       const kindOn =
         p.type === "spot"
@@ -292,9 +388,9 @@ const IndoMap = () => {
   renderRef.current = render;
 
   const zoomAt = useCallback(
-    (px: number, py: number, factor: number) => {
+    (lx: number, ly: number, factor: number) => {
       const s = vs.current;
-      const p = toVb(px, py);
+      const p = toVb(lx, ly);
       const nk = Math.max(KMIN, Math.min(KMAX, s.k * factor));
       const f = nk / s.k;
       s.tx = p.x - (p.x - s.tx) * f;
@@ -305,19 +401,27 @@ const IndoMap = () => {
     [render, toVb]
   );
 
+  const zoomCenter = (factor: number) => {
+    const w = wrapRef.current;
+    if (!w) return;
+    zoomAt(w.clientWidth / 2, w.clientHeight / 2, factor);
+  };
+
   // ---------- 핀 탭 ----------
-  // 화면 좌표에서 가장 가까운 (그 줌에서 표시되는) 핀을 반환. 없으면 null.
+  // 지도 상자 안쪽 좌표에서 가장 가까운 (그 줌에서 표시되는) 핀을 반환. 없으면 null.
   const findPin = useCallback(
-    (cx: number, cy: number): Pin | null => {
+    (lx: number, ly: number): Pin | null => {
       const s = vs.current;
       const m = pxToVb();
       // 탭 허용 반경 56px → viewBox 단위로 변환 (손가락 터치 크기 고려)
       const tol = 56 / m.scale;
+      const bonus = DEEP_PIN_BONUS_PX / m.scale;
       // 탭 지점을 view group 적용 전 좌표계로 (pin.x*k+tx 와 같은 좌표계)
-      const p = toVb(cx, cy);
+      const p = toVb(lx, ly);
       let best: Pin | null = null;
       let bestD = 1e9;
       PINS.forEach((pin) => {
+        if (pin.staff && !staffRef.current) return;
         const start = tierStart(pin.tier);
         const kindOn =
           pin.type === "spot"
@@ -331,8 +435,10 @@ const IndoMap = () => {
         const sx = pin.x * s.k + s.tx;
         const sy = pin.y * s.k + s.ty;
         const d = Math.hypot(p.x - sx, p.y - sy);
-        if (d < tol && d < bestD) {
-          bestD = d;
+        if (d >= tol) return;
+        const score = d - (pin.tier === 4 ? bonus : 0);
+        if (score < bestD) {
+          bestD = score;
           best = pin;
         }
       });
@@ -345,14 +451,31 @@ const IndoMap = () => {
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;
+    // 처음 열었을 때(시안 MP1): 1.55배로 자바~술라웨시 가운데(viewBox 430, 245)를 화면 가운데에 둡니다.
+    // 이 배율이면 대도시(tier 1) 핀이 처음부터 보입니다.
+    if (!initViewDone.current && wrap.clientWidth > 0) {
+      initViewDone.current = true;
+      const k0 = 1.55;
+      const c = toVb(wrap.clientWidth / 2, wrap.clientHeight / 2);
+      vs.current = { k: k0, tx: c.x - 430 * k0, ty: c.y - 245 * k0 };
+    }
     render();
 
     const onDown = (e: PointerEvent) => {
-      wrap.setPointerCapture(e.pointerId);
-      pointers.current[e.pointerId] = { x: e.clientX, y: e.clientY };
+      // 지도 위 버튼(범례·확대·축소·가로 보기)은 제스처로 잡지 않습니다. 여기서 포인터를 붙잡으면
+      // click 이 버튼이 아니라 지도 상자로 가서 버튼이 눌리지 않습니다(크롬 — 2026-11 확인).
+      try {
+        const t = e.target as Element | null;
+        if (t && typeof t.closest === "function" && t.closest("button")) return;
+      } catch (err) {}
+      try {
+        wrap.setPointerCapture(e.pointerId);
+      } catch (err) {}
+      const lp = localPt(e.clientX, e.clientY);
+      pointers.current[e.pointerId] = lp;
       const ids = Object.keys(pointers.current);
       if (ids.length === 1) {
-        gesture.current = { mode: "pan", t: performance.now(), moved: 0, sx: e.clientX, sy: e.clientY };
+        gesture.current = { mode: "pan", t: performance.now(), moved: 0, sx: lp.x, sy: lp.y };
       } else if (ids.length === 2) {
         const a = pointers.current[+ids[0]];
         const b = pointers.current[+ids[1]];
@@ -369,14 +492,15 @@ const IndoMap = () => {
       const g = gesture.current;
       if (!pointers.current[e.pointerId] || !g) return;
       const prev = pointers.current[e.pointerId];
-      pointers.current[e.pointerId] = { x: e.clientX, y: e.clientY };
+      const lp = localPt(e.clientX, e.clientY);
+      pointers.current[e.pointerId] = lp;
       const ids = Object.keys(pointers.current);
 
       if (g.mode === "pan" && ids.length === 1) {
         const m = pxToVb();
-        vs.current.tx += (e.clientX - prev.x) / m.scale;
-        vs.current.ty += (e.clientY - prev.y) / m.scale;
-        g.moved = (g.moved || 0) + Math.hypot(e.clientX - prev.x, e.clientY - prev.y);
+        vs.current.tx += (lp.x - prev.x) / m.scale;
+        vs.current.ty += (lp.y - prev.y) / m.scale;
+        g.moved = (g.moved || 0) + Math.hypot(lp.x - prev.x, lp.y - prev.y);
         render();
       } else if (g.mode === "pinch" && ids.length === 2) {
         const a = pointers.current[+ids[0]];
@@ -390,29 +514,29 @@ const IndoMap = () => {
     const onUp = (e: PointerEvent) => {
       const g = gesture.current;
       const wasPan = g && g.mode === "pan";
-      const moved = g ? g.moved || 99 : 99;
       const t0 = g ? g.t || 0 : 0;
+      const lp = localPt(e.clientX, e.clientY);
       delete pointers.current[e.pointerId];
       const remain = Object.keys(pointers.current).length;
 
       if (wasPan && remain === 0) {
         const dt = performance.now() - t0;
         // 탭 판정: 시작점→끝점 직선거리(미세 흔들림 허용) 12px + 핀치 이력 없을 때만.
-        const sx = g && g.sx != null ? g.sx : e.clientX;
-        const sy = g && g.sy != null ? g.sy : e.clientY;
-        const dist = Math.hypot(e.clientX - sx, e.clientY - sy);
+        const sx = g && g.sx != null ? g.sx : lp.x;
+        const sy = g && g.sy != null ? g.sy : lp.y;
+        const dist = Math.hypot(lp.x - sx, lp.y - sy);
         const wasPinch = multiTouched.current;
         multiTouched.current = false; // 소진
         if (!wasPinch && dist < 12 && dt < 300) {
           // 핀 히트가 있으면 즉시 열기(더블탭 대기 없음). 핀이 없을 때만 더블탭 줌 후보.
-          const hit = findPin(e.clientX, e.clientY);
+          const hit = findPin(lp.x, lp.y);
           if (hit) {
             openSheetRef.current(hit);
             lastTap.current = 0;
           } else {
             const now = performance.now();
             if (now - lastTap.current < 300) {
-              zoomAt(e.clientX, e.clientY, vs.current.k >= KMAX * 0.9 ? 1 / vs.current.k : 2);
+              zoomAt(lp.x, lp.y, vs.current.k >= KMAX * 0.9 ? 1 / vs.current.k : 2);
               lastTap.current = 0;
             } else {
               lastTap.current = now;
@@ -438,7 +562,21 @@ const IndoMap = () => {
       wrap.removeEventListener("pointerup", onUp);
       wrap.removeEventListener("pointercancel", onUp);
     };
-  }, [render, zoomAt, findPin]);
+  }, [render, zoomAt, findPin, localPt, pxToVb, toVb]);
+
+  // 화면 크기가 바뀌면(회전·가로 보기) 다시 그립니다.
+  useEffect(() => {
+    const onResize = () => {
+      setVp({ w: window.innerWidth, h: window.innerHeight });
+      renderRef.current();
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => renderRef.current());
+    return () => cancelAnimationFrame(id);
+  }, [land, vp, staff]);
 
   // ---------- 시트 열기/닫기 (+ 뒤로가기 한 단계) ----------
   const openSheet = (pin: Pin) => {
@@ -447,8 +585,6 @@ const IndoMap = () => {
     setEntry(null);
     setSavedWords({});
     setInfo(null);
-    setPhotos([]);
-    setCredits([]);
     setLightbox(null);
     if (!sheetOpenRef.current) {
       sheetOpenRef.current = true;
@@ -457,29 +593,11 @@ const IndoMap = () => {
       } catch (e) {}
     }
     const reqId = ++reqIdRef.current;
-    setPhotoState("loading");
     setInfoState("loading");
 
     void (async () => {
       const e = await takeContent(pin.id);
       if (reqIdRef.current !== reqId) return;
-
-      // 실제 사진 (위키피디아, 무과금). 원고에 위키 문서 제목이 적혀 있으면 그것을 씁니다.
-      fetchPlacePhotos(pin.id, e ? e.wiki : undefined)
-        .then((urls) => {
-          if (reqIdRef.current !== reqId) return;
-          setPhotos(urls);
-          setPhotoState(urls.length ? "idle" : "error");
-          // 사진 출처(저작자·라이선스)는 사진을 띄운 뒤 따로 받아 아래에 적습니다.
-          if (urls.length) {
-            fetchPhotoCredits(urls)
-              .then((c) => { if (reqIdRef.current === reqId) setCredits(c); })
-              .catch(() => {});
-          }
-        })
-        .catch(() => {
-          if (reqIdRef.current === reqId) setPhotoState("error");
-        });
 
       // 미리 써 둔 내용이 있으면 여기서 끝입니다 (Gemini 호출 없음, 과금 없음)
       if (e) {
@@ -520,7 +638,7 @@ const IndoMap = () => {
       categoryId: MAP_WORDBOOK_ID,
     });
     setSavedWords((prev) => ({ ...prev, [w.word]: true }));
-    toast.success(r.added ? "지도에서 배운 단어에 담았어요" : "이미 담긴 단어예요");
+    toast.success(r.added ? "지도에서 배운 단어에 담았습니다" : "이미 담긴 단어입니다");
   };
 
   openSheetRef.current = openSheet;
@@ -531,6 +649,7 @@ const IndoMap = () => {
     if (sheetOpenRef.current && !viaPop) {
       sheetOpenRef.current = false;
       try {
+        ignorePopRef.current++;
         history.back();
       } catch (e) {}
     } else {
@@ -538,19 +657,134 @@ const IndoMap = () => {
     }
   }, []);
 
+  // ---------- 가로로 보기 ----------
+  const leaveNative = () => {
+    try {
+      const so = (screen as any).orientation;
+      if (so && typeof so.unlock === "function") so.unlock();
+    } catch (e) {}
+    try {
+      if (document.fullscreenElement && document.exitFullscreen) void document.exitFullscreen().catch(() => {});
+    } catch (e) {}
+  };
+
+  const setLandMode = (m: LandMode) => {
+    landRef.current = m;
+    setLand(m);
+  };
+
+  const exitLandscape = useCallback((viaPop = false) => {
+    if (landRef.current === "off") return;
+    if (landRef.current === "native") leaveNative();
+    landRef.current = "off";
+    setLand("off");
+    if (landPushedRef.current && !viaPop) {
+      landPushedRef.current = false;
+      try {
+        ignorePopRef.current++;
+        history.back();
+      } catch (e) {}
+    } else {
+      landPushedRef.current = false;
+    }
+  }, []);
+
+  const enterLandscape = async () => {
+    if (landBusyRef.current || landRef.current !== "off") return;
+    landBusyRef.current = true;
+    let mode: LandMode = "css";
+    let enteredFs = false;
+    try {
+      // 1) 진짜 화면 회전. 크롬·많은 웹뷰는 전체 화면일 때만 lock 을 받아 줍니다.
+      const so = (screen as any).orientation;
+      if (so && typeof so.lock === "function") {
+        const de = document.documentElement as any;
+        if (!document.fullscreenElement && de && typeof de.requestFullscreen === "function") {
+          try {
+            await withDeadline(de.requestFullscreen(), 1500);
+            enteredFs = true;
+          } catch (e) {}
+        }
+        await withDeadline(so.lock("landscape"), 1500);
+        mode = "native";
+      }
+    } catch (e) {
+      mode = "css";
+    }
+    if (mode === "css" && enteredFs) {
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) void document.exitFullscreen().catch(() => {});
+      } catch (e) {}
+    }
+    landBusyRef.current = false;
+    setLandMode(mode);
+    try {
+      history.pushState({ kkMapLand: true }, "");
+      landPushedRef.current = true;
+    } catch (e) {}
+  };
+
+  // 진짜 회전 중에 시스템이 전체 화면을 풀면(뒤로가기 제스처 등) 가로 보기도 끝냅니다.
+  useEffect(() => {
+    const onFs = () => {
+      if (landRef.current === "native" && !document.fullscreenElement) exitLandscape();
+    };
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, [exitLandscape]);
+
+  // 지도를 떠날 때 회전 잠금을 풉니다.
+  useEffect(() => {
+    return () => {
+      if (landRef.current === "native") leaveNative();
+    };
+  }, []);
+
   useEffect(() => {
     const onPop = () => {
-      if (sheetOpenRef.current) closeSheet(true);
+      if (ignorePopRef.current > 0) {
+        ignorePopRef.current--;
+        return;
+      }
+      if (sheetOpenRef.current) {
+        closeSheet(true);
+        return;
+      }
+      if (landRef.current !== "off") exitLandscape(true);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, [closeSheet]);
+  }, [closeSheet, exitLandscape]);
 
-  const zoomBtn =
-    "w-10 h-10 rounded-xl bg-[rgba(9,34,40,0.6)] border border-white/15 text-white/90 flex items-center justify-center active:bg-[rgba(9,34,40,0.8)]";
+  const landscape = land !== "off";
+  // CSS 회전 가로 보기: 화면 전체를 덮는 상자를 시계 방향 90° 돌립니다.
+  // 시트·사진 확대(fixed)는 이 상자 안에 있으므로 함께 돌아갑니다(변형된 조상이 fixed 의 기준이 됨).
+  const rootStyle: React.CSSProperties | undefined =
+    land === "css"
+      ? {
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: vp.h + "px",
+          height: vp.w + "px",
+          transform: "translateX(" + vp.w + "px) rotate(90deg)",
+          transformOrigin: "top left",
+          zIndex: 50,
+        }
+      : undefined;
+
+  const photos = selected ? getPlacePhotos(selected.id) : [];
+  const chip = selected ? TYPE_CHIP[selected.type] : TYPE_CHIP.city;
+
+  const legend: { on: boolean; color: string; label: string; toggle: () => void }[] = [
+    { on: showCities, color: "#f97316", label: "도시", toggle: toggleCities },
+    { on: showSpots, color: "#fbbf24", label: "관광지", toggle: toggleSpots },
+    { on: showFaith, color: "#38bdf8", label: "종교·역사", toggle: toggleFaith },
+    { on: showCulture, color: "#c084fc", label: "민족·문화", toggle: toggleCulture },
+  ];
 
   return (
-    <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
+    <div className="h-[100dvh] bg-background flex flex-col overflow-hidden" style={rootStyle}>
       <style>{`
         .kkm-country { fill: #17555c; stroke: #3e8d95; stroke-width: 0.7; }
         .kkm-neighbor { fill: #123c42; stroke: #2c5860; stroke-width: 0.6; pointer-events: none; }
@@ -571,22 +805,19 @@ const IndoMap = () => {
         @keyframes kkmLbPop { from { opacity: 0; transform: translateY(40px) scale(0.85); } to { opacity: 1; transform: translateY(0) scale(1); } }
       `}</style>
 
-      {/* 헤더 */}
-      <header className="relative flex items-center gap-2 px-4 pt-5 pb-3 shrink-0">
-        <button
-          onClick={() => goBackOr(navigate, location.key, "/insight")}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-foreground/80 hover:bg-black/5 active:bg-black/10 -ml-1"
-          title="뒤로"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div className="flex items-center gap-2.5">
-          <span className="w-9 h-9 rounded-xl bg-sky-500 flex items-center justify-center shadow-lg shadow-black/30">
-            <Map size={18} className="text-white" />
-          </span>
-          <h1 className="text-lg font-semibold text-foreground leading-none">인도네시아 지도</h1>
-        </div>
-      </header>
+      {/* 헤더 — 화면 헤더 규칙(뒤로가기 + 인니어 대문자 제목). 가로 보기에서는 숨기고 닫기 버튼을 둡니다. */}
+      {landscape ? null : (
+        <header className="bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3 shrink-0">
+          <button
+            onClick={() => goBackOr(navigate, location.key, "/insight")}
+            className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
+            title="뒤로"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">PETA INDONESIA</h1>
+        </header>
+      )}
 
       {/* 지도 */}
       <div ref={wrapRef} className="relative flex-1 min-h-0 touch-none overflow-hidden" style={{ backgroundColor: "#0b2f37" }}>
@@ -617,89 +848,74 @@ const IndoMap = () => {
                 </text>
               </g>
             ))}
-            {PINS.map((p, i) => (
-              <g key={p.type + "-" + p.id} ref={(el) => (pinRefs.current[i] = el)} opacity={0}>
-                <circle
-                  r={p.tier === 1 ? 9 : p.tier === 2 ? 8 : p.tier === 3 ? 7.5 : 7}
-                  className={"kkm-pin-dot" + (p.type === "city" ? "" : " " + p.type)}
-                />
-                <text className="kkm-pin-name" y={-15}>
-                  {p.id}
-                </text>
-              </g>
-            ))}
+            {PINS.map((p, i) =>
+              pinShown(p) ? (
+                <g key={p.type + "-" + p.id} ref={(el) => (pinRefs.current[i] = el)} opacity={0}>
+                  <circle
+                    r={p.tier === 1 ? 9 : p.tier === 2 ? 8 : p.tier === 3 ? 7.5 : 7}
+                    className={"kkm-pin-dot" + (p.type === "city" ? "" : " " + p.type)}
+                  />
+                  <text className="kkm-pin-name" y={-15}>
+                    {p.id}
+                  </text>
+                </g>
+              ) : null
+            )}
           </g>
         </svg>
 
-        {/* 범례 겸 토글 버튼 (좌측 하단, +/- 버튼과 같은 높이) */}
-        {/* 도시 → 관광지 → 종교·역사 → 민족·문화 순으로 세로 일렬 */}
+        {/* 범례 겸 토글 버튼 (왼쪽 아래). 도시 → 관광지 → 종교·역사 → 민족·문화 순으로 세로 일렬 */}
         <div className="absolute left-3.5 bottom-4 flex flex-col items-start gap-1.5">
-          <button
-            onClick={toggleCities}
-            className={
-              "flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5 transition-opacity " +
-              (showCities ? "bg-[rgba(9,34,40,0.7)]" : "bg-[rgba(9,34,40,0.4)] opacity-50")
-            }
-          >
-            <span className="w-3 h-3 rounded-full bg-[#f97316] border border-white/80 shrink-0" />
-            <span className="text-[0.6875rem] font-gothic text-white/85">도시</span>
-          </button>
-          <button
-            onClick={toggleSpots}
-            className={
-              "flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5 transition-opacity " +
-              (showSpots ? "bg-[rgba(9,34,40,0.7)]" : "bg-[rgba(9,34,40,0.4)] opacity-50")
-            }
-          >
-            <span className="w-3 h-3 rounded-full bg-[#fbbf24] border border-white/80 shrink-0" />
-            <span className="text-[0.6875rem] font-gothic text-white/85">관광지</span>
-          </button>
-          <button
-            onClick={toggleFaith}
-            className={
-              "flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5 transition-opacity " +
-              (showFaith ? "bg-[rgba(9,34,40,0.7)]" : "bg-[rgba(9,34,40,0.4)] opacity-50")
-            }
-          >
-            <span className="w-3 h-3 rounded-full bg-[#38bdf8] border border-white/80 shrink-0" />
-            <span className="text-[0.6875rem] font-gothic text-white/85">종교·역사</span>
-          </button>
-          <button
-            onClick={toggleCulture}
-            className={
-              "flex items-center gap-2 rounded-full pl-2 pr-3 py-1.5 transition-opacity " +
-              (showCulture ? "bg-[rgba(9,34,40,0.7)]" : "bg-[rgba(9,34,40,0.4)] opacity-50")
-            }
-          >
-            <span className="w-3 h-3 rounded-full bg-[#c084fc] border border-white/80 shrink-0" />
-            <span className="text-[0.6875rem] font-gothic text-white/85">민족·문화</span>
-          </button>
+          {legend.map((l) => (
+            <button
+              key={l.label}
+              onClick={l.toggle}
+              className="flex items-center gap-[7px] h-7 pl-2 pr-[11px] rounded-[14px] transition-opacity"
+              style={{ background: l.on ? "rgba(9,34,40,0.72)" : "rgba(9,34,40,0.4)", opacity: l.on ? 1 : 0.55 }}
+            >
+              <span
+                className="w-[11px] h-[11px] rounded-full border border-white/80 shrink-0"
+                style={{ background: l.color }}
+              />
+              <span className="font-gothic text-[0.71875rem] text-white/[0.88]">{l.label}</span>
+            </button>
+          ))}
         </div>
+
+        {/* 확대 · 축소 · (조금 띄워) 가로로 보기 */}
         <div className="absolute right-3.5 bottom-4 flex flex-col gap-2">
-          <button
-            className={zoomBtn}
-            onClick={() => {
-              const r = wrapRef.current!.getBoundingClientRect();
-              zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.5);
-            }}
-            title="확대"
-          >
-            <Plus size={18} />
+          <button className={ZB} style={ZB_STYLE} onClick={() => zoomCenter(1.5)} title="확대" aria-label="확대">
+            <Plus size={18} strokeWidth={2.2} />
+          </button>
+          <button className={ZB} style={ZB_STYLE} onClick={() => zoomCenter(1 / 1.5)} title="축소" aria-label="축소">
+            <Minus size={18} strokeWidth={2.2} />
           </button>
           <button
-            className={zoomBtn}
-            onClick={() => {
-              const r = wrapRef.current!.getBoundingClientRect();
-              zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.5);
-            }}
-            title="축소"
+            className={ZB + " mt-1.5"}
+            style={ZB_STYLE}
+            onClick={() => (landscape ? exitLandscape() : void enterLandscape())}
+            title={landscape ? "세로로 보기" : "가로로 보기"}
+            aria-label={landscape ? "세로로 보기" : "가로로 보기"}
           >
-            <Minus size={18} />
+            <RotateIcon />
           </button>
         </div>
+
+        {/* 가로 보기 닫기 */}
+        {landscape ? (
+          <button
+            className={ZB + " absolute right-3.5 top-3.5"}
+            style={ZB_STYLE}
+            onClick={() => exitLandscape()}
+            title="가로 보기 닫기"
+            aria-label="가로 보기 닫기"
+          >
+            <X size={18} strokeWidth={2.2} />
+          </button>
+        ) : null}
       </div>
 
-      {/* 사진 라이트박스 — 기존 화면 위에 팝업 애니메이션 */}
+      {/* 사진 확대 — 기존 화면 위에 팝업 애니메이션 */}
       {lightbox && (
         <div
           className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4 kkm-lb-backdrop"
@@ -709,11 +925,12 @@ const IndoMap = () => {
             src={lightbox}
             alt="확대 사진"
             onClick={(e) => e.stopPropagation()}
-            className="max-w-full max-h-[82vh] rounded-2xl object-contain shadow-2xl kkm-lb-img"
+            className="max-w-full max-h-[82%] rounded-2xl object-contain shadow-2xl kkm-lb-img"
           />
           <button
             onClick={(e) => { e.stopPropagation(); setLightbox(null); }}
             className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center"
+            aria-label="닫기"
           >
             <X size={20} />
           </button>
@@ -724,6 +941,7 @@ const IndoMap = () => {
       {selected && (
         <div
           className="fixed inset-0 z-40"
+          style={{ background: "rgba(5,20,24,0.35)" }}
           onClick={() => {
             // 핀 탭에서 이어지는 합성 click이 시트를 즉시 닫는 것 방지
             if (Date.now() - sheetOpenedAt.current < 500) return;
@@ -731,148 +949,136 @@ const IndoMap = () => {
           }}
         >
           <div
-            className="absolute left-0 right-0 bottom-0 bg-white rounded-t-3xl shadow-2xl max-h-[75dvh] flex flex-col"
+            className="absolute left-0 right-0 bottom-0 mx-auto max-w-[560px] bg-white rounded-t-[22px] flex flex-col"
+            style={{ maxHeight: land === "css" ? "88%" : "75dvh", boxShadow: "0 -4px 24px rgba(5,20,24,0.18)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-10 h-1 rounded-full bg-gray-300 mx-auto mt-3 shrink-0" />
+            <div className="w-9 h-1 rounded-full bg-[#DDE3E6] mx-auto mt-2.5 shrink-0" />
+            <button
+              onClick={() => closeSheet()}
+              className="absolute right-4 top-[22px] w-8 h-8 rounded-full bg-[#F1F4F5] text-[#646C72] flex items-center justify-center active:bg-[#E5EAEC]"
+              aria-label="닫기"
+            >
+              <X size={14} strokeWidth={2.2} />
+            </button>
             <div className="px-5 pt-3 pb-6 overflow-y-auto">
               {/* 이름 */}
-              <div className="flex items-center gap-2.5 flex-wrap pr-8">
-                <h2 className="text-xl font-bold text-gray-900">{selected.ko}</h2>
-                <span className="font-word italic text-[0.9375rem] text-gray-500">{selected.id}</span>
+              <div className="flex items-center gap-[9px] flex-wrap pr-10">
+                <h2 className="font-gothic text-[1.25rem] font-bold text-[#1D1F1E]">{selected.ko}</h2>
+                <span className="font-word italic text-[0.9375rem] text-[#646C72]">{selected.id}</span>
                 <button
                   onClick={() => speak(selected.id, "id")}
-                  className="w-8 h-8 rounded-full bg-teal-600/10 text-teal-700 flex items-center justify-center active:bg-teal-600/20"
+                  className="w-8 h-8 rounded-full bg-[#E3EEEC] text-[#2C6D63] flex items-center justify-center active:opacity-80 shrink-0"
                   title="발음 듣기"
+                  aria-label="발음 듣기"
                 >
-                  <Volume2 size={15} />
+                  <Volume2 size={15} strokeWidth={2} />
                 </button>
-                <span
-                  className={
-                    "text-[0.6875rem] font-gothic font-semibold px-2.5 py-1 rounded-full " +
-                    (selected.type === "spot"
-                      ? "bg-amber-500/15 text-amber-700"
-                      : selected.type === "faith"
-                        ? "bg-sky-500/15 text-sky-700"
-                        : selected.type === "culture"
-                          ? "bg-purple-500/15 text-purple-700"
-                          : "bg-orange-500/15 text-orange-700")
-                  }
-                >
-                  {selected.type === "spot"
-                    ? "관광지"
-                    : selected.type === "faith"
-                      ? "종교·역사"
-                      : selected.type === "culture"
-                        ? "민족·문화"
-                        : "도시"}
-                </span>
               </div>
-              <p className="mt-1 text-xs font-gothic text-gray-400">{selected.hint}</p>
+              <div className="mt-1.5 flex items-center gap-2 min-w-0">
+                <span
+                  className="h-[22px] px-[9px] rounded-[11px] flex items-center font-gothic text-[0.71875rem] font-semibold shrink-0"
+                  style={{ background: chip.bg, color: chip.fg }}
+                >
+                  {TYPE_LABEL[selected.type]}
+                </span>
+                <span className="font-gothic text-[0.78125rem] text-[#9AA1A6] truncate">{selected.hint}</span>
+              </div>
 
-              {/* 실제 사진 (위키피디아) — 썸네일 최대 2장, 탭하면 확대.
-                  한 장도 없거나 실패하면 안내 없이 영역 자체를 그리지 않습니다. */}
-              {photoState === "loading" ? (
-                <div className="mt-3 flex items-center justify-center gap-2 py-8 bg-gray-50 rounded-xl text-sm font-gothic text-gray-400">
-                  <Loader2 size={16} className="animate-spin" /> 사진을 불러오는 중...
-                </div>
-              ) : photoState !== "error" && photos.length > 0 ? (
+              {/* 사진 — 고정 목록(mapPhotos)에서 최대 2장, 4:3. 탭하면 확대. 없으면 영역을 그리지 않습니다.
+                  출처는 시트에 적지 않고 설정 > 앱 정보 > 사진 출처에 모읍니다. */}
+              {photos.length > 0 ? (
                 <div className="mt-3 grid grid-cols-2 gap-1.5">
-                  {photos.map((u, i) => (
+                  {photos.map((ph, i) => (
                     <button
-                      key={i}
-                      onClick={() => setLightbox(u)}
-                      className="aspect-square rounded-xl overflow-hidden bg-gray-100 active:opacity-80"
+                      key={ph.file}
+                      onClick={() => setLightbox(ph.thumb)}
+                      className="rounded-xl overflow-hidden bg-[#EEF1F3] active:opacity-80 flex items-center justify-center text-[#B7BDC1]"
+                      style={{ aspectRatio: "4 / 3" }}
                     >
-                      <img src={u} alt={selected.ko + " 사진 " + (i + 1)} loading="lazy" className="w-full h-full object-cover" />
+                      <img
+                        src={ph.thumb}
+                        alt={selected.ko + " 사진 " + (i + 1)}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          try {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                          } catch (err) {}
+                        }}
+                      />
                     </button>
                   ))}
                 </div>
               ) : null}
-              {/* 사진 출처 — 위키미디어 공용 라이선스(CC BY 등)의 표시 의무 */}
-              {photoState !== "loading" && photos.length > 0 && credits.length > 0 ? (
-                <p className="mt-1.5 text-[0.6875rem] leading-relaxed font-gothic text-gray-500">
-                  사진:{" "}
-                  {credits.map((c, i) => (
-                    <span key={c.url}>
-                      {i > 0 ? " · " : ""}
-                      <a href={c.page} className="underline">
-                        {(c.artist || "저작자 미상") + (c.license ? " (" + c.license + ")" : "")}
-                      </a>
-                    </span>
-                  ))}
-                  {" "}/ Wikimedia Commons
-                </p>
-              ) : null}
-              <button
-                onClick={() => closeSheet()}
-                className="absolute right-4 top-4 w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center active:bg-gray-200"
-              >
-                <X size={16} />
-              </button>
 
               {/* 설명 */}
-              <div className="mt-4">
+              <div className="mt-3.5">
                 {infoState === "loading" && (
-                  <div className="py-6 text-center text-sm font-gothic text-gray-400">
+                  <div className="py-6 text-center font-gothic text-[0.875rem] text-[#9AA1A6]">
                     설명을 불러오는 중입니다…
                   </div>
                 )}
                 {infoState === "error" && (
                   <div className="py-4 text-center">
-                    <p className="text-sm font-gothic text-gray-500">
-                      {hasGeminiApiKey()
-                        ? "설명을 불러오지 못했어요."
-                        : "설정에서 Gemini API 키를 입력하면 설명을 볼 수 있어요."}
+                    <p className="font-gothic text-[0.875rem] text-[#646C72] break-keep">
+                      {!publicEdition && !hasGeminiApiKey()
+                        ? "설정에서 Gemini API 키를 입력하면 설명을 볼 수 있습니다."
+                        : "설명을 불러오지 못했습니다. 잠시 뒤 다시 시도하세요."}
                     </p>
-                    {hasGeminiApiKey() && (
+                    {publicEdition || hasGeminiApiKey() ? (
                       <button
                         onClick={() => openSheet(selected)}
-                        className="mt-2 text-xs font-gothic font-semibold text-teal-700 bg-teal-600/10 px-4 py-2 rounded-full active:bg-teal-600/20"
+                        className="mt-2.5 h-9 px-4 rounded-full bg-[#E3EEEC] text-[#2C6D63] font-gothic text-[0.8125rem] font-semibold active:opacity-80"
                       >
                         다시 시도
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 )}
                 {(entry || info) && (
-                  <p className="mt-1 text-sm font-gothic text-gray-700 leading-relaxed whitespace-pre-line content-bump">
+                  <p
+                    className="font-gothic text-[0.90625rem] leading-[1.7] text-[#33393C] whitespace-pre-line"
+                    style={{ wordBreak: "keep-all" }}
+                  >
                     {entry ? entry.desc : info ? info.desc : ""}
                   </p>
                 )}
 
                 {entry && entry.words.length > 0 && (
-                  <div className="mt-5">
-                    <p className="text-xs font-gothic font-semibold text-gray-400">이 지역에서 배우는 단어</p>
-                    <div className="mt-2 space-y-2">
+                  <div>
+                    <p className="mt-5 mx-1 mb-2 font-gothic text-[0.875rem] font-bold text-[#3B4245]">이 지역에서 배우는 단어</p>
+                    <div className="flex flex-col gap-2">
                       {entry.words.map((w) => (
-                        <div key={w.word} className="rounded-2xl bg-gray-50 px-4 py-3">
+                        <div key={w.word} className="rounded-2xl bg-[#F5F7F8] py-3 pr-3 pl-4">
                           <div className="flex items-center gap-2">
-                            <span className="font-word italic text-base text-gray-900">{w.word}</span>
+                            <span className="font-word text-base font-semibold text-[#1D1F1E]">{w.word}</span>
                             <button
                               onClick={() => speak(w.word, "id")}
-                              className="w-7 h-7 rounded-full bg-teal-600/10 text-teal-700 flex items-center justify-center active:bg-teal-600/20 shrink-0"
+                              className="w-7 h-7 rounded-full bg-[#E3EEEC] text-[#2C6D63] flex items-center justify-center active:opacity-80 shrink-0"
                               title="발음 듣기"
+                              aria-label="발음 듣기"
                             >
-                              <Volume2 size={13} />
+                              <Volume2 size={13} strokeWidth={2} />
                             </button>
-                            <span className="font-gothic text-sm text-gray-600 flex-1 min-w-0">{w.meaning}</span>
+                            <span className="flex-1 min-w-0 font-gothic text-[0.84375rem] text-[#4A5257]">{w.meaning}</span>
                             <button
                               onClick={() => saveMapWord(w)}
                               disabled={!!savedWords[w.word]}
                               className={
                                 "w-8 h-8 rounded-full flex items-center justify-center shrink-0 " +
                                 (savedWords[w.word]
-                                  ? "bg-teal-700 text-white"
-                                  : "bg-white border border-gray-200 text-gray-500 active:bg-gray-100")
+                                  ? "bg-[#2C6D63] text-white"
+                                  : "bg-white border border-[#DDE3E6] text-[#646C72] active:bg-[#F1F4F5]")
                               }
                               title={savedWords[w.word] ? "이미 담긴 단어" : "단어장에 담기"}
+                              aria-label={savedWords[w.word] ? "이미 담긴 단어" : "단어장에 담기"}
                             >
-                              {savedWords[w.word] ? <Check size={15} /> : <Plus size={15} />}
+                              {savedWords[w.word] ? <Check size={15} strokeWidth={2.4} /> : <Plus size={15} strokeWidth={2.2} />}
                             </button>
                           </div>
-                          <p className="mt-1.5 font-word text-sm text-gray-700">{w.example}</p>
-                          <p className="mt-0.5 font-gothic text-xs text-gray-500">{w.exampleKo}</p>
+                          <p className="mt-1.5 font-word text-[0.875rem] text-[#3B4245]">{w.example}</p>
+                          <p className="mt-0.5 font-gothic text-[0.78125rem] text-[#646C72]">{w.exampleKo}</p>
                         </div>
                       ))}
                     </div>
