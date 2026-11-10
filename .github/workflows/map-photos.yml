@@ -36,6 +36,7 @@ jobs:
 
       - name: Build photo list
         run: |
+          set -o pipefail
           node scripts/build-map-photos.mjs 2>&1 | tee photo-build.log
           REVIEW=$(find /tmp "${RUNNER_TEMP:-/tmp}" -maxdepth 2 -name 'map-photos-review.html' 2>/dev/null | head -1)
           if [ -n "$REVIEW" ]; then cp "$REVIEW" map-photos-review.html; fi
