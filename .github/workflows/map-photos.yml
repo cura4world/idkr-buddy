@@ -1,0 +1,62 @@
+name: Map photos (지도 사진 고정 목록 만들기)
+
+# 작업 환경(클라우드 세션)에서는 위키미디어 접속이 막혀 있어, 인터넷이 되는 Actions 러너에서
+# scripts/build-map-photos.mjs 를 돌려 src/lib/mapPhotos.ts 를 채웁니다.
+# 결과는 release/public 에 커밋하고, 눈으로 확인할 HTML 은 실행 결과(artifact)로 올립니다.
+# main 에는 쓰지 않습니다.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [release/public]
+    paths:
+      - 'scripts/build-map-photos.mjs'
+      - '.github/workflows/map-photos.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: map-photos
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: release/public
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build photo list
+        run: |
+          node scripts/build-map-photos.mjs 2>&1 | tee photo-build.log
+          REVIEW=$(find /tmp "${RUNNER_TEMP:-/tmp}" -maxdepth 2 -name 'map-photos-review.html' 2>/dev/null | head -1)
+          if [ -n "$REVIEW" ]; then cp "$REVIEW" map-photos-review.html; fi
+
+      - name: Review page (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: map-photos-review
+          path: |
+            map-photos-review.html
+            photo-build.log
+          if-no-files-found: warn
+
+      - name: Commit photo list
+        run: |
+          if git diff --quiet -- src/lib/mapPhotos.ts; then
+            echo "mapPhotos.ts 바뀐 것 없음"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/mapPhotos.ts
+          git commit -m "지도: 사진 고정 목록 채움 (Actions 에서 위키미디어 조회)"
+          git push origin HEAD:release/public
