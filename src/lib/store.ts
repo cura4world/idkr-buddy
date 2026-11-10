@@ -71,21 +71,24 @@ const defaultCategories: Category[] = [
 ];
 
 const defaultWords: Word[] = [
-  { id: "1", word: "Selamat pagi", meaning: "좋은 아침", example: "Selamat pagi, apa kabar?", exampleMeaning: "좋은 아침, 어떻게 지내세요?", categoryId: "greetings", createdAt: Date.now() },
-  { id: "2", word: "Terima kasih", meaning: "감사합니다", example: "Terima kasih banyak.", exampleMeaning: "정말 감사합니다.", categoryId: "greetings", createdAt: Date.now() },
-  { id: "3", word: "Nasi goreng", meaning: "볶음밥", example: "Saya mau nasi goreng.", exampleMeaning: "저는 볶음밥을 원해요.", categoryId: "food", createdAt: Date.now() },
-  { id: "4", word: "Satu", meaning: "하나 (1)", example: "Satu, dua, tiga.", exampleMeaning: "하나, 둘, 셋.", categoryId: "numbers", createdAt: Date.now() },
-  { id: "5", word: "Dua", meaning: "둘 (2)", example: "Saya punya dua kucing.", exampleMeaning: "저는 고양이 두 마리가 있어요.", categoryId: "numbers", createdAt: Date.now() },
-  { id: "6", word: "Apa kabar?", meaning: "어떻게 지내세요?", example: "Halo, apa kabar?", exampleMeaning: "안녕, 어떻게 지내?", categoryId: "greetings", createdAt: Date.now() },
-  { id: "7", word: "Makan", meaning: "먹다", example: "Sudah makan?", exampleMeaning: "밥 먹었어?", categoryId: "daily", createdAt: Date.now() },
-  { id: "8", word: "Tidur", meaning: "자다", example: "Saya mau tidur.", exampleMeaning: "저는 자고 싶어요.", categoryId: "daily", createdAt: Date.now() },
+  // 표제어는 고유명사가 아니면 소문자 (2026-11). 예전 기기에 대문자로 저장된 것은
+  // sharedIdMigration.ts 의 LEGACY_DEFAULT_WORD_CASE 가 한 번 소문자로 바꿉니다.
+  { id: "1", word: "selamat pagi", meaning: "좋은 아침", example: "Selamat pagi, apa kabar?", exampleMeaning: "좋은 아침, 어떻게 지내세요?", categoryId: "greetings", createdAt: Date.now() },
+  { id: "2", word: "terima kasih", meaning: "감사합니다", example: "Terima kasih banyak.", exampleMeaning: "정말 감사합니다.", categoryId: "greetings", createdAt: Date.now() },
+  { id: "3", word: "nasi goreng", meaning: "볶음밥", example: "Saya mau nasi goreng.", exampleMeaning: "저는 볶음밥을 원해요.", categoryId: "food", createdAt: Date.now() },
+  { id: "4", word: "satu", meaning: "하나 (1)", example: "Satu, dua, tiga.", exampleMeaning: "하나, 둘, 셋.", categoryId: "numbers", createdAt: Date.now() },
+  { id: "5", word: "dua", meaning: "둘 (2)", example: "Saya punya dua kucing.", exampleMeaning: "저는 고양이 두 마리가 있어요.", categoryId: "numbers", createdAt: Date.now() },
+  { id: "6", word: "apa kabar?", meaning: "어떻게 지내세요?", example: "Halo, apa kabar?", exampleMeaning: "안녕, 어떻게 지내?", categoryId: "greetings", createdAt: Date.now() },
+  { id: "7", word: "makan", meaning: "먹다", example: "Sudah makan?", exampleMeaning: "밥 먹었어?", categoryId: "daily", createdAt: Date.now() },
+  { id: "8", word: "tidur", meaning: "자다", example: "Saya mau tidur.", exampleMeaning: "저는 자고 싶어요.", categoryId: "daily", createdAt: Date.now() },
 ];
 
 // 앱에 내장된 단어인가 — 기본·개인 폴더 단어(seed)와 처음 설치 때 깔리는 예시 단어 8개.
 // 어느 기기에서나 저절로 생기므로 백업·옮기기에 담지 않습니다.
+// 예시 단어는 예전 대문자 표기(예: "Makan")로 남아 있어도 같은 것으로 봅니다.
 export function isBuiltInWord(w: Word): boolean {
   if (w.isShared) return true;
-  return defaultWords.some((d) => d.id === w.id && d.word === w.word);
+  return defaultWords.some((d) => d.id === w.id && d.word === (w.word || "").toLowerCase());
 }
 
 // 어느 기기에나 저절로 있는 단어장인가 (기본·개인 폴더, 예시 4개, 내 단어장, 지도 단어장)
