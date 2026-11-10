@@ -1,7 +1,7 @@
 // src/components/PointFloat.tsx
 // 점수가 확정되는 순간에만 "+N"이 잠깐 떠올랐다 사라집니다. 소리 없음.
 // 읽기 화면에는 이것 말고 어떤 표시도 두지 않습니다 (타이머·게이지 없음).
-// 게임 화면(GameMatch/GameOX)은 각자 로컬 구현을 그대로 씁니다.
+// 게임 화면은 이것을 쓰지 않고 game/GameKit.tsx 의 FloatPoint(결과 카드의 "+N")를 씁니다.
 
 import { useEffect, useState } from "react";
 
