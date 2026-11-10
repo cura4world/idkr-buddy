@@ -38,11 +38,14 @@ import SavedWords from "./pages/SavedWords";
 import SavedStudyMode from "./pages/SavedStudyMode";
 import SavedQuizMode from "./pages/SavedQuizMode";
 import Permainan from "./pages/Permainan";
-import GameMatch from "./pages/GameMatch";
+import GameKata from "./pages/GameKata";
+import GameJodoh from "./pages/GameJodoh";
 import GameOX from "./pages/GameOX";
+import GameDengar from "./pages/GameDengar";
 import GameSusun from "./pages/GameSusun";
 import GameEja from "./pages/GameEja";
 import GameTangkap from "./pages/GameTangkap";
+import PlusGame from "@/components/game/PlusGame";
 import NotFound from "./pages/NotFound";
 import Plus from "./pages/Plus";
 import MyInfo from "./pages/MyInfo";
@@ -122,11 +125,13 @@ const App = () => (
           <Route path="/saved/study" element={<SavedStudyMode />} />
           <Route path="/saved/quiz" element={<SavedQuizMode />} />
           <Route path="/permainan" element={<Permainan />} />
-          <Route path="/permainan/match" element={<GameMatch />} />
-          <Route path="/permainan/ox" element={<GameOX />} />
-          <Route path="/permainan/susun" element={<GameSusun />} />
-          <Route path="/permainan/eja" element={<GameEja />} />
-          <Route path="/permainan/tangkap" element={<GameTangkap />} />
+          <Route path="/permainan/kata" element={<GameKata />} />
+          <Route path="/permainan/jodoh" element={<PlusGame><GameJodoh /></PlusGame>} />
+          <Route path="/permainan/ox" element={<PlusGame><GameOX /></PlusGame>} />
+          <Route path="/permainan/dengar" element={<PlusGame><GameDengar /></PlusGame>} />
+          <Route path="/permainan/susun" element={<PlusGame><GameSusun /></PlusGame>} />
+          <Route path="/permainan/eja" element={<PlusGame><GameEja /></PlusGame>} />
+          <Route path="/permainan/tangkap" element={<PlusGame><GameTangkap /></PlusGame>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         {/* 공개판 하단 탭 — 홈·내 단어장·게임·내 정보 네 화면에서만 스스로 나타납니다 */}

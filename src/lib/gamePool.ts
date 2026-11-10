@@ -22,7 +22,7 @@ const MEANING_MAX = 24;     // 카드에 들어갈 뜻 길이 상한
 
 // 카드 한 장에 들어갈 만한 길이로 뜻을 다듬습니다.
 // (찾아본 단어의 뜻은 여러 뜻이 이어져 있어 그대로 두면 카드가 깨집니다)
-function shortMeaning(raw: string): string {
+export function shortMeaning(raw: string): string {
   const flat = String(raw || "").replace(new RegExp("\\s+", "g"), " ").trim();
   if (!flat) return "";
   if (flat.length <= MEANING_MAX) return flat;
@@ -188,6 +188,73 @@ export async function drawPool(unconfirmed: number, confirmed: number): Promise<
   }
 
   return picked;
+}
+
+// ── 듣고 고르기(Dengar)용 비슷한 단어 ───────────────────────────────
+// 소리만 듣고 고르는 게임이라, 보기는 뜻이 아니라 "철자·소리가 비슷한 다른 단어"여야 합니다
+// (lapar 를 들려주고 lebar · lamar · lapang 중에서 고르기). 뜻이 같은 단어는 보기에 넣지 않습니다.
+
+/** 한 단어로 된 소문자 알파벳(하이픈 허용) 3~12자인가 — 귀로 구분할 만한 단어만 */
+export function fitsListening(word: string): boolean {
+  const w = String(word || "").trim();
+  if (w.length < 3 || w.length > 12) return false;
+  for (const c of w) {
+    if (c === "-") continue;
+    if (c < "a" || c > "z") return false;
+  }
+  return true;
+}
+
+/** 편집 거리 (글자 하나 넣기·빼기·바꾸기 = 1) */
+export function editDistance(a: string, b: string): number {
+  const x = String(a || "");
+  const y = String(b || "");
+  if (x === y) return 0;
+  if (!x.length) return y.length;
+  if (!y.length) return x.length;
+  let prev: number[] = [];
+  for (let j = 0; j <= y.length; j++) prev.push(j);
+  for (let i = 1; i <= x.length; i++) {
+    const cur: number[] = [i];
+    for (let j = 1; j <= y.length; j++) {
+      const cost = x[i - 1] === y[j - 1] ? 0 : 1;
+      cur.push(Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost));
+    }
+    prev = cur;
+  }
+  return prev[y.length];
+}
+
+/**
+ * 정답과 소리가 비슷한 단어 k개. 첫 글자가 같고 편집 거리가 작은 순으로 앞 6개를 추린 뒤
+ * 그중에서 섞어 고릅니다(매번 같은 보기가 나오지 않게). 모자라면 길이가 비슷한 단어로 채웁니다.
+ */
+export function similarWords(
+  target: PoolWord,
+  all: PoolWord[],
+  k: number,
+  rand: () => number = Math.random
+): PoolWord[] {
+  const tw = wordKey(target.word);
+  const tm = meaningKey(target.meaning);
+  const seenW = new Set<string>([tw]);
+  const seenM = new Set<string>([tm]);
+  const cands: { p: PoolWord; score: number }[] = [];
+  for (const p of all) {
+    const w = wordKey(p.word);
+    const m = meaningKey(p.meaning);
+    if (seenW.has(w) || seenM.has(m)) continue;
+    if (!fitsListening(w)) continue;
+    seenW.add(w);
+    seenM.add(m);
+    const lenGap = Math.abs(w.length - tw.length);
+    const score =
+      editDistance(w, tw) + (w[0] === tw[0] ? 0 : 1.5) + lenGap * 0.5 + rand() * 0.4;
+    cands.push({ p, score });
+  }
+  cands.sort((a, b) => a.score - b.score);
+  const head = shuffle(cands.slice(0, Math.max(k, 6)).map((c) => c.p));
+  return head.slice(0, k);
 }
 
 // ── 문장 조립(Susun Kalimat)용 예문 ────────────────────────────────

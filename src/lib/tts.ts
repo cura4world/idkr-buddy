@@ -587,3 +587,31 @@ class TtsPlayer {
 }
 
 export const ttsPlayer = new TtsPlayer();
+
+// ── 추가 전용: 짧은 글(단어 발음)의 음성 주소 ─────────────────────
+// 듣고 고르기(Dengar) 게임이 씁니다. 게임은 소리를 직접 재생해야(천천히 듣기 = 재생 속도 조절)
+// 하므로 ttsPlayer 대신 주소만 받아 갑니다. 캐시 키는 ttsPlayer.toggle("say:" + 글, 글) 과
+// 똑같이 만들어, 단어 발음 버튼(스토어 앱의 AndroidTTS 대체)으로 한 번 들은 단어는 다시 만들지 않습니다.
+// cacheOnly 면 새로 만들지 않고 저장된 것만 돌려줍니다(오프라인일 때 "들어 본 단어" 고르기용).
+// 실패하면 null — 부르는 쪽이 글자로 대신 보여 줍니다. 기존 함수·메서드는 바꾸지 않았습니다.
+export async function getSayAudioUrl(
+  text: string,
+  opts?: { cacheOnly?: boolean },
+): Promise<string | null> {
+  const t = String(text || "").trim();
+  if (!t) return null;
+  try {
+    const chunks = splitForTts(t);
+    if (chunks.length !== 1) return null; // 단어·짧은 구절 전용
+    const voiceName = voiceNameOf(getTtsVoice());
+    const ckey = "say:" + t + "::v=" + voiceName + "::0/1";
+    const have = await getCachedAudio(ckey);
+    if (have) return have;
+    if (opts && opts.cacheOnly) return null;
+    const url = await generateAudioForText(chunks[0], voiceName);
+    await saveCachedAudio(ckey, url);
+    return url;
+  } catch {
+    return null;
+  }
+}

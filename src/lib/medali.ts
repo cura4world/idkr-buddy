@@ -88,7 +88,9 @@ export function effectiveStatus(rec: WordRecord, now: number): WordRecord["statu
 
 export interface GameRound {
   id: string;                                 // String(Date.now()) + 난수 꼬리
-  game: "match" | "ox" | "susun" | "eja" | "tangkap";
+  // match(짝맞추기)는 2026-11 게임방에서 뺐지만, 이미 저장된 판 기록을 읽을 수 있게 이름은 남겨 둡니다.
+  // jodoh = 빠른 짝짓기, dengar = 듣고 고르기, kata = 오늘의 단어 퍼즐 (2026-11 추가)
+  game: "match" | "ox" | "susun" | "eja" | "tangkap" | "jodoh" | "dengar" | "kata";
   date: string;
   durationSec: number;
   score: number;
