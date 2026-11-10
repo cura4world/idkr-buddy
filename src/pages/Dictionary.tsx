@@ -25,6 +25,7 @@ import { lastQuotaNotice } from "@/lib/aiProxy";
 import { publicAiErrorText } from "@/lib/aiErrors";
 import { dropReturnTicket } from "@/lib/readReturn";
 import { medaliEngine } from "@/lib/medali";
+import { useBackClose } from "@/hooks/useBackClose";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // TTS: AndroidTTS 우선, 없으면 speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -562,6 +563,8 @@ const Dictionary = () => {
 
   // 최근 검색 항목 길게 누르기 → 삭제 확인 (600ms, 앱 공통 롱프레스 시간)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  // 폰 뒤로가기는 "검색 기록 삭제" 창만 닫습니다(QA Q03)
+  useBackClose(!!deleteTarget, () => setDeleteTarget(null));
   const lpTimer = useRef<number | null>(null);
   const lpFiredRef = useRef(false);
 
