@@ -19,6 +19,7 @@ import { isStoreApp } from "@/lib/platform";
 import { currentStreak } from "@/lib/kataHariIni";
 import MedaliSheet from "@/components/MedaliSheet";
 import MedaliPill from "@/components/game/MedaliPill";
+import PlusLockBox from "@/components/PlusLockBox";
 import {
   G,
   CARD_SHADOW,
@@ -180,34 +181,11 @@ const Permainan = () => {
 
       <div className="px-4 pt-4 flex flex-col gap-2.5">
         {!plus ? (
-          <div
-            className="rounded-[18px] py-3.5 pr-3.5 pl-[22px]"
-            style={{ background: G.goldBg, border: "1px solid " + G.goldBd }}
-          >
-            <p className="text-[15px] font-semibold whitespace-nowrap" style={{ color: G.text }}>
-              게임은 Plus 회원 기능입니다
-            </p>
-            <div className="mt-1.5 flex items-stretch gap-3">
-              <span
-                className="flex-1 min-w-0 font-gothic text-[12px] leading-[1.55] whitespace-nowrap"
-                style={{ color: G.goldInk }}
-              >
-                Plus로 모든 게임을 열고,
-                <br />
-                맞힌 단어는 훈장 · 별로 쌓입니다
-              </span>
-              <button
-                type="button"
-                onClick={() => navigate(PAYWALL_PATH)}
-                className="px-3.5 rounded-xl font-gothic text-[11.5px] font-bold leading-[1.25] text-white shrink-0 active:opacity-90"
-                style={{ background: G.goldText }}
-              >
-                Plus
-                <br />
-                7일 무료 체험
-              </button>
-            </div>
-          </div>
+          <PlusLockBox
+            title="게임은 Plus 회원 기능입니다"
+            lines={["Plus로 모든 게임을 열고,", "맞힌 단어는 훈장 · 별로 쌓입니다"]}
+            onClick={() => navigate(PAYWALL_PATH)}
+          />
         ) : null}
 
         {GAME_ORDER.map((id) => {
