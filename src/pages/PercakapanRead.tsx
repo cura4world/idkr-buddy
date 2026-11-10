@@ -52,6 +52,7 @@ const PercakapanRead = () => {
 
   const [scene, setScene] = useState<PercakapanScene | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [snap, setSnap] = useState<PcAudioSnapshot>(() =>
     percakapanAudioPlayer.getSnapshot()
   );
@@ -134,39 +135,40 @@ const PercakapanRead = () => {
       navigate("/percakapan", { replace: true });
       return;
     }
+    // 없는 회화집이거나 이 등급에 안 보이는 회화집(교회와 신앙 — findScene 이 null)이면
+    // "볼 수 없는 회화집" 화면을 그립니다. 이동은 그 화면의 버튼으로만 합니다
+    // (setState 와 navigate 를 같이 부르지 않기 위해서입니다).
     findScene(id)
       .then((s) => {
         if (cancelled) return;
         if (!s) {
-          navigate("/percakapan", { replace: true });
+          setNotFound(true);
+          setLoading(false);
           return;
         }
+        setNotFound(false);
         setScene(s);
         setLoading(false);
       })
       .catch(() => {
         if (cancelled) return;
-        navigate("/percakapan", { replace: true });
+        setNotFound(true);
+        setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [id, navigate]);
+  }, [id, navigate, plan.tier]);
 
   // ---------- 등급 확인 ----------
-  // 무료: 기본 회화집은 잠김 → 안내 + 구독 화면. 교회와 신앙은 관리자·Special Member 만.
-  // (setState 없이 이동만 합니다)
+  // 무료: 기본 회화집은 잠김 → 안내 + 구독 화면. (setState 없이 이동만 합니다)
   useEffect(() => {
     if (!scene) return;
-    if (scene.cat === "gereja" && !plan.staff && !scene.custom) {
-      navigate("/percakapan", { replace: true });
-      return;
-    }
     if (!plan.plus && !scene.custom) {
       toast("회화집은 Plus 회원 기능입니다");
       navigate(PAYWALL_PATH, { replace: true });
     }
-  }, [scene, plan.plus, plan.staff, navigate]);
+  }, [scene, plan.plus, navigate]);
 
   // ---------- 돌아올 자리로 되돌리기 ----------
   // 어느 회화집이었는지는 주소(/percakapan/:id)로 저절로 돌아오므로 스크롤만 챙깁니다.
@@ -482,7 +484,22 @@ const PercakapanRead = () => {
       ) : null}
 
       <div className="px-4 pt-3 pb-6">
-        {loading || !scene ? (
+        {notFound ? (
+          <div className="px-4 py-10 text-center" style={CARD_STYLE}>
+            <p className="text-[0.9375rem]" style={{ color: "#1D1F1E" }}>볼 수 없는 회화집입니다</p>
+            <p className="mt-1 font-gothic text-[0.78125rem]" style={{ color: "#646C72" }}>
+              지워졌거나 이 계정에서는 열리지 않는 회화집입니다
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/percakapan", { replace: true })}
+              className="mt-4 h-10 px-4 rounded-full font-gothic text-[0.8125rem] font-semibold"
+              style={{ background: "#E3EEEC", color: TEAL }}
+            >
+              회화집 목록으로
+            </button>
+          </div>
+        ) : loading || !scene ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
             <Loader2 size={16} className="animate-spin" /> 불러오는 중...
           </div>
