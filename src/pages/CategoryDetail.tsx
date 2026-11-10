@@ -20,6 +20,7 @@ import { isStoreApp } from "@/lib/platform";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { GROUP_STYLES, GroupKey, groupOf, bookTitle, bookNumberText, displayMeaning } from "@/lib/wordbookGroups";
 import { loadIllustBook, hasIllustBook, IllustScene } from "@/lib/illust";
+import { useCompactPill } from "@/lib/useCompactPill";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 // 묶기 권유 배너를 닫은 시점의 단어 수. 이보다 50개 더 모이면 다시 띄웁니다.
@@ -287,6 +288,11 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   // "내 단어장"은 다른 진입 화면과 같은 인니어 대문자 표제,
   // 사용자가 만든 폴더 이름은 한글이라 본문 폰트를 씁니다.
   const isMine = category?.id === MY_WORDBOOK_ID;
+  // 헤더 "KOSAKATAKU" 를 자르지 않도록, 자리가 모자라면 "단어 추가" 알약을 + 동그라미로 줄입니다(QA Q09).
+  const mineTitleRef = useRef<HTMLHeadingElement>(null);
+  const addPillRef = useRef<HTMLButtonElement>(null);
+  const addLabelRef = useRef<HTMLSpanElement>(null);
+  const addCompact = useCompactPill(mineTitleRef, addPillRef, addLabelRef, isMine && editable);
   // 내 단어장 안에 보관해 둔 단어장들. addCategory 가 앞에 넣으므로 최신이 위입니다.
   const archived: Category[] = isMine
     ? categories.filter((c) => !c.isShared && c.id !== MY_WORDBOOK_ID)
@@ -872,7 +878,12 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
           </button>
         ) : null}
         {isMine ? (
-          <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">
+          // 제목은 자르지 않습니다(QA Q09). 자리가 모자라면 오른쪽 "단어 추가" 알약이 + 동그라미로 줄어듭니다.
+          <h1
+            ref={mineTitleRef}
+            className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]"
+            style={{ minWidth: "fit-content" }}
+          >
             KOSAKATAKU
           </h1>
         ) : (
@@ -891,15 +902,21 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
           </span>
         )}
         {editable ? (
+          // 좁은 폭·큰 글자에서는 + 만 남은 동그라미가 됩니다(useCompactPill).
           <button
+            ref={addPillRef}
             type="button"
             onClick={() => setAddOpen(true)}
-            className="shrink-0 h-9 pl-[11px] pr-[13px] rounded-full bg-[#E3EEEC] text-[#2C6D63] font-gothic text-[0.8125rem] font-semibold flex items-center gap-[5px] active:opacity-80"
+            aria-label="단어 추가"
+            className={
+              "h-9 rounded-full bg-[#E3EEEC] text-[#2C6D63] font-gothic text-[0.8125rem] font-semibold flex items-center active:opacity-80 " +
+              (addCompact ? "w-9 shrink-0 justify-center" : "min-w-9 overflow-hidden pl-[11px] pr-[13px] gap-[5px]")
+            }
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
               <path d="M12 5v14M5 12h14" />
             </svg>
-            단어 추가
+            {addCompact ? null : <span ref={addLabelRef} className="whitespace-nowrap">단어 추가</span>}
           </button>
         ) : null}
         {menuItems.length > 0 ? (
@@ -961,27 +978,35 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
             </span>
           </p>
           <div className={"relative grid grid-cols-2 gap-2 " + (isMine ? "mt-3.5" : "mt-3")}>
+            {/* 글자는 낱말 중간에서 꺾지 않습니다(QA Q09 — 360px·125% 에서 "외우 / 기"). 큰 글자에서는
+                글자 15px·아이콘 상자 30px 에서 멈춥니다. */}
             <button
               type="button"
               onClick={goStudy}
-              className="h-[46px] rounded-[14px] bg-white font-gothic text-[0.875rem] font-semibold flex items-center justify-center gap-2 active:opacity-80"
-              style={{ color: ink }}
+              className="h-[46px] min-w-0 px-1.5 rounded-[14px] bg-white font-gothic font-semibold flex items-center justify-center gap-2 active:opacity-80"
+              style={{ color: ink, fontSize: "min(0.875rem, 15px)" }}
             >
-              <span className="w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0" style={{ background: tint }}>
+              <span
+                className="rounded-[9px] flex items-center justify-center shrink-0"
+                style={{ background: tint, width: "min(1.75rem, 30px)", height: "min(1.75rem, 30px)" }}
+              >
                 <CardIcon />
               </span>
-              카드로 외우기
+              <span className="whitespace-nowrap">카드로 외우기</span>
             </button>
             <button
               type="button"
               onClick={goQuiz}
-              className="h-[46px] rounded-[14px] bg-white font-gothic text-[0.875rem] font-semibold flex items-center justify-center gap-2 active:opacity-80"
-              style={{ color: ink }}
+              className="h-[46px] min-w-0 px-1.5 rounded-[14px] bg-white font-gothic font-semibold flex items-center justify-center gap-2 active:opacity-80"
+              style={{ color: ink, fontSize: "min(0.875rem, 15px)" }}
             >
-              <span className="w-7 h-7 rounded-[9px] flex items-center justify-center shrink-0" style={{ background: tint }}>
+              <span
+                className="rounded-[9px] flex items-center justify-center shrink-0"
+                style={{ background: tint, width: "min(1.75rem, 30px)", height: "min(1.75rem, 30px)" }}
+              >
                 <QuizIcon />
               </span>
-              퀴즈 풀기
+              <span className="whitespace-nowrap">퀴즈 풀기</span>
             </button>
           </div>
         </section>
@@ -1098,7 +1123,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
               >
                 {/* 단어 줄: 단어·뜻 | (색연필 그림은 이 줄 빈칸에 깔림) | 사전(내 단어장만) · 스피커 */}
                 <div className={"relative flex items-center " + (category.isShared ? "gap-2" : "gap-0.5")}>
-                  {category.isShared ? <WordIllust scene={scenes[w.word]} /> : null}
+                  {category.isShared ? <WordIllust scene={scenes[w.word]} measureKey={w.word + "|" + w.meaning} /> : null}
                   <div className="relative z-[1] flex-1 min-w-0 content-bump">
                     <p className="m-0 font-word text-[1.1875rem] font-semibold leading-[1.35] text-[#104B60] break-words">{w.word}</p>
                     <p className="mt-px font-gothic text-[0.875rem] font-semibold text-[#34332F]">{displayMeaning(w.meaning)}</p>
