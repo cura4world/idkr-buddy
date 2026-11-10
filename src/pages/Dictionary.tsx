@@ -641,7 +641,7 @@ const Dictionary = () => {
           <AlertDialogHeader>
             <AlertDialogTitle className="font-body text-gray-900">검색 기록 삭제</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-600 break-words">
-              "{deleteTarget}" 을(를) 최근 검색에서 삭제할까요?
+              "{deleteTarget}" 을(를) 최근 검색에서 삭제하시겠습니까?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
