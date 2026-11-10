@@ -66,3 +66,9 @@ Gemini 호출은 가짜 응답으로 바꿈(소리는 무음). 외부 글꼴은 
 - 게임 시간 감각(빠른 짝짓기 60초, 단어 받기 낙하 속도).
 - Google 로그인·결제·구매 복원·"풀이가 이상합니다" 신고 버튼 — 미리보기는 세션이 없어 신고 버튼 자체가 안 보임.
 - 서버 한도(무료 이야기 2편째, Plus 한도 초과 안내) — 문서(S41)상 Worker 는 아직 배포 전. 이 검토에서 서버 상태는 확인하지 않음.
+
+## 처리 결과 — Q12 · Q14 · Q17
+
+- **Q12 처리 결과**: 정답을 동결 목록 `src/data/kataHariIniWords.ts`(482단어, 2026-11-10 = 0번, 이미 나간 날과 같은 순서)에서 `(날짜 번호 − 20767) mod 482` 로 고름 — `seed.json` 연결 끊음, 늘릴 때는 맨 끝에만 붙임(머리말). 입력은 정답 + `src/data/kataHariIniGuesses.ts`(469단어) 951단어만 받고, 없는 말(MAANU)은 시도를 쓰지 않고 줄 흔들기 + "단어 목록에 없는 단어입니다". vitest 25개(단어장을 비워도 11-10 mewah · 11-11 pedas) · Playwright: maanu → 기록 0줄·알림 표시·1.6초 뒤 사라짐, rumah → 1줄.
+- **Q14 처리 결과**: Google Fonts·jsdelivr 제거, `src/fonts.ts`·`src/fonts.css` 로 앱 안 woff2 사용(Lora 라틴 5개 109KB · Gowun Dodum 93조각 1.33MB · Pretendard 서브셋 4굵기 1.07MB, 합계 2.51MB, woff 0개). 글꼴은 서비스워커 설치 목록에서 빼고 처음 볼 때 `kata-fonts` 캐시(설치 목록 17개 4,745KiB, 그중 글꼴 0개). Playwright 에서 127.0.0.1 밖 요청을 모두 막고 Pretendard 400~700·Gowun Dodum·Lora 600·기울임 `document.fonts.check` 모두 true, 외부 요청 시도 0건. 07 데이터 보안에 한 줄 추가. `public/guide.html`(앱에서 열지 않는 안내 페이지)은 아직 Google Fonts 를 씀.
+- **Q17 처리 결과**: 한 판 최대 20문제, 단어장 전체에서 무작위로 뽑음(`src/lib/quizRound.ts`, 단어장 퀴즈·보관함 퀴즈 공용). 랜덤 꺼짐이면 뽑힌 단어를 단어장 순서대로, 20개 이하는 예전과 같음, 보기는 단어장 전체에서. Playwright 동물(71) 한 판: "1 / 20" → "20 / 20" → "20개 중 N개".
