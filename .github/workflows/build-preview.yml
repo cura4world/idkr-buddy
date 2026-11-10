@@ -1,0 +1,801 @@
+name: Build Preview APK (공개판 미리보기)
+
+# 출시 전 검사용 미리보기 APK (app.naruve.katakata.preview, 앱 이름 "Kata kata 미리보기").
+#
+# - 웹을 VITE_PREVIEW=1 로 빌드해 APK 안(assets)에 넣고, WebViewAssetLoader 로
+#   https://appassets.androidplatform.net/idkr-buddy/ 에서 엽니다.
+#   지금 쓰는 앱(cura4world.github.io)과 출처가 달라 localStorage·IndexedDB 가 섞이지 않습니다.
+# - 스토어 앱·관리자판과 패키지 이름이 달라 나란히 설치됩니다.
+# - 로그인·결제는 콘솔 설정 전이라 쓰지 않습니다(통로는 있지만 언제나 PREVIEW 오류를 돌려줌).
+# - 디버그 서명 APK 를 프리릴리스 preview-latest 에 올립니다. 매번 지우고 다시 만들어 받는 주소가 같습니다:
+#   https://github.com/cura4world/idkr-buddy/releases/download/preview-latest/kata-kata-preview.apk
+# - 서명 키는 실행마다 같아야 덮어 설치가 됩니다. 비밀값 PREVIEW_KEYSTORE_BASE64 가 있으면 그것을,
+#   없으면 처음 한 번 만든 키를 Actions 캐시에 두고 계속 씁니다(캐시가 7일 넘게 안 쓰이면 사라짐 →
+#   그때는 폰에서 미리보기 앱을 지우고 새로 설치).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [release/public]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'data/**'
+      - 'scripts/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.*'
+      - '.github/workflows/build-preview.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-preview
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # ubuntu-latest(26)에서는 Android SDK 준비가 실패했습니다(build-store.yml 참고). 24.04 로 고정합니다.
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Build info (KST)
+        run: |
+          SHA=$(git rev-parse --short=7 HEAD)
+          CT=$(TZ=Asia/Seoul git log -1 --format=%cd --date=format-local:'%Y-%m-%d %H:%M')
+          BT=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')
+          echo "PV_SHA=$SHA" >> "$GITHUB_ENV"
+          echo "PV_COMMIT_TIME=$CT" >> "$GITHUB_ENV"
+          echo "PV_BUILD_TIME=$BT" >> "$GITHUB_ENV"
+          echo "커밋 $SHA · 커밋 $CT KST · 빌드 $BT KST"
+
+      # npm run build 가 scripts/csv-to-seed.js 를 먼저 돌려 src/data/seed.json 을 만듭니다(deploy.yml 과 같음).
+      - name: Web build (VITE_PREVIEW=1)
+        run: |
+          VITE_PREVIEW=1 VITE_PREVIEW_BUILD="$PV_SHA · $PV_COMMIT_TIME KST" npm run build
+          if [ -f dist/registerSW.js ] || grep -q registerSW dist/index.html; then
+            echo "미리보기 빌드에 서비스워커 등록이 들어 있습니다"; exit 1
+          fi
+          test -f dist/index.html
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # android-actions/setup-android@v3 는 2026-11 현재 러너에서 실패합니다(build-store.yml 과 같은 방식).
+      - name: Android SDK (러너에 들어 있는 것 사용)
+        run: |
+          if [ -z "$ANDROID_HOME" ] || [ ! -d "$ANDROID_HOME" ]; then
+            export ANDROID_HOME="$HOME/android-sdk"
+            mkdir -p "$ANDROID_HOME/cmdline-tools"
+            curl -sSL -o /tmp/clt.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+            unzip -q /tmp/clt.zip -d "$ANDROID_HOME/cmdline-tools"
+            mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+          fi
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKM" || SDKM="$(ls -d $ANDROID_HOME/cmdline-tools/*/bin/sdkmanager | tail -1)"
+          echo "sdkmanager: $SDKM"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "build-tools;36.0.0" "platforms;android-36"
+
+      - name: Setup Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Signing key cache (실행마다 같은 서명)
+        uses: actions/cache@v4
+        with:
+          path: ~/kata-preview-key
+          key: kata-preview-debug-keystore-v1
+
+      - name: Signing key
+        env:
+          PREVIEW_KEYSTORE_BASE64: ${{ secrets.PREVIEW_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p "$HOME/kata-preview-key"
+          KS="$HOME/kata-preview-key/preview.jks"
+          if [ -n "$PREVIEW_KEYSTORE_BASE64" ]; then
+            echo "$PREVIEW_KEYSTORE_BASE64" | base64 -d > "$KS"
+            echo "서명 키: 비밀값 PREVIEW_KEYSTORE_BASE64"
+          elif [ -f "$KS" ]; then
+            echo "서명 키: 캐시에 있던 키"
+          else
+            keytool -genkeypair -keystore "$KS" -storepass android -alias kata-preview -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=Kata kata Preview,O=Naruve Studio,C=KR'
+            echo "서명 키: 새로 만듦 (이번 APK 는 이전 미리보기 위에 덮어 설치되지 않을 수 있음)"
+          fi
+          echo "PREVIEW_KEYSTORE=$KS" >> "$GITHUB_ENV"
+
+      - name: App icons (관리자판과 같은 아이콘)
+        run: |
+          sudo apt-get install -y imagemagick -q
+          test -f public/icon-512x512.png || { echo "public/icon-512x512.png 이 없습니다"; exit 1; }
+          test -f public/icon-foreground-432.png || { echo "public/icon-foreground-432.png 이 없습니다"; exit 1; }
+          for d in mdpi:48:108 hdpi:72:162 xhdpi:96:216 xxhdpi:144:324 xxxhdpi:192:432; do
+            n=${d%%:*}; rest=${d#*:}; s=${rest%%:*}; f=${rest#*:}
+            mkdir -p app/src/main/res/mipmap-$n
+            convert public/icon-512x512.png -resize ${s}x${s} app/src/main/res/mipmap-$n/ic_launcher.png
+            convert public/icon-foreground-432.png -resize ${f}x${f} app/src/main/res/mipmap-$n/ic_launcher_foreground.png
+          done
+          mkdir -p app/src/main/res/mipmap-anydpi-v26 app/src/main/res/values
+          # 배경은 반드시 불투명 (투명이면 삼성 런처가 검게 칠함 — CLAUDE.md 금지 사항)
+          cat > app/src/main/res/values/ic_launcher_background.xml << 'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_launcher_background">#37C0D2</color>
+          </resources>
+          XML
+          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ic_launcher_background" />
+              <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+          </adaptive-icon>
+          XML
+
+      - name: Web files into APK assets
+        run: |
+          mkdir -p app/src/main/assets
+          cp -r dist/. app/src/main/assets/
+          # 점으로 시작하는 폴더는 APK 에 들어가지 않습니다(aapt 무시 규칙). 미리보기에는 필요 없습니다.
+          rm -rf app/src/main/assets/.well-known
+          echo "assets: $(find app/src/main/assets -type f | wc -l) 개, $(du -sh app/src/main/assets | cut -f1)"
+
+      - name: Create preview Android project
+        run: |
+          mkdir -p app/src/main/java/app/naruve/katakata/preview app/src/main/res/values
+
+          cat > settings.gradle << 'GRADLE'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "KataKataPreview"
+          include ':app'
+          GRADLE
+
+          cat > build.gradle << 'GRADLE'
+          plugins {
+              id 'com.android.application' version '8.13.0' apply false
+          }
+          GRADLE
+
+          cat > gradle.properties << 'GRADLE'
+          android.useAndroidX=true
+          org.gradle.jvmargs=-Xmx3072m
+          GRADLE
+
+          cat > app/build.gradle << 'GRADLE'
+          plugins {
+              id 'com.android.application'
+          }
+
+          def runNumber = System.getenv('GITHUB_RUN_NUMBER')
+          def appVersionCode = runNumber ? runNumber.toInteger() : 1
+          def ksPath = System.getenv('PREVIEW_KEYSTORE')
+
+          android {
+              namespace 'app.naruve.katakata.preview'
+              compileSdk 36
+              defaultConfig {
+                  applicationId 'app.naruve.katakata.preview'
+                  minSdk 24
+                  targetSdk 36
+                  versionCode appVersionCode
+                  versionName '0.9.' + appVersionCode + '-preview'
+              }
+              buildFeatures {
+                  buildConfig true
+              }
+              signingConfigs {
+                  preview {
+                      storeFile file(ksPath)
+                      storePassword 'android'
+                      keyAlias 'kata-preview'
+                      keyPassword 'android'
+                  }
+              }
+              buildTypes {
+                  debug {
+                      signingConfig signingConfigs.preview
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.7.0'
+              implementation 'androidx.core:core:1.13.1'
+              implementation 'androidx.activity:activity:1.9.3'
+              implementation 'androidx.webkit:webkit:1.12.1'
+          }
+          GRADLE
+
+          cat > app/src/main/AndroidManifest.xml << 'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+              <queries>
+                  <intent>
+                      <action android:name="android.speech.RecognitionService" />
+                  </intent>
+              </queries>
+              <application
+                  android:allowBackup="false"
+                  android:label="@string/app_name"
+                  android:icon="@mipmap/ic_launcher"
+                  android:roundIcon="@mipmap/ic_launcher"
+                  android:usesCleartextTraffic="false"
+                  android:enableOnBackInvokedCallback="true"
+                  android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:windowSoftInputMode="adjustResize"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|screenLayout|smallestScreenSize|density|layoutDirection|uiMode">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          XML
+
+          cat > app/src/main/res/values/strings.xml << 'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">Kata kata 미리보기</string>
+          </resources>
+          XML
+
+          cat > app/src/main/java/app/naruve/katakata/preview/MainActivity.java << 'JAVA'
+          package app.naruve.katakata.preview;
+
+          import android.Manifest;
+          import android.content.ContentValues;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.graphics.Color;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.os.Environment;
+          import android.provider.MediaStore;
+          import android.util.Base64;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.PermissionRequest;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebResourceResponse;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.widget.FrameLayout;
+          import android.widget.Toast;
+
+          import androidx.activity.OnBackPressedCallback;
+          import androidx.annotation.NonNull;
+          import androidx.annotation.Nullable;
+          import androidx.appcompat.app.AppCompatActivity;
+          import androidx.core.graphics.Insets;
+          import androidx.core.view.ViewCompat;
+          import androidx.core.view.WindowCompat;
+          import androidx.core.view.WindowInsetsCompat;
+          import androidx.core.view.WindowInsetsControllerCompat;
+          import androidx.webkit.WebViewAssetLoader;
+
+          import org.json.JSONObject;
+
+          import java.io.ByteArrayInputStream;
+          import java.io.File;
+          import java.io.FileOutputStream;
+          import java.io.IOException;
+          import java.io.InputStream;
+          import java.io.OutputStream;
+          import java.util.HashMap;
+          import java.util.Map;
+
+          public class MainActivity extends AppCompatActivity {
+
+              // 웹 파일은 APK 안(assets)에 있고, 이 주소로 엽니다. 지금 쓰는 앱(cura4world.github.io)과
+              // 출처가 달라 저장 데이터가 섞이지 않습니다.
+              private static final String ASSET_HOST = "appassets.androidplatform.net";
+              private static final String APP_BASE = "https://" + ASSET_HOST + "/idkr-buddy/";
+              private static final String WEB_BASE = "https://cura4world.github.io/idkr-buddy/";
+              private static final int FILE_CHOOSER_REQUEST = 1001;
+              private static final int MIC_REQUEST = 1002;
+
+              private static final Map<String, String> MIME = new HashMap<>();
+              static {
+                  MIME.put("html", "text/html");
+                  MIME.put("htm", "text/html");
+                  MIME.put("js", "text/javascript");
+                  MIME.put("mjs", "text/javascript");
+                  MIME.put("css", "text/css");
+                  MIME.put("json", "application/json");
+                  MIME.put("webmanifest", "application/manifest+json");
+                  MIME.put("map", "application/json");
+                  MIME.put("txt", "text/plain");
+                  MIME.put("xml", "application/xml");
+                  MIME.put("svg", "image/svg+xml");
+                  MIME.put("png", "image/png");
+                  MIME.put("jpg", "image/jpeg");
+                  MIME.put("jpeg", "image/jpeg");
+                  MIME.put("gif", "image/gif");
+                  MIME.put("webp", "image/webp");
+                  MIME.put("ico", "image/x-icon");
+                  MIME.put("woff2", "font/woff2");
+                  MIME.put("woff", "font/woff");
+                  MIME.put("ttf", "font/ttf");
+                  MIME.put("otf", "font/otf");
+                  MIME.put("mp3", "audio/mpeg");
+                  MIME.put("wav", "audio/wav");
+                  MIME.put("ogg", "audio/ogg");
+                  MIME.put("m4a", "audio/mp4");
+                  MIME.put("mp4", "video/mp4");
+                  MIME.put("wasm", "application/wasm");
+                  MIME.put("pdf", "application/pdf");
+              }
+
+              private WebView webView;
+              private WebViewAssetLoader assetLoader;
+              private ValueCallback<Uri[]> fileCallback;
+              private PermissionRequest pendingPermissionRequest;
+
+              // ── 웹으로 결과 보내기 (항상 UI 스레드에서) ─────────────
+              private void callJs(final String fn, final String jsonArg) {
+                  final String js = "window." + fn + " && window." + fn + "(" + jsonArg + ")";
+                  runOnUiThread(new Runnable() {
+                      @Override
+                      public void run() {
+                          if (webView != null) {
+                              webView.evaluateJavascript(js, null);
+                          }
+                      }
+                  });
+              }
+
+              private void toast(final String message) {
+                  runOnUiThread(new Runnable() {
+                      @Override
+                      public void run() {
+                          Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+                      }
+                  });
+              }
+
+              // ── assets 에서 웹 파일 꺼내 주기 (SPA: 없는 화면 주소는 index.html) ──
+              private static String extOf(String path) {
+                  int slash = path.lastIndexOf('/');
+                  int dot = path.lastIndexOf('.');
+                  if (dot < 0 || dot < slash) return "";
+                  return path.substring(dot + 1).toLowerCase();
+              }
+
+              private static String textEncoding(String mime) {
+                  if (mime.startsWith("text/") || mime.equals("application/json")
+                          || mime.equals("application/manifest+json") || mime.equals("application/xml")
+                          || mime.equals("image/svg+xml")) {
+                      return "UTF-8";
+                  }
+                  return null;
+              }
+
+              @Nullable
+              private InputStream openAsset(String path) {
+                  try {
+                      return getAssets().open(path);
+                  } catch (IOException e) {
+                      return null;
+                  }
+              }
+
+              private static WebResourceResponse notFound() {
+                  return new WebResourceResponse("text/plain", "UTF-8", 404, "Not Found",
+                      new HashMap<String, String>(), new ByteArrayInputStream(new byte[0]));
+              }
+
+              private static WebResourceResponse ok(String mime, InputStream in) {
+                  Map<String, String> headers = new HashMap<>();
+                  headers.put("Cache-Control", "no-cache");
+                  return new WebResourceResponse(mime, textEncoding(mime), 200, "OK", headers, in);
+              }
+
+              private class SpaAssetHandler implements WebViewAssetLoader.PathHandler {
+                  @Nullable
+                  @Override
+                  public WebResourceResponse handle(@NonNull String path) {
+                      String p = path;
+                      int cut = p.indexOf('?');
+                      if (cut >= 0) p = p.substring(0, cut);
+                      cut = p.indexOf('#');
+                      if (cut >= 0) p = p.substring(0, cut);
+                      while (p.startsWith("/")) p = p.substring(1);
+                      if (p.contains("..")) return notFound();
+                      if (p.length() == 0 || p.endsWith("/")) p = p + "index.html";
+                      String ext = extOf(p);
+                      InputStream in = openAsset(p);
+                      if (in != null) {
+                          String mime = MIME.get(ext);
+                          return ok(mime != null ? mime : "application/octet-stream", in);
+                      }
+                      // 없는 정적 파일(js·css·그림 등)은 404. 그 밖의 주소는 앱 화면이므로 index.html.
+                      if (ext.length() > 0 && !ext.equals("html") && MIME.containsKey(ext)) return notFound();
+                      InputStream index = openAsset("index.html");
+                      if (index == null) return notFound();
+                      return ok("text/html", index);
+                  }
+              }
+
+              // ── KataStore: "나는 스토어 앱" (미리보기도 공개판으로 동작) ──
+              private class StoreBridge {
+                  @JavascriptInterface
+                  public String version() {
+                      return BuildConfig.VERSION_NAME;
+                  }
+
+                  @JavascriptInterface
+                  public boolean isPreview() {
+                      return true;
+                  }
+              }
+
+              // ── KataAuth / KataBilling: 미리보기에서는 쓰지 않습니다 (언제나 PREVIEW 오류) ──
+              private void sendAuth(boolean ok, String idToken, String error) {
+                  try {
+                      JSONObject o = new JSONObject();
+                      o.put("ok", ok);
+                      if (idToken != null) o.put("idToken", idToken);
+                      if (error != null) o.put("error", error);
+                      callJs("__kataAuthResult", o.toString());
+                  } catch (Exception e) {
+                      callJs("__kataAuthResult", "{ok:false,error:'FAILED'}");
+                  }
+              }
+
+              private class AuthBridge {
+                  @JavascriptInterface
+                  public void signIn(final String nonce) {
+                      sendAuth(false, null, "PREVIEW");
+                  }
+
+                  @JavascriptInterface
+                  public void signOut() {
+                  }
+              }
+
+              private void emitBillingSimple(String type, String code) {
+                  try {
+                      JSONObject o = new JSONObject();
+                      o.put("type", type);
+                      if (code != null) o.put("code", code);
+                      callJs("__kataBillingEvent", o.toString());
+                  } catch (Exception ignored) {
+                  }
+              }
+
+              private class BillingBridge {
+                  @JavascriptInterface
+                  public void query(final String idsJson) {
+                      emitBillingSimple("error", "PREVIEW");
+                  }
+
+                  @JavascriptInterface
+                  public void purchase(final String productId, final String offerToken, final String accountId) {
+                      emitBillingSimple("error", "PREVIEW");
+                  }
+
+                  @JavascriptInterface
+                  public void restore() {
+                      emitBillingSimple("error", "PREVIEW");
+                  }
+
+                  @JavascriptInterface
+                  public void manage(final String productId) {
+                      toast("미리보기에서는 구독 관리를 열 수 없습니다");
+                  }
+              }
+
+              // ── AndroidFile: 다운로드 폴더에 저장 ────────────────────
+              // 안드로이드 10 이상은 MediaStore(권한 필요 없음), 그 아래는 앱 전용 다운로드 폴더.
+              private class FileBridge {
+                  @JavascriptInterface
+                  public String save(String name, String mime, String base64) {
+                      try {
+                          byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+                          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                              ContentValues v = new ContentValues();
+                              v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+                              v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+                              v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+                              Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                              if (uri == null) return "FAIL";
+                              OutputStream out = getContentResolver().openOutputStream(uri);
+                              if (out == null) return "FAIL";
+                              try {
+                                  out.write(bytes);
+                                  out.flush();
+                              } finally {
+                                  out.close();
+                              }
+                          } else {
+                              File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                              if (dir == null) return "FAIL";
+                              if (!dir.exists()) dir.mkdirs();
+                              FileOutputStream out = new FileOutputStream(new File(dir, name));
+                              try {
+                                  out.write(bytes);
+                                  out.flush();
+                              } finally {
+                                  out.close();
+                              }
+                          }
+                          return "OK";
+                      } catch (Exception e) {
+                          return "FAIL";
+                      }
+                  }
+              }
+
+              private void openExternal(String url) {
+                  try {
+                      startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                  } catch (Exception e) {
+                      toast("링크를 열 앱이 없습니다");
+                  }
+              }
+
+              // 앱 화면은 웹뷰 안에서, 정책 페이지(.html)와 바깥 링크는 브라우저로 엽니다.
+              private boolean isInAppUrl(String url) {
+                  if (url == null || !url.startsWith(APP_BASE)) return false;
+                  return !pathOf(url).endsWith(".html");
+              }
+
+              private static String pathOf(String url) {
+                  String path = url.substring(APP_BASE.length());
+                  int q = path.indexOf('?');
+                  if (q >= 0) path = path.substring(0, q);
+                  int h = path.indexOf('#');
+                  if (h >= 0) path = path.substring(0, h);
+                  return path;
+              }
+
+              @Override
+              public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+                  if (requestCode != MIC_REQUEST) return;
+                  PermissionRequest req = pendingPermissionRequest;
+                  pendingPermissionRequest = null;
+                  if (req == null) return;
+                  boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                  if (granted) {
+                      req.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                  } else {
+                      req.deny();
+                  }
+              }
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  assetLoader = new WebViewAssetLoader.Builder()
+                      .setDomain(ASSET_HOST)
+                      .addPathHandler("/idkr-buddy/", new SpaAssetHandler())
+                      .build();
+
+                  // 안드로이드 15(타깃 35)부터 화면이 상단바·하단바 뒤까지 그려집니다.
+                  // 웹뷰를 감싼 틀에 시스템 바·키보드만큼 여백을 줘서 겹치지 않게 합니다.
+                  WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+                  FrameLayout root = new FrameLayout(this);
+                  root.setBackgroundColor(Color.parseColor("#F0F2F4"));
+                  ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+                      Insets b = insets.getInsets(WindowInsetsCompat.Type.systemBars()
+                          | WindowInsetsCompat.Type.displayCutout()
+                          | WindowInsetsCompat.Type.ime());
+                      v.setPadding(b.left, b.top, b.right, b.bottom);
+                      return WindowInsetsCompat.CONSUMED;
+                  });
+                  WindowInsetsControllerCompat bars = WindowCompat.getInsetsController(getWindow(), root);
+                  bars.setAppearanceLightStatusBars(true);
+                  bars.setAppearanceLightNavigationBars(true);
+
+                  // 검사용이므로 PC 크롬(chrome://inspect)에서 들여다볼 수 있게 둡니다.
+                  WebView.setWebContentsDebuggingEnabled(true);
+
+                  webView = new WebView(this);
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setAllowFileAccess(false);
+                  settings.setAllowContentAccess(true);
+                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setUserAgentString(settings.getUserAgentString()
+                      + " KataStore/" + BuildConfig.VERSION_NAME + " KataPreview");
+
+                  // 폰 내장 음성(AndroidTTS)은 넣지 않습니다 — 웹이 Gemini 음성으로 대신합니다.
+                  webView.addJavascriptInterface(new StoreBridge(), "KataStore");
+                  webView.addJavascriptInterface(new AuthBridge(), "KataAuth");
+                  webView.addJavascriptInterface(new BillingBridge(), "KataBilling");
+                  webView.addJavascriptInterface(new FileBridge(), "AndroidFile");
+
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                          return assetLoader.shouldInterceptRequest(request.getUrl());
+                      }
+
+                      @Override
+                      public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                          String url = request.getUrl().toString();
+                          if (isInAppUrl(url)) return false;
+                          // 앱 주소의 정책 페이지(.html)는 공개 웹 주소로 바꿔 브라우저에서 엽니다.
+                          if (url.startsWith(APP_BASE)) {
+                              openExternal(WEB_BASE + pathOf(url));
+                              return true;
+                          }
+                          openExternal(url);
+                          return true;
+                      }
+                  });
+
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> filePathCallback,
+                              FileChooserParams fileChooserParams) {
+                          if (fileCallback != null) fileCallback.onReceiveValue(null);
+                          fileCallback = filePathCallback;
+                          try {
+                              startActivityForResult(fileChooserParams.createIntent(), FILE_CHOOSER_REQUEST);
+                          } catch (Exception e) {
+                              fileCallback = null;
+                              return false;
+                          }
+                          return true;
+                      }
+
+                      @Override
+                      public void onPermissionRequest(final PermissionRequest request) {
+                          runOnUiThread(new Runnable() {
+                              @Override
+                              public void run() {
+                                  boolean wantsAudio = false;
+                                  for (String r : request.getResources()) {
+                                      if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) wantsAudio = true;
+                                  }
+                                  if (!wantsAudio) {
+                                      request.deny();
+                                      return;
+                                  }
+                                  if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                      request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                                  } else {
+                                      pendingPermissionRequest = request;
+                                      requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_REQUEST);
+                                  }
+                              }
+                          });
+                      }
+                  });
+
+                  // 예측형 뒤로가기(타깃 36): onBackPressed 대신 디스패처로 받습니다.
+                  getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+                      @Override
+                      public void handleOnBackPressed() {
+                          if (webView != null && webView.canGoBack()) {
+                              webView.goBack();
+                          } else {
+                              // 첫 화면에서는 앱을 끝내지 않고 뒤로 보냅니다.
+                              moveTaskToBack(true);
+                          }
+                      }
+                  });
+
+                  root.addView(webView, new FrameLayout.LayoutParams(
+                      FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+                  setContentView(root);
+
+                  if (savedInstanceState != null) {
+                      webView.restoreState(savedInstanceState);
+                  } else {
+                      webView.loadUrl(APP_BASE);
+                  }
+              }
+
+              @Override
+              protected void onSaveInstanceState(@NonNull Bundle outState) {
+                  super.onSaveInstanceState(outState);
+                  if (webView != null) webView.saveState(outState);
+              }
+
+              @Override
+              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+                  if (requestCode != FILE_CHOOSER_REQUEST || fileCallback == null) return;
+                  Uri[] results = null;
+                  if (resultCode == RESULT_OK && data != null && data.getDataString() != null) {
+                      results = new Uri[]{Uri.parse(data.getDataString())};
+                  }
+                  fileCallback.onReceiveValue(results);
+                  fileCallback = null;
+              }
+          }
+          JAVA
+
+      - name: Build debug APK
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
+          ls -la app/build/outputs/apk/debug/
+
+      - name: 실패하면 오류를 주석으로 남기기
+        if: failure()
+        run: |
+          if [ -f build.log ]; then
+            ERR=$(grep -E "error:|What went wrong|Could not|e: |FAILURE" build.log | head -60 | sed 's/%/%25/g' | tr '\n' '\r' | sed 's/\r/%0A/g')
+            echo "::error title=Preview build failed::${ERR}"
+          fi
+
+      - name: Publish prerelease (preview-latest)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk kata-kata-preview.apk
+          SUBJ=$(git log -1 --format=%s)
+          {
+            echo "출시 전 검사용 미리보기 APK (app.naruve.katakata.preview)"
+            echo ""
+            echo "- 커밋: ${PV_SHA} (${GITHUB_REF_NAME})"
+            echo "- 커밋 시각: ${PV_COMMIT_TIME} KST"
+            echo "- 빌드 시각: ${PV_BUILD_TIME} KST · 실행 #${GITHUB_RUN_NUMBER}"
+            echo "- 마지막 커밋: ${SUBJ}"
+            echo ""
+            echo "지금 쓰는 Kata kata 앱과 데이터가 따로입니다. 설치가 막히면 폰에서 미리보기 앱을 지우고 다시 설치하세요."
+          } > release-notes.md
+          gh release delete preview-latest --yes --cleanup-tag || true
+          gh api -X DELETE "repos/${GH_REPO}/git/refs/tags/preview-latest" > /dev/null 2>&1 || true
+          gh release create preview-latest kata-kata-preview.apk \
+            --prerelease \
+            --target "${GITHUB_SHA}" \
+            --title "Kata kata 미리보기 · ${PV_SHA}" \
+            --notes-file release-notes.md
+          echo "받는 주소: https://github.com/${GH_REPO}/releases/download/preview-latest/kata-kata-preview.apk"
