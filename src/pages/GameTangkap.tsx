@@ -1,16 +1,28 @@
 // src/pages/GameTangkap.tsx
-// 단어 받기 (Tangkap). 위에서 떨어지는 인니어 단어의 뜻을 골라 받아냅니다 — 어휘 반응 속도 게임입니다.
+// 단어 받기 (Tangkap) — 시안 GM-Tangkap. 위에서 떨어지는 인니어 단어의 뜻을 골라 받아냅니다.
 // 재료는 전부 로컬(gamePool) — API 호출이 없습니다.
 // 목숨 3개를 다 쓰면 판이 끝나고, 그때 점수·단어 기록이 남습니다. 중간에 나가면 아무것도 남지 않습니다.
 // 낙하는 CSS transition 한 줄로 처리합니다 (rAF 물리 계산 없음).
+// 화면 조각(머리·상태 줄·결과)은 GameKit 하나를 같이 씁니다.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Heart, Star } from "lucide-react";
-import { goBackOr } from "@/lib/nav";
 import { drawPool } from "@/lib/gamePool";
 import type { PoolWord } from "@/lib/gamePool";
-import { medaliEngine, listRounds, dateKey, MEDALI_COLORS } from "@/lib/medali";
+import { medaliEngine, listRounds, dateKey } from "@/lib/medali";
+import {
+  G,
+  GameScreen,
+  GameLoading,
+  GameEmpty,
+  GameReady,
+  GameResult,
+  StatusRow,
+  Stat,
+  IconHeart,
+  speakWord,
+  stopSpeak,
+} from "@/components/game/GameKit";
+import type { ResultRow } from "@/components/game/GameKit";
 
 const MIN_WORDS = 6;          // 이보다 적으면 게임을 못 엽니다
 const LIVES = 3;
@@ -20,24 +32,8 @@ const FALL_MIN_MS = 3500;     // 아무리 빨라도 여기까지
 const CATCH_MS = 1000;        // 받았을 때 청록으로 켜 두는 시간 (발음을 듣는 동안)
 const MISS_MS = 1100;         // 놓쳤을 때 정답 뜻을 보여주는 시간
 const CHOICES = 3;            // 뜻 버튼 수
-
-/* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 (GameEja와 같은 방식) */
-const speak = (text: string) => {
-  const w = window as any;
-  if (w.AndroidTTS) {
-    try {
-      w.AndroidTTS.speak(text, "id-ID");
-      return;
-    } catch (e) { /* 폴백으로 넘어갑니다 */ }
-  }
-  try {
-    window.speechSynthesis?.cancel?.();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "id-ID";
-    u.rate = 0.95;
-    window.speechSynthesis?.speak?.(u);
-  } catch (e) { /* 지원하지 않는 기기는 조용히 넘어갑니다 */ }
-};
+const PILL_H = 48;
+const TRAIL_H = 46;
 
 type Phase = "loading" | "empty" | "ready" | "playing" | "done";
 
@@ -53,20 +49,14 @@ interface WordResult {
   meaning: string;
   source: PoolWord["source"];
   correct: boolean;           // 그 단어의 "첫 응답" 기준 (바닥에 닿으면 오답)
-  becameConfirmed: boolean;
 }
 
 interface RoundResult {
   score: number;
   bestBefore: number;
-  words: WordResult[];
+  rows: ResultRow[];
+  starWords: string[];
 }
-
-const SOURCE_LABEL: Record<PoolWord["source"], string> = {
-  wordbook: "단어장",
-  lookup: "찾아본",
-  seed: "기본",
-};
 
 const meaningKey = (m: string): string =>
   String(m || "").replace(new RegExp("\\s+", "g"), " ").trim().toLowerCase();
@@ -109,39 +99,42 @@ export function makeQuestion(
 }
 
 // 뜻 버튼 색. 받았을 때는 누른 버튼이 청록으로 켜지고,
-// 놓쳤을 때는 누른 버튼이 붉게·정답 버튼이 초록으로 함께 켜집니다(바닥에 닿았으면 정답만).
-export function choiceClass(
+// 놓쳤을 때는 누른 버튼이 분홍·정답 버튼이 초록으로 함께 켜집니다(바닥에 닿았으면 정답만).
+export function choiceStyle(
   choice: string,
   truth: string,
   picked: string | null,
   caught: boolean,
   revealing: boolean
-): string {
+): React.CSSProperties {
+  const base: React.CSSProperties = { background: "#FFFFFF", border: "1px solid " + G.line, color: G.text };
   if (caught) {
-    return choice === picked
-      ? "border-primary bg-primary text-white"
-      : "border-border bg-card text-foreground";
+    return choice === picked ? { background: G.teal, border: "1px solid " + G.teal, color: "#FFFFFF" } : base;
   }
   if (revealing) {
     if (picked && choice === picked && choice !== truth) {
-      return "border-destructive bg-destructive/15 text-destructive";
+      return { background: G.badBg, border: "1px solid " + G.badBd, color: G.text };
     }
-    if (choice === truth) return "border-emerald-500 bg-emerald-500/15 text-foreground";
-    return "border-border bg-card text-foreground";
+    if (choice === truth) return { background: G.okBg, border: "1px solid " + G.okBd, color: G.text };
   }
-  return "border-border bg-card text-foreground active:bg-muted/60";
+  return base;
 }
 
+const Pill = ({ text, tone }: { text: string; tone: "fall" | "caught" }) => (
+  <span
+    className="h-12 px-5 rounded-3xl flex items-center font-word text-[24px] font-semibold whitespace-nowrap"
+    style={
+      tone === "caught"
+        ? { background: G.teal, color: "#FFFFFF", boxShadow: "0 4px 14px rgba(16,40,50,0.10)" }
+        : { background: "#FFFFFF", color: G.deep, boxShadow: "0 4px 14px rgba(16,40,50,0.10)" }
+    }
+  >
+    {text}
+  </span>
+);
+
 // 위에서 아래로 떨어지는 단어. key를 바꿔 새로 마운트하면 처음부터 다시 떨어집니다.
-const Falling = ({
-  text,
-  ms,
-  onLand,
-}: {
-  text: string;
-  ms: number;
-  onLand: () => void;
-}) => {
+const Falling = ({ text, ms, onLand }: { text: string; ms: number; onLand: () => void }) => {
   const [down, setDown] = useState(false);
   useEffect(() => {
     // 마운트 직후 값이 바뀌어야 transition이 걸립니다 (rAF 2번)
@@ -160,51 +153,23 @@ const Falling = ({
         if (e.propertyName !== "top") return;
         onLand();
       }}
-      className="absolute font-word text-[1.375rem] leading-none text-foreground whitespace-nowrap"
+      className="absolute left-1/2 flex flex-col items-center"
       style={{
-        left: "50%",
         transform: "translateX(-50%)",
-        top: down ? "calc(100% - 2.25rem)" : "0.25rem",
+        top: down ? "calc(100% - " + (TRAIL_H + PILL_H + 6) + "px)" : -TRAIL_H + 8 + "px",
         transition: "top " + ms + "ms linear",
       }}
     >
-      {text}
-    </span>
-  );
-};
-
-// "+3" 같은 점수 표시가 위로 떠오르며 사라집니다. (소리 없음)
-const FloatPoint = ({ text }: { text: string }) => {
-  const [on, setOn] = useState(false);
-  useEffect(() => {
-    let inner = 0;
-    const outer = requestAnimationFrame(() => {
-      inner = requestAnimationFrame(() => setOn(true));
-    });
-    return () => {
-      cancelAnimationFrame(outer);
-      if (inner) cancelAnimationFrame(inner);
-    };
-  }, []);
-  return (
-    <span
-      className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-1 font-gothic text-sm font-semibold"
-      style={{
-        color: MEDALI_COLORS.emas,
-        opacity: on ? 0 : 1,
-        transform: on ? "translate(-50%, -12px)" : "translate(-50%, 0)",
-        transition: "opacity 1s linear, transform 1s ease-out",
-      }}
-    >
-      {text}
+      <span
+        className="w-0.5 rounded-[1px]"
+        style={{ height: TRAIL_H, background: "linear-gradient(rgba(16,75,96,0), rgba(16,75,96,0.18))" }}
+      />
+      <Pill text={text} tone="fall" />
     </span>
   );
 };
 
 const GameTangkap = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
   const [phase, setPhase] = useState<Phase>("loading");
   const [question, setQuestion] = useState<Question | null>(null);
   const [seq, setSeq] = useState(0);              // 낙하 애니메이션을 새로 시작시키는 열쇠
@@ -229,6 +194,7 @@ const GameTangkap = () => {
   const lockedRef = useRef(false);
   const stepTimerRef = useRef<number | null>(null);
   const floatTimerRef = useRef<number | null>(null);
+  const aliveRef = useRef(true);
 
   const clearStep = () => {
     if (stepTimerRef.current) {
@@ -260,7 +226,7 @@ const GameTangkap = () => {
     finishedRef.current = true;
     clearStep();
     // 점수 화면으로 넘어간 뒤 발음이 남아 울리지 않게 끊습니다
-    try { window.speechSynthesis?.cancel?.(); } catch (e) {}
+    stopSpeak();
 
     const words = Array.from(answeredRef.current.values());
     const finalScore = scoreRef.current;
@@ -270,15 +236,11 @@ const GameTangkap = () => {
     );
 
     const got = await medaliEngine.addPoints("game", 3);
-    if (got > 0) {
-      setGained(got);
-      setFloatOn(true);
-      floatTimerRef.current = window.setTimeout(() => setFloatOn(false), 1200);
-    }
 
+    const starWords: string[] = [];
     for (const w of words) {
       const r = await medaliEngine.recordWordResult(w.word, w.correct, w.source);
-      w.becameConfirmed = r.becameConfirmed;
+      if (r.becameConfirmed) starWords.push(w.word);
     }
 
     let bestBefore = 0;
@@ -299,7 +261,20 @@ const GameTangkap = () => {
       words: words.map((w) => ({ word: w.word, correct: w.correct, source: w.source })),
     });
 
-    setResult({ score: finalScore, bestBefore, words });
+    if (!aliveRef.current) return;
+    if (got > 0) {
+      setGained(got);
+      setFloatOn(true);
+      floatTimerRef.current = window.setTimeout(() => {
+        if (aliveRef.current) setFloatOn(false);
+      }, 1200);
+    }
+    setResult({
+      score: finalScore,
+      bestBefore,
+      rows: words.map((w) => ({ word: w.word, meaning: w.meaning, source: w.source, correct: w.correct })),
+      starWords,
+    });
     setPhase("done");
   }, []);
 
@@ -327,6 +302,7 @@ const GameTangkap = () => {
       setPhase("loading");
       drawPool(14, 6)
         .then((list) => {
+          if (!aliveRef.current) return;
           if (list.length < MIN_WORDS) {
             poolRef.current = [];
             setPhase("empty");
@@ -337,6 +313,7 @@ const GameTangkap = () => {
           else setPhase("ready");
         })
         .catch(() => {
+          if (!aliveRef.current) return;
           poolRef.current = [];
           setPhase("empty");
         });
@@ -366,10 +343,12 @@ const GameTangkap = () => {
 
   // 화면을 벗어날 때 남은 타이머 정리 (setState 없이 정리만)
   useEffect(() => {
+    aliveRef.current = true;
     return () => {
+      aliveRef.current = false;
       if (stepTimerRef.current) window.clearTimeout(stepTimerRef.current);
       if (floatTimerRef.current) window.clearTimeout(floatTimerRef.current);
-      try { window.speechSynthesis?.cancel?.(); } catch (e) {}
+      stopSpeak();
     };
   }, []);
 
@@ -379,13 +358,7 @@ const GameTangkap = () => {
     if (!p) return;
     const key = wordKey(q.word);
     if (answeredRef.current.has(key)) return;
-    answeredRef.current.set(key, {
-      word: p.word,
-      meaning: p.meaning,
-      source: p.source,
-      correct: ok,
-      becameConfirmed: false,
-    });
+    answeredRef.current.set(key, { word: p.word, meaning: p.meaning, source: p.source, correct: ok });
   };
 
   const loseLife = (q: Question) => {
@@ -393,7 +366,7 @@ const GameTangkap = () => {
     setLives(livesRef.current);
     setReveal(q.truth);
     stepTimerRef.current = window.setTimeout(() => {
-      if (finishedRef.current) return;
+      if (!aliveRef.current || finishedRef.current) return;
       if (livesRef.current <= 0) {
         finishRound();
         return;
@@ -416,9 +389,9 @@ const GameTangkap = () => {
       fallMsRef.current = Math.max(FALL_MIN_MS, fallMsRef.current - FALL_STEP_MS);
       setFallMs(fallMsRef.current);
       setCaught(true);
-      speak(q.word);   // 맞힌 단어의 발음을 들려줍니다 (점수와 무관)
+      speakWord(q.word, 0.95);   // 맞힌 단어의 발음을 들려줍니다 (점수와 무관)
       stepTimerRef.current = window.setTimeout(() => {
-        if (finishedRef.current) return;
+        if (!aliveRef.current || finishedRef.current) return;
         nextWord();
       }, CATCH_MS);
       return;
@@ -433,201 +406,87 @@ const GameTangkap = () => {
     loseLife(question);
   };
 
+  const hearts: number[] = [];
+  for (let i = 0; i < LIVES; i++) hearts.push(i);
+
   return (
-    <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-clip bg-background pb-9">
-      <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => goBackOr(navigate, location.key, "/permainan")}
-          className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
-          title="뒤로"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">
-          TANGKAP
-        </h1>
-      </header>
+    <GameScreen id="tangkap">
+      {phase === "loading" ? <GameLoading /> : null}
+      {phase === "empty" ? <GameEmpty text="단어가 아직 부족합니다" /> : null}
+      {phase === "ready" ? (
+        <GameReady
+          id="tangkap"
+          lines={["떨어지는 단어의 뜻을 골라 받으세요", "놓치면 하트가 하나 줄어듭니다 · 하트 세 개"]}
+          onStart={beginPlay}
+        />
+      ) : null}
 
-      <div className="px-4">
-        {phase === "loading" ? (
-          <p className="pt-16 text-center font-gothic text-[0.875rem] text-muted-foreground">
-            준비 중...
-          </p>
-        ) : null}
-
-        {phase === "empty" ? (
-          <div className="mt-6 rounded-2xl border border-border bg-card px-4 py-10 text-center">
-            <p className="text-[0.9375rem] text-foreground">단어가 아직 부족해요</p>
-            <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
-              사전에서 단어를 만나고 오세요
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate("/dictionary")}
-              className="mt-5 h-10 px-4 rounded-full bg-primary text-[0.8125rem] font-gothic font-medium text-white active:opacity-90"
-            >
-              사전으로 가기
-            </button>
-          </div>
-        ) : null}
-
-        {phase === "ready" ? (
-          <div className="mt-6 rounded-2xl border border-border bg-card px-4 py-10 text-center">
-            <p className="text-[0.9375rem] text-foreground">떨어지는 단어의 뜻을 골라 받아요</p>
-            <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
-              놓치면 하트가 하나 줄어요 · 하트 세 개
-            </p>
-            <button
-              type="button"
-              onClick={beginPlay}
-              className="mt-6 h-12 w-full max-w-[16rem] rounded-[13px] bg-primary text-[0.9375rem] font-medium text-white active:opacity-90"
-            >
-              시작
-            </button>
-          </div>
-        ) : null}
-
-        {phase === "playing" && question ? (
-          <div className="pt-3">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                {[0, 1, 2].map((i) => (
-                  <Heart
-                    key={i}
-                    size={15}
-                    color={i < lives ? MEDALI_COLORS.perunggu : "currentColor"}
-                    fill={i < lives ? MEDALI_COLORS.perunggu : "none"}
-                    className={i < lives ? "" : "text-muted-foreground/30"}
-                  />
+      {phase === "playing" && question ? (
+        <>
+          <StatusRow
+            left={
+              <span className="flex gap-1">
+                {hearts.map((i) => (
+                  <IconHeart key={i} on={i < lives} size={18} />
                 ))}
               </span>
-              <span className="font-gothic text-[0.75rem] text-muted-foreground">{score}개</span>
-            </div>
+            }
+            right={<Stat icon="check" label="받은 수" value={score} />}
+          />
 
-            {/* 낙하 영역 — 길수록 떨어지는 속도가 느리게 느껴집니다 */}
-            <div className="relative mt-2 h-[52dvh] overflow-hidden rounded-2xl border border-border bg-card">
-              {caught ? (
-                <span
-                  className="absolute left-1/2 top-1/2 font-word text-[1.5rem] leading-none text-primary"
-                  style={{ transform: "translate(-50%, -50%)" }}
-                >
-                  {question.word}
+          {/* 낙하 영역 — 화면 남는 높이를 다 씁니다 */}
+          <div
+            className="relative mt-2 flex-1 min-h-[260px] rounded-[20px] overflow-hidden"
+            style={{ background: "linear-gradient(#FFFFFF, #F6F8F9)", border: "1px solid " + G.tile }}
+          >
+            {caught ? (
+              <span className="absolute left-1/2 top-1/2" style={{ transform: "translate(-50%, -50%)" }}>
+                <Pill text={question.word} tone="caught" />
+              </span>
+            ) : reveal ? (
+              <span className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 px-4 text-center">
+                <Pill text={question.word} tone="fall" />
+                <span className="font-gothic text-[16px] font-semibold leading-snug break-keep" style={{ color: G.ok }}>
+                  {reveal}
                 </span>
-              ) : reveal ? (
-                <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
-                  <span className="font-word text-[1.25rem] leading-none text-foreground">
-                    {question.word}
-                  </span>
-                  <span className="font-gothic text-[0.875rem] leading-snug text-emerald-500 break-words">
-                    {reveal}
-                  </span>
-                </span>
-              ) : (
-                <Falling key={seq} text={question.word} ms={fallMs} onLand={handleLand} />
-              )}
-            </div>
-
-            {/* 뜻 버튼 — 탭한 순간 무엇이 맞고 틀렸는지 색으로 알려 줍니다 */}
-            <div className="mt-3 space-y-2">
-              {question.choices.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => handleChoice(c)}
-                  className={
-                    "w-full rounded-2xl border px-4 py-3 text-left font-gothic text-[0.9375rem] transition-colors " +
-                    choiceClass(c, question.truth, picked, caught, !!reveal)
-                  }
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
+              </span>
+            ) : (
+              <Falling key={seq} text={question.word} ms={fallMs} onLand={handleLand} />
+            )}
+            <span className="absolute left-0 right-0 bottom-0 h-1" style={{ background: G.track }} />
           </div>
-        ) : null}
 
-        {phase === "done" && result ? (
-          <div className="mt-4">
-            <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center">
-              <p className="relative inline-block font-word text-[1.375rem] font-medium leading-snug text-foreground">
-                <span className="tabular-nums text-primary">{result.score}</span>개 받았어요
-                {floatOn ? <FloatPoint text={"+" + gained} /> : null}
-              </p>
-              <p className="mt-2 font-gothic text-[0.8125rem] text-muted-foreground">
-                {result.bestBefore === 0 || result.score > result.bestBefore
-                  ? "최고 기록!"
-                  : "최고 " + result.bestBefore + "개"}
-              </p>
-            </div>
-
-            {result.words.some((w) => w.becameConfirmed) ? (
-              <div className="mt-3 rounded-2xl border border-border bg-card px-4 py-3.5">
-                <p className="flex items-center gap-1.5 font-gothic text-[0.75rem] font-semibold text-muted-foreground">
-                  <Star
-                    size={13}
-                    color={MEDALI_COLORS.emas}
-                    fill={MEDALI_COLORS.emas}
-                    className="shrink-0"
-                  />
-                  별이 된 단어
-                </p>
-                <p className="mt-1.5 font-word text-[0.9375rem] text-foreground break-words">
-                  {result.words
-                    .filter((w) => w.becameConfirmed)
-                    .map((w) => w.word)
-                    .join(", ")}
-                </p>
-              </div>
-            ) : null}
-
-            {result.words.length > 0 ? (
-              <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-card">
-                {result.words.map((w, i) => (
-                  <div
-                    key={w.word + i}
-                    className={
-                      "flex items-center gap-3 px-4 py-3 " +
-                      (i === result.words.length - 1 ? "" : "border-b border-border") +
-                      (w.correct ? "" : " opacity-50")
-                    }
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-word text-[0.9375rem] leading-tight text-foreground truncate">
-                        {w.word}
-                      </p>
-                      <p className="mt-0.5 text-[0.78125rem] text-muted-foreground truncate">
-                        {w.meaning}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-full border border-border px-2 py-0.5 font-gothic text-[0.6875rem] text-muted-foreground">
-                      {SOURCE_LABEL[w.source]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            <div className="mt-4 flex gap-2">
+          {/* 뜻 버튼 — 탭한 순간 무엇이 맞고 틀렸는지 색으로 알려 줍니다 */}
+          <div className="mt-3 flex flex-col gap-2">
+            {question.choices.map((c) => (
               <button
+                key={c}
                 type="button"
-                onClick={() => goBackOr(navigate, location.key, "/permainan")}
-                className="flex-1 h-11 rounded-[13px] border border-border text-[0.875rem] font-gothic text-foreground/80 active:bg-muted"
+                onClick={() => handleChoice(c)}
+                className="h-[54px] rounded-2xl box-border px-[18px] flex items-center text-left font-gothic text-[16px] font-medium"
+                style={{ ...choiceStyle(c, question.truth, picked, caught, !!reveal), transition: "background-color 120ms ease" }}
               >
-                게임방으로
+                <span className="truncate">{c}</span>
               </button>
-              <button
-                type="button"
-                onClick={() => loadPool(true)}
-                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-gothic font-medium text-white active:opacity-90"
-              >
-                한 판 더
-              </button>
-            </div>
+            ))}
           </div>
-        ) : null}
-      </div>
-    </div>
+        </>
+      ) : null}
+
+      {phase === "done" && result ? (
+        <GameResult
+          label="받은 단어"
+          value={result.score}
+          best={result.score > 0 && result.score > result.bestBefore}
+          bestText={result.bestBefore > 0 ? "최고 " + result.bestBefore + "개" : undefined}
+          gained={gained}
+          floatOn={floatOn}
+          starWords={result.starWords}
+          rows={result.rows}
+          onAgain={() => loadPool(true)}
+        />
+      ) : null}
+    </GameScreen>
   );
 };
 
