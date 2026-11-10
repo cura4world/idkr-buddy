@@ -11,7 +11,7 @@
 
 import { toast } from "sonner";
 import { MEMBER_BASE, memberHeaders } from "@/lib/member";
-import { PUBLIC_BASE, publicHeaders } from "@/lib/account";
+import { PUBLIC_BASE, publicHeaders, expireSession } from "@/lib/account";
 
 /**
  * 어떤 기능의 호출인지. 공개판 서버는 이 이름(x-kata-kind)별로 하루·한 달 한도를 셉니다.
@@ -48,6 +48,8 @@ export interface AiTarget {
   url: string;
   headers: Record<string, string>;
   viaProxy: boolean;
+  /** 공개판 서버(kata-public)를 거치는가 — 401·403 을 공개판 문구로 바꿀 때 씁니다. */
+  publicProxy?: boolean;
 }
 
 // 긴 읽기 한 편을 가리키는 값으로 보낼 수 있는 글자(서버 검사와 같음)
@@ -85,6 +87,7 @@ export function geminiTarget(model: string, apiKey: string, kind: AiKind, unit?:
     url: PUBLIC_BASE + "/ai/gemini/" + model + ":generateContent",
     headers,
     viaProxy: true,
+    publicProxy: true,
   };
 }
 
@@ -219,4 +222,21 @@ export async function handleQuotaResponse(res: Response, viaProxy: boolean): Pro
     }
   }
   return true;
+}
+
+/**
+ * 공개판 서버의 인증·허용 거절을 오류 코드로 바꿉니다. handleQuotaResponse 다음에 부르세요
+ * (Plus 필요 403 은 그쪽이 먼저 처리합니다). 공개판 서버 응답이 아니면 빈 문자열 — 관리자판·회원판은 예전 그대로.
+ *   401 (NO_SESSION 등)                         → "SESSION_EXPIRED" + 이 기기 세션을 지워 로그인 화면으로
+ *   403 (KIND_NOT_ALLOWED·MODEL_NOT_ALLOWED 등)  → "NOT_AVAILABLE"
+ * 화면은 aiErrors.ts 로 이 코드를 사용자 문장으로 바꿉니다.
+ */
+export function publicProxyError(res: Response, target: AiTarget): string {
+  if (!target.publicProxy) return "";
+  if (res.status === 401) {
+    expireSession();
+    return "SESSION_EXPIRED";
+  }
+  if (res.status === 403) return "NOT_AVAILABLE";
+  return "";
 }
