@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { updateWord, Word, deleteWord } from "@/lib/store";
 import { Trash2, X } from "lucide-react";
+import { useBackClose } from "@/hooks/useBackClose";
 
 interface Props {
   open: boolean;
@@ -55,6 +56,9 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
     setExampleMeaning(word.exampleMeaning || "");
     setConfirmDelete(false);
   }
+
+  // 폰의 뒤로가기는 이 창만 닫습니다(화면을 떠나지 않음)
+  useBackClose(open && !!word, () => onOpenChange(false));
 
   // 열려 있는 동안 뒤 배경 스크롤 잠금 + Escape로 닫기
   useEffect(() => {
