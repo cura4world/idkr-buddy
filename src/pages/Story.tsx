@@ -317,7 +317,9 @@ const Story = () => {
       openCard(rec);
     } catch (e: any) {
       const code = e?.message || "";
-      if (code === "RATE_LIMIT") toast("요청이 많습니다. 잠시 후 다시 시도해주세요");
+      // QUOTA_*: 오늘 불러올 이야기를 다 불러왔거나 Plus 기능 — 안내는 aiProxy 가 이미 띄웠습니다.
+      if (code.indexOf("QUOTA") === 0) { /* 겹쳐 띄우지 않음 */ }
+      else if (code === "RATE_LIMIT") toast("요청이 많습니다. 잠시 후 다시 시도해주세요");
       else if (code === "NO_API_KEY" || code === "INVALID_API_KEY") toast("API 키를 설정에서 확인해주세요");
       else toast("이야기 생성에 실패했습니다. 다시 시도해주세요");
     } finally {
