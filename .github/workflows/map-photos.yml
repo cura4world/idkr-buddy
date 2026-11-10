@@ -38,10 +38,12 @@ jobs:
         run: |
           set -o pipefail
           node scripts/build-map-photos.mjs 2>&1 | tee photo-build.log
-          REVIEW=$(find /tmp "${RUNNER_TEMP:-/tmp}" -maxdepth 2 -name 'map-photos-review.html' 2>/dev/null | head -1)
+          # find 는 읽을 수 없는 폴더가 있으면 0 이 아닌 값을 돌려줘, pipefail 아래에서 단계가 멈췄습니다(2026-11-11).
+          REVIEW=$(find /tmp -maxdepth 2 -name 'map-photos-review.html' 2>/dev/null | head -1 || true)
           if [ -n "$REVIEW" ]; then cp "$REVIEW" map-photos-review.html; fi
 
       - name: Review page (artifact)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: map-photos-review
