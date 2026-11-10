@@ -1,10 +1,12 @@
 // src/pages/PercakapanCategory.tsx
 // 카테고리 안의 회화집 목록 (/percakapan/c/:id).
 // 사용자가 만든 회화집만 이름 수정 / 삭제가 됩니다 (롱프레스 0.6초).
+// 시안: PC2-Scenes (한국어 제목 16px + 인니어 부제 12px, 01·02 번호, "8줄").
+// 공개판 무료: 기본 회화집은 잠기고(누르면 안내 + 구독 화면), 직접 만든 회화집은 계속 읽힙니다.
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { ArrowLeft, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Lock, X } from "lucide-react";
 import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import {
@@ -14,12 +16,22 @@ import {
   deleteCustomScene,
 } from "@/lib/percakapan";
 import type { PercakapanCategory, PercakapanScene } from "@/lib/percakapan";
+import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+
+const LOCK_TEXT = "회화집은 Plus 회원 기능입니다";
+const CARD_STYLE = { background: "#FFFFFF", borderRadius: 18, boxShadow: "0 1px 3px rgba(16,40,50,0.06)" };
 
 const PercakapanCategory = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
   const catId = params.id || "";
+  const plan = usePlan();
+
+  // 교회와 신앙은 관리자·Special Member 에게만 — 주소로 바로 들어와도 폴더 목록으로 돌려보냅니다.
+  useEffect(() => {
+    if (catId === "gereja" && !plan.staff) navigate("/percakapan", { replace: true });
+  }, [catId, plan.staff, navigate]);
 
   const [cat, setCat] = useState<PercakapanCategory | null>(null);
   const [scenes, setScenes] = useState<PercakapanScene[]>([]);
@@ -95,6 +107,11 @@ const PercakapanCategory = () => {
       firedRef.current = false;
       return;
     }
+    if (!plan.plus && !s.custom) {
+      toast(LOCK_TEXT);
+      navigate(PAYWALL_PATH);
+      return;
+    }
     navigate("/percakapan/" + s.id);
   };
 
@@ -144,21 +161,22 @@ const PercakapanCategory = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <span className="shrink-0 text-[1.125rem] leading-none">{cat ? cat.emoji : "💬"}</span>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-semibold leading-tight">
             {cat ? cat.title : "회화집"}
           </h1>
-          <p className="mt-0.5 truncate font-word text-[0.71875rem] text-muted-foreground">
+          <p className="mt-px truncate font-word text-[0.75rem]" style={{ color: "#646C72" }}>
             {cat ? cat.titleId : "Percakapan"}
           </p>
         </div>
       </header>
 
-      <div className="px-4 py-4">
+      <div className="px-4 pt-4 pb-6">
         {scenes.length > 0 ? (
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            {scenes.map((s, i) => (
+          <div className="overflow-hidden" style={CARD_STYLE}>
+            {scenes.map((s, i) => {
+              const locked = !plan.plus && !s.custom;
+              return (
               <button
                 key={s.id}
                 type="button"
@@ -171,31 +189,43 @@ const PercakapanCategory = () => {
                 onMouseUp={cancelLongPress}
                 onMouseLeave={cancelLongPress}
                 onContextMenu={(e) => e.preventDefault()}
-                className={
-                  "w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-muted/60 transition-colors " +
-                  (i === scenes.length - 1 ? "" : "border-b border-border")
-                }
+                className="w-full flex items-center gap-3 text-left active:bg-muted/60 transition-colors"
+                style={{
+                  padding: "13px 12px 13px 16px",
+                  borderBottom: i === scenes.length - 1 ? "0" : "1px solid #EEF1F3",
+                }}
               >
+                <span
+                  className="w-[26px] shrink-0 font-word text-[0.8125rem] font-semibold"
+                  style={{ color: "#9AA1A6" }}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
                 <div className="flex-1 min-w-0">
-                  <p className="flex items-center gap-1.5 text-[0.875rem] leading-tight text-foreground">
+                  <p className="flex items-center gap-1.5 text-[0.96875rem] leading-tight" style={{ color: "#1D1F1E" }}>
                     <span className="min-w-0 truncate">{s.title}</span>
                     {s.custom ? (
                       <span className="shrink-0 h-[5px] w-[5px] rounded-full bg-muted-foreground/45" />
                     ) : null}
                   </p>
-                  <p className="mt-0.5 font-word text-[0.71875rem] text-muted-foreground truncate">
+                  <p className="mt-0.5 font-word text-[0.78125rem] truncate" style={{ color: "#646C72" }}>
                     {s.titleId}
                   </p>
                 </div>
-                <span className="shrink-0 pl-2.5 font-word text-[0.78125rem] text-muted-foreground">
-                  {s.lines.length}문장
+                <span className="shrink-0 pl-1 font-gothic text-[0.75rem]" style={{ color: "#9AA1A6" }}>
+                  {s.lines.length}줄
                 </span>
-                <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
+                {locked ? (
+                  <Lock size={14} strokeWidth={2} className="shrink-0" style={{ color: "#B7BDC1" }} />
+                ) : (
+                  <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#B7BDC1" }} />
+                )}
               </button>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <div className="rounded-2xl border border-border bg-card px-4 py-10 text-center">
+          <div className="px-4 py-10 text-center" style={CARD_STYLE}>
             <p className="text-[0.9375rem] text-foreground">아직 회화집이 없습니다</p>
             <p className="mt-1 font-word text-[0.75rem] text-muted-foreground">Belum ada percakapan</p>
           </div>
