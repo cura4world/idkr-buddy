@@ -134,12 +134,14 @@ export function saveWords(words: Word[]) {
 // 팝업에서 Gemini 조회가 실패하면 뜻 칸에 이 문구를 넣는다.
 // 이 문구가 단어장에 "뜻"으로 저장되면 퀴즈·게임 보기로 튀어나오므로,
 // (1) 저장 단계에서 막고 (2) 예전에 저장된 것은 시작할 때 지운다.
-export const LOOKUP_FAIL_TEXT = "뜻을 불러오지 못했어요. 다시 탭해주세요";
-const LOOKUP_FAIL_HEAD = "뜻을 불러오지 못했어요";
+export const LOOKUP_FAIL_TEXT = "뜻을 불러오지 못했습니다. 다시 눌러 주세요";
+// 예전 문구("…못했어요")로 저장된 것도 알아봐야 하므로 둘 다 둔다 (2026-11 말투 통일).
+const LOOKUP_FAIL_HEADS = ["뜻을 불러오지 못했습니다", "뜻을 불러오지 못했어요"];
 
 // 빈 뜻은 실패로 보지 않는다 — CSV로 들어온 정상 단어를 지우면 안 되기 때문.
 export function isFailedMeaning(meaning: string): boolean {
-  return (meaning || "").trim().startsWith(LOOKUP_FAIL_HEAD);
+  const m = (meaning || "").trim();
+  return LOOKUP_FAIL_HEADS.some((h) => m.startsWith(h));
 }
 
 // 이번 실행에서 지운 단어들 (메인 화면이 한 번 읽어 가서 알려 준다)
