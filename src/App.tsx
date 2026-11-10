@@ -27,6 +27,8 @@ import InsightChristian from "./pages/InsightChristian";
 import InsightEthnic from "./pages/InsightEthnic";
 import InsightHistory from "./pages/InsightHistory";
 import InsightTips from "./pages/InsightTips";
+import InsightGate from "./pages/InsightGate";
+import PhotoCredits from "./pages/PhotoCredits";
 import Percakapan from "./pages/Percakapan";
 import PercakapanCategory from "./pages/PercakapanCategory";
 import PercakapanRead from "./pages/PercakapanRead";
@@ -95,14 +97,15 @@ const App = () => (
           <Route path="/sermon" element={<HiddenInPublic><Sermons /></HiddenInPublic>} />
           <Route path="/sermon/:id" element={<HiddenInPublic><SermonRead /></HiddenInPublic>} />
           <Route path="/plus" element={<Plus />} />
-          <Route path="/map" element={<IndoMap />} />
+          <Route path="/map" element={<InsightGate><IndoMap /></InsightGate>} />
           <Route path="/insight" element={<Insight />} />
-          <Route path="/insight/overview" element={<InsightOverview />} />
-          <Route path="/insight/religion" element={<InsightReligion />} />
+          <Route path="/insight/overview" element={<InsightGate><InsightOverview /></InsightGate>} />
+          <Route path="/insight/religion" element={<InsightGate><InsightReligion /></InsightGate>} />
           <Route path="/insight/christian" element={<HiddenInPublic><InsightChristian /></HiddenInPublic>} />
-          <Route path="/insight/ethnic" element={<InsightEthnic />} />
-          <Route path="/insight/history" element={<InsightHistory />} />
-          <Route path="/insight/tips" element={<InsightTips />} />
+          <Route path="/insight/ethnic" element={<InsightGate><InsightEthnic /></InsightGate>} />
+          <Route path="/insight/history" element={<InsightGate><InsightHistory /></InsightGate>} />
+          <Route path="/insight/tips" element={<InsightGate><InsightTips /></InsightGate>} />
+          <Route path="/about/photos" element={<PhotoCredits />} />
           <Route path="/percakapan" element={<Percakapan />} />
           <Route path="/percakapan/c/:id" element={<PercakapanCategory />} />
           <Route path="/percakapan/:id" element={<PercakapanRead />} />
