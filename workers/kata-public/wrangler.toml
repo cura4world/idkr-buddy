@@ -15,7 +15,9 @@ compatibility_date = "2026-11-01"
 GOOGLE_WEB_CLIENT_ID = ""
 PLAY_PACKAGE = "app.naruve.katakata"
 PRODUCT_IDS = "plus"
-# 한도를 바꾸려면 이 값만 고칩니다 (재논의 후). 비워 두면 worker.js 의 잠정값을 씁니다.
+# 한도를 바꾸려면 이 값만 고칩니다. 비워 두면 worker.js 의 DEFAULT_LIMITS(결정 문서 표)를 씁니다.
+# 적은 칸만 바뀝니다. 예: {"plus":{"story":{"day":6,"month":70}},"trial":{"longread":{"total":20}},"free":{"tts":0}}
+#   숫자 하나는 하루 상한, null 은 그 기간 제한 없음, "locked":true 는 그 등급에서 잠금.
 LIMITS_JSON = ""
 
 [[kv_namespaces]]
