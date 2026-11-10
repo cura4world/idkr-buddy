@@ -98,6 +98,25 @@ const BAD = new RegExp(
     "|stamp|perangko|prangko|banknote|uang kertas|rupiah|bank indonesia|volksschool|school|sekolah|portrait|potret",
   "i"
 );
+// 2026-11-11 세 번째 실행 확인: 식민지 시대 인물·군인·총독 사진, 회화·판화, 도시 핀의 교회 건물이 섞여 들어와 거릅니다.
+// (교회 사진이 필요한 지점은 위 PICK 에 직접 적습니다.)
+const BAD2 = new RegExp(
+  "gouverneur|europese|koppensnellers|onderworpen|militairen|koning willem|lijfwacht|radja|vorstin|hofdames|secretaris|" +
+    "olieverfschildering|prent |schildering|painting|kerk|church|catholic|katolik|protestant|pastorie|christelijke|missiona|piggy bank",
+  "i"
+);
+const ARCHIVE = new RegExp("tropenmuseum|kitlv|wereldculturen", "i");
+
+// 원본(수 MB)이 아니라 폭 500px 썸네일을 씁니다. 위키미디어 표준 썸네일 폭(500)이고, 폰 시트 두 칸에 충분합니다.
+// 원본이 500px 보다 작으면 원본을 그대로 씁니다.
+function sizedThumb(i) {
+  const orig = String(i.thumb || "").split("?")[0];
+  const base = "https://upload.wikimedia.org/wikipedia/commons/";
+  if (!(i.width > 500) || orig.indexOf(base) !== 0 || orig.indexOf(base + "thumb/") === 0) return orig;
+  const rest = orig.slice(base.length); // a/a7/Name.jpg
+  const name = rest.slice(rest.lastIndexOf("/") + 1);
+  return base + "thumb/" + rest + "/500px-" + name;
+}
 const PHOTO = new RegExp("\\.(jpe?g)$", "i");
 const FREE = new RegExp("^(cc[ -]by|cc0|public domain|pd\\b|pd-)", "i");
 const TAG = new RegExp("<[^>]*>", "g");
@@ -249,7 +268,7 @@ function usable(info) {
   if (info.mime !== "image/jpeg") return false;
   if (info.width < 480 || info.height < 320) return false;
   if (!FREE.test(info.license)) return false;
-  if (BAD.test(info.file)) return false;
+  if (BAD.test(info.file) || BAD2.test(info.file)) return false;
   if (info.thumb.indexOf("https://upload.wikimedia.org/wikipedia/commons/") !== 0) return false;
   return true;
 }
@@ -291,6 +310,8 @@ async function main() {
         console.warn("공용 검색 실패", p.id, e.message);
       }
     }
+    // 옛 식민지 시대 기록 사진(트로펜 박물관·KITLV)은 오늘의 모습이 아니라 뒤로 돌립니다(2026-11-11 확인).
+    infos.sort((a, b) => (ARCHIVE.test(a.file) ? 1 : 0) - (ARCHIVE.test(b.file) ? 1 : 0));
     const picked = [];
     for (const i of infos) {
       if (picked.length >= 2) break;
@@ -303,7 +324,7 @@ async function main() {
       region: p.region,
       photos: picked.map((i) => ({
         file: i.file,
-        thumb: i.thumb,
+        thumb: sizedThumb(i),
         author: i.author || "(작가 표시 없음)",
         license: i.license,
         licenseUrl: i.licenseUrl,
