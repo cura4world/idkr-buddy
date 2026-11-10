@@ -5,7 +5,7 @@
 // 주의: gemini.ts 를 import 하지 않습니다. gemini.ts 가 이 파일을 import 하므로
 // 순환 참조를 피하기 위해 API 키는 localStorage 에서 직접 읽습니다.
 
-import { geminiTarget, handleQuotaResponse } from "@/lib/aiProxy";
+import { geminiTarget, handleQuotaResponse, lastQuotaCode, AiKind } from "@/lib/aiProxy";
 const KEY_STORAGE = "geminiApiKey";
 
 function readApiKey(): string {
@@ -48,6 +48,8 @@ export interface GeminiCallOptions {
   timeoutMs?: number;
   maxOutputTokens?: number;
   totalDeadlineMs?: number;
+  /** 어떤 기능의 호출인지 (공개판 서버가 기능별 한도를 셈). 생략하면 "text". */
+  kind?: AiKind;
 }
 
 // 지수 백오프 + 지터. 503 과부하는 1초로는 회복되지 않습니다.
@@ -66,9 +68,10 @@ async function callOnce(
   prompt: string,
   timeoutMs: number,
   maxOutputTokens: number,
+  kind: AiKind = "text",
 ): Promise<string> {
   // 내 키가 있으면 직접, 없고 회원키가 있으면 Worker 를 거칩니다.
-  const target = geminiTarget(model, apiKey, "text");
+  const target = geminiTarget(model, apiKey, kind);
   if (!target) throw new Error("NO_API_KEY");
 
   const controller = new AbortController();
@@ -102,7 +105,8 @@ async function callOnce(
     clearTimeout(timer);
   }
 
-  if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA");
+  // 한도 초과·Plus 필요: 서버 코드(QUOTA_STORY·QUOTA_DICT_NEW·QUOTA_PLUS_REQUIRED …)로 던집니다. 재시도하지 않습니다.
+  if (await handleQuotaResponse(res, target.viaProxy)) throw new Error(lastQuotaCode());
   if (!res.ok) {
     if (res.status === 403) throw new Error("INVALID_API_KEY");
     if (res.status === 400) throw new Error("BAD_REQUEST");
@@ -137,7 +141,7 @@ export async function callGeminiText(
       if (Date.now() - startedAt > deadline) throw lastError;
 
       try {
-        return await callOnce(model, apiKey, prompt, timeoutMs, maxOutputTokens);
+        return await callOnce(model, apiKey, prompt, timeoutMs, maxOutputTokens, opts.kind || "text");
       } catch (e: any) {
         lastError = e;
         const code = (e && e.message) || "";
