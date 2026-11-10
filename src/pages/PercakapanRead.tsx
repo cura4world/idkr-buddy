@@ -2,10 +2,12 @@
 // 회화 한 편 읽기 (/percakapan/:id).
 // 인도네시아어와 한국어를 뒤집지 않고 한 줄씩 위아래로 같이 보여줍니다 (플립 없음).
 // 전체 듣기는 남/여 두 목소리로, 줄 오른쪽 스피커는 그 문장 하나만 읽습니다.
+// 시안: PC3-Read (청록 스피커, 전체 듣기 중에는 지금 읽는 줄을 연한 바탕 + 왼쪽 청록 막대로 표시).
+// 공개판 무료: 기본 회화집은 Plus 기능이라 구독 화면으로 보냅니다. 직접 만든 회화집은 계속 읽힙니다.
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Play, Pause, Loader2, Volume2, Plus, Check, X, ChevronDown, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, Play, Pause, Loader2, Volume1, Maximize2, Minimize2 } from "lucide-react";
 import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
@@ -18,20 +20,27 @@ import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
+import WordMiniSheet from "@/components/WordMiniSheet";
 import { medaliEngine } from "@/lib/medali";
 import PointFloat from "@/components/PointFloat";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
+import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 
-// 화자 배지 색. A / B / C 를 한눈에 구분하기 위한 것입니다.
-const BADGE: Record<string, string> = {
-  A: "bg-primary/15 text-primary",
-  B: "bg-sky-500/15 text-sky-600",
-  C: "bg-amber-500/15 text-amber-600",
+const TEAL = "#2C6D63";
+const CARD_STYLE = { background: "#FFFFFF", borderRadius: 18, boxShadow: "0 1px 3px rgba(16,40,50,0.06)" };
+
+// 화자 배지 색 (시안 PC3). A / B / C 를 한눈에 구분하기 위한 것입니다.
+const BADGE: Record<string, { bg: string; fg: string }> = {
+  A: { bg: "#E2F1EC", fg: "#2C6D63" },
+  B: { bg: "#FCEFD9", fg: "#8C5A12" },
+  C: { bg: "#E4EEF6", fg: "#2B5F86" },
 };
 
-const badgeClass = (s: PercakapanSpeaker): string => BADGE[s] || BADGE.A;
+const badgeOf = (s: PercakapanSpeaker) => BADGE[s] || BADGE.A;
+
+const voiceText = (g: string | undefined) => (g === "f" ? "여자 목소리" : "남자 목소리");
 
 const PercakapanRead = () => {
   const navigate = useNavigate();
@@ -39,6 +48,7 @@ const PercakapanRead = () => {
   const location = useLocation();
   const params = useParams();
   const id = params.id || "";
+  const plan = usePlan();
 
   const [scene, setScene] = useState<PercakapanScene | null>(null);
   const [loading, setLoading] = useState(true);
@@ -143,6 +153,21 @@ const PercakapanRead = () => {
     };
   }, [id, navigate]);
 
+  // ---------- 등급 확인 ----------
+  // 무료: 기본 회화집은 잠김 → 안내 + 구독 화면. 교회와 신앙은 관리자·Special Member 만.
+  // (setState 없이 이동만 합니다)
+  useEffect(() => {
+    if (!scene) return;
+    if (scene.cat === "gereja" && !plan.staff && !scene.custom) {
+      navigate("/percakapan", { replace: true });
+      return;
+    }
+    if (!plan.plus && !scene.custom) {
+      toast("회화집은 Plus 회원 기능입니다");
+      navigate(PAYWALL_PATH, { replace: true });
+    }
+  }, [scene, plan.plus, plan.staff, navigate]);
+
   // ---------- 돌아올 자리로 되돌리기 ----------
   // 어느 회화집이었는지는 주소(/percakapan/:id)로 저절로 돌아오므로 스크롤만 챙깁니다.
   // 본문이 그려진 뒤 한 번만 실행합니다. 표가 없으면 아무것도 하지 않습니다.
@@ -209,6 +234,54 @@ const PercakapanRead = () => {
       })
       .catch(() => {});
   }, [snap, scene]);
+
+  const mineAll = !!scene && snap.sceneId === scene.id && snap.lineIndex === null;
+
+  // ---------- 전체 듣기 중 지금 읽는 줄 짐작 ----------
+  // 전체 듣기는 소리 파일 하나라 줄 경계를 모릅니다. 재생 위치(비율)를 줄마다의 글자 수
+  // (+ 줄 사이 쉼 몫)로 나눠 지금 줄을 짐작합니다. 정확한 시각이 아니라 눈으로 따라가는 표시입니다.
+  const [estLine, setEstLine] = useState<number | null>(null);
+  const rowRefs = useRef<Array<HTMLDivElement | null>>([]);
+
+  useEffect(() => {
+    if (!scene || !mineAll || (snap.state !== "playing" && snap.state !== "paused")) {
+      setEstLine(null);
+      return;
+    }
+    const weights = scene.lines.map((l) => l.id.length + 14);
+    const total = weights.reduce((a, b) => a + b, 0) || 1;
+    const tick = () => {
+      const p = percakapanAudioPlayer.progress();
+      if (!p) return;
+      const target = (p.time / p.duration) * total;
+      let acc = 0;
+      let idx = weights.length - 1;
+      for (let i = 0; i < weights.length; i++) {
+        acc += weights[i];
+        if (target < acc) {
+          idx = i;
+          break;
+        }
+      }
+      setEstLine((prev) => (prev === idx ? prev : idx));
+    };
+    tick();
+    const t = setInterval(tick, 250);
+    return () => clearInterval(t);
+  }, [scene, mineAll, snap.state]);
+
+  // 읽는 줄이 화면 밖으로 나가면 살짝 따라갑니다
+  useEffect(() => {
+    if (estLine === null) return;
+    const el = rowRefs.current[estLine];
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.top < 70 || r.bottom > window.innerHeight - 20) {
+      try {
+        el.scrollIntoView({ block: "center", behavior: "smooth" });
+      } catch (e) {}
+    }
+  }, [estLine]);
 
   // 본문에서 고른 표현 찾기
   const { phrase: selPhrase, take: takeSelPhrase } = useSelectedPhrase();
@@ -278,16 +351,6 @@ const PercakapanRead = () => {
       });
   };
 
-  const copyPopupWord = async () => {
-    if (!popupWord) return;
-    try {
-      await navigator.clipboard.writeText(popupWord);
-      toast("복사되었습니다");
-    } catch (e) {
-      toast("복사에 실패했어요");
-    }
-  };
-
   // 회화집은 주소(/percakapan/:id)만으로 돌아오므로 어느 글이었는지는 표에 기대지 않습니다.
   // 읽던 자리(스크롤)만 표로 한 장 적어 둡니다. setState 없이 navigate 만 부릅니다.
   // 단어 팝업이 히스토리를 쌓지 않는 화면이라 replace 는 주지 않습니다.
@@ -323,7 +386,6 @@ const PercakapanRead = () => {
       </span>
     ));
 
-  const mineAll = !!scene && snap.sceneId === scene.id && snap.lineIndex === null;
   const allLabel = mineAll
     ? snap.state === "loading"
       ? "준비 중..."
@@ -334,13 +396,16 @@ const PercakapanRead = () => {
       : "전체 듣기"
     : "전체 듣기";
 
-  const rolesLine = scene
-    ? "A " +
-      scene.roles.A +
-      " · B " +
-      scene.roles.B +
-      (scene.roles.C ? " · C " + scene.roles.C : "")
-    : "";
+  const roleItems: { s: PercakapanSpeaker; text: string }[] = scene
+    ? [
+        { s: "A" as PercakapanSpeaker, text: scene.roles.A + " · " + voiceText(scene.voices ? scene.voices.A : "m") },
+        { s: "B" as PercakapanSpeaker, text: scene.roles.B + " · " + voiceText(scene.voices ? scene.voices.B : "f") },
+      ].concat(
+        scene.roles.C
+          ? [{ s: "C" as PercakapanSpeaker, text: scene.roles.C + " · " + voiceText(scene.voices ? scene.voices.A : "m") }]
+          : []
+      )
+    : [];
 
   return (
     <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background pb-9"}>
@@ -361,7 +426,7 @@ const PercakapanRead = () => {
             <h1 className="truncate text-base font-semibold leading-tight">
               {scene ? scene.title : "회화집"}
             </h1>
-            <p className="mt-0.5 truncate font-word text-[0.71875rem] text-muted-foreground">
+            <p className="mt-px truncate font-word text-[0.75rem]" style={{ color: "#646C72" }}>
               {scene ? scene.titleId : ""}
             </p>
           </div>
@@ -369,14 +434,15 @@ const PercakapanRead = () => {
             <button
               type="button"
               onClick={() => percakapanAudioPlayer.playAll(scene)}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-2 text-[0.78125rem] font-gothic text-foreground/80 active:bg-muted"
+              className="shrink-0 -mr-1 h-9 px-[13px] rounded-full inline-flex items-center gap-[5px] font-gothic text-[0.78125rem] font-semibold active:opacity-85"
+              style={{ background: TEAL, color: "#FFFFFF" }}
             >
               {mineAll && snap.state === "loading" ? (
-                <Loader2 size={14} className="animate-spin" />
+                <Loader2 size={13} className="animate-spin" />
               ) : mineAll && snap.state === "playing" ? (
-                <Pause size={14} />
+                <Pause size={13} fill="currentColor" strokeWidth={0} />
               ) : (
-                <Play size={14} />
+                <Play size={13} fill="currentColor" strokeWidth={0} />
               )}
               {allLabel}
             </button>
@@ -393,141 +459,117 @@ const PercakapanRead = () => {
             </button>
           ) : null}
         </div>
-        {rolesLine ? (
-          <p className="mt-1.5 pl-[2.25rem] truncate font-gothic text-[0.71875rem] text-muted-foreground">
-            {rolesLine}
-          </p>
-        ) : null}
       </header>
 
-      <div className="px-4 py-4">
+      {/* 화자 안내: A 손님 · 여자 목소리 | B 점원 · 남자 목소리 */}
+      {roleItems.length > 0 ? (
+        <div className="px-4 pt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-gothic text-[0.78125rem]" style={{ color: "#646C72" }}>
+          {roleItems.map((r, i) => (
+            <span key={r.s} className="flex items-center gap-2 min-w-0">
+              {i > 0 ? <span style={{ color: "#D5DCDF" }}>|</span> : null}
+              <span className="flex items-center gap-1.5 min-w-0">
+                <span
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[0.65625rem] font-bold shrink-0"
+                  style={{ background: badgeOf(r.s).bg, color: badgeOf(r.s).fg }}
+                >
+                  {r.s}
+                </span>
+                <span className="truncate">{r.text}</span>
+              </span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="px-4 pt-3 pb-6">
         {loading || !scene ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
             <Loader2 size={16} className="animate-spin" /> 불러오는 중...
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            {scene.lines.map((l, i) => {
-              const active = snap.sceneId === scene.id && snap.lineIndex === i;
-              return (
-                <div
-                  key={i}
-                  className={
-                    "flex items-start gap-2.5 px-4 py-3 " +
-                    (i === scene.lines.length - 1 ? "" : "border-b border-border ") +
-                    (active ? "bg-muted/50" : "")
-                  }
-                >
-                  <span
-                    className={
-                      "mt-0.5 shrink-0 h-5 w-5 rounded-full flex items-center justify-center text-[0.65625rem] font-gothic font-semibold " +
-                      badgeClass(l.s)
-                    }
+          <>
+            <div className="overflow-hidden" style={CARD_STYLE}>
+              {scene.lines.map((l, i) => {
+                const lineMine = snap.sceneId === scene.id && snap.lineIndex === i;
+                const active = lineMine || (mineAll && estLine === i);
+                const b = badgeOf(l.s);
+                return (
+                  <div
+                    key={i}
+                    ref={(el) => { rowRefs.current[i] = el; }}
+                    className="relative flex items-start gap-3"
+                    style={{
+                      padding: "14px 10px 14px 16px",
+                      background: active ? "#F4F8F7" : undefined,
+                      borderBottom: i === scene.lines.length - 1 ? "0" : "1px solid #EEF1F3",
+                    }}
                   >
-                    {l.s}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-word text-[0.96875rem] leading-snug text-foreground">
-                      {renderTokens(l.id, i + "-")}
-                    </p>
-                    <p className="mt-0.5 font-gothic text-[0.78125rem] leading-snug text-muted-foreground">
-                      {l.ko}
-                    </p>
+                    {active ? (
+                      <span
+                        className="absolute left-0 w-[3px] rounded-sm"
+                        style={{ top: 10, bottom: 10, background: TEAL }}
+                      />
+                    ) : null}
+                    <span
+                      className="mt-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-gothic text-[0.71875rem] font-bold"
+                      style={{ background: b.bg, color: b.fg }}
+                    >
+                      {l.s}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="font-word text-[1.03125rem] leading-[1.5] break-words"
+                        style={{ color: active ? "#104B60" : "#1D1F1E" }}
+                      >
+                        {renderTokens(l.id, i + "-")}
+                      </p>
+                      <p className="mt-[3px] font-gothic text-[0.8125rem] leading-[1.5]" style={{ color: "#646C72" }}>
+                        {l.ko}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => percakapanAudioPlayer.playLine(scene, i)}
+                      className="shrink-0 w-[34px] h-[34px] rounded-full flex items-center justify-center"
+                      style={active ? { background: TEAL, color: "#FFFFFF" } : { color: TEAL }}
+                      title="이 문장 듣기"
+                      aria-label="이 문장 듣기"
+                    >
+                      {lineMine && snap.state === "loading" ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <Volume1 size={15} strokeWidth={2} />
+                      )}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => percakapanAudioPlayer.playLine(scene, i)}
-                    className="shrink-0 -mr-1 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground active:bg-muted"
-                    title="이 문장 듣기"
-                    aria-label="이 문장 듣기"
-                  >
-                    {active && snap.state === "loading" ? (
-                      <Loader2 size={15} className="animate-spin" />
-                    ) : (
-                      <Volume2 size={15} />
-                    )}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+            <p className="mt-3.5 text-center font-gothic text-[0.75rem]" style={{ color: "#9AA1A6" }}>
+              단어를 누르면 뜻이 나옵니다
+            </p>
+          </>
         )}
       </div>
 
       {/* 단어 미니 팝업 */}
       <PhraseFindBar phrase={selPhrase} onFind={openPhrasePopup} hidden={!!popupWord} widthClass={widthClass} />
       {popupWord && (
-        <div className="fixed inset-0 z-50" onClick={() => setPopupWord(null)}>
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className={"absolute bottom-0 left-0 right-0 " + widthClass + " mx-auto bg-card rounded-t-2xl px-5 pt-5 pb-7"}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <p className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">{popupWord}</p>
-              <span className="flex-1" />
-              <button
-                onClick={() => setPopupWord(null)}
-                className="shrink-0 w-8 h-8 rounded-full bg-black/5 text-gray-500 flex items-center justify-center"
-                title="닫기"
-              >
-                <X size={15} />
-              </button>
-            </div>
-            {popupLoading ? (
-              <div className="flex items-center gap-2 text-gray-400 mt-2 text-sm">
-                <Loader2 size={15} className="animate-spin" /> 뜻을 찾고 있어요...
-              </div>
-            ) : (
-              <>
-                <p className="text-sm font-bold text-gray-900 mt-1.5 break-words font-gothic">{popupMeaning}</p>
-                {popupInfo && (
-                  <p className="text-xs text-gray-500 mt-1 break-words font-gothic">{popupInfo}</p>
-                )}
-              </>
-            )}
-            <div className="flex gap-2 mt-4">
-              <div className="flex-1 min-w-0 flex items-stretch overflow-hidden rounded-full text-xs font-medium">
-                <button
-                  onClick={savePopupWord}
-                  disabled={popupSaved || popupLoading || !popupMeaning || isFailedMeaning(popupMeaning) || !saveTargetId}
-                  className={`flex-1 min-w-0 flex items-center justify-center gap-1 py-2 ${
-                    popupSaved || !saveTargetId ? "bg-gray-100 text-gray-400" : "bg-primary text-white disabled:opacity-50"
-                  }`}
-                >
-                  {popupSaved ? <Check size={13} className="shrink-0" /> : <Plus size={13} className="shrink-0" />}
-                  <span className="truncate">
-                    {popupSaved ? "저장됨" : saveTargetId ? saveTargetName : "단어장을 먼저 만들어 주세요"}
-                  </span>
-                </button>
-                {/* 담긴 뒤에도 다른 단어장에는 담을 수 있어야 하므로 ⌄ 는 잠그지 않습니다 */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); openWbPicker(); }}
-                  title="담을 단어장 고르기"
-                  className={`shrink-0 flex items-center px-2.5 border-l ${
-                    popupSaved || !saveTargetId
-                      ? "border-gray-200 bg-gray-100 text-gray-400"
-                      : "border-white/30 bg-primary text-white"
-                  }`}
-                >
-                  <ChevronDown size={13} />
-                </button>
-              </div>
-              <button
-                onClick={copyPopupWord}
-                className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-gray-700"
-              >
-                복사
-              </button>
-              <button
-                onClick={openInDictionary}
-                className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-gray-700"
-              >
-                사전에서 보기
-              </button>
-            </div>
-          </div>
-        </div>
+        <WordMiniSheet
+          word={popupWord}
+          loading={popupLoading}
+          meaning={popupMeaning}
+          info={popupInfo}
+          saved={popupSaved}
+          saveDisabled={popupLoading || !popupMeaning || isFailedMeaning(popupMeaning)}
+          saveTargetId={saveTargetId}
+          saveTargetName={saveTargetName}
+          widthClass={widthClass}
+          onClose={() => setPopupWord(null)}
+          onSave={savePopupWord}
+          onPickTarget={openWbPicker}
+          onDictionary={openInDictionary}
+        />
       )}
 
       {/* 담을 단어장 고르는 시트 — 팝업(z-50)보다 위에 오도록 한 단계 더 띄웁니다 */}
