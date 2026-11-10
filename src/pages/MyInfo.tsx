@@ -6,6 +6,8 @@
 //
 // 설정은 저장 방식을 새로 만들지 않고 기존 lib(fontScale·tts·medaliSync·account·billing)와
 // 기존 창(SettingsDialog·MedaliSheet)을 그대로 씁니다.
+// 공개판에는 서버가 아직 없는 줄(서버 자동 백업·회원키·친구 비교)을 보이지 않습니다(QA Q01) —
+// 새 폰으로 옮기기는 백업 파일(저장·불러오기)로 합니다.
 // 등급 판단은 usePlan() 하나로만 합니다. 이메일은 보이지 않습니다(결정 문서 11/10).
 //
 // 공부 시간은 앱을 켜 둔 시간(usageTimer → Medali 일일 로그의 usageMs)입니다. 날마다 이미 쌓이고 있습니다.
@@ -18,14 +20,17 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import SettingsDialog, { REOPEN_SETTINGS_KEY, formatMemberInput } from "@/components/SettingsDialog";
+import SettingsDialog, { REOPEN_SETTINGS_KEY } from "@/components/SettingsDialog";
+import BackupRestoreDialog from "@/components/BackupRestoreDialog";
+import { useBackClose } from "@/hooks/useBackClose";
+import { buildBackupFile, describeSummary, formatBytes } from "@/lib/transfer";
 import MedaliSheet from "@/components/MedaliSheet";
 import PlusLockBox from "@/components/PlusLockBox";
 import { ProfileAvatar, profileName } from "@/components/BottomTabs";
 import { usePlan, PAYWALL_PATH, Tier, TIER_LABEL, isPreviewBuild } from "@/lib/plan";
 import { getSession, onSessionChange, signOut, deleteAccount, PublicSession } from "@/lib/account";
 import { billingAvailable, manageSubscription } from "@/lib/billing";
-import { isStoreApp, storeAppVersion, PRIVACY_URL, TERMS_URL } from "@/lib/platform";
+import { isStoreApp, storeAppVersion, hasNativeFileSave, saveFileNative, PRIVACY_URL, TERMS_URL } from "@/lib/platform";
 import { getEdition, EDITION_LABEL } from "@/lib/access";
 import { getMemberProfile } from "@/lib/member";
 import { getFontStep, getStepCount, stepFont } from "@/lib/fontScale";
@@ -374,8 +379,9 @@ const MyInfo = () => {
   const [nickInput, setNickInput] = useState("");
   const [fontOpen, setFontOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
-  const [keyOpen, setKeyOpen] = useState(false);
-  const [keyInput, setKeyInput] = useState("KK-");
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveBusy, setMoveBusy] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
   const [ttsConfirm, setTtsConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -443,22 +449,59 @@ const MyInfo = () => {
     manageSubscription();
   };
 
+  // 서버 자동 백업 — 관리자판·회원판에만 있습니다(공개판은 서버가 생길 때까지 줄 자체를 숨김).
   const onAutoBackup = () => {
     if (autoBackupOn) {
       setSettingsOpen(true);
       return;
     }
-    toast("서버 자동 백업은 출시 전 서버 연결 뒤 사용할 수 있습니다");
+    toast("서버 자동 백업은 회원키를 넣은 기기에서 사용할 수 있습니다");
   };
 
+  // 회원키 — 관리자판·회원판은 설정 창의 회원키 칸에서 넣고 관리합니다(공개판에는 이 줄이 없음).
   const onMemberKeyRow = () => {
-    if (!storeApp && memberProfile) {
-      setSettingsOpen(true); // 관리자판·회원판은 설정 창의 회원키 칸에서 관리합니다
-      return;
-    }
-    setKeyInput("KK-");
-    setKeyOpen(true);
+    setSettingsOpen(true);
   };
+
+  // 새 폰으로 옮기기 — 공개판은 백업 파일로 옮기고, 관리자판·회원판은 설정 창(회원키로 서버를 거쳐 옮기기)
+  const onMoveRow = () => {
+    if (publicLike) setMoveOpen(true);
+    else setSettingsOpen(true);
+  };
+
+  const saveBackupFile = async () => {
+    if (moveBusy) return;
+    setMoveBusy(true);
+    try {
+      const f = await buildBackupFile();
+      if (hasNativeFileSave()) {
+        const ok = saveFileNative(f.fileName, "application/json", f.href.slice(f.href.indexOf(",") + 1));
+        toast(ok
+          ? "백업 파일(" + formatBytes(f.bytes) + ")을 다운로드 폴더에 저장했습니다 — " + describeSummary(f.summary)
+          : "백업 파일을 저장하지 못했습니다", { duration: 7000 });
+      } else {
+        const a = document.createElement("a");
+        a.href = f.href;
+        a.download = f.fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast("백업 파일(" + formatBytes(f.bytes) + ")을 다운로드 폴더에 저장합니다 — " + describeSummary(f.summary), { duration: 7000 });
+      }
+    } catch (e) {
+      toast("백업 파일을 만들지 못했습니다");
+    } finally {
+      setMoveBusy(false);
+    }
+  };
+
+  // 폰의 뒤로가기는 열린 창만 닫습니다(내 정보 화면을 떠나지 않음). 설정 창은 SettingsDialog 가 스스로 합니다.
+  useBackClose(nickOpen, () => setNickOpen(false));
+  useBackClose(fontOpen, () => setFontOpen(false));
+  useBackClose(voiceOpen, () => setVoiceOpen(false));
+  useBackClose(moveOpen, () => setMoveOpen(false));
+  useBackClose(ttsConfirm, () => setTtsConfirm(false));
+  useBackClose(deleteConfirm, () => setDeleteConfirm(false));
 
   // ── 화면 ──
   const badge = tierBadge(tier);
@@ -528,16 +571,7 @@ const MyInfo = () => {
               onClick={() => navigate(PAYWALL_PATH)}
               wholeBox
             />
-            <p className="text-center font-gothic" style={{ margin: "2px 0 0", fontSize: rem(12), color: FAINT }}>
-              회원키가 있다면{" "}
-              <button
-                type="button"
-                onClick={onMemberKeyRow}
-                style={{ color: MUTED, textDecoration: "underline", textUnderlineOffset: 3 }}
-              >
-                입력하기
-              </button>
-            </p>
+            {/* 공개판 회원키 입력은 서버가 생기면 다시 넣습니다(QA Q01 — 그 전에는 링크를 보이지 않음) */}
           </>
         ) : tier === "plus" || tier === "trial" ? (
           <Card style={{ overflow: "hidden" }}>
@@ -562,14 +596,18 @@ const MyInfo = () => {
               label="회원 등급"
               value={TIER_LABEL[tier] + " · 기한 없음"}
               onClick={() => toast(TIER_LABEL[tier] + " 등급은 기한 없이 모든 기능을 사용할 수 있습니다")}
+              last={publicLike}
             />
-            <Row
-              icon={I_KEY}
-              label="회원키"
-              value={tail ? "등록됨 · " + tail : "등록됨"}
-              onClick={onMemberKeyRow}
-              last
-            />
+            {/* 회원키 관리는 관리자판·회원판의 설정 창에서만 됩니다. 공개판은 서버가 생길 때까지 줄을 숨깁니다. */}
+            {publicLike ? null : (
+              <Row
+                icon={I_KEY}
+                label="회원키"
+                value={tail ? "등록됨 · " + tail : memberProfile ? "등록됨" : undefined}
+                onClick={onMemberKeyRow}
+                last
+              />
+            )}
           </Card>
         )}
 
@@ -713,11 +751,6 @@ const MyInfo = () => {
                 <span className="font-word" style={{ fontSize: rem(15), fontWeight: 600 }}>{r.pts}</span>
               </div>
             ))}
-            {publicLike ? (
-              <p className="font-gothic" style={{ margin: "2px 0 0", fontSize: rem(12), lineHeight: 1.55, color: FAINT }}>
-                친구와 점수 비교, 전체 사용자 중 순위는 출시 전 서버 연결 뒤 사용할 수 있습니다.
-              </p>
-            ) : null}
           </div>
         </Card>
 
@@ -727,8 +760,11 @@ const MyInfo = () => {
           <Row icon={I_PEN} label="닉네임" value={nick || "—"} onClick={openNick} />
           <Row icon={I_TYPE} label="글자 크기" value={fontPct + "%"} onClick={() => setFontOpen(true)} />
           <Row icon={I_MIC} label="읽기 음성" value={voiceLabel} onClick={() => setVoiceOpen(true)} />
-          <Row icon={I_CLOUD} label="서버 자동 백업" onClick={onAutoBackup} right={<Toggle on={autoBackupOn} />} />
-          <Row icon={I_PHONE} label="새 폰으로 옮기기" onClick={() => setSettingsOpen(true)} last />
+          {/* 서버 자동 백업은 관리자판·회원판(회원키 서버)에만 있습니다. 공개판은 서버가 생길 때까지 숨깁니다(QA Q01). */}
+          {publicLike ? null : (
+            <Row icon={I_CLOUD} label="서버 자동 백업" onClick={onAutoBackup} right={<Toggle on={autoBackupOn} />} />
+          )}
+          <Row icon={I_PHONE} label="새 폰으로 옮기기" onClick={onMoveRow} last />
         </Card>
         <Card style={{ overflow: "hidden" }}>
           <Row icon={I_TRASH} label="저장된 읽기 음성 비우기" onClick={() => setTtsConfirm(true)} last={!session} />
@@ -848,39 +884,36 @@ const MyInfo = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ── 회원키 입력 (공개판) ── */}
-      <Dialog open={keyOpen} onOpenChange={setKeyOpen}>
+      {/* ── 새 폰으로 옮기기 (공개판: 백업 파일) ── */}
+      <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-sm mx-auto bg-card">
           <DialogHeader>
-            <DialogTitle className="font-body text-gray-900">회원키 입력</DialogTitle>
+            <DialogTitle className="font-body text-gray-900">새 폰으로 옮기기</DialogTitle>
           </DialogHeader>
-          {tail ? (
-            <p className="font-gothic text-xs text-muted-foreground">지금 등록된 회원키 · 끝자리 {tail}</p>
-          ) : null}
-          <input
-            value={keyInput}
-            onChange={(e) => setKeyInput(formatMemberInput(e.target.value, keyInput))}
-            placeholder="KK-XXXX-XXXX-XXXX"
-            inputMode="text"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck={false}
-            className="h-11 w-full rounded-xl border border-border bg-white px-3 font-word text-[0.9375rem] tracking-[0.04em] outline-none focus:border-primary"
-          />
-          <p
-            className="rounded-xl px-3 py-2.5 font-gothic text-xs leading-relaxed"
-            style={{ background: "#FFF6DC", border: "1px solid #F1E0AE", color: "#6E5612" }}
-          >
-            회원키 확인은 출시 전 서버 연결 뒤 사용할 수 있습니다.
+          <p className="font-gothic text-xs leading-relaxed text-muted-foreground">
+            내 단어장·직접 넣은 단어·설정을 백업 파일로 저장하세요. 새 폰에서 이 화면의
+            "백업 파일 불러오기"로 그 파일을 고르면 지금 있는 것과 합쳐집니다.
           </p>
           <button
             type="button"
-            disabled
-            className="h-11 w-full rounded-xl text-white font-gothic text-[0.875rem] font-semibold opacity-40"
+            onClick={saveBackupFile}
+            disabled={moveBusy}
+            className="h-11 w-full rounded-xl text-white font-gothic text-[0.875rem] font-semibold disabled:opacity-60"
             style={{ background: TEAL }}
           >
-            확인
+            백업 파일 저장
           </button>
+          <button
+            type="button"
+            onClick={() => setRestoreOpen(true)}
+            disabled={moveBusy}
+            className="h-11 w-full rounded-xl border font-gothic text-[0.875rem] font-semibold disabled:opacity-60"
+            style={{ background: "#FFFFFF", borderColor: "#DDE3E6", color: INK }}
+          >
+            백업 파일 불러오기
+          </button>
+          {/* 창 안에 두어야 겹친 창으로 열리고, 뒤로가기가 위의 창만 닫습니다(설정 창과 같은 방식) */}
+          <BackupRestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} />
         </DialogContent>
       </Dialog>
 
