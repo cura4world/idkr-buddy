@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useBackClose } from "@/hooks/useBackClose";
 
 interface CSVImportDialogProps {
   open: boolean;
@@ -15,6 +16,9 @@ interface CSVImportDialogProps {
 export default function CSVImportDialog({ open, onOpenChange, onImported, categoryId }: CSVImportDialogProps) {
   const [csv, setCsv] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // 폰의 뒤로가기는 이 창만 닫습니다(화면을 떠나지 않음)
+  useBackClose(open, () => onOpenChange(false));
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
