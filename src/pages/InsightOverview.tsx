@@ -200,12 +200,7 @@ const InsightOverview = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <div className="flex items-center gap-2.5">
-          <span className="w-9 h-9 rounded-xl bg-sky-400 flex items-center justify-center shadow-lg shadow-black/30">
-            <Globe size={18} className="text-white" />
-          </span>
-          <h1 className="text-lg font-semibold text-foreground leading-none">인도네시아 개관</h1>
-        </div>
+        <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">IKHTISAR</h1>
       </header>
 
       <p className="mb-4 text-[0.8125rem] font-gothic text-muted-foreground leading-relaxed px-1">
