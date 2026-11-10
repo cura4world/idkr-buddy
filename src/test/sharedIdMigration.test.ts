@@ -161,6 +161,24 @@ describe("공용 단어장 ID 이전 (S43)", () => {
     expect(JSON.parse(s.data["kata-categories"])).toHaveLength(1);
   });
 
+  it("예시 단어 8개의 대문자 표제어는 소문자로, 사용자가 고친 것은 그대로", () => {
+    const s = fakeStore({
+      "kata-words": JSON.stringify([
+        { id: "7", word: "Makan", meaning: "먹다", categoryId: "daily" },
+        { id: "8", word: "Tidur pulas", meaning: "푹 자다", categoryId: "daily" }, // 사용자가 고침
+        { id: "4", word: "Satu", meaning: "하나", categoryId: "my-wordbook" },  // 다른 단어장으로 옮김
+        { id: "x", word: "Jakarta", meaning: "자카르타", categoryId: "daily" },
+      ]),
+    });
+    migrateSharedIdsOnce(s, SEED);
+    expect(JSON.parse(s.data["kata-words"]).map((w: { word: string }) => w.word)).toEqual([
+      "makan",
+      "Tidur pulas",
+      "Satu",
+      "Jakarta",
+    ]);
+  });
+
   it("단어 ID 변환: 개인 폴더 단어로 새지 않고, 시드를 모르면 번호만 바꾼다", () => {
     const res = makeLegacyWordResolver(SEED);
     expect(res.byWord.get("nggak")).toEqual(["shared_shared_06_입말·구어_nggak"]);
