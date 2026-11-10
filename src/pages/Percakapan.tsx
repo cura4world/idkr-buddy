@@ -548,7 +548,7 @@ const Percakapan = () => {
             className="fixed z-50 left-1/2 -translate-x-1/2 top-[22%] w-[min(92vw,22rem)] rounded-2xl bg-card border border-border/60 shadow-2xl shadow-black/40 px-5 py-5"
           >
             <p className="text-[0.9375rem] leading-relaxed text-card-foreground">
-              개인 회화집 {restoreCount}개를 찾았습니다. 불러올까요?
+              개인 회화집 {restoreCount}개를 찾았습니다. 불러오시겠습니까?
             </p>
             <div className="mt-5 flex gap-2">
               <button
