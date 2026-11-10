@@ -6,6 +6,7 @@ import { ArrowLeft, RotateCcw, Shuffle, Volume2, VolumeX } from "lucide-react";
 import { medaliEngine } from "@/lib/medali";
 import { displayWord } from "@/lib/wordCase";
 import PointFloat from "@/components/PointFloat";
+import { pickRoundWords } from "@/lib/quizRound";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -67,8 +68,9 @@ export default function SavedQuizMode() {
   const [isRandom, setIsRandom] = useState(false);
   const [speakOn, setSpeakOn] = useState(() => loadSpeakOn());
 
+  // 한 판은 최대 20문제 — 많으면 무작위로 20개를 뽑습니다(src/lib/quizRound.ts). 보기는 보관함 전체에서.
   const makeQuestions = (random: boolean) => {
-    const source = random ? shuffle(allWords) : allWords;
+    const source = pickRoundWords(allWords, random);
     return source.map((word) => {
       const others = allWords.filter((w) => w.id !== word.id);
       const wrongChoices = shuffle(others).slice(0, 3).map((w) => w.meaning);

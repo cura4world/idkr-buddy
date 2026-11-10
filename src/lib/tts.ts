@@ -5,7 +5,7 @@
 // - 긴 글은 문단으로 쪼개 생성하되(품질 드리프트 방지), 재생은 이어서 하나처럼.
 // - 재생/일시정지/정지 컨트롤 + 상태 구독(subscribe) 제공.
 
-import { geminiTarget, handleQuotaResponse, AiKind } from "@/lib/aiProxy";
+import { geminiTarget, handleQuotaResponse, publicProxyError, AiKind } from "@/lib/aiProxy";
 import { getGeminiApiKey } from "@/lib/gemini";
 import { isStoreApp } from "@/lib/platform";
 
@@ -341,6 +341,9 @@ async function generateAudioForText(
 
     // 하루 음성 한도를 넘으면 안내를 띄우고 재시도하지 않습니다.
     if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA_TTS");
+    // 공개판 서버의 401(세션 만료 → 로그인 화면)·403(허용 안 됨)은 키 오류가 아닙니다.
+    const pubErr = publicProxyError(res, target);
+    if (pubErr) throw new Error(pubErr);
 
     if (!res.ok) {
       // 3.8 이 거절하면(모델 없음·형식 오류) 예전 모델로 한 번만 다시 만듭니다.

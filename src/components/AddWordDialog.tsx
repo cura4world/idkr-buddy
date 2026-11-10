@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useBackClose } from "@/hooks/useBackClose";
+import { aiErrorToast } from "@/lib/aiErrors";
 
 interface AddWordDialogProps {
   open: boolean;
@@ -31,6 +33,9 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
     if (open) setCategoryId(categoryIdProp || defaultCategoryId || "");
   }, [open, categoryIdProp, defaultCategoryId]);
 
+  // 폰의 뒤로가기는 이 창만 닫습니다(화면을 떠나지 않음)
+  useBackClose(open, () => onOpenChange(false));
+
   const handleAutoFill = async () => {
     if (!word.trim()) {
       toast("먼저 인도네시아어 단어를 입력하세요");
@@ -45,12 +50,15 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
       toast("자동 채우기 완료 (내용을 확인하세요)");
     } catch (err) {
       const msg = (err as Error)?.message || "";
-      if (msg === "INVALID_API_KEY") {
-        toast("API 키가 올바르지 않습니다. 설정에서 확인하세요");
+      // 공개판은 키 설정이 없으므로 aiErrors 가 사용자용 문장으로 바꿉니다(관리자판은 기존 문구).
+      if (msg === "INVALID_API_KEY" || msg === "NOT_AVAILABLE") {
+        aiErrorToast(msg, "API 키가 올바르지 않습니다. 설정에서 확인하세요");
       } else if (msg === "RATE_LIMIT") {
         toast("잠시 후 다시 시도하세요 (요청 한도)");
-      } else if (msg === "NO_API_KEY") {
-        toast("설정에서 Gemini API 키를 먼저 입력하세요");
+      } else if (msg === "NO_API_KEY" || msg === "SESSION_EXPIRED") {
+        aiErrorToast(msg, "설정에서 Gemini API 키를 먼저 입력하세요");
+      } else if (msg.indexOf("QUOTA") === 0) {
+        // 한도·Plus 안내는 aiProxy 가 이미 띄웠습니다
       } else {
         toast("자동 채우기에 실패했습니다");
       }

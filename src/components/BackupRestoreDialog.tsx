@@ -15,6 +15,8 @@ import {
   summarize,
   describeSummary,
 } from "@/lib/transfer";
+import { isStoreApp } from "@/lib/platform";
+import { useBackClose } from "@/hooks/useBackClose";
 
 interface BackupRestoreDialogProps {
   open: boolean;
@@ -27,6 +29,11 @@ export default function BackupRestoreDialog({ open, onOpenChange }: BackupRestor
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // 공개판에는 '복사'가 없고 버튼 이름이 "백업 파일 저장"입니다(내 정보 > 새 폰으로 옮기기)
+  const storeApp = isStoreApp();
+
+  // 폰의 뒤로가기는 이 창만 닫습니다(화면을 떠나지 않음)
+  useBackClose(open, () => onOpenChange(false));
 
   useEffect(() => {
     if (open) {
@@ -95,8 +102,9 @@ export default function BackupRestoreDialog({ open, onOpenChange }: BackupRestor
         </DialogHeader>
         <div className="space-y-3">
           <p className="text-xs leading-relaxed text-muted-foreground font-gothic">
-            '파일 저장'으로 받은 백업 파일을 고르거나, '복사'로 보관해 둔 글을 아래에 붙여넣으세요.
-            지금 있는 것은 지우지 않고 합칩니다.
+            {storeApp
+              ? "'백업 파일 저장'으로 받은 파일을 고르세요. 지금 있는 것은 지우지 않고 합칩니다."
+              : "'파일 저장'으로 받은 백업 파일을 고르거나, '복사'로 보관해 둔 글을 아래에 붙여넣으세요. 지금 있는 것은 지우지 않고 합칩니다."}
           </p>
           <input
             ref={fileRef}
@@ -108,14 +116,16 @@ export default function BackupRestoreDialog({ open, onOpenChange }: BackupRestor
           <Button variant="outline" className="w-full text-xs" disabled={busy} onClick={() => fileRef.current?.click()}>
             백업 파일 고르기
           </Button>
-          <Textarea
-            value={text}
-            onChange={(e) => handleTextChange(e.target.value)}
-            placeholder="또는 여기에 붙여넣기"
-            rows={4}
-            className="text-xs font-body"
-            disabled={busy}
-          />
+          {storeApp ? null : (
+            <Textarea
+              value={text}
+              onChange={(e) => handleTextChange(e.target.value)}
+              placeholder="또는 여기에 붙여넣기"
+              rows={4}
+              className="text-xs font-body"
+              disabled={busy}
+            />
+          )}
           {bundle ? (
             <p className="rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-gray-900 font-gothic">
               {describeSummary(summarize(bundle))}

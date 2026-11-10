@@ -6,7 +6,7 @@
 //   회화집 오디오가 커서 기존 캐시를 밀어내 버립니다.
 // - tts.ts / PlayButton.tsx 는 여러 화면이 함께 쓰므로 손대지 않고, 여기에 독립된 재생기를 둡니다.
 
-import { geminiTarget, handleQuotaResponse, AiKind } from "@/lib/aiProxy";
+import { geminiTarget, handleQuotaResponse, publicProxyError, AiKind } from "@/lib/aiProxy";
 import { getGeminiApiKey } from "@/lib/gemini";
 import { ttsPlayer } from "@/lib/tts";
 import { bibleAudioPlayer } from "@/lib/bibleAudio";
@@ -201,6 +201,9 @@ async function postTts(apiKey: string, body: any, attempt = 0, kind: AiKind = "s
 
   // 하루 음성 한도를 넘으면 안내를 띄우고 재시도하지 않습니다.
   if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA_TTS");
+  // 공개판 서버의 401(세션 만료 → 로그인 화면)·403(허용 안 됨)은 키 오류가 아닙니다.
+  const pubErr = publicProxyError(res, target);
+  if (pubErr) throw new Error(pubErr);
 
   if (!res.ok) {
     // 500은 가끔 오디오 대신 텍스트 토큰을 반환하는 알려진 이슈 → 1회 재시도

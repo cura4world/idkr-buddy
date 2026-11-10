@@ -27,6 +27,8 @@ import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { isStoreApp } from "@/lib/platform";
 import LevelCircles from "@/components/LevelCircles";
 import { useCompactPill } from "@/lib/useCompactPill";
+import { aiErrorToast } from "@/lib/aiErrors";
+import { useBackClose } from "@/hooks/useBackClose";
 
 const RESTORE_ASKED_KEY = "percakapan-restore-asked";
 const NEW_CAT = "__new__";
@@ -107,6 +109,11 @@ const Percakapan = () => {
   const makePillRef = useRef<HTMLButtonElement>(null);
   const makeLabelRef = useRef<HTMLSpanElement>(null);
   const makeCompact = useCompactPill(headTitleRef, makePillRef, makeLabelRef);
+
+  // 폰의 뒤로가기는 시트만 닫습니다(회화집 화면을 떠나지 않음). 만드는 중에 눌러도 시트만 내려가고,
+  // 다 만들어지면 그대로 읽기 화면으로 넘어갑니다.
+  const makeBack = useBackClose(makeOpen, () => setMakeOpen(false));
+  useBackClose(restoreOpen, () => setRestoreOpen(false));
 
   const refresh = () => {
     listCategories()
@@ -222,8 +229,9 @@ const Percakapan = () => {
       if (madeCat) await saveCustomCat(madeCat);
       await saveCustomScene(scene);
       // 시트를 닫는 setState 없이 곧바로 이동합니다 (WebView 에서 setState 여러 개 +
-      // navigate 를 같이 부르면 화면이 죽는 일이 있었습니다)
-      navigate("/percakapan/" + scene.id);
+      // navigate 를 같이 부르면 화면이 죽는 일이 있었습니다).
+      // 시트가 쌓아 둔 히스토리 칸은 새 화면으로 바꿔 끼웁니다 — 읽기 화면에서 한 번 뒤로 = 회화집 목록.
+      navigate("/percakapan/" + scene.id, { replace: makeBack.onTop() });
     } catch (e: any) {
       setCreating(false);
       const code = (e && e.message) || "";
@@ -231,8 +239,9 @@ const Percakapan = () => {
       // Plus 필요(QUOTA_PLUS_REQUIRED): aiProxy 가 "Plus 보기" 알림을 띄웠으므로 여기서는 아무것도 하지 않습니다.
       if (code === "QUOTA_PLUS_REQUIRED") { /* 겹쳐 띄우지 않음 */ }
       else if (code.indexOf("QUOTA") === 0) setQuotaHit(true);
-      else if (code === "NO_API_KEY") toast.error("설정에서 Gemini API 키를 넣어 주세요");
-      else if (code === "INVALID_API_KEY") toast.error("Gemini API 키가 맞지 않습니다");
+      // 공개판은 키 설정이 없으므로 aiErrors 가 사용자용 문장으로 바꿉니다(관리자판은 기존 문구).
+      else if (code === "NO_API_KEY" || code === "SESSION_EXPIRED") aiErrorToast(code, "설정에서 Gemini API 키를 넣어 주세요", true);
+      else if (code === "INVALID_API_KEY" || code === "NOT_AVAILABLE") aiErrorToast(code, "Gemini API 키가 맞지 않습니다", true);
       else if (code === "RATE_LIMIT") toast.error("요청이 많습니다. 잠시 뒤에 다시 하세요");
       else if (code === "TIMEOUT") toast.error("시간이 너무 오래 걸려 멈췄습니다");
       else if (code === "NETWORK_FAILED") toast.error("인터넷 연결을 확인해 주세요");

@@ -18,6 +18,7 @@ import {
 } from "@/lib/percakapan";
 import type { PercakapanCategory, PercakapanScene } from "@/lib/percakapan";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { useBackClose } from "@/hooks/useBackClose";
 
 const LOCK_TEXT = "회화집은 Plus 회원 기능입니다";
 const CARD_STYLE = { background: "#FFFFFF", borderRadius: 18, boxShadow: "0 1px 3px rgba(16,40,50,0.06)" };
@@ -47,12 +48,24 @@ const PercakapanCategory = () => {
   const firedRef = useRef(false);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [loaded, setLoaded] = useState(false);
+
   const refresh = () => {
     if (!catId) return;
     listScenes(catId)
-      .then((list) => setScenes(list))
-      .catch(() => setScenes([]));
+      .then((list) => { setScenes(list); setLoaded(true); })
+      .catch(() => { setScenes([]); setLoaded(true); });
   };
+
+  // 공개판 무료가 주소로 바로 들어온 경우(QA Q11): 목록 화면과 같이 구독 화면으로 보냅니다.
+  // 직접 만든 회화집이 든 폴더는 그대로 열립니다(구독 취소 뒤에도 내 회화 글은 계속 — 결정 문서).
+  // setState 없이 이동만 합니다(CLAUDE.md).
+  useEffect(() => {
+    if (!loaded || plan.plus) return;
+    if (scenes.some((s) => s.custom)) return;
+    toast(LOCK_TEXT);
+    navigate(PAYWALL_PATH, { replace: true });
+  }, [loaded, scenes, plan.plus, navigate]);
 
   useEffect(() => {
     if (!catId) return;
@@ -101,6 +114,9 @@ const PercakapanCategory = () => {
     setConfirmDelete(false);
     setRenaming(false);
   };
+
+  // 폰의 뒤로가기는 롱프레스 메뉴만 닫습니다(화면을 떠나지 않음)
+  useBackClose(!!menuScene, () => setMenuScene(null));
 
   const handleOpenScene = (s: PercakapanScene) => {
     // 롱프레스로 메뉴가 뜬 직후의 click 은 무시합니다
@@ -173,7 +189,8 @@ const PercakapanCategory = () => {
       </header>
 
       <div className="px-4 pt-4 pb-6">
-        {scenes.length > 0 ? (
+        {/* 무료 + 직접 만든 회화집 없음: 곧 구독 화면으로 넘어가므로 목록을 그리지 않습니다(잠긴 목록이 잠깐 비치지 않게) */}
+        {!plan.plus && !scenes.some((s) => s.custom) ? null : scenes.length > 0 ? (
           <div className="overflow-hidden" style={CARD_STYLE}>
             {scenes.map((s, i) => {
               const locked = !plan.plus && !s.custom;

@@ -8,6 +8,7 @@ import { displayWord } from "@/lib/wordCase";
 import PointFloat from "@/components/PointFloat";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { groupOf, displayMeaning } from "@/lib/wordbookGroups";
+import { pickRoundWords } from "@/lib/quizRound";
 
 // 아래 알약 버튼 (시안: 퀴즈 풀기 — 켜진 버튼만 연한 청록)
 const PILL = "h-10 px-4 rounded-full border flex items-center gap-1.5 transition-colors";
@@ -88,8 +89,9 @@ export default function QuizMode() {
     else navigate("/category/" + (id || ""), { replace: true });
   };
 
+  // 한 판은 최대 20문제 — 단어장이 크면 무작위로 20개를 뽑습니다(src/lib/quizRound.ts). 보기는 단어장 전체에서.
   const makeQuestions = (random: boolean) => {
-    const source = random ? shuffle(allWords) : allWords;
+    const source = pickRoundWords(allWords, random);
     return source.map((word) => {
       const others = allWords.filter((w) => w.id !== word.id);
       const wrongChoices = shuffle(others).slice(0, 3).map((w) => w.meaning);

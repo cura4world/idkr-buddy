@@ -115,7 +115,8 @@ const PROPER_NOUNS = new Set([
   "ramadan", "idul", "natal", "lebaran", "pancasila", "asia", "amerika", "eropa",
 ]);
 
-function normalizeHeadword(w: string): string {
+// 이야기 단어 시트(Story.tsx)도 같은 규칙으로 표제어를 정리합니다.
+export function normalizeHeadword(w: string): string {
   const t = w.trim();
   if (!t) return t;
   // \uC804\uBD80 \uB300\uBB38\uC790 \uC57D\uC5B4(RI, KTP \uB4F1)\uB294 \uADF8\uB300\uB85C \uB458\uB2E4.

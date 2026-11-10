@@ -1,0 +1,41 @@
+/*
+ * src/fonts.css — Pretendard (font-gothic) 를 앱 안에 넣어 둔 파일에서 읽습니다. 인터넷 글꼴 주소를 쓰지 않습니다.
+ * 원본: npm 패키지 pretendard 1.3.9 의 woff2-subset (한글 2,780자 + 라틴 등, 굵기 하나에 약 265KB).
+ * 앱에서 쓰는 굵기 네 가지만 둡니다: 400(font-normal) · 500(font-medium) · 600(font-semibold) · 700(font-bold).
+ * 서브셋에 없는 드문 글자는 다음 글꼴(Gowun Dodum → 기기 기본)로 그려집니다.
+ * Lora · Gowun Dodum 은 src/fonts.ts 에서 @fontsource 패키지로 불러옵니다.
+ *
+ * Copyright (c) 2021 Kil Hyung-jin, with Reserved Font Name Pretendard. SIL Open Font License 1.1.
+ */
+
+@font-face {
+  font-family: "Pretendard";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("pretendard/dist/web/static/woff2-subset/Pretendard-Regular.subset.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Pretendard";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("pretendard/dist/web/static/woff2-subset/Pretendard-Medium.subset.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Pretendard";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("pretendard/dist/web/static/woff2-subset/Pretendard-SemiBold.subset.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Pretendard";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("pretendard/dist/web/static/woff2-subset/Pretendard-Bold.subset.woff2") format("woff2");
+}

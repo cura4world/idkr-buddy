@@ -22,6 +22,7 @@ import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import AiReportButton from "@/components/AiReportButton";
 import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
 import { lastQuotaNotice } from "@/lib/aiProxy";
+import { publicAiErrorText } from "@/lib/aiErrors";
 import { dropReturnTicket } from "@/lib/readReturn";
 import { medaliEngine } from "@/lib/medali";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -283,6 +284,9 @@ const Dictionary = () => {
     if (code.indexOf("QUOTA") === 0) {
       return lastQuotaNotice() || "오늘 새로 찾을 수 있는 단어를 모두 찾았습니다. 이미 찾아본 단어는 그대로 볼 수 있고, 새 단어는 내일 다시 찾을 수 있습니다.";
     }
+    // 공개판: 키·세션 오류는 사용자용 문장으로 (aiErrors). 관리자판은 아래 기존 문구.
+    const pubText = publicAiErrorText(code);
+    if (pubText) return pubText;
     if (code === "NO_API_KEY") return "Gemini API 키가 필요합니다. 설정에서 키를 입력해주세요.";
     if (code === "INVALID_API_KEY") return "API 키가 올바르지 않습니다. 설정에서 다시 확인해주세요.";
     if (code === "RATE_LIMIT") return "요청이 많습니다. 잠시 후 다시 시도해주세요.";
@@ -300,7 +304,7 @@ const Dictionary = () => {
     const w = (term ?? query).trim();
     if (!w) return;
     if (!hasGeminiApiKey()) {
-      setError("Gemini API 키가 필요합니다. 설정에서 키를 입력해주세요.");
+      setError(errorMessage("NO_API_KEY"));
       setResult(null);
       setQuery(w); // 입력한 내용 유지
       return;
