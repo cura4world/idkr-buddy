@@ -79,7 +79,7 @@ export default function MedaliIdDialog({ open, onDone }: Props) {
     : !formatOk
       ? "한글·영문·숫자만, 6자 이내로 적어주세요."
       : isTaken
-        ? "이미 등록된 이름이에요. 내 다른 기기면 그대로 시작하세요."
+        ? "이미 등록된 이름입니다. 내 다른 기기라면 그대로 시작하세요."
         : "";
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -124,7 +124,7 @@ export default function MedaliIdDialog({ open, onDone }: Props) {
             앱에서 사용할 ID를 입력하세요
           </p>
           <p className="mt-1.5 font-gothic text-[0.75rem] leading-relaxed text-muted-foreground">
-            영문 6자 이내로 적어주세요. 아이디를 입력하면 상대방의 학습 점수를 확인할 수 있어요.
+            한글·영문·숫자 6자 이내로 적어 주세요. 아이디를 입력하면 상대방의 학습 점수를 확인할 수 있습니다.
           </p>
 
           <form onSubmit={handleSubmit}>
@@ -186,7 +186,7 @@ export default function MedaliIdDialog({ open, onDone }: Props) {
               }}
               className="mt-3 w-full py-2 font-gothic text-[0.75rem] text-muted-foreground underline underline-offset-2"
             >
-              이 기기에서는 사용하지 않을래요
+              이 기기에서는 사용 안 함
             </button>
           </form>
         </div>
