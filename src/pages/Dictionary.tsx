@@ -21,6 +21,7 @@ import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveT
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import AiReportButton from "@/components/AiReportButton";
 import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
+import { lastQuotaNotice } from "@/lib/aiProxy";
 import { dropReturnTicket } from "@/lib/readReturn";
 import { medaliEngine } from "@/lib/medali";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -277,6 +278,11 @@ const Dictionary = () => {
   const histHideTimer = useRef<any>(null);
 
   const errorMessage = (code: string): string => {
+    // 공개판 서버의 숨은 한도(처음 찾는 단어 하루·한 달)를 넘은 경우 — 오류 코드는 QUOTA_DICT_NEW 등 "QUOTA" 로 시작.
+    // aiProxy 는 이 경우 토스트를 띄우지 않고 기간(오늘/이번 달)에 맞는 문장만 남깁니다. 이미 찾아본 단어는 캐시로 계속 보입니다.
+    if (code.indexOf("QUOTA") === 0) {
+      return lastQuotaNotice() || "오늘 새로 찾을 수 있는 단어를 모두 찾았습니다. 이미 찾아본 단어는 그대로 볼 수 있고, 새 단어는 내일 다시 찾을 수 있습니다.";
+    }
     if (code === "NO_API_KEY") return "Gemini API 키가 필요합니다. 설정에서 키를 입력해주세요.";
     if (code === "INVALID_API_KEY") return "API 키가 올바르지 않습니다. 설정에서 다시 확인해주세요.";
     if (code === "RATE_LIMIT") return "요청이 많습니다. 잠시 후 다시 시도해주세요.";
@@ -285,8 +291,6 @@ const Dictionary = () => {
     if (code === "NETWORK") return "네트워크 연결을 확인해주세요.";
     if (code === "SERVER_ERROR") return "Gemini 서버 오류입니다. 잠시 후 다시 시도해주세요.";
     if (code === "BAD_REQUEST") return "요청 처리에 실패했습니다. 잠시 후 다시 시도해주세요.";
-    // 공개판 서버의 숨은 한도(처음 찾는 단어 하루 N번)를 넘은 경우. 이미 찾아본 단어는 캐시로 계속 보입니다.
-    if (code === "QUOTA") return "오늘 새로 찾을 수 있는 단어를 모두 찾았습니다. 이미 찾아본 단어는 그대로 볼 수 있고, 새 단어는 내일 다시 찾을 수 있습니다.";
     return "검색에 실패했습니다. 잠시 후 다시 시도해주세요.";
   };
 

@@ -41,8 +41,8 @@ export const PAYWALL_PATH = "/plus";        // 잠긴 메뉴를 누르면 여기
 | # | 스토리 | 상태 | 받아들임 조건 |
 |---|---|---|---|
 | S40 | **미리보기 APK + 등급 전환** | ⬜ | 아래 "S40 상세" |
-| S41 | 한도 확정 반영 (서버) | ⬜ | 무료·Plus·체험·Special 한도가 결정 문서 표와 같음(아래). 하루·한 달 둘 다. 테스트 추가·통과 |
-| S42 | 구독 화면 (PW1·PW2) + `plusCopy.ts` | ⬜ | 문구·혜택 5줄·요금제 2칸·버튼·안내 시안 그대로. 가격은 Play 값, 없으면(미리보기) 고정 표시 |
+| S41 | 한도 확정 반영 (서버) | ✅ | 무료·Plus·체험·Special 한도가 결정 문서 표와 같음(아래). 하루·한 달 둘 다. 테스트 추가·통과 — 서버 배포는 아직(Cloudflare 에 붙여 넣기 필요) |
+| S42 | 구독 화면 (PW1·PW2) + `plusCopy.ts` | ✅ | 문구·혜택 5줄·요금제 2칸·버튼·안내 시안 그대로. 가격은 Play 값, 없으면(미리보기) 고정 표시 — 폰 확인 🔍 |
 | S43 | 단어장 재분류·검토·새 5권 | 🔍 | 01~34 공개, 35~41 성경과 신앙. 34권 합계 3,000단어 안팎. 보관함 ID 이전. WORDLIST-PLAN 갱신 |
 | S44 | 회화집 채우기 + 난이도 하 | 🔍 | 공개 14개 폴더 86장면, 교회와 신앙은 staff 만. `PercakapanLevel` 에 "하" 추가, 만들기 기본 "중" — 구현 완료(54장면 새로 씀, 기존 5곳 고침), 내용 검토 대기. 기록: `src/data/percakapan/REVIEW-2026-11.md` |
 | S45 | 홈 (H5·H6) + 하단 탭 | 🟡 | 시안 그대로. 무료는 잠긴 메뉴 눌러 구독 화면 — 구현 끝, 폰 확인 대기 |
@@ -96,6 +96,16 @@ export const PAYWALL_PATH = "/plus";        // 잠긴 메뉴를 누르면 여기
 
 (각 스토리가 끝날 때 아래에 한 줄씩: 커밋 해시, 바꾼 파일, 검증 결과, 폰에서 볼 것)
 
+- **S41** (2026-11-11) `ea97d8e`·`6386eaa`·`352fe7e` 서버(`workers/kata-public/worker.js`·`test.mjs`·`wrangler.toml`), `d9603a6`~`d3f522d` 앱(aiProxy·geminiText·tts·percakapanAudio·story·dictionary·percakapan·phrase·peribahasa·account·plan·billing·AccountSection·Story·Percakapan·Dictionary).
+  기능 이름(`x-kata-kind`): story · percakapan-make · longread · dict-new · phrase · word-audio · shared-audio · text · tts(예전). 하루·한 달·체험 합계, 긴 읽기는 `x-kata-unit` 한 편 = 한 번.
+  `/me` 에 `features`, 관리자 `POST/GET /admin/special`. 계약·표는 `03-architecture.md`.
+  검증: `node --test workers/kata-public/test.mjs` 16/16(기존 8 그대로 통과 + 새 8), esbuild 바꾼 파일 전부, `tsc` 0, `npm run build` 0.
+  판단: 체험 사전은 절반(25)이 무료(50)보다 적어 무료 값으로 올림 · Plus 의 "제한 없음/안 셈" 기능에 숨은 안전 상한 · Plus 필요(403)는 자동 이동 대신 "Plus 보기" 버튼 달린 알림.
+  남은 일: **Worker 배포 전에는 폰에 반영 안 됨**(코드만). 폰에서 볼 것: 무료로 이야기 2편째 → "오늘 불러올 수 있는 이야기를 모두 불러왔습니다…", 무료로 이야기 듣기 → "Plus 보기" 알림.
+- **S42** (2026-11-11) `800e13a` `src/pages/Plus.tsx` + `src/lib/plusCopy.ts`(내보내는 이름이 바뀌어 한 커밋).
+  시안 PW1·PW2 와 390×844 렌더 비교(미리보기 빌드 + Playwright): 두 장 모두 픽셀 차 40 넘는 점 0개. "이용 중" 상자도 확인.
+  가격: Play `formattedPrice`(원화 "₩34,800" → "34,800원", 월 환산·할인율은 원화만 계산), 없으면 고정 34,800/3,900원. 체험: Play `freeTrialPeriod`, Play 가 없으면 미리보기 `kata-preview-trial-used` 키(없으면 체험 가능).
+  폰에서 볼 것: 글꼴(Pretendard/Gowun Dodum) 실제 모양, 아래 안전 영역 여백, 연간↔월간 눌렀을 때 버튼·안내 문구 바뀜, 미리보기 패널 "체험 이미 사용" 켜면 PW2 문구.
 - S47 (11/11) f6526a9 phrase.ts(알아두기 지시문) · 654e1d2 AiReportButton.tsx(문구) · cec6679 Dictionary.tsx · 496d895 PhraseDetail.tsx · 297be27 SavedPhrases.tsx — esbuild·tsc·build 통과, Playwright 390px 캡처로 D4·P1 대조(단어·문장·한국어 단어/문장·한도 초과·빈 알아두기·공개판 신고). 폰에서 볼 것: 사전 makan 결과 카드 순서·색, 담기 알약, 문장 점선 밑줄 탭, 알아두기 없는 문장에서 구역 숨김, 글자 크기 단계별 줄바꿈
 - S44 (2026-11-11) · 커밋: 이 줄을 담은 커밋 바로 앞의 "회화집:" 커밋 20개 · 파일: `src/data/percakapan/` (새 9개 + types·index·01·03·05·08 + REVIEW-2026-11.md), `src/lib/percakapan.ts`·`percakapanAudio.ts`·`peribahasa.ts`, `src/pages/Percakapan.tsx` · 검증: esbuild 21파일·tsc·`npm run build` 통과, 데이터 점검 스크립트(폴더별 장면 수 = 목표, 새 장면 6~10줄, 모든 줄 id·ko 있음, 공개 86/전체 94) 통과 · 폰에서 볼 것: 미리보기에서 무료·Plus 는 폴더 14개(교회와 신앙 없음), Special·관리자는 15개 / 새 장면 소리(남녀 목소리 구분) / 만들기 시트 하·중·상 세 칸, 기본 중 / 고친 3장면(자기소개·오토바이 기사·병문안)이 새 대사로 다시 읽히는지
 - S45·S46 (2026-11-11): 8726b21 `BottomTabs.tsx`(새) · e37ef09 `SettingsDialog.tsx`(회원키 서식 함수 export 한 줄) · e3ebe3f `MyInfo.tsx`(새, /me) · c9c7769 `Index.tsx`(스토어 앱일 때만 H5·H6 홈, 관리자판 홈 그대로) · 17636cb `App.tsx`(/me 라우트·탭 막대). esbuild 5파일·tsc·build 통과, 390×844 Playwright 로 무료·Plus·Special 홈/내 정보와 잠금→구독 화면·탭 뒤로가기 확인. 폰에서 볼 것: 탭 막대 안전 영역 여백, 잠긴 메뉴 안개 안내 후 구독 화면, 안드로이드 뒤로가기(탭→홈→앱 뒤로), 공부 시간 막대, Google 사진. 다른 탭 화면(`SavedWords`·`Permainan`)은 아직 뒤로가기 화살표가 있고 하단 여백은 탭 막대의 빈칸이 대신함(그 화면 담당이 `--kata-tabbar-h` 로 맞추면 됨).

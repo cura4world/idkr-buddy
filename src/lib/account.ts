@@ -22,9 +22,16 @@ export interface PublicUser {
   picture: string;
 }
 
+/**
+ * 서버(kata-public)가 주는 등급.
+ *   free · trial(7일 무료 체험 중, trial: true) · plus · special(Special Member) · admin
+ *   until: 끝나는 시각(ms). special·admin 은 0 이면 무기한.
+ * 예전 서버는 체험을 {tier:"plus", trial:true} 로 줄 수도 있어 plan.ts 가 둘 다 받습니다.
+ */
 export interface PublicPlan {
-  tier: "free" | "plus";
+  tier: "free" | "trial" | "plus" | "special" | "admin";
   until: number;
+  trial?: boolean;
   productId?: string;
 }
 
@@ -38,14 +45,26 @@ export interface PublicSession {
 
 export interface PublicUsage {
   day: string;
+  month?: string;
   text: number;
   tts: number;
 }
 
 export interface PublicLimits {
-  text: number;
-  tts: number;
+  text: number | null;
+  tts: number | null;
 }
+
+/** /me 의 features 한 칸 — 기능별 하루·한 달(체험이면 체험 합계) 사용량과 한도. null = 제한 없음. */
+export interface PublicFeatureUsage {
+  locked: boolean;
+  hidden: boolean;
+  used: { day: number; month: number; total?: number };
+  limit: { day: number | null; month: number | null; total?: number };
+  left: { day: number | null; month: number | null; total?: number };
+}
+
+export type PublicFeatures = Record<string, PublicFeatureUsage>;
 
 // ── 보관 ────────────────────────────────────────────────────
 
@@ -222,7 +241,12 @@ export async function signInWithGoogle(): Promise<PublicSession> {
 }
 
 /** 서버에서 계정·플랜·사용량을 다시 받습니다. 세션이 끊겼으면 로그아웃 처리합니다. */
-export async function refreshMe(): Promise<{ plan: PublicPlan; usage: PublicUsage; limits: PublicLimits } | null> {
+export async function refreshMe(): Promise<{
+  plan: PublicPlan;
+  usage: PublicUsage;
+  limits: PublicLimits;
+  features: PublicFeatures;
+} | null> {
   const s = getSession();
   if (!s) return null;
   let res: Response;
@@ -243,7 +267,7 @@ export async function refreshMe(): Promise<{ plan: PublicPlan; usage: PublicUsag
     accountId: d.accountId || s.accountId,
   });
   saveSession(next);
-  return { plan: next.plan, usage: d.usage, limits: d.limits };
+  return { plan: next.plan, usage: d.usage, limits: d.limits, features: d.features || {} };
 }
 
 /** 세션의 플랜만 바꿔 저장합니다 (구독 검증 직후). */

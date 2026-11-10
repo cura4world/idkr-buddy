@@ -6,7 +6,7 @@
 //   회화집 오디오가 커서 기존 캐시를 밀어내 버립니다.
 // - tts.ts / PlayButton.tsx 는 여러 화면이 함께 쓰므로 손대지 않고, 여기에 독립된 재생기를 둡니다.
 
-import { geminiTarget, handleQuotaResponse } from "@/lib/aiProxy";
+import { geminiTarget, handleQuotaResponse, AiKind } from "@/lib/aiProxy";
 import { getGeminiApiKey } from "@/lib/gemini";
 import { ttsPlayer } from "@/lib/tts";
 import { bibleAudioPlayer } from "@/lib/bibleAudio";
@@ -175,9 +175,17 @@ function pcmBase64ToWavDataUrl(pcmB64: string): string {
 
 // ── Gemini TTS 호출 ───────────────────────────────────────────
 
-async function postTts(apiKey: string, body: any, attempt = 0): Promise<string> {
+function isQuotaError(e: unknown): boolean {
+  const m = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "";
+  return m.indexOf("QUOTA") === 0;
+}
+
+// kind: 공개판 서버가 셀 기능 이름.
+//   내가 만든 회화 전체 듣기 → longread (Plus 하루·한 달 한도)
+//   기본 회화집 전체 듣기, 문장 하나 듣기 → shared-audio (Plus 는 한도에 안 셈, 무료는 잠김)
+async function postTts(apiKey: string, body: any, attempt = 0, kind: AiKind = "shared-audio"): Promise<string> {
   // 내 키가 있으면 직접, 없고 회원키가 있으면 Worker 를 거칩니다(키는 서버에만).
-  const target = geminiTarget(TTS_MODEL, apiKey, "tts");
+  const target = geminiTarget(TTS_MODEL, apiKey, kind);
   if (!target) throw new Error("NO_API_KEY");
 
   let res: Response;
@@ -196,7 +204,7 @@ async function postTts(apiKey: string, body: any, attempt = 0): Promise<string> 
 
   if (!res.ok) {
     // 500은 가끔 오디오 대신 텍스트 토큰을 반환하는 알려진 이슈 → 1회 재시도
-    if (res.status === 500 && attempt < 1) return postTts(apiKey, body, attempt + 1);
+    if (res.status === 500 && attempt < 1) return postTts(apiKey, body, attempt + 1, kind);
     if (res.status === 400 || res.status === 403) throw new Error("INVALID_API_KEY");
     if (res.status === 429) throw new Error("RATE_LIMIT");
     throw new Error("REQUEST_FAILED_" + res.status);
@@ -205,7 +213,7 @@ async function postTts(apiKey: string, body: any, attempt = 0): Promise<string> 
   const data = await res.json();
   const b64: string = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ?? "";
   if (!b64) {
-    if (attempt < 1) return postTts(apiKey, body, attempt + 1);
+    if (attempt < 1) return postTts(apiKey, body, attempt + 1, kind);
     throw new Error("EMPTY_AUDIO");
   }
   return pcmBase64ToWavDataUrl(b64);
@@ -243,7 +251,7 @@ async function generateSceneAudio(scene: PercakapanScene): Promise<string> {
         },
       },
     },
-  });
+  }, 0, scene.custom ? "longread" : "shared-audio");
 }
 
 // 문장 하나 — 단일 화자
@@ -262,7 +270,7 @@ async function generateLineAudio(text: string, speakerName: string): Promise<str
         voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceNameFor(speakerName) } },
       },
     },
-  });
+  }, 0, "shared-audio");
 }
 
 // ── 캐시 키 ───────────────────────────────────────────────────
@@ -420,7 +428,9 @@ class PercakapanAudioPlayer {
       }
     } catch (e) {
       if (myToken !== this.token) return;
-      this.fail();
+      // 한도·Plus 안내는 aiProxy 가 이미 띄웠으므로 오류 알림(errorAt)을 겹쳐 띄우지 않습니다.
+      if (isQuotaError(e)) this.stop();
+      else this.fail();
       return;
     }
 
@@ -459,7 +469,9 @@ class PercakapanAudioPlayer {
       }
     } catch (e) {
       if (myToken !== this.token) return;
-      this.fail();
+      // 한도·Plus 안내는 aiProxy 가 이미 띄웠으므로 오류 알림(errorAt)을 겹쳐 띄우지 않습니다.
+      if (isQuotaError(e)) this.stop();
+      else this.fail();
       return;
     }
 

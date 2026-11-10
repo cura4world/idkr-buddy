@@ -220,8 +220,10 @@ const Percakapan = () => {
     } catch (e: any) {
       setCreating(false);
       const code = (e && e.message) || "";
-      // 한도 초과: 토스트는 aiProxy 가 이미 띄웁니다. 시트 안에 오늘은 더 못 만든다는 안내를 둡니다.
-      if (code === "QUOTA") setQuotaHit(true);
+      // 한도 초과(QUOTA_PERCAKAPAN_MAKE 등): 토스트는 aiProxy 가 이미 띄웁니다. 시트 안에 오늘은 더 못 만든다는 안내를 둡니다.
+      // Plus 필요(QUOTA_PLUS_REQUIRED): aiProxy 가 "Plus 보기" 알림을 띄웠으므로 여기서는 아무것도 하지 않습니다.
+      if (code === "QUOTA_PLUS_REQUIRED") { /* 겹쳐 띄우지 않음 */ }
+      else if (code.indexOf("QUOTA") === 0) setQuotaHit(true);
       else if (code === "NO_API_KEY") toast.error("설정에서 Gemini API 키를 넣어 주세요");
       else if (code === "INVALID_API_KEY") toast.error("Gemini API 키가 맞지 않습니다");
       else if (code === "RATE_LIMIT") toast.error("요청이 많습니다. 잠시 뒤에 다시 하세요");

@@ -401,7 +401,9 @@ const Story = () => {
       openCard(rec);
     } catch (e: any) {
       const code = e?.message || "";
-      if (code === "QUOTA") {
+      // 서버 한도 코드는 QUOTA_STORY 등(aiProxy·geminiText). Plus 필요는 aiProxy 의 "Plus 보기" 알림으로 끝.
+      if (code === "QUOTA_PLUS_REQUIRED") { /* 겹쳐 띄우지 않음 */ }
+      else if (code.indexOf("QUOTA") === 0) {
         // 서버가 오늘 한도를 다 썼다고 알려 왔습니다. 오늘은 버튼을 막고 버튼 아래에 안내를 둡니다.
         // (토스트는 aiProxy 가 이미 한 번 띄우므로 여기서는 더 띄우지 않습니다)
         try { localStorage.setItem(QUOTA_DAY_KEY, today); } catch (err) {}

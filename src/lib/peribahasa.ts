@@ -569,7 +569,7 @@ async function createAyat(recent: string[]): Promise<Phrase | null> {
       const text = stripVerseIntro(found.text, found.verse);
       // 표제만 있거나 원본이 잘려 있는 절이면 다른 구절로 다시 고릅니다
       if (!isUsableVerseText(text)) continue;
-      await getPhraseDetail(text, "");
+      await getPhraseDetail(text, "", false, "", "phrase");
       return {
         kind: "alkitab",
         id: text,
@@ -591,14 +591,14 @@ async function createPhrase(kind: PhraseKind, recent: string[]): Promise<Phrase 
   if (kind === "percakapan") {
     const p = await pickFromPercakapan();
     if (!p) return null;
-    await getPhraseDetail(p.id, p.ko);
+    await getPhraseDetail(p.id, p.ko, false, "", "phrase");
     return p;
   }
 
   if (kind === "kosakataku" || kind === "kosakata") {
     const p = kind === "kosakataku" ? pickFromMyWordbook() : pickFromSharedWordbooks();
     if (!p) return null;
-    await getPhraseDetail(p.id, p.ko);
+    await getPhraseDetail(p.id, p.ko, false, "", "phrase");
     return p;
   }
 

@@ -244,7 +244,7 @@ const PhraseDetail = () => {
       const msg = String(e?.message || "");
       if (msg === "NO_API_KEY" || msg === "INVALID_API_KEY") setError("API_KEY");
       else if (msg === "RATE_LIMIT") setError("잠시 뒤에 다시 시도해 주세요");
-      else if (msg === "QUOTA") setError("오늘 볼 수 있는 해설을 모두 보았습니다. 내일 다시 볼 수 있습니다");
+      else if (msg.indexOf("QUOTA") === 0) setError("오늘 볼 수 있는 해설을 모두 보았습니다. 내일 다시 볼 수 있습니다");
       else setError("설명을 불러오지 못했습니다");
     } finally {
       setLoading(false);

@@ -82,7 +82,7 @@ export async function generateStory(
     "- 동화라면 그 이야기가 담고 있는 교훈이나 비슷한 설화 전통을 소개해도 좋습니다.\n" +
     "- 딱딱한 사전식 나열이 아니라, 읽으면 '아하' 하게 되는 친절한 도움말로 쓰세요.\n";
 
-  const parsed = await callGeminiJSON(prompt, { timeoutMs: STORY_TIMEOUT_MS });
+  const parsed = await callGeminiJSON(prompt, { timeoutMs: STORY_TIMEOUT_MS, kind: "story" });
 
   return {
     title: (parsed.title || "").toString().trim(),

@@ -4,7 +4,10 @@
 // 텍스트: 풍성한 사전 정보(JSON)를 생성.
 
 // 텍스트 호출은 공통 모듈(geminiText.ts)이 담당합니다. 모델·타임아웃·재시도는 거기서 관리합니다.
-import { callGeminiJSON } from "@/lib/geminiText";
+import { callGeminiJSON, GeminiCallOptions } from "@/lib/geminiText";
+
+// 사전 화면은 캐시(dictStore)에 없을 때만 아래 함수를 부릅니다 → 공개판 서버의 "처음 찾는 말" 한도로 셉니다.
+const DICT_NEW: GeminiCallOptions = { kind: "dict-new" };
 
 export interface DictExample {
   id: string;      // 인도네시아어 예문
@@ -149,7 +152,7 @@ export async function lookupWord(word: string): Promise<DictResult> {
   const trimmed = word.trim();
   if (!trimmed) throw new Error("EMPTY_WORD");
 
-  const parsed = await callGeminiJSON(buildPrompt(trimmed));
+  const parsed = await callGeminiJSON(buildPrompt(trimmed), DICT_NEW);
 
   return {
     word: normalizeHeadword((parsed.word || trimmed).toString().trim()),
@@ -236,7 +239,7 @@ export async function analyzeIdSentence(sentence: string): Promise<IdSentenceRes
     "- natural\uC740 \uC6D0\uBB38\uBCF4\uB2E4 \uB354 \uC790\uC5F0\uC2A4\uB7FD\uAC70\uB098 \uBB38\uBC95\uC801\uC73C\uB85C \uB354 \uC644\uC804\uD55C \uD45C\uD604\uC774 \uC788\uC73C\uBA74 \uBC18\uB4DC\uC2DC \uCC44\uC6B0\uC138\uC694. \uC6D0\uBB38\uC774 \uC774\uBBF8 \uC644\uBCBD\uD558\uBA74 id\uC640 ko \uBAA8\uB450 \uBE48 \uBB38\uC790\uC5F4\uB85C \uB450\uC138\uC694.\n" +
     "- patterns\uB294 \uC774 \uBB38\uC7A5\uC5D0\uC11C \uBC30\uC6B8 \uB9CC\uD55C \uD575\uC2EC \uBB38\uD615 1~2\uAC1C\uC785\uB2C8\uB2E4. pattern\uC5D0\uB294 \uC778\uB3C4\uB124\uC2DC\uC544\uC5B4 \uBF08\uB300\uB97C +\uB85C \uC5F0\uACB0\uD574 \uC801\uACE0(\uC608: mendorong + \uC0AC\uB78C + untuk + \uB3D9\uC0AC), meaning\uC5D0\uB294 \uADF8 \uBB38\uD615\uC758 \uD55C\uAD6D\uC5B4 \uC758\uBBF8\uB97C \uC801\uC73C\uC138\uC694. \uBC30\uC6B8 \uBB38\uD615\uC774 \uC5C6\uC73C\uBA74 \uBE48 \uBC30\uC5F4 [].\n";
 
-  const parsed = await callGeminiJSON(prompt);
+  const parsed = await callGeminiJSON(prompt, DICT_NEW);
   return {
     original: (parsed.original || trimmed).toString().trim(),
     translation: (parsed.translation || "").toString().trim(),
@@ -304,7 +307,7 @@ export async function lookupKoWord(word: string): Promise<KoWordResult> {
     "- 각 단어마다 자연스러운 예문 1개와 한국어 해석을 꼭 넣으세요.\n" +
     "- pron은 한국인이 읽기 쉽게 한글로 근사 표기 (예: bicara → 비짜라).\n";
 
-  const parsed = await callGeminiJSON(prompt);
+  const parsed = await callGeminiJSON(prompt, DICT_NEW);
   return {
     query: (parsed.query || trimmed).toString().trim(),
     candidates: arr<KoWordCandidate>(parsed.candidates).map((c) => ({
@@ -354,7 +357,7 @@ export async function translateKoSentence(sentence: string): Promise<KoSentenceR
     "- pron은 한국인이 읽기 쉽게 한글로 근사 표기.\n" +
     "- hardWords는 위 두 문장에 나온 단어 중 초중급 학습자가 모를 만한 단어만 골라 넣으세요. 쉬운 단어는 제외.\n";
 
-  const parsed = await callGeminiJSON(prompt);
+  const parsed = await callGeminiJSON(prompt, DICT_NEW);
   const variant = (v: any): KoSentenceVariant => ({
     id: (v?.id || "").toString().trim(),
     pron: (v?.pron || "").toString().trim(),
