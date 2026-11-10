@@ -34,6 +34,7 @@ export const DASAR: PercakapanScene[] = [
     roles: { A: "새로 온 사람", B: "모임 진행자" },
     voices: { A: "m", B: "f" },
     level: "중",
+    rev: 2,
     lines: [
       { s: "B", id: "Silakan, Mas. Perkenalkan diri dulu.", ko: "자, 먼저 자기소개 해주세요." },
       { s: "A", id: "Baik. Perkenalkan, nama saya Arga.", ko: "네. 소개드릴게요, 제 이름은 아르가입니다." },
@@ -43,8 +44,8 @@ export const DASAR: PercakapanScene[] = [
       { s: "B", id: "Sudah berkeluarga?", ko: "결혼은 하셨어요?" },
       { s: "A", id: "Sudah. Istri saya juga orang Korea.", ko: "네. 아내도 한국 사람이에요." },
       { s: "B", id: "Kerjanya di bidang apa?", ko: "어떤 일 하세요?" },
-      { s: "A", id: "Saya pendeta, melayani jemaat Indonesia.", ko: "저는 목사고, 인도네시아 성도들을 섬기고 있어요." },
-      { s: "B", id: "Wah, luar biasa. Hobinya apa, Mas?", ko: "우와, 대단하시네요. 취미는 뭐예요?" },
+      { s: "A", id: "Saya kerja di perusahaan Korea, bagian ekspor.", ko: "한국 회사에 다니고, 수출 부서에 있어요." },
+      { s: "B", id: "Oh, gitu. Hobinya apa, Mas?", ko: "아, 그렇군요. 취미는 뭐예요?" },
       { s: "A", id: "Saya suka jalan-jalan dan baca buku.", ko: "여행하고 책 읽는 걸 좋아해요." },
       { s: "A", id: "Mohon bantuannya ya, saya masih baru di sini.", ko: "잘 부탁드려요, 여기 아직 새내기라서요." },
       { s: "B", id: "Santai aja, Mas. Kita semua ramah kok.", ko: "편하게 하세요. 다들 친절해요." },
