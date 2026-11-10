@@ -47,6 +47,7 @@ jobs:
           path: |
             map-photos-review.html
             photo-build.log
+            src/lib/mapPhotos.ts
           if-no-files-found: warn
 
       - name: Commit photo list
@@ -59,4 +60,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/lib/mapPhotos.ts
           git commit -m "지도: 사진 고정 목록 채움 (Actions 에서 위키미디어 조회)"
-          git push origin HEAD:release/public
+          # 조회하는 동안(약 25분) 브랜치가 앞서 나가면 push 가 거절되므로, 받아서 다시 올립니다(최대 3번).
+          for i in 1 2 3; do
+            git pull --rebase origin release/public && git push origin HEAD:release/public && exit 0
+            sleep 10
+          done
+          exit 1

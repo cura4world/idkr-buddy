@@ -33,7 +33,11 @@ const PICK = {
   // "Borobudur": ["Borobudur-Nothwest-view.jpg"],
 };
 // 어디에도 쓰지 않을 파일 이름
-const SKIP = new Set([]);
+// 2026-11-11 첫 실행 확인: 도시(마나도) 대표 사진으로 교회 건물 두 장이 들어와 공개판에 맞지 않아 뺍니다.
+const SKIP = new Set([
+  "Cathedral Church Manado - panoramio.jpg",
+  "Gereja Pantekosta di Indonesia (GPdI) Manado - panoramio.jpg",
+]);
 // 사진을 두지 않을 지점 (그 지점을 잘 보여 주는 자유 사진이 없을 때)
 const NONE = new Set([]);
 
@@ -89,7 +93,9 @@ const FILE_REGION = {
 
 // 공용 이미지(지도·국기·문장·로고 등)와 몽타주는 거릅니다.
 const BAD = new RegExp(
-  "logo|icon|map|peta|flag|bendera|seal|emblem|lambang|coat.of.arms|locator|location|banner|symbol|blank|question|disambig|montage|collage|kolase|diagram|chart|graph|svg$",
+  // 2026-11-11 첫 실행에서 우표·은행 건물·학교 단체 사진·교회 건물이 지점 대표 사진으로 들어와 더 거릅니다.
+  "logo|icon|map|peta|flag|bendera|seal|emblem|lambang|coat.of.arms|locator|location|banner|symbol|blank|question|disambig|montage|collage|kolase|diagram|chart|graph|svg$" +
+    "|stamp|perangko|prangko|banknote|uang kertas|rupiah|bank indonesia|volksschool|school|sekolah|portrait|potret",
   "i"
 );
 const PHOTO = new RegExp("\\.(jpe?g)$", "i");
