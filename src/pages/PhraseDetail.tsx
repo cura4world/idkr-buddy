@@ -19,6 +19,7 @@ import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } 
 import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
 import AiReportButton from "@/components/AiReportButton";
+import { publicAiErrorText } from "@/lib/aiErrors";
 
 /* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 */
 const speak = (text: string, lang: "id" | "ko") => {
@@ -242,7 +243,10 @@ const PhraseDetail = () => {
       }
     } catch (e: any) {
       const msg = String(e?.message || "");
-      if (msg === "NO_API_KEY" || msg === "INVALID_API_KEY") setError("API_KEY");
+      // 공개판에는 키 설정이 없으므로 "설정 열기" 카드 대신 사용자용 문장을 씁니다(aiErrors).
+      if (msg === "NO_API_KEY" || msg === "INVALID_API_KEY" || msg === "SESSION_EXPIRED" || msg === "NOT_AVAILABLE") {
+        setError(publicAiErrorText(msg) || "API_KEY");
+      }
       else if (msg === "RATE_LIMIT") setError("잠시 뒤에 다시 시도해 주세요");
       else if (msg.indexOf("QUOTA") === 0) setError("오늘 볼 수 있는 해설을 모두 보았습니다. 내일 다시 볼 수 있습니다");
       else setError("설명을 불러오지 못했습니다");
@@ -259,7 +263,7 @@ const PhraseDetail = () => {
     }
     if (!hasGeminiApiKey()) {
       setLoading(false);
-      setError("API_KEY");
+      setError(publicAiErrorText("NO_API_KEY") || "API_KEY");
       return;
     }
     if (isAyat) {
