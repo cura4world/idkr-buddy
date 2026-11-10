@@ -266,12 +266,18 @@ async function generateLineAudio(text: string, speakerName: string): Promise<str
 }
 
 // ── 캐시 키 ───────────────────────────────────────────────────
+// 기본 장면의 인도네시아어 대사를 고치면 그 장면에 rev 를 올립니다.
+// rev 가 없는 장면은 예전과 같은 키라 이미 받아 둔 소리를 그대로 씁니다.
+function revPart(scene: PercakapanScene): string {
+  return scene.rev ? "::r" + scene.rev : "";
+}
+
 function allKey(scene: PercakapanScene): string {
-  return "all::" + scene.id + "::" + scene.lines.length;
+  return "all::" + scene.id + revPart(scene) + "::" + scene.lines.length;
 }
 
 function lineKey(scene: PercakapanScene, index: number, speakerName: string): string {
-  return "line::" + scene.id + "::" + index + "::" + speakerName;
+  return "line::" + scene.id + revPart(scene) + "::" + index + "::" + speakerName;
 }
 
 // ── 재생기 (전역 단일 인스턴스) ────────────────────────────────

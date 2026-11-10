@@ -18,13 +18,14 @@ import {
   fetchBackup,
   restoreBackup,
   hasPercakapanConfig,
+  isCategoryVisible,
+  PERCAKAPAN_LEVELS,
 } from "@/lib/percakapan";
 import type { PercakapanCategory, PercakapanLevel } from "@/lib/percakapan";
 import { builtinScenesOf } from "@/data/percakapan";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { isStoreApp } from "@/lib/platform";
 import LevelCircles from "@/components/LevelCircles";
-import type { LevelValue } from "@/components/LevelCircles";
 
 const RESTORE_ASKED_KEY = "percakapan-restore-asked";
 const NEW_CAT = "__new__";
@@ -55,6 +56,9 @@ const TILE_BG: Record<string, string> = {
   kerja: "#ECE8F6",
   telepon: "#F1F4F5",
   masalah: "#F8ECEC",
+  uang: "#FCEFE3",
+  "hari-raya": "#EAF2DF",
+  kantor: "#ECE8F6",
   gereja: "#EAF2DF",
 };
 
@@ -67,8 +71,6 @@ function tileBg(c: PercakapanCategory): string {
   return "#F1F4F5";
 }
 
-// 교회와 신앙은 관리자·Special Member 에게만 보입니다 (lib 쪽에서도 거르지만 화면에서 한 번 더).
-const isStaffOnlyCat = (id: string) => id === "gereja";
 
 const Percakapan = () => {
   const navigate = useNavigate();
@@ -76,7 +78,8 @@ const Percakapan = () => {
   const plan = usePlan();
 
   const [allCats, setAllCats] = useState<CatRow[]>([]);
-  const cats = allCats.filter((c) => plan.staff || !isStaffOnlyCat(c.id));
+  // 교회와 신앙(staffOnly)은 listCategories 가 이미 거릅니다. 등급이 바뀐 직후를 위해 화면에서도 한 번 더.
+  const cats = allCats.filter((c) => isCategoryVisible(c.id));
 
   // 만들기 시트
   const [makeOpen, setMakeOpen] = useState(false);
@@ -85,9 +88,8 @@ const Percakapan = () => {
   const [newCatKo, setNewCatKo] = useState("");
   const [newCatId, setNewCatId] = useState("");
   const [situation, setSituation] = useState("");
-  // 난이도 "하" 는 lib 의 PercakapanLevel 에 더해지는 중입니다(S44). 여기서는 넓은 타입으로 들고,
-  // generateScene 에 넘길 때만 PercakapanLevel 로 맞춥니다.
-  const [level, setLevel] = useState<LevelValue>("중");
+  // 난이도 하·중·상 (PERCAKAPAN_LEVELS), 기본 중
+  const [level, setLevel] = useState<PercakapanLevel>("중");
   const [creating, setCreating] = useState(false);
   // 서버가 오늘 만들기 한도를 다 썼다고 알려 왔는지 (이 화면에 있는 동안만)
   const [quotaHit, setQuotaHit] = useState(false);
@@ -105,9 +107,10 @@ const Percakapan = () => {
       .catch(() => setAllCats([]));
   };
 
+  // 등급이 바뀌면(예: 회원키 입력) 보이는 폴더가 달라지므로 다시 불러옵니다.
   useEffect(() => {
     refresh();
-  }, []);
+  }, [plan.tier]);
 
   // 처음 들어왔을 때 한 번만: 이 기기가 비어 있고 서버에 백업이 있으면 물어봅니다.
   useEffect(() => {
@@ -207,7 +210,7 @@ const Percakapan = () => {
         name: trimmed,
         catId: targetCat,
         situation: situation.trim(),
-        level: level as PercakapanLevel,
+        level,
       });
       if (madeCat) await saveCustomCat(madeCat);
       await saveCustomScene(scene);
@@ -496,7 +499,13 @@ const Percakapan = () => {
 
               <div>
                 {labelEl("난이도")}
-                <LevelCircles value={level} onChange={setLevel} variant="make" disabled={creating} />
+                <LevelCircles
+                  value={level}
+                  onChange={setLevel}
+                  variant="make"
+                  levels={PERCAKAPAN_LEVELS}
+                  disabled={creating}
+                />
               </div>
             </div>
 

@@ -5,21 +5,21 @@
 
 export type LevelValue = "하" | "중" | "상";
 
-const LEVELS: { v: LevelValue; n: number }[] = [
-  { v: "하", n: 1 },
-  { v: "중", n: 2 },
-  { v: "상", n: 3 },
-];
+const DOTS: Record<LevelValue, number> = { 하: 1, 중: 2, 상: 3 };
+const ALL: LevelValue[] = ["하", "중", "상"];
 
 interface Props {
   value: LevelValue;
   onChange: (v: LevelValue) => void;
   /** "story" = 60px 동그라미를 세 칸에 고르게, "make" = 46px 동그라미를 가운데로 모아 */
   variant: "story" | "make";
+  /** 보여 줄 난이도와 순서 (회화집은 lib 의 PERCAKAPAN_LEVELS). 없으면 하·중·상 */
+  levels?: readonly LevelValue[];
   disabled?: boolean;
 }
 
-const LevelCircles = ({ value, onChange, variant, disabled }: Props) => {
+const LevelCircles = ({ value, onChange, variant, levels, disabled }: Props) => {
+  const LEVELS = (levels && levels.length ? levels : ALL).map((v) => ({ v, n: DOTS[v] || 2 }));
   const big = variant === "story";
   const size = big ? 60 : 46;
   const wrapClass = big ? "grid grid-cols-3 gap-2" : "flex justify-center gap-7";

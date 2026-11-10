@@ -114,6 +114,7 @@ export const KESEHATAN: PercakapanScene[] = [
     roles: { A: "문병 온 사람", B: "입원한 사람" },
     voices: { A: "f", B: "m" },
     level: "중",
+    rev: 2,
     lines: [
       { s: "A", id: "Permisi, boleh masuk?", ko: "실례합니다, 들어가도 돼요?" },
       { s: "B", id: "Eh, kamu datang! Ayo masuk.", ko: "어, 왔구나! 어서 들어와." },
@@ -128,8 +129,8 @@ export const KESEHATAN: PercakapanScene[] = [
       { s: "B", id: "Nggak ada kok, istriku udah urus semua.", ko: "없어, 아내가 다 챙겨줘." },
       { s: "A", id: "Kalau butuh apa-apa, chat aja ya.", ko: "뭐 필요하면 톡해." },
       { s: "B", id: "Iya, makasih udah nyempetin datang.", ko: "응, 시간 내서 와줘서 고마워." },
-      { s: "A", id: "Cepet sembuh ya. Aku doakan.", ko: "빨리 나아. 기도할게." },
-      { s: "B", id: "Amin, makasih ya.", ko: "아멘, 고마워." },
+      { s: "A", id: "Cepet sembuh ya. Jaga kesehatan.", ko: "빨리 나아. 몸 잘 챙기고." },
+      { s: "B", id: "Iya, makasih ya.", ko: "응, 고마워." },
     ],
   },
   {

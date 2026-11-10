@@ -10,6 +10,7 @@ export const TRANSPORTASI: PercakapanScene[] = [
     roles: { A: "승객", B: "오토바이 기사" },
     voices: { A: "f", B: "m" },
     level: "중",
+    rev: 2,
     lines: [
       { s: "A", id: "Halo, Bang. Yang pesan Grab atas nama Rina?", ko: "여보세요, 기사님. 리나 이름으로 그랩 부른 거 맞죠?" },
       { s: "B", id: "Iya betul, Mbak. Saya sudah di depan minimarket.", ko: "네 맞아요. 편의점 앞에 있어요." },
@@ -17,8 +18,8 @@ export const TRANSPORTASI: PercakapanScene[] = [
       { s: "B", id: "Betul. Silakan naik, Mbak.", ko: "맞아요. 타세요." },
       { s: "A", id: "Bentar ya, saya pakai helm dulu.", ko: "잠깐만요, 헬멧 먼저 쓸게요." },
       { s: "B", id: "Tujuannya ke Kemang, ya?", ko: "목적지가 끄망 맞죠?" },
-      { s: "A", id: "Iya, tapi tolong lewat tol aja.", ko: "네, 근데 고속도로로 가주세요." },
-      { s: "B", id: "Nanti tambah ongkos lho, Mbak.", ko: "그러면 요금이 추가돼요." },
+      { s: "A", id: "Iya. Bang, tolong cari jalan yang nggak macet, ya.", ko: "네. 기사님, 안 막히는 길로 가 주세요." },
+      { s: "B", id: "Bisa, tapi lewat jalan tikus, agak sempit, Mbak.", ko: "돼요, 근데 골목길로 가서 좀 좁아요." },
       { s: "A", id: "Nggak apa-apa, saya buru-buru.", ko: "괜찮아요, 좀 급해서요." },
       { s: "B", id: "Siap. Kira-kira dua puluh menit sampai.", ko: "알겠습니다. 20분쯤이면 도착해요." },
       { s: "A", id: "Bang, tolong pelan-pelan ya.", ko: "기사님, 좀 천천히 가주세요." },
