@@ -29,7 +29,7 @@ menjenguk,병문안하다,Kami menjenguk jemaat yang dirawat.,우리는 입원�
 gejala,증상,Gejala penyakit itu muncul sejak kemarin.,그 병의 증상이 어제부터 나타났다.
 keluhan,호소하는 증상,Dokter menanyakan keluhan utama pasien.,의사가 환자의 주된 증상을 물었다.
 pilek,코감기/콧물,Anak itu pilek karena kehujanan.,그 아이는 비를 맞아 코감기에 걸렸다.
-flu,독감,Dia terkena flu dan tidak masuk kerja.,그는 독감에 걸려 출근하지 않았다.
+flu,감기/독감,Dia terkena flu dan tidak masuk kerja.,그는 감기에 걸려 출근하지 않았다.
 muntah,토하다/구토,Dia muntah setelah makan makanan basi.,그는 상한 음식을 먹고 토했다.
 diare,설사,Diare itu biasanya karena air yang kotor.,설사는 보통 더러운 물 때문이다.
 sakit kepala,두통,Saya minum obat karena sakit kepala.,저는 두통 때문에 약을 먹었습니다.
@@ -58,7 +58,7 @@ stroke,뇌졸중,Kakeknya terkena stroke tahun lalu.,그의 할아버지는 작�
 radang,염증,Dia mengalami radang tenggorokan.,그는 인후염을 앓고 있다.
 berobat,진료를 받다/치료받다,Dia berobat ke klinik dekat rumahnya.,그는 집 근처 의원에 진료를 받으러 갔다.
 memeriksakan diri,진찰을 받다,Sebaiknya Anda memeriksakan diri ke dokter.,의사에게 진찰을 받아 보시는 게 좋겠습니다.
-diagnosa,진단,Diagnosa dokter belum keluar.,의사의 진단이 아직 나오지 않았다.
+diagnosis,진단,Diagnosis dokter belum keluar.,의사의 진단이 아직 나오지 않았다.
 resep,처방전,Dokter menulis resep untuk tiga hari.,의사가 사흘치 처방전을 써 주었다.
 tablet,알약/정제,Minum satu tablet setelah makan.,식후에 한 알씩 드세요.
 kapsul,캡슐,Obat ini berbentuk kapsul.,이 약은 캡슐 형태다.
