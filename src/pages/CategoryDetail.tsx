@@ -1311,7 +1311,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
       <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
         <DialogContent className="max-w-sm mx-auto bg-card">
           <DialogHeader>
-            <DialogTitle className="font-body text-black">어느 단어장으로 옮길까요?</DialogTitle>
+            <DialogTitle className="font-body text-black">옮길 단어장을 고르세요</DialogTitle>
           </DialogHeader>
           {moveTargets.length === 0 ? (
             <p className="font-body text-[0.8125rem] leading-relaxed text-muted-foreground">
