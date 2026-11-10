@@ -154,8 +154,11 @@ const writeFlag = (key: string, on: boolean) => {
   } catch (e) {}
 };
 
-export default function CategoryDetail() {
-  const { id } = useParams<{ id: string }>();
+/* fixedId·asTab: 공개판 하단 탭 "내 단어장"(/saved, SavedWords.tsx)이 이 화면을 탭 뿌리로 씁니다.
+   탭 뿌리에서는 뒤로가기 화살표가 없고, 화면 높이와 아래 고정 바를 탭 막대 높이만큼 비웁니다. */
+export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; asTab?: boolean } = {}) {
+  const params = useParams<{ id: string }>();
+  const id = fixedId || params.id;
   const navigate = useNavigate();
   const location = useLocation();
   const [, setTick] = useState(0);
@@ -819,8 +822,9 @@ export default function CategoryDetail() {
     : category.isShared
       ? (titleText === "동물" ? "paw" : group)
       : "flower";
-  // 공개판에서 내 단어장은 하단 탭 화면이라 뒤로가기 화살표가 없습니다.
-  const showBack = !(isMine && isStoreApp());
+  // 공개판 하단 탭 "내 단어장"(탭 뿌리)에는 뒤로가기 화살표가 없습니다.
+  // 홈의 내 단어장 상자로 들어온 /category/my-wordbook 은 탭이 없으므로 화살표를 둡니다.
+  const showBack = !(asTab && isStoreApp());
   const newThisWeek = isMine ? words.filter((w) => (w.createdAt || 0) >= weekStartMs()).length : 0;
   const nudgeCount = Math.max(NUDGE_MIN, Math.floor(words.length / 10) * 10);
   const hasScenes = category.isShared && Object.keys(scenes).length > 0;
@@ -851,7 +855,10 @@ export default function CategoryDetail() {
       : [];
 
   return (
-    <div className="min-h-screen bg-background max-w-lg mx-auto">
+    <div
+      className={(asTab ? "" : "min-h-screen ") + "bg-background max-w-lg mx-auto"}
+      style={asTab ? { minHeight: "calc(100dvh - var(--kata-tabbar-h, 0px))" } : undefined}
+    >
       {hasScenes ? <PencilDefs /> : null}
       <header className={"sticky top-0 z-30 h-14 bg-background text-foreground border-b border-[#E3E8EB] flex items-center gap-3 " + (editable ? "pl-4 pr-2" : "px-4")}>
         {showBack ? (
@@ -1278,7 +1285,7 @@ export default function CategoryDetail() {
       </Dialog>
       {/* 고른 단어가 있을 때만 뜨는 아래 고정 바. 어두운 배경에서도 보이도록 불투명 bg-card 를 씁니다. */}
       {editable && selectedIds.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40">
+        <div className="fixed inset-x-0 bottom-0 z-40" style={asTab ? { bottom: "var(--kata-tabbar-h, 0px)" } : undefined}>
           <div className="mx-auto max-w-lg border-t border-border bg-card px-4 py-3 flex items-center gap-3">
             <span className="flex-1 min-w-0 text-[0.8125rem] font-body text-foreground">
               {selectedIds.length}개 선택
