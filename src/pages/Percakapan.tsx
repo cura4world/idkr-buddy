@@ -16,6 +16,7 @@ import {
   fetchBackup,
   restoreBackup,
   hasPercakapanConfig,
+  PERCAKAPAN_LEVELS,
 } from "@/lib/percakapan";
 import type { PercakapanCategory, PercakapanLevel } from "@/lib/percakapan";
 
@@ -392,7 +393,7 @@ const Percakapan = () => {
                   난이도
                 </span>
                 <div className="mt-1.5 flex gap-2">
-                  {(["중", "상"] as PercakapanLevel[]).map((lv) => (
+                  {PERCAKAPAN_LEVELS.map((lv) => (
                     <button
                       key={lv}
                       type="button"
