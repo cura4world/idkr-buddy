@@ -45,6 +45,8 @@ import GameEja from "./pages/GameEja";
 import GameTangkap from "./pages/GameTangkap";
 import NotFound from "./pages/NotFound";
 import Plus from "./pages/Plus";
+import MyInfo from "./pages/MyInfo";
+import BottomTabs from "@/components/BottomTabs";
 import LoginGate from "@/components/LoginGate";
 import HiddenInPublic from "@/components/HiddenInPublic";
 import { installStoreTtsShim } from "@/lib/storeTtsShim";
@@ -95,6 +97,7 @@ const App = () => (
           <Route path="/sermon" element={<HiddenInPublic><Sermons /></HiddenInPublic>} />
           <Route path="/sermon/:id" element={<HiddenInPublic><SermonRead /></HiddenInPublic>} />
           <Route path="/plus" element={<Plus />} />
+          <Route path="/me" element={<MyInfo />} />
           <Route path="/map" element={<IndoMap />} />
           <Route path="/insight" element={<Insight />} />
           <Route path="/insight/overview" element={<InsightOverview />} />
@@ -121,6 +124,8 @@ const App = () => (
           <Route path="/permainan/tangkap" element={<GameTangkap />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        {/* 공개판 하단 탭 — 홈·내 단어장·게임·내 정보 네 화면에서만 스스로 나타납니다 */}
+        <BottomTabs />
         </LoginGate>
       </BrowserRouter>
     </TooltipProvider>
