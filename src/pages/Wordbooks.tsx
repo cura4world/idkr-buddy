@@ -3,19 +3,23 @@ import { goBackOr } from "@/lib/nav";
 import { getCategories, Category } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import { ArrowLeft } from "lucide-react";
+import { usePlan } from "@/lib/plan";
+import { isFaithWordbook, sharedWordbookNumber } from "@/lib/wordbookAccess";
 
 /* 단어장을 주제별로 묶어 메인 화면처럼 구역을 나눠 보여줍니다.
    이 화면은 완성된 "책"이라 읽기 전용입니다. 단어장 추가·이름 변경·삭제·순서 이동은
    내 단어장(/category/my-wordbook) 쪽에서만 합니다. */
 // 공용 단어장은 "01 인칭·지시·의문"처럼 두 자리 번호로 시작한다.
 // 그 번호 범위로 묶어 소제목을 붙인다. 번호가 없는 단어장(개인 단어장 등)은 "그 외".
+// 범위는 data/WORDLIST-PLAN.md 의 묶음 표와 같다 (2026-11 재배치).
+// 성경과 신앙(35~41)은 공개판에서 Special Member·관리자에게만 보인다 (wordbookAccess.ts).
 const GROUPS: { label: string; from: number; to: number }[] = [
-  { label: "기초", from: 1, to: 4 },
-  { label: "동사·형용사", from: 5, to: 11 },
-  { label: "사람과 일상", from: 12, to: 18 },
-  { label: "사회생활", from: 19, to: 22 },
-  { label: "자연과 세상", from: 23, to: 29 },
-  { label: "성경과 신앙", from: 30, to: 36 },
+  { label: "기초", from: 1, to: 6 },
+  { label: "동사·형용사", from: 7, to: 13 },
+  { label: "사람과 일상", from: 14, to: 21 },
+  { label: "사회생활", from: 22, to: 27 },
+  { label: "자연과 세상", from: 28, to: 34 },
+  { label: "성경과 신앙", from: 35, to: 41 },
 ];
 const OTHER_LABEL = "그 외";
 
@@ -33,11 +37,17 @@ function groupLabelOf(name: string): string {
 const Wordbooks = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { staff } = usePlan();
   // 폴더 화면은 시드에서 온 공용 단어장(읽기 전용 "책")만 보여줍니다.
   // 사용자가 만들거나 보관한 단어장은 내 단어장 안에서 관리합니다.
-  const categories = getCategories().filter((c) => c.isShared);
+  // 저장된 순서는 새 단어장이 뒤에 붙는 순서라, 이름 앞 번호로 다시 줄 세웁니다(같으면 원래 순서).
+  const categories = getCategories()
+    .filter((c) => c.isShared && (staff || !isFaithWordbook(c)))
+    .map((c, i) => ({ c, i, n: sharedWordbookNumber(c.name) ?? 999 }))
+    .sort((a, b) => a.n - b.n || a.i - b.i)
+    .map((x) => x.c);
 
-  // 화면에 보일 묶음들. 시드 순서를 그대로 쓰므로 별도 정렬은 하지 않습니다.
+  // 화면에 보일 묶음들.
   const grouped = (() => {
     const bucket = new Map<string, Category[]>();
     categories.forEach((cat) => {
