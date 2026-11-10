@@ -43,7 +43,7 @@ export const PAYWALL_PATH = "/plus";        // 잠긴 메뉴를 누르면 여기
 | S40 | **미리보기 APK + 등급 전환** | ⬜ | 아래 "S40 상세" |
 | S41 | 한도 확정 반영 (서버) | ⬜ | 무료·Plus·체험·Special 한도가 결정 문서 표와 같음(아래). 하루·한 달 둘 다. 테스트 추가·통과 |
 | S42 | 구독 화면 (PW1·PW2) + `plusCopy.ts` | ⬜ | 문구·혜택 5줄·요금제 2칸·버튼·안내 시안 그대로. 가격은 Play 값, 없으면(미리보기) 고정 표시 |
-| S43 | 단어장 재분류·검토·새 5권 | 🔍 | 01~34 공개, 35~41 성경과 신앙. 34권 합계 3,000단어 안팎. 보관함 ID 이전. WORDLIST-PLAN 갱신 |
+| S43 | 단어장 재분류·검토·새 5권 | 🔍 작업 끝·내용 검토 대기 | 01~34 공개 34권 3,005단어, 35~41 성경과 신앙(공개판 staff 만). 보관함 ID 이전(`kata-shared-ids-v2`). WORDLIST-PLAN·`data/REVIEW-2026-11.md` 갱신 |
 | S44 | 회화집 채우기 + 난이도 하 | 🔍 | 공개 14개 폴더 86장면, 교회와 신앙은 staff 만. `PercakapanLevel` 에 "하" 추가, 만들기 기본 "중" |
 | S45 | 홈 (H5·H6) + 하단 탭 | ⬜ | 시안 그대로. 무료는 잠긴 메뉴 눌러 구독 화면 |
 | S46 | 내 정보 (ME1·ME2·ME3) | ⬜ | 등급별 회원 구역, 학습 기록 그래프, 훈장 설명, 설정 목록 |
@@ -95,3 +95,5 @@ export const PAYWALL_PATH = "/plus";        // 잠긴 메뉴를 누르면 여기
 ## 작업 기록
 
 (각 스토리가 끝날 때 아래에 한 줄씩: 커밋 해시, 바꾼 파일, 검증 결과, 폰에서 볼 것)
+
+- **S43** (2026-11-11) 커밋 `4af0527`(이름 변경) → `a952caf`~`ec180b9`(검토 5묶음) → `925b8d5`·`c7fa16c`·`fb71162`·`02dd287`·`9dcaf08`(새 5권) → `56cb6ae`~`6938707`(ID 이전·staff 표시·이모지) → `9d74a92`·`af74272`(문서). 바꾼 파일: `data/categories/*.csv` 41개, `src/lib/sharedIdMigration.ts`(새)·`wordbookAccess.ts`(새)·`store.ts`·`transfer.ts`·`gamePool.ts`·`peribahasa.ts`, `src/pages/Wordbooks.tsx`·`CategoryDetail.tsx`·`StudyMode.tsx`·`QuizMode.tsx`, `scripts/csv-to-seed.js`, `src/test/sharedIdMigration.test.ts`(새). 검증: csv-to-seed 41권 3,555단어, check-wordlist 중복 0·형식오류 0, esbuild·tsc·build 통과, vitest 8개 통과(이전 테스트 7). 폰에서 볼 것: 단어장 폴더 묶음 6개와 순서(01 인사·기본 표현이 맨 위), 미리보기에서 무료/Plus 는 성경과 신앙 묶음이 안 보이고 Special·관리자는 보임, 관리자판은 그대로 41권, 이전 전에 별표한 단어가 보관함에 그대로 있는지.
