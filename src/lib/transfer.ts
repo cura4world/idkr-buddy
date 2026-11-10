@@ -28,6 +28,8 @@ import {
   setSavedWordIds,
   isBuiltInWord,
   isBuiltInCategory,
+  upgradeLegacySharedCategoryId,
+  upgradeLegacySharedWordId,
 } from "@/lib/store";
 import { MEMBER_BASE, memberHeaders } from "@/lib/member";
 import { pushMyLogs } from "@/lib/medaliSync";
@@ -412,8 +414,28 @@ function newId(): string {
   try { return crypto.randomUUID(); } catch (e) { return "w" + Date.now().toString(36) + Math.random().toString(36).slice(2); }
 }
 
+// 공용 단어장 번호 재배치(2026-11) 전에 만든 묶음이면 옛 공용 ID 를 새 ID 로 바꿔 둡니다.
+// 새 묶음에는 옛 ID 가 없으므로 그대로 지나갑니다.
+function upgradeLegacyBundleIds(b: PersonalBundle): PersonalBundle {
+  return {
+    ...b,
+    words: {
+      categories: b.words.categories.map((c) => {
+        const id = upgradeLegacySharedCategoryId(c.id);
+        return id === c.id ? c : { ...c, id };
+      }),
+      words: b.words.words.map((w) => {
+        const categoryId = upgradeLegacySharedCategoryId(w.categoryId);
+        return categoryId === w.categoryId ? w : { ...w, categoryId };
+      }),
+      saved: b.words.saved.map((s) => upgradeLegacySharedWordId(s)),
+    },
+  };
+}
+
 /** 단어장·단어·'다시 외울' 표시를 합칩니다. 돌려주는 값: 새로 들어간 단어장 수, 단어 수 */
-function mergeWords(b: PersonalBundle): { categories: number; words: number } {
+function mergeWords(bundle: PersonalBundle): { categories: number; words: number } {
+  const b = upgradeLegacyBundleIds(bundle);
   const localCats = getCategories();
   const localWords = getWords();
   const localIds = new Set(localWords.map((w) => w.id));
