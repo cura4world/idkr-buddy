@@ -6,6 +6,7 @@ import { ArrowLeft, Volume2, Loader2, BookOpen, Lock, Lightbulb, Maximize2, Mini
 import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
 import { generateStory, quickLookupWord, StoryDifficulty } from "@/lib/story";
+import { normalizeHeadword } from "@/lib/dictionary";
 import { saveStory, listStories, StoryRecord } from "@/lib/storyStore";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT } from "@/lib/store";
@@ -25,10 +26,17 @@ import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
 import AiReportButton from "@/components/AiReportButton";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { aiErrorToast } from "@/lib/aiErrors";
+import { isBackCloseEntry } from "@/hooks/useBackClose";
 
 const DIFF_KEY = "story-difficulty";
 // 서버가 "오늘 한도를 다 썼다"고 알려 준 날 (한국 시간 기준 "YYYY-MM-DD")
 const QUOTA_DAY_KEY = "story-quota-day";
+
+// 단어 시트 표제어 판단 (QA Q13): 대문자로 시작하는 단어, 쌍점으로 끝난 앞 단어, 따옴표로 여는 단어(대사 첫머리)
+const CAPITALIZED = new RegExp("^[A-Z][a-z]");
+const COLON_END = new RegExp(":$");
+const QUOTE_START = new RegExp("^[\"“‘'(]");
 
 // 시안(ST1~ST5) 색
 const C = {
@@ -390,7 +398,7 @@ const Story = () => {
   const handleGenerate = async () => {
     if (generating || blocked) return;
     if (!hasGeminiApiKey()) {
-      toast("Gemini API 키가 필요합니다. 설정에서 입력하세요");
+      aiErrorToast("NO_API_KEY", "Gemini API 키가 필요합니다. 설정에서 입력하세요");
       return;
     }
     setGenerating(true);
@@ -410,7 +418,9 @@ const Story = () => {
         try { localStorage.setItem(QUOTA_DAY_KEY, today); } catch (err) {}
         setQuotaDay(today);
       } else if (code === "RATE_LIMIT") toast("요청이 많습니다. 잠시 후 다시 시도하세요");
-      else if (code === "NO_API_KEY" || code === "INVALID_API_KEY") toast("API 키를 설정에서 확인하세요");
+      else if (code === "NO_API_KEY" || code === "INVALID_API_KEY" || code === "SESSION_EXPIRED" || code === "NOT_AVAILABLE") {
+        aiErrorToast(code, "API 키를 설정에서 확인하세요");
+      }
       else toast("이야기를 불러오지 못했습니다. 다시 시도하세요");
     } finally {
       setGenerating(false);
@@ -445,14 +455,17 @@ const Story = () => {
     openWordPopup(s.phrase, s.sentence, "");
   };
 
-  const openWordPopup = async (rawToken: string, sentence: string, tokKey: string) => {
+  // keepCase: 본문 문장 가운데의 대문자 단어 — 고유명사로 보고 표기를 그대로 둡니다.
+  const openWordPopup = async (rawToken: string, sentence: string, tokKey: string, keepCase = false) => {
     if (shouldIgnoreTap()) return;
     // 글자를 고르는 중이면 팝업을 열지 않습니다
     // (선택을 끝내며 나는 탭이 단어 팝업을 잘못 여는 것을 막습니다)
     const liveSel = window.getSelection();
     if (liveSel && !liveSel.isCollapsed) return;
     trackerRef.current?.touch();
-    const word = cleanPhrase(rawToken);
+    // 표제어는 사전과 같은 규칙으로 소문자 정리(제목·문장 첫머리의 Pasar → pasar). 시트 표시·담기 모두 이 값을 씁니다.
+    const cleaned = cleanPhrase(rawToken);
+    const word = keepCase ? cleaned : normalizeHeadword(cleaned);
     if (!word) return;
     const key = word.toLowerCase();
     const reqId = ++popupReqId.current;
@@ -518,7 +531,8 @@ const Story = () => {
     // 카드가 쌓아 둔 히스토리 칸은 그대로 둡니다.
     // 사전에서 뒤로가기를 누르면 그 칸으로 돌아오고, 한 번 더 누르면 목록으로 나갑니다.
     // (칸을 덮어썼다가 돌아와서 다시 쌓으면, 조작 없이 쌓은 칸이라 뒤로가기가 먹지 않습니다)
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=story");
+    // 단어 시트가 뒤로가기용으로 쌓은 칸만은 사전 화면으로 바꿔 끼웁니다(되돌아올 때 빈 칸이 하나 더 생기지 않게).
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=story", { replace: isBackCloseEntry() });
   };
 
   const savePopupWord = () => {
@@ -537,13 +551,18 @@ const Story = () => {
   // 인니어 텍스트를 단어 단위로 쪼개 탭 가능하게 렌더링 (제목/본문 공용)
   // 단어마다 옅은 점선 밑줄, 지금 뜻을 보고 있는 단어는 귤색 바탕 (시안 ST3)
   const renderTokens = (text: string, keyPrefix: string) =>
-    text.split(" ").map((tok, ti) => {
+    text.split(" ").map((tok, ti, toks) => {
       const k = keyPrefix + ti;
       const on = !!popupWord && popupTok === k;
+      // 본문 문장 가운데(첫 단어가 아니고, 앞 단어가 따옴표·쌍점으로 끝나지 않음)의 대문자 단어는 고유명사로 봅니다.
+      // 제목은 단어마다 대문자로 쓰므로 언제나 소문자 정리 대상입니다.
+      const prevTok = ti > 0 ? toks[ti - 1] : "";
+      const midSentence = keyPrefix !== "title-" && ti > 0 && !COLON_END.test(prevTok) && !QUOTE_START.test(tok);
+      const keepCase = midSentence && CAPITALIZED.test(cleanPhrase(tok));
       return (
         <span key={k} data-idw="1">
           <span
-            onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text, k); }}
+            onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text, k, keepCase); }}
             className="cursor-pointer active:bg-primary/20"
             style={
               on
