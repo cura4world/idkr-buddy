@@ -17,7 +17,7 @@
 | 라우터 | react-router-dom, `basename="/idkr-buddy"` |
 | 배포 | GitHub Actions → GitHub Pages |
 | 배포 URL | https://cura4world.github.io/idkr-buddy/ |
-| Android | WebView 껍데기 APK (내용은 GitHub Pages에서 로드) |
+| Android | 관리자판·회원판은 WebView 껍데기 APK (내용은 GitHub Pages에서 로드). 공개판 미리보기 APK(`build-preview.yml`)는 웹 파일을 APK 안에 담아 따로 열림 |
 | AI | Gemini API (텍스트/이미지/TTS/검색 그라운딩), 유료 키 |
 | 오디오 | Cloudflare R2 (성경 낭독 mp3 1,189장) |
 
@@ -86,7 +86,7 @@
 - 임의값 `calc()`는 클래스 문자열에 넣으면 깨질 수 있으므로 **인라인 style** 권장
 - 폰트: `font-word`(Lora, 인니어) / `font-body`(Gowun Dodum, 기본 한글) / `font-gothic`(Pretendard, 설명·라벨)
 - `content-bump`: 사전 결과 카드·단어장 단어 박스 글자를 한 단계 확대하는 클래스
-- 글자 크기는 7단계(85~115%, 기본 100%), 기기별 localStorage
+- 글자 크기는 9단계(85~125%, 기본 100%), 기기별 localStorage (`src/lib/fontScale.ts`)
 
 ## 화면 헤더 규칙
 진입 화면 9개는 헤더가 통일되어 있다. 뒤로가기 화살표 + 인니어 대문자 제목만 두고, 클래스는 다음을 그대로 쓴다.
@@ -114,7 +114,7 @@ src/
   App.tsx            라우트 정의 (화면을 새로 만들면 여기에 등록)
   main.tsx           엔트리 + 서비스워커 자동 업데이트
   pages/
-    Index.tsx          메인화면
+    Index.tsx          메인화면 — 공개판(스토어 앱) 홈 H5·H6 과 관리자판·회원판 홈이 따로
     Dictionary.tsx     사전 (~1,160줄)
     Story.tsx          이야기
     News.tsx           뉴스
@@ -130,8 +130,11 @@ src/
     SavedPhrases.tsx   저장해 둔 문장 목록 (/phrase/saved)
     Percakapan.tsx / PercakapanCategory.tsx / PercakapanRead.tsx   회화집 폴더·목록·읽기
     Permainan.tsx      게임방 입구 (/permainan)
-    Game*.tsx          게임 5종 — Match(짝맞추기) / OX(스피드) / Susun(문장조립)
-                       / Eja(철자채우기) / Tangkap(단어받기)
+    Game*.tsx          게임 7종 — Kata(오늘의 단어 퍼즐) / Jodoh(빠른 짝짓기) / OX(스피드)
+                       / Dengar(듣고 고르기) / Susun(문장조립) / Eja(철자채우기) / Tangkap(단어받기)
+                       (2026-11 Match 짝맞추기는 뺌. 공용 틀은 components/game/GameKit.tsx)
+    MyInfo.tsx         내 정보 (/me, 공개판 하단 탭)  · Plus.tsx 구독 화면 (/plus)
+    PhotoCredits.tsx   사진 출처 (/about/photos)  · InsightGate.tsx 이해·지도 Plus 잠금
     Wordbooks.tsx / CategoryDetail.tsx / StudyMode.tsx / QuizMode.tsx
     SavedWords.tsx / SavedStudyMode.tsx / SavedQuizMode.tsx
     NotFound.tsx       404
@@ -189,6 +192,12 @@ src/
     percakapan/     기본 회화집 (코드로 들어 있음, 손대지 않음)
   test/             vitest 설정 + 예제
   qtToday.ts        lib/qtToday.ts와 내용이 같은 미사용 사본 — 고칠 때 lib 쪽을 볼 것
+  (2026-11 공개판에서 더한 것) lib/plan.ts 등급 판단(모든 잠금은 여기로만) · lib/preview.ts 미리보기 빌드 ·
+  lib/account.ts·billing.ts·aiProxy.ts·aiErrors.ts 공개판 계정·결제·AI 경로·오류 문구 · lib/platform.ts isStoreApp ·
+  lib/wordbookGroups.ts·wordbookAccess.ts 단어장 묶음·성경과 신앙 숨김 · lib/sharedIdMigration.ts 단어장 ID 이전 ·
+  lib/illust.ts·illustFit.ts + data/illust/ 색연필 그림(README 가 정본) · lib/kataHariIni.ts + data/kataHariIniWords.ts
+  퍼즐 정답 동결본(맨 끝에만 붙임) · lib/mapPhotos.ts 지도 사진 고정 목록(scripts/build-map-photos.mjs, Actions 에서 생성) ·
+  hooks/useBackClose.ts 창·시트 뒤로가기 닫기 · components/BottomTabs·PlusLockBox·PreviewPanel·WordIllust·LevelCircles·WordMiniSheet
 data/categories/*.csv       공용 기본 단어장
 data/private/{폴더명}/*.csv  개인 단어장
 data/WORDLIST-PLAN.md       단어장 목표 개수·형식·분류 원칙
@@ -214,7 +223,8 @@ CSV 형식(헤더 없이 4열): `인니어,한국어,예문,예문뜻`. 파일�
 getCategories() / addCategory() / updateCategory() / deleteCategory()
 reorderCategoryById(movedId, targetId)       // ID 기준 (폴더용)
 moveCategoryToEdgeWithin(id, ids, toTop)     // 범위 내 맨위/맨아래
-restoreSharedCategories()
+// 공용 단어장 시드 동기화는 store.ts 를 불러올 때 내부 initSharedCategories() 가 합니다
+// (restoreSharedCategories 는 없음). 2026-11 재분류의 옛 ID → 새 ID 이전은 sharedIdMigration.ts
 
 // 단어
 getWordsByCategory() / addWord() / updateWord() / deleteWord() / reorderWords()
