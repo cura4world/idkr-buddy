@@ -50,8 +50,8 @@ describe("정답 목록 (동결본)", () => {
     expect(answerForDay(day(2026, 11, 10))?.word).toBe("mewah");
     expect(answerForDay(day(2026, 11, 11))?.word).toBe("pedas");
     expect(answerForDay(day(2026, 11, 12))?.word).toBe("musim");
-    expect(answerForDay(day(2028, 3, 5))?.word).toBe("koper");   // 마지막 줄
-    expect(answerForDay(day(2028, 3, 6))?.word).toBe("mewah");   // 한 바퀴 돌아 처음으로
+    expect(answerForDay(day(2028, 2, 11))?.word).toBe("koper");  // 마지막 줄 (11-11 구어·영어 23개 뺀 뒤 459개)
+    expect(answerForDay(day(2028, 2, 12))?.word).toBe("mewah");  // 한 바퀴 돌아 처음으로
     expect(todayPuzzle(Date.UTC(2026, 10, 11, 3, 0, 0))?.word).toBe("pedas");
   });
 
