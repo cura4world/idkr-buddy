@@ -94,7 +94,7 @@ export default function MedaliNudge() {
       >
         {/* 별을 가리키는 꼬리 */}
         <span className="absolute -top-1 right-5 h-2 w-2 rotate-45 bg-white/95" aria-hidden="true" />
-        <span className="relative">⭐ 게임 한 판이면 별이 늘어요</span>
+        <span className="relative">⭐ 게임 한 판으로 별을 늘려 보세요</span>
       </button>
     </div>
   );
