@@ -23,6 +23,21 @@ function copyWellKnown(): Plugin {
   };
 }
 
+// @fontsource 글꼴 CSS 는 woff2 뒤에 woff(옛 형식) 대체 주소를 함께 적어 둡니다. 앱이 도는 웹뷰·브라우저는
+// 모두 woff2 를 읽으므로 woff 주소를 걷어내 빌드(=APK)에 woff 파일이 들어가지 않게 합니다(약 1.6MB 절약).
+// 글꼴 CSS 는 src/fonts.ts 에서 JS import 로 불러야 이 변환을 거칩니다(CSS @import 로 넣으면 거치지 않음).
+function woff2Only(): Plugin {
+  const woffSrc = new RegExp(",\\s*url\\([^)]*\\.woff\\)\\s*format\\(['\"]woff['\"]\\)", "g");
+  return {
+    name: "woff2-only",
+    enforce: "pre",
+    transform(code, id) {
+      if (!id.includes("/@fontsource/") || !id.endsWith(".css")) return null;
+      return { code: code.replace(woffSrc, ""), map: null };
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => ({
   base: '/idkr-buddy/',
   server: {
@@ -33,6 +48,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [
+    woff2Only(),
     react(),
     mode === "development" && componentTagger(),
     copyWellKnown(),
@@ -48,8 +64,19 @@ export default defineConfig(({ mode }) => ({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         // 단어장 색연필 그림(src/data/illust → assets/illust-*.json)은 설치 때 한꺼번에 받지 않고,
         // 그 단어장을 열 때 받은 것만 폰에 남깁니다(src/lib/illust.ts).
-        globIgnores: ["**/illust-*.json"],
+        // 글꼴(약 2.5MB, Gowun Dodum 은 95조각)도 설치 때 한꺼번에 받지 않습니다. 화면에 나온 글자가 든
+        // 조각만 처음 볼 때 받아 "kata-fonts" 에 남깁니다. 파일 이름에 해시가 있어 글꼴이 바뀔 때만 새로 받습니다.
+        // (스토어 앱은 APK 안의 파일을 바로 읽으므로 이 캐시와 상관없이 오프라인에서도 글꼴이 나옵니다.)
+        globIgnores: ["**/illust-*.json", "**/*.woff2", "**/*.woff"],
         runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes("/assets/") && url.pathname.endsWith(".woff2"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "kata-fonts",
+              expiration: { maxEntries: 160 },
+            },
+          },
           {
             urlPattern: ({ url }) => url.pathname.includes("/assets/illust-") && url.pathname.endsWith(".json"),
             handler: "CacheFirst",
