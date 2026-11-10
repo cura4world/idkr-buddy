@@ -1,5 +1,13 @@
 import seedData from '@/data/seed.json';
 import { medaliEngine } from "@/lib/medali";
+import {
+  migrateSharedIdsOnce,
+  makeLegacyWordResolver,
+  upgradeLegacyCategoryId,
+  upgradeLegacyWordId,
+  type LegacyWordResolver,
+  type SeedLike,
+} from "@/lib/sharedIdMigration";
 
 export interface Word {
   id: string;
@@ -217,10 +225,26 @@ function sortMyWordbookNewestFirstOnce() {
   } catch (e) {}
 }
 
+// 공용 단어장 번호 재배치(2026-11) 뒤 처음 켤 때 한 번, 옛 ID 로 저장된 것을 새 ID 로 옮깁니다.
+// 시드 동기화보다 먼저 돌아야 옛 단어장이 "시드에서 사라진 단어장"으로 지워지지 않습니다.
+try {
+  migrateSharedIdsOnce(localStorage, seedData as SeedLike);
+} catch (e) {}
+
 initSharedCategories();
 ensureMyWordbook();
 sortMyWordbookNewestFirstOnce();
 purgeFailedMeaningWords();
+
+// 재배치 전에 만든 백업·옮기기 묶음을 되돌릴 때 쓰는 ID 변환 (transfer.ts)
+let legacyResolver: LegacyWordResolver | null = null;
+export function upgradeLegacySharedCategoryId(id: string): string {
+  return upgradeLegacyCategoryId(id);
+}
+export function upgradeLegacySharedWordId(id: string): string {
+  if (!legacyResolver) legacyResolver = makeLegacyWordResolver(seedData as SeedLike);
+  return upgradeLegacyWordId(id, legacyResolver);
+}
 
 // 지도에서 담은 단어가 모이는 단어장.
 // 앱 시작 때 만들지 않고, 지도에서 처음 담을 때 만들어집니다.
