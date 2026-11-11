@@ -133,15 +133,6 @@ const H_LINE = "#E3E8EB";
 const H_LOCK = "#8F7E4E";
 const hrem = (px: number) => px / 16 + "rem";
 
-// 문장 종류 꼬리표 (홈 카드 제목 옆)
-const KIND_TAG: Record<string, string> = {
-  peribahasa: "속담",
-  ungkapan: "관용구",
-  alkitab: "성경",
-  kosakataku: "내 단어장",
-  kosakata: "단어장",
-  percakapan: "회화",
-};
 
 // 무료 사용자의 "다른 문장" 은 하루 한 번 (결정 문서 무료와 Plus 표)
 const FREE_PHRASE_DAY_KEY = "kata-free-phrase-refresh-day";
@@ -732,7 +723,6 @@ const Index = () => {
     const listBox = "bg-white overflow-hidden";
     const listStyle = { border: "1px solid " + H_LINE, borderRadius: 16 };
     const iconBtnPub = "shrink-0 flex items-center justify-center active:bg-black/5 rounded-full";
-    const kindTag = phrase ? KIND_TAG[phrase.kind] || "" : "";
     // 머리 장식 꽃 중 제목·날짜 곁의 두 송이는 글자 크기를 따라 오른쪽으로 비켜 섭니다(QA Q08).
     // 제목 글자는 32px 에서 멈추므로(아래 h1) 제목 곁 꽃은 그 비율까지만 따라갑니다.
     let rootScale = 1;
@@ -918,14 +908,7 @@ const Index = () => {
               >
                 BAHASA HARI INI
               </p>
-              {kindTag ? (
-                <span
-                  className="font-gothic flex items-center shrink-0"
-                  style={{ marginLeft: 6, height: 20, padding: "0 7px", borderRadius: 10, background: "#FCE6D9", color: "#9A4419", fontSize: "min(" + hrem(11) + ", 12px)", fontWeight: 600 }}
-                >
-                  {kindTag}
-                </span>
-              ) : null}
+              {/* 문장 종류 꼬리표(관용구·속담 등)는 2026-11-11 사용자 요청으로 홈에서 뺐습니다 */}
               <span className="flex-1" />
               <button
                 type="button"
