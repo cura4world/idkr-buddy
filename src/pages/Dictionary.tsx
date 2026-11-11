@@ -1,5 +1,5 @@
 import { Fragment, useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, Volume1, Plus, Check, Loader2, Mic, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -223,6 +223,7 @@ function chunkedSentence(r: IdSentenceResult): string {
 
 const Dictionary = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   // 다른 화면의 "사전에서 보기"로 들어왔을 때 "성경으로" 같은 돌아가기 플로팅 버튼을
   // 띄웠었는데, 폰의 뒤로가기로 그대로 돌아가지므로 없앴습니다.
   // (주소의 from= 값은 어디서 들어왔는지 남겨두기 위해 그대로 둡니다)
@@ -770,7 +771,12 @@ const Dictionary = () => {
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => { dropReturnTicket(); navigate("/"); }}
+          onClick={() => {
+            // 폰 뒤로가기와 같게: 직전 결과 → 들어오기 전 화면(이야기·설교문이면 읽던 자리로).
+            // 앱 안에 이전 칸이 없을 때(첫 진입)만 홈으로 갑니다.
+            if (location.key !== "default") { window.history.back(); return; }
+            dropReturnTicket(); navigate("/");
+          }}
           className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
           title="뒤로"
         >
