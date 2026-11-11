@@ -24,7 +24,7 @@ interface RowItem {
 }
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-  <p className="mx-1 mb-2 font-gothic text-[0.875rem] font-bold tracking-[0.02em] text-[#3B4245]">{children}</p>
+  <p className="mx-1 mb-2 font-gothic text-[0.8125rem] font-bold tracking-[0.02em] text-[#3B4245]">{children}</p>
 );
 
 const CARD_SHADOW = { boxShadow: "0 1px 3px rgba(16,40,50,0.06)" };
@@ -50,8 +50,8 @@ const Rows = ({ items, locked, go }: { items: RowItem[]; locked: boolean; go: (t
             <Icon size={20} strokeWidth={1.8} />
           </span>
           <span className="flex-1 min-w-0">
-            <span className="block font-gothic text-[0.96875rem] leading-tight text-foreground truncate">{it.title}</span>
-            <span className="block mt-px font-word text-[0.75rem] text-[#646C72] truncate">{it.sub}</span>
+            <span className="block font-gothic text-[0.90625rem] leading-tight text-foreground truncate">{it.title}</span>
+            <span className="block mt-px font-word text-[0.6875rem] text-[#646C72] truncate">{it.sub}</span>
           </span>
           {locked ? (
             <Lock size={16} strokeWidth={2} className="shrink-0 text-[#A9B0B4]" />
@@ -96,10 +96,10 @@ const MapCard = ({ locked, onClick }: { locked: boolean; onClick: () => void }) 
     <span className="flex items-center gap-3 pt-3 pb-3.5 pl-4 pr-3.5">
       <span className="flex-1 min-w-0">
         <span className="flex items-baseline gap-[7px]">
-          <span className="font-gothic text-base font-semibold text-white">인도네시아 지도</span>
-          <span className="font-word text-[0.75rem] text-[#9CC3C8]">Peta</span>
+          <span className="font-gothic text-[0.9375rem] font-semibold text-white">인도네시아 지도</span>
+          <span className="font-word text-[0.6875rem] text-[#9CC3C8]">Peta</span>
         </span>
-        <span className="block mt-[3px] font-gothic text-[0.78125rem] text-[#B9D4D7]">
+        <span className="block mt-[3px] font-gothic text-[0.71875rem] text-[#B9D4D7]">
           섬과 도시를 눌러 그 지역 이야기를 읽어 보세요
         </span>
       </span>
