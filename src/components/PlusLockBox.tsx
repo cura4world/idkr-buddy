@@ -23,11 +23,11 @@ const PlusLockBox = ({ title, lines, onClick, wholeBox = false }: Props) => (
     onKeyDown={wholeBox ? (e) => { if (e.key === "Enter") onClick(); } : undefined}
     className={"rounded-[18px] border border-[#F1E0AE] bg-[#FFF6DC] py-3.5 pr-3.5 pl-[22px]" + (wholeBox ? " active:opacity-90" : "")}
   >
-    <p className="m-0 text-[0.9375rem] font-semibold text-[#1D1F1E] whitespace-nowrap overflow-hidden text-ellipsis">
+    <p className="m-0 text-[0.875rem] font-semibold text-[#1D1F1E] whitespace-nowrap overflow-hidden text-ellipsis">
       {title}
     </p>
     <div className="mt-1.5 flex items-stretch gap-3">
-      <span className="flex-1 min-w-0 font-gothic text-[0.75rem] leading-[1.55] text-[#6E5612] break-keep">
+      <span className="flex-1 min-w-0 font-gothic text-[0.6875rem] leading-[1.55] text-[#6E5612] break-keep">
         {lines[0]}
         <br />
         {lines[1]}
@@ -38,7 +38,7 @@ const PlusLockBox = ({ title, lines, onClick, wholeBox = false }: Props) => (
           e.stopPropagation();
           onClick();
         }}
-        className="shrink-0 px-3.5 rounded-xl bg-[#8A6A12] text-white font-gothic text-[0.71875rem] font-bold leading-[1.25] active:opacity-90"
+        className="shrink-0 px-3.5 rounded-xl bg-[#8A6A12] text-white font-gothic text-[0.65625rem] font-bold leading-[1.25] active:opacity-90"
       >
         Plus
         <br />
