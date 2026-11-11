@@ -629,7 +629,10 @@ const Dictionary = () => {
   };
 
   return (
-    <div className={`w-full max-w-lg mx-auto overflow-x-clip bg-background flex flex-col ${isHome ? "h-[100dvh]" : "min-h-screen"}`}>
+    <div
+      className={`w-full max-w-lg mx-auto overflow-x-clip bg-background flex flex-col ${isHome ? "" : "min-h-screen"}`}
+      style={isHome ? { height: "calc(100dvh - var(--kata-tabbar-h, 0px))" } : undefined}
+    >
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
         <button
@@ -664,7 +667,8 @@ const Dictionary = () => {
       {koBackTerm && !isHome && (
         <button
           onClick={() => handleSearch(koBackTerm)}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
+          className="fixed right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
+          style={{ bottom: "calc(1.25rem + var(--kata-tabbar-h, 0px))" }}
           title={`"${koBackTerm}" 검색 결과로 돌아가기`}
         >
           <ArrowLeft size={16} /> {withRo(koBackTerm)}
