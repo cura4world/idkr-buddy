@@ -14,7 +14,7 @@ import {
   KoWordResult,
   KoSentenceResult,
   InputKind,
-  normalizeHeadword,
+  headwordInSentence,
 } from "@/lib/dictionary";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
@@ -319,11 +319,18 @@ const Dictionary = () => {
   };
 
   // forceRefresh: 캐시를 무시하고 새로 받아 캐시를 덮어씀 ("다시 검색" 버튼)
-  // entry: 히스토리 칸 기록 방식. 지정하지 않으면 지금 칸에 결과가 없을 때만 적고(첫 검색은 이 화면 칸),
-  //        이미 다른 결과를 보고 있으면 새 칸을 쌓습니다.
+  // entry: 히스토리 칸 기록 방식. 지정하지 않으면 새 칸을 쌓습니다(뒤로가기 = 바로 전 결과·사전 첫 화면).
+  //        예외: 주소(?q=)로 들어온 첫 검색은 이 화면 칸에 적고(replace), 같은 검색어를 다시 찾으면 쌓지 않습니다.
   const handleSearch = async (term?: string, entry?: "push" | "replace" | "none", forceRefresh?: boolean) => {
     const w = (term ?? query).trim();
     if (!w) return;
+    // 최근 검색 플로팅이 열려 있으면(입력창을 눌러 그 칸이 쌓여 있음) 지금 바로 닫습니다.
+    // 160ms 뒤 닫기 타이머에 맡기면, 그 사이 쌓은 검색 칸이 대신 빠져 뒤로가기가 첫 화면으로 갑니다.
+    // 여기서 닫으면 histBackPendingRef 가 서서, 검색 칸은 그 뒤로가기가 끝난 다음(onPop)에 쌓입니다.
+    if (histOpenRef.current) {
+      if (histHideTimer.current) { window.clearTimeout(histHideTimer.current); histHideTimer.current = null; }
+      closeHistoryPanel();
+    }
     // 같은 결과를 다시 찾으면 칸을 쌓지 않습니다
     let mode: "push" | "replace" | "none" = entry || "push";
     if (!entry) {
@@ -451,7 +458,7 @@ const Dictionary = () => {
           {tok.slice(0, s)}
           <button
             type="button"
-            onClick={() => handleSearch(normalizeHeadword(core))}
+            onClick={() => handleSearch(headwordInSentence(core, text.split(" / ").join(" ")))}
             className="inline p-0 m-0 bg-transparent border-0 text-left underline decoration-dotted decoration-[#104B60]/35 underline-offset-[5px] active:opacity-60"
             style={{ font: "inherit", color: "inherit", letterSpacing: "inherit" }}
             title={'"' + core + '" 사전 검색'}
