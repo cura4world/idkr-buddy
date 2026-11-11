@@ -255,6 +255,10 @@ jobs:
                   <intent>
                       <action android:name="android.speech.RecognitionService" />
                   </intent>
+                  <!-- 낱말 발음용 폰 내장 음성(TextToSpeech)을 찾으려면 Android 11+ 에서 필요 -->
+                  <intent>
+                      <action android:name="android.intent.action.TTS_SERVICE" />
+                  </intent>
               </queries>
               <application
                   android:allowBackup="false"
@@ -296,6 +300,9 @@ jobs:
           import android.net.Uri;
           import android.os.Build;
           import android.os.Bundle;
+          import android.speech.tts.TextToSpeech;
+          import android.speech.tts.UtteranceProgressListener;
+          import java.util.Locale;
           import android.os.Environment;
           import android.provider.MediaStore;
           import android.util.Base64;
@@ -385,6 +392,88 @@ jobs:
               private WebViewAssetLoader assetLoader;
               private ValueCallback<Uri[]> fileCallback;
               private PermissionRequest pendingPermissionRequest;
+
+              // ── KataNativeTTS: 폰 내장 음성 (낱말 발음 전용) ─────────
+              // 2026-11-11 사용자 요청: 낱말 발음만 예전 관리자판과 같은 폰 내장 음성으로(누르면 바로 나옴).
+              // 문장·예문·한국어 뜻은 그대로 Gemini 음성입니다. 웹 쪽 판단은 src/lib/nativeTts.ts.
+              // 다 읽으면(또는 끊기면) window.__kataNativeTtsDone('번호') 로 알립니다.
+              private TextToSpeech nativeTts;
+              private boolean nativeTtsReady = false;
+
+              private static String safeTtsId(String id) {
+                  if (id == null) return "";
+                  StringBuilder b = new StringBuilder();
+                  for (int i = 0; i < id.length() && i < 40; i++) {
+                      char c = id.charAt(i);
+                      if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') b.append(c);
+                  }
+                  return b.toString();
+              }
+
+              private void nativeTtsDone(String id) {
+                  callJs("__kataNativeTtsDone", "'" + safeTtsId(id) + "'");
+              }
+
+              private void initNativeTts() {
+                  try {
+                      nativeTts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+                          @Override
+                          public void onInit(int status) {
+                              if (status != TextToSpeech.SUCCESS || nativeTts == null) return;
+                              nativeTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                                  @Override
+                                  public void onStart(String utteranceId) {}
+
+                                  @Override
+                                  public void onDone(String utteranceId) { nativeTtsDone(utteranceId); }
+
+                                  @Override
+                                  public void onError(String utteranceId) { nativeTtsDone(utteranceId); }
+
+                                  @Override
+                                  public void onStop(String utteranceId, boolean interrupted) { nativeTtsDone(utteranceId); }
+                              });
+                              nativeTtsReady = true;
+                          }
+                      });
+                  } catch (Exception e) {
+                      nativeTts = null;
+                      nativeTtsReady = false;
+                  }
+              }
+
+              private class NativeTtsBridge {
+                  @JavascriptInterface
+                  public boolean isReady() {
+                      return nativeTts != null && nativeTtsReady;
+                  }
+
+                  // 읽기 시작하면 true. 준비가 안 됐거나 그 언어 음성이 없으면 false — 웹이 Gemini 음성으로 대신합니다.
+                  @JavascriptInterface
+                  public boolean speak(String text, String lang, String id) {
+                      if (nativeTts == null || !nativeTtsReady || text == null || text.length() == 0) return false;
+                      try {
+                          Locale locale = "ko-KR".equals(lang) ? Locale.KOREAN : new Locale("id", "ID");
+                          int r = nativeTts.setLanguage(locale);
+                          if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) return false;
+                          nativeTts.setSpeechRate(0.9f);
+                          String uid = safeTtsId(id);
+                          if (uid.length() == 0) uid = "kk" + System.currentTimeMillis();
+                          return nativeTts.speak(text, TextToSpeech.QUEUE_FLUSH, null, uid) == TextToSpeech.SUCCESS;
+                      } catch (Exception e) {
+                          return false;
+                      }
+                  }
+
+                  @JavascriptInterface
+                  public void stop() {
+                      try {
+                          if (nativeTts != null) nativeTts.stop();
+                      } catch (Exception e) {
+                          // 무시
+                      }
+                  }
+              }
 
               // ── 웹으로 결과 보내기 (항상 UI 스레드에서) ─────────────
               private void callJs(final String fn, final String jsonArg) {
@@ -719,7 +808,10 @@ jobs:
                   settings.setUserAgentString(settings.getUserAgentString()
                       + " KataStore/" + BuildConfig.VERSION_NAME + " KataPreview");
 
-                  // 폰 내장 음성(AndroidTTS)은 넣지 않습니다 — 웹이 Gemini 음성으로 대신합니다.
+                  // 폰 내장 음성은 window.AndroidTTS 로 넣지 않습니다(그 이름이면 모든 읽기가 폰 음성이 됨).
+                  // 낱말 발음 전용 통로 KataNativeTTS 만 둡니다 — 문장은 웹이 Gemini 음성으로 읽습니다.
+                  initNativeTts();
+                  webView.addJavascriptInterface(new NativeTtsBridge(), "KataNativeTTS");
                   webView.addJavascriptInterface(new StoreBridge(), "KataStore");
                   webView.addJavascriptInterface(new AuthBridge(), "KataAuth");
                   webView.addJavascriptInterface(new BillingBridge(), "KataBilling");
@@ -846,6 +938,21 @@ jobs:
                   }
                   fileCallback.onReceiveValue(results);
                   fileCallback = null;
+              }
+
+              @Override
+              protected void onDestroy() {
+                  try {
+                      if (nativeTts != null) {
+                          nativeTts.stop();
+                          nativeTts.shutdown();
+                      }
+                  } catch (Exception e) {
+                      // 무시
+                  }
+                  nativeTts = null;
+                  nativeTtsReady = false;
+                  super.onDestroy();
               }
           }
           JAVA
