@@ -27,6 +27,17 @@ const TTS_MODEL = "gemini-3.8-flash-lite-tts";
 const LEGACY_TTS_MODEL = "gemini-3.1-flash-tts-preview";
 // 3.8 TTS 는 입력을 "읽을 원고 그대로"로 취급합니다. 읽는 방식은 원고가 아니라 이 값으로 줍니다.
 const TTS_READ_STYLE = "Read aloud clearly and naturally, in a calm reading voice.";
+// 한글이 없는 글(인도네시아어)에는 언어를 알려 줍니다. 원고만 보면 "perawat" 같은 낱말 하나는
+// 영어처럼 읽힐 때가 있었습니다(2026-11-11 S21 사용자 확인 — 문장인 예문은 정상).
+const TTS_READ_STYLE_ID =
+  "Read aloud in Indonesian (Bahasa Indonesia) with native Indonesian pronunciation, clearly and naturally, in a calm reading voice.";
+const HANGUL_RE = new RegExp("[\\uAC00-\\uD7A3]");
+function readStyleFor(text: string): string {
+  return HANGUL_RE.test(text) ? TTS_READ_STYLE : TTS_READ_STYLE_ID;
+}
+// 낱말 발음("say:")은 위 언어 지시를 넣기 전에 만든 소리를 다시 쓰지 않도록 캐시 이름에 판을 붙입니다.
+// play() 와 getSayAudioUrl() 이 같은 이름을 써야 합니다.
+const SAY_CACHE_VER = "::id1";
 function isVerbatimTtsModel(model: string): boolean {
   return model.indexOf("gemini-3.8-") === 0;
 }
@@ -311,7 +322,7 @@ async function generateAudioForText(
   // 3.8 은 원고만 보내고 읽는 방식은 speech_metadata 로 따로 줍니다(원고에 섞으면 소리 내어 읽음).
   const verbatim = isVerbatimTtsModel(model);
   const part = verbatim
-    ? { text, speech_metadata: { style: TTS_READ_STYLE } }
+    ? { text, speech_metadata: { style: readStyleFor(text) } }
     : { text: prompt };
 
   // 응답이 안 오면 로딩이 끝나지 않으므로 마감을 겁니다. 본문(res.json)을 다 읽을 때까지 유지합니다.
@@ -573,7 +584,7 @@ class TtsPlayer {
     try {
       for (let i = 0; i < chunks.length; i++) {
         if (myToken !== this.token) return; // 취소됨
-        const ckey = key + "::v=" + voiceName + "::" + i + "/" + chunks.length;
+        const ckey = key + "::v=" + voiceName + "::" + i + "/" + chunks.length + (key.indexOf("say:") === 0 ? SAY_CACHE_VER : "");
         let url = await getCachedAudio(ckey);
         if (!url) {
           url = await generateAudioForText(chunks[i], voiceName, 0, TTS_MODEL, true, kind, unit);
@@ -630,7 +641,7 @@ export async function getSayAudioUrl(
     const chunks = splitForTts(t);
     if (chunks.length !== 1) return null; // 단어·짧은 구절 전용
     const voiceName = voiceNameOf(getTtsVoice());
-    const ckey = "say:" + t + "::v=" + voiceName + "::0/1";
+    const ckey = "say:" + t + "::v=" + voiceName + "::0/1" + SAY_CACHE_VER;
     const have = await getCachedAudio(ckey);
     if (have) return have;
     if (opts && opts.cacheOnly) return null;
