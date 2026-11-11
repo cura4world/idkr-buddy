@@ -73,7 +73,7 @@ export default function CategoryCard({ category, variant = "folder", tile = "#EE
           {/* 이름은 자르지 않고 두 줄까지 꺾습니다(QA Q06 — 360px·글자 115% 이상에서 잘리던 것).
               낱말 중간이 아니라 띄어쓰기와 "·" 뒤에서만 꺾고, 그래도 안 들어가면 그때만 글자 사이에서. */}
           <span
-            className="block font-body text-[0.96875rem] leading-[1.3] text-[#1D1F1E]"
+            className="block font-body text-[0.875rem] leading-[1.3] text-[#1D1F1E]"
             style={{ wordBreak: "keep-all", overflowWrap: "anywhere" }}
           >
             {num ? <span className="mr-1.5 font-word text-[0.75rem] text-[#9AA1A6]">{num}</span> : null}
