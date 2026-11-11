@@ -41,7 +41,8 @@ const LevelCircles = ({ value, onChange, variant, levels, disabled }: Props) => 
             <span
               className={
                 "box-border flex items-center justify-center rounded-full font-gothic font-bold " +
-                (big ? "text-[1rem]" : "text-[1rem]")
+                // 이야기 하/중/상 글자는 2026-11-11 사용자 요청으로 한 단계 더 작게(16 → 14.5px)
+                (big ? "text-[0.90625rem]" : "text-[1rem]")
               }
               style={{
                 width: size,
