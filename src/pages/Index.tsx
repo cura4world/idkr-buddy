@@ -24,6 +24,7 @@ import MedaliIdDialog from "@/components/MedaliIdDialog";
 import { needsMedaliId, syncMedali } from "@/lib/medaliSync";
 import { getEdition, takeRevokedNotice } from "@/lib/access";
 import { isStoreApp } from "@/lib/platform";
+import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import {
   RotateCcw,
@@ -294,7 +295,9 @@ const Index = () => {
 
   // 검색
   const [query, setQuery] = useState("");
-  const [voiceLang, setVoiceLang] = useState<"ko" | "id">("ko");
+  // 음성 검색 언어 — 마이크 옆 한/IN 버튼으로 바꿉니다(사전 화면과 같은 값을 씀, 2026-11-11 사용자 요청)
+  const [voiceLang, setVoiceLangState] = useState<"ko" | "id">(() => loadVoiceLang());
+  const setVoiceLang = (v: "ko" | "id") => { setVoiceLangState(v); saveVoiceLang(v); };
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 
@@ -631,6 +634,7 @@ const Index = () => {
       recognitionRef.current = rec;
       setListening(true);
       rec.start();
+      toast(voiceLang === "ko" ? "한국어로 말해 보세요" : "인도네시아어로 말해 보세요");
     } catch (e) {
       setListening(false);
       toast("음성 검색을 시작하지 못했습니다");
@@ -806,7 +810,9 @@ const Index = () => {
               >
                 {dateLabel}
               </p>
-              <div className="flex items-center" style={{ gap: 8 }}>
+              {/* PLUS 꼬리표의 아래 끝을 "Kata kata" 글자의 아랫단(기준선)에 맞춥니다(2026-11-11 사용자 요청).
+                  줄 높이 1 인 Lora 는 글자 상자 아래 끝이 기준선보다 약 0.134em 아래라, 그만큼 띄웁니다. */}
+              <div className="flex items-end" style={{ gap: 8 }}>
                 {/* 앱 이름은 한 줄. 글자 크기 115% 를 넘으면 32px 에서 멈춥니다(QA Q08 — 360px·125% 에서 두 줄로 꺾이던 것) */}
                 <h1
                   className="font-word text-white"
@@ -817,7 +823,7 @@ const Index = () => {
                 {plus ? (
                   <span
                     className="font-gothic flex items-center shrink-0"
-                    style={{ height: 20, padding: "0 8px", borderRadius: 10, background: "#F6E7C4", color: "#5A4610", fontSize: "min(" + hrem(10.5) + ", 12px)", fontWeight: 700, letterSpacing: "0.06em" }}
+                    style={{ height: 20, padding: "0 8px", borderRadius: 10, background: "#F6E7C4", color: "#5A4610", fontSize: "min(" + hrem(10.5) + ", 12px)", fontWeight: 700, letterSpacing: "0.06em", marginBottom: "calc(min(" + hrem(28) + ", 32px) * 0.134)" }}
                   >
                     PLUS
                   </span>
@@ -859,12 +865,23 @@ const Index = () => {
                   autoCapitalize="none"
                   autoCorrect="off"
                 />
+                {/* 음성 검색 언어 (한 / IN) — 누를 때마다 바뀌고 기기에 기억합니다 */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setVoiceLang(voiceLang === "ko" ? "id" : "ko")}
+                  aria-label={voiceLang === "ko" ? "음성 검색 언어: 한국어 (누르면 인도네시아어)" : "음성 검색 언어: 인도네시아어 (누르면 한국어)"}
+                  className="shrink-0 flex items-center justify-center rounded-full font-gothic"
+                  style={{ width: 28, height: 24, borderRadius: 12, background: "#EEF3F2", color: "#2C6D63", fontSize: 11, fontWeight: 700, letterSpacing: "0.02em" }}
+                >
+                  {voiceLangLabel(voiceLang)}
+                </button>
                 <button
                   type="button"
                   onClick={startVoice}
                   aria-label="음성 검색"
                   className="shrink-0 flex items-center justify-center rounded-full"
-                  style={{ width: 36, height: 36, color: listening ? "#DC2626" : "#646C72" }}
+                  style={{ width: 34, height: 36, color: listening ? "#DC2626" : "#646C72" }}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                     <rect x="9" y="2" width="6" height="12" rx="3" />
@@ -1177,6 +1194,16 @@ const Index = () => {
               autoCapitalize="none"
               autoCorrect="off"
             />
+            {/* 음성 검색 언어 (한 / IN) */}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setVoiceLang(voiceLang === "ko" ? "id" : "ko")}
+              className="shrink-0 h-6 w-7 rounded-full bg-muted text-primary font-gothic text-[11px] font-bold"
+              title="음성 검색 언어 바꾸기"
+            >
+              {voiceLangLabel(voiceLang)}
+            </button>
             <button
               type="button"
               onClick={startVoice}
