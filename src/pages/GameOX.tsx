@@ -319,18 +319,18 @@ const GameOX = () => {
               transition: "background-color 150ms ease",
             }}
           >
-            <p className="font-word text-[26px] font-semibold leading-tight break-words" style={{ color: G.deep }}>
+            <p className="font-word text-[24px] font-semibold leading-tight break-words" style={{ color: G.deep }}>
               {question.word}
             </p>
             <span className="w-8 h-0.5 rounded-[1px] my-[18px]" style={{ background: G.track }} />
             <p
-              className="font-gothic text-[18px] font-semibold leading-snug break-keep"
+              className="font-gothic text-[16.5px] font-semibold leading-snug break-keep"
               style={{ color: G.text, textDecoration: reveal ? "line-through" : "none", opacity: reveal ? 0.55 : 1 }}
             >
               {question.shown}
             </p>
             {reveal ? (
-              <p className="mt-2.5 font-gothic text-[16px] font-semibold leading-snug break-keep" style={{ color: G.ok }}>
+              <p className="mt-2.5 font-gothic text-[15px] font-semibold leading-snug break-keep" style={{ color: G.ok }}>
                 {reveal}
               </p>
             ) : null}
@@ -341,7 +341,7 @@ const GameOX = () => {
               type="button"
               aria-label="맞음"
               onClick={() => answer(true)}
-              className="flex-1 h-[60px] rounded-[18px] font-word text-[18px] font-semibold text-white active:opacity-90"
+              className="flex-1 h-[60px] rounded-[18px] font-word text-[16.5px] font-semibold text-white active:opacity-90"
               style={{ background: G.teal }}
             >
               O
@@ -350,13 +350,13 @@ const GameOX = () => {
               type="button"
               aria-label="아님"
               onClick={() => answer(false)}
-              className="flex-1 h-[60px] rounded-[18px] box-border bg-white font-word text-[18px] font-semibold active:bg-[#F1F4F5]"
+              className="flex-1 h-[60px] rounded-[18px] box-border bg-white font-word text-[16.5px] font-semibold active:bg-[#F1F4F5]"
               style={{ border: "1px solid " + G.line, color: G.text }}
             >
               X
             </button>
           </div>
-          <p className="mt-3.5 text-center font-gothic text-[12px]" style={{ color: G.mute }}>
+          <p className="mt-3.5 text-center font-gothic text-[11px]" style={{ color: G.mute }}>
             뜻이 맞으면 O, 아니면 X
           </p>
         </>
