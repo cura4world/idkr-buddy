@@ -362,16 +362,16 @@ const GameDengar = () => {
           >
             {sound === "failed" ? (
               <>
-                <p className="font-gothic text-[12px] font-semibold" style={{ color: G.mute }}>
+                <p className="font-gothic text-[11px] font-semibold" style={{ color: G.mute }}>
                   소리를 불러오지 못했습니다 · 뜻을 보고 고르세요
                 </p>
-                <p className="mt-2.5 font-gothic text-[22px] font-semibold text-center break-keep" style={{ color: G.text }}>
+                <p className="mt-2.5 font-gothic text-[20px] font-semibold text-center break-keep" style={{ color: G.text }}>
                   {q.answer.meaning}
                 </p>
                 <button
                   type="button"
                   onClick={() => prepare(qIndex, true)}
-                  className="mt-3 h-[30px] px-3 rounded-[15px] font-gothic text-[12px] font-semibold"
+                  className="mt-3 h-[30px] px-3 rounded-[15px] font-gothic text-[11px] font-semibold"
                   style={{ background: G.soft, color: G.sub }}
                 >
                   소리 다시 불러오기
@@ -388,13 +388,13 @@ const GameDengar = () => {
                 >
                   <IconSpeaker size={30} />
                 </button>
-                <p className="mt-[22px] font-gothic text-[13px]" style={{ color: G.sub }}>
+                <p className="mt-[22px] font-gothic text-[12px]" style={{ color: G.sub }}>
                   {sound === "loading" ? "소리를 불러오는 중입니다" : "눌러서 다시 듣기"}
                 </p>
                 <button
                   type="button"
                   onClick={() => play(q.answer.word, true)}
-                  className="mt-2.5 h-[30px] px-3 rounded-[15px] font-gothic text-[12px] font-semibold active:opacity-70"
+                  className="mt-2.5 h-[30px] px-3 rounded-[15px] font-gothic text-[11px] font-semibold active:opacity-70"
                   style={{ background: G.soft, color: G.sub }}
                 >
                   천천히 듣기
@@ -414,12 +414,12 @@ const GameDengar = () => {
                   className="h-[60px] rounded-2xl box-border pl-[18px] pr-4 flex items-center gap-2.5 text-left"
                   style={{ ...choiceStyle(c), transition: "opacity 150ms ease, background-color 150ms ease" }}
                 >
-                  <span className="font-word text-[19px] font-semibold shrink-0" style={{ color: G.deep }}>
+                  <span className="font-word text-[17.5px] font-semibold shrink-0" style={{ color: G.deep }}>
                     {c.word}
                   </span>
                   {isAnswer ? (
                     <>
-                      <span className="flex-1 min-w-0 truncate font-gothic text-[13.5px]" style={{ color: G.sub }}>
+                      <span className="flex-1 min-w-0 truncate font-gothic text-[12.5px]" style={{ color: G.sub }}>
                         {c.meaning}
                       </span>
                       <span style={{ color: G.ok }}>
