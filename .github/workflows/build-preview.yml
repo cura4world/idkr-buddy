@@ -128,15 +128,21 @@ jobs:
       - name: App icons (관리자판과 같은 아이콘)
         timeout-minutes: 10
         run: |
-          # 2026-11-11 apt 잠금 대기로 이 단계에서 20분 넘게 멈춘 적이 있어, 이미 있으면 건너뛰고 잠금은 2분까지만 기다립니다
-          command -v convert >/dev/null 2>&1 || sudo apt-get install -y -q -o DPkg::Lock::Timeout=120 imagemagick
+          # 2026-11-11 apt-get install imagemagick 이 이 단계에서 20분 넘게 멈춰(두 번) 빌드가 끝나지 않았습니다.
+          # 그래서 pip 의 Pillow 로 줄입니다(npm·pip 저장소는 잘 됨). Pillow 가 안 되면 그때만 apt 를 씁니다.
           test -f public/icon-512x512.png || { echo "public/icon-512x512.png 이 없습니다"; exit 1; }
           test -f public/icon-foreground-432.png || { echo "public/icon-foreground-432.png 이 없습니다"; exit 1; }
+          if python3 -c "import PIL" 2>/dev/null || timeout 180 python3 -m pip install -q --break-system-packages pillow || timeout 180 python3 -m pip install -q --user pillow; then
+            resize() { python3 -c "import sys; from PIL import Image; n=int(sys.argv[2]); Image.open(sys.argv[1]).convert('RGBA').resize((n, n), Image.LANCZOS).save(sys.argv[3])" "$1" "$2" "$3"; }
+          else
+            command -v convert >/dev/null 2>&1 || timeout 300 sudo apt-get install -y -q -o DPkg::Lock::Timeout=120 imagemagick
+            resize() { convert "$1" -resize "$2x$2" "$3"; }
+          fi
           for d in mdpi:48:108 hdpi:72:162 xhdpi:96:216 xxhdpi:144:324 xxxhdpi:192:432; do
             n=${d%%:*}; rest=${d#*:}; s=${rest%%:*}; f=${rest#*:}
             mkdir -p app/src/main/res/mipmap-$n
-            convert public/icon-512x512.png -resize ${s}x${s} app/src/main/res/mipmap-$n/ic_launcher.png
-            convert public/icon-foreground-432.png -resize ${f}x${f} app/src/main/res/mipmap-$n/ic_launcher_foreground.png
+            resize public/icon-512x512.png $s app/src/main/res/mipmap-$n/ic_launcher.png
+            resize public/icon-foreground-432.png $f app/src/main/res/mipmap-$n/ic_launcher_foreground.png
           done
           mkdir -p app/src/main/res/mipmap-anydpi-v26 app/src/main/res/values
           # 배경은 반드시 불투명 (투명이면 삼성 런처가 검게 칠함 — CLAUDE.md 금지 사항)
