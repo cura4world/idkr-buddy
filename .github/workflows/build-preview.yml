@@ -126,8 +126,10 @@ jobs:
           echo "PREVIEW_KEYSTORE=$KS" >> "$GITHUB_ENV"
 
       - name: App icons (관리자판과 같은 아이콘)
+        timeout-minutes: 10
         run: |
-          sudo apt-get install -y imagemagick -q
+          # 2026-11-11 apt 잠금 대기로 이 단계에서 20분 넘게 멈춘 적이 있어, 이미 있으면 건너뛰고 잠금은 2분까지만 기다립니다
+          command -v convert >/dev/null 2>&1 || sudo apt-get install -y -q -o DPkg::Lock::Timeout=120 imagemagick
           test -f public/icon-512x512.png || { echo "public/icon-512x512.png 이 없습니다"; exit 1; }
           test -f public/icon-foreground-432.png || { echo "public/icon-foreground-432.png 이 없습니다"; exit 1; }
           for d in mdpi:48:108 hdpi:72:162 xhdpi:96:216 xxhdpi:144:324 xxxhdpi:192:432; do
