@@ -7,12 +7,17 @@ import { goBackOr, wordbookFallback } from "@/lib/nav";
 import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Play, Square, Bookmark, RefreshCw, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import { displayMeaning } from "@/lib/wordbookGroups";
+import { isStoreApp } from "@/lib/platform";
+import { ttsPlayer } from "@/lib/tts";
+import { hasNativeTts, isWordLike, speakNative, stopNative } from "@/lib/nativeTts";
 
 
 // 아래 동그라미 버튼 (시안: 카드로 외우기 — 켜진 버튼만 연한 청록)
 const BTN = "w-12 h-12 flex items-center justify-center rounded-full border transition-colors disabled:opacity-30";
 const BTN_OFF = "bg-white text-[#1D1F1E] border-[#DDE3E6]";
 const BTN_ON = "bg-[#E3EEEC] text-[#2C6D63] border-[#2C6D63]";
+// 밀어 넘길 때 카드가 화면 밖으로 나가는 시간(ms). 들어오는 시간은 index.css 의 card-swipe-in-*.
+const SWIPE_OUT_MS = 380;
 const FACE = "absolute inset-0 backface-hidden rounded-[20px] bg-white border border-[#E6EAEC] shadow-[0_1px_4px_rgba(16,40,50,0.05)] flex flex-col items-center justify-center p-8 text-card-foreground";
 
 export default function StudyMode() {
@@ -29,6 +34,13 @@ export default function StudyMode() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isBreathing, setIsBreathing] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
+  // 옆으로 밀기 애니메이션 (handleTouchMove/End)
+  const [dragX, setDragX] = useState(0);
+  const [leaving, setLeaving] = useState<0 | 1 | -1>(0);
+  const [enterFrom, setEnterFrom] = useState<"left" | "right" | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const swipingRef = useRef(false);
+  const swipeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [isAutoRandom, setIsAutoRandom] = useState(false);
@@ -107,7 +119,35 @@ export default function StudyMode() {
     toast("표시된 단어 " + marked.length + "개만 학습합니다");
   };
 
-  const speak = (text: string, lang: "id" | "ko") => {
+  // 읽기 — 다 읽은 뒤에 끝나는 Promise (자동재생이 이것을 기다렸다가 카드를 넘깁니다)
+  // 공개판(스토어·미리보기 앱), 2026-11-11 사용자 요청:
+  //   인도네시아어 낱말 = 폰 내장 음성(예전 관리자판 목소리, 바로 나옴) / 그 밖의 인도네시아어 = Gemini 여성
+  //   한국어 뜻 = Gemini 남성(Charon). Gemini 는 실제로 다 들릴 때까지 기다립니다(예전엔 글자 수로 어림해
+  //   한국어 음성이 늦게 오면 다 읽기 전에 카드가 넘어갔습니다).
+  const speak = async (text: string, lang: "id" | "ko"): Promise<void> => {
+    const clean = text.replace(new RegExp("~", "g"), "무엇무엇").replace(new RegExp("\\s*/\\s*", "g"), ", ");
+    if (isStoreApp()) {
+      if (lang === "id" && isWordLike(clean) && hasNativeTts()) {
+        const ok = await speakNative(clean, "id-ID");
+        if (ok) return;
+      }
+      try { stopNative(); } catch (e) {}
+      await ttsPlayer.playOnce("say:" + clean, clean, lang === "ko" ? "male" : "female");
+      return;
+    }
+    return speakDevice(text, lang);
+  };
+
+  // Gemini 로 읽을 글이면 미리 만들어 둡니다(폰 음성으로 읽을 낱말·관리자판은 할 일 없음)
+  const prefetchSpeak = (text: string, lang: "id" | "ko") => {
+    if (!isStoreApp() || !text) return;
+    const clean = text.replace(new RegExp("~", "g"), "무엇무엇").replace(new RegExp("\\s*/\\s*", "g"), ", ");
+    if (lang === "id" && isWordLike(clean) && hasNativeTts()) return;
+    ttsPlayer.prefetch("say:" + clean, clean, lang === "ko" ? "male" : "female").catch(() => {});
+  };
+
+  // 관리자판·회원판(폰 내장 음성 AndroidTTS 가 있는 앱)의 예전 읽기 — 그대로 둡니다
+  const speakDevice = (text: string, lang: "id" | "ko") => {
     return new Promise<void>((resolve) => {
       const cleanText = text.replace(/~/g, "무엇무엇").replace(/\s*\/\s*/g, ", ");
       if ((window as any).AndroidTTS) {
@@ -138,6 +178,14 @@ export default function StudyMode() {
     }
   };
 
+  // 손으로 뒤집으면 뒷면 음성을 미리 만들어 둡니다(스피커를 누르면 바로 나오게)
+  useEffect(() => {
+    if (!isFlipped || isAutoPlaying || !currentWord) return;
+    const { text, lang } = getSpeakTarget(currentWord, true);
+    prefetchSpeak(text, lang);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFlipped, currentWord && currentWord.id]);
+
   useEffect(() => {
     if (isFlipped) { setIsBreathing(false); return; }
     const timer = setTimeout(() => setIsBreathing(true), 2000);
@@ -163,14 +211,17 @@ export default function StudyMode() {
     }
   }, [reviewFilter, displayWords.length, words.length]);
 
-  const goNext = useCallback(() => {
+  // bySwipe: 손으로 밀어 넘긴 경우(들어오는 방향은 handleTouchEnd 가 정함). 버튼이면 예전처럼 살짝 들어옵니다.
+  const goNext = useCallback((bySwipe?: boolean) => {
     if (currentIndex < displayWords.length - 1) {
+      if (bySwipe !== true) setEnterFrom(null);
       setSlideDir(1); setIsFlipped(false); setIsBreathing(false); setCurrentIndex((i) => i + 1);
     }
   }, [currentIndex, displayWords.length]);
 
-  const goPrev = useCallback(() => {
+  const goPrev = useCallback((bySwipe?: boolean) => {
     if (currentIndex > 0) {
+      if (bySwipe !== true) setEnterFrom(null);
       setSlideDir(-1); setIsFlipped(false); setIsBreathing(false); setCurrentIndex((i) => i - 1);
     }
   }, [currentIndex]);
@@ -219,10 +270,15 @@ export default function StudyMode() {
     if (!isAutoPlayingRef.current) return;
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(() => { resolve(); }, 350); });
     if (!isAutoPlayingRef.current) return;
+    // 앞면을 읽는 동안 뒷면 음성을 미리 만들어 둡니다(뒷면 한국어 음성이 늦게 와 끊기던 것)
+    { const backLang0: "id" | "ko" = lang === "id" ? "ko" : "id"; prefetchSpeak(lang === "id" ? playWords[index].meaning : playWords[index].word, backLang0); }
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(async () => { const frontText = lang === "id" ? playWords[index].word : playWords[index].meaning; await speak(frontText, lang); resolve(); }, 1000); });
     if (!isAutoPlayingRef.current) return;
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(() => { setIsFlipped(true); resolve(); }, 1500); });
     if (!isAutoPlayingRef.current) return;
+    // 다음 카드 앞면도 미리
+    { const nx = playWords[index + 1]; if (nx) prefetchSpeak(lang === "id" ? nx.word : nx.meaning, lang); }
+    // 뒷면은 다 읽을 때까지 기다린 뒤에야 다음 카드로 넘어갑니다
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(async () => { const backLang: "id" | "ko" = lang === "id" ? "ko" : "id"; const backText = lang === "id" ? playWords[index].meaning : playWords[index].word; await speak(backText, backLang); resolve(); }, 700); });
     if (!isAutoPlayingRef.current) return;
     autoPlayRef.current = setTimeout(() => { runAutoPlay(index + 1, playWords, lang); }, 1500);
@@ -246,17 +302,56 @@ export default function StudyMode() {
   useEffect(() => {
     return () => {
       if (autoPlayRef.current) clearTimeout(autoPlayRef.current);
+      if (swipeTimer.current) clearTimeout(swipeTimer.current);
+      try { (window as any).AndroidTTS?.stop?.(); } catch(e) {}
       try { speechSynthesis?.cancel?.(); } catch(e) {}
       releaseWakeLock();
     };
   }, []);
 
-  const handleTouchStart = (e: React.TouchEvent) => { setTouchStart(e.touches[0].clientX); };
+  // 옆으로 밀기 — 카드가 손가락을 따라 움직이다가, 놓으면 천천히 밀려 나가고 다음 카드가 들어옵니다
+  // (2026-11-11 사용자 요청: "진짜 카드가 넘어가는 느낌"). 방향은 예전 그대로: 오른쪽으로 밀면 다음 카드.
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (leaving) return;
+    setTouchStart(e.touches[0].clientX);
+    touchStartY.current = e.touches[0].clientY;
+    swipingRef.current = false;
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStart === null || isAutoPlaying || leaving) return;
+    const dx = e.touches[0].clientX - touchStart;
+    const dy = e.touches[0].clientY - (touchStartY.current ?? e.touches[0].clientY);
+    if (!swipingRef.current) {
+      if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return;
+      swipingRef.current = true;
+    }
+    // 더 갈 카드가 없는 쪽으로는 조금만 따라오게 합니다
+    const canGo = dx > 0 ? currentIndex < displayWords.length - 1 : currentIndex > 0;
+    setDragX(canGo ? dx : dx * 0.25);
+  };
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStart === null) return;
     const diff = e.changedTouches[0].clientX - touchStart;
-    if (Math.abs(diff) > 60) { if (diff > 0) goNext(); else goPrev(); }
     setTouchStart(null);
+    touchStartY.current = null;
+    const wasSwiping = swipingRef.current;
+    swipingRef.current = false;
+    if (isAutoPlaying || leaving) { setDragX(0); return; }
+    const dir: 1 | -1 = diff > 0 ? 1 : -1;
+    const canGo = dir > 0 ? currentIndex < displayWords.length - 1 : currentIndex > 0;
+    if (Math.abs(diff) > 60 && canGo) {
+      setLeaving(dir);
+      if (swipeTimer.current) clearTimeout(swipeTimer.current);
+      swipeTimer.current = setTimeout(() => {
+        swipeTimer.current = null;
+        setEnterFrom(dir > 0 ? "left" : "right");
+        setLeaving(0);
+        setDragX(0);
+        if (dir > 0) goNext(true); else goPrev(true);
+      }, SWIPE_OUT_MS);
+      return;
+    }
+    if (wasSwiping || dragX !== 0) setDragX(0); // 제자리로 돌아감
   };
 
   // 기본 단어장 잠금 (무료 → 구독 화면, 성경과 신앙 → 관리자·Special Member 만)
@@ -299,8 +394,21 @@ export default function StudyMode() {
           <span className="w-8" />
         )}
       </div>
-      <div className="flex-1 flex items-center justify-center px-6" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        <div key={isAutoPlaying ? "autoplay-card" : ((currentWord && currentWord.id) || "empty")} className={`perspective w-full max-w-sm aspect-[3/4] cursor-pointer ${isAutoPlaying ? "" : slideDir === 1 ? "card-enter-next" : "card-enter-prev"}`} onClick={() => !isAutoPlaying && setIsFlipped((f) => !f)}>
+      <div className="flex-1 flex items-center justify-center px-6 overflow-x-hidden" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}>
+        <div
+          key={isAutoPlaying ? "autoplay-card" : ((currentWord && currentWord.id) || "empty")}
+          className={`perspective w-full max-w-sm aspect-[3/4] cursor-pointer ${
+            isAutoPlaying ? "" : enterFrom === "left" ? "card-swipe-in-left" : enterFrom === "right" ? "card-swipe-in-right" : slideDir === 1 ? "card-enter-next" : "card-enter-prev"
+          }`}
+          style={
+            leaving
+              ? { transform: "translateX(" + leaving * 118 + "%) rotate(" + leaving * 10 + "deg)", opacity: 0, transition: "transform " + SWIPE_OUT_MS + "ms cubic-bezier(0.45, 0, 0.25, 1), opacity " + SWIPE_OUT_MS + "ms ease-in" }
+              : dragX !== 0
+                ? { transform: "translateX(" + dragX + "px) rotate(" + (dragX / 24).toFixed(2) + "deg)", transition: "none" }
+                : { transition: "transform 0.28s ease-out" }
+          }
+          onClick={() => { if (!isAutoPlaying && !leaving && dragX === 0) setIsFlipped((f) => !f); }}
+        >
           <div className={`relative w-full h-full preserve-3d flip-transition ${isFlipped ? "rotate-y-180" : ""}`}>
             <div className={`${FACE} transition-shadow duration-1000 ${isBreathing ? "animate-breathe" : ""}`}>
               <button
@@ -310,7 +418,7 @@ export default function StudyMode() {
               >
                 <Bookmark size={20} strokeWidth={1.8} fill={isMarked ? "currentColor" : "none"} />
               </button>
-              <p className={`m-0 text-center ${frontLang === "id" ? "font-word text-[1.875rem] font-semibold leading-snug text-[#104B60]" : "font-gothic text-lg font-bold leading-relaxed text-[#1D1F1E]"}`}>
+              <p className={`m-0 text-center ${frontLang === "id" ? "font-word text-[1.78125rem] font-semibold leading-snug text-[#104B60]" : "font-gothic text-[1.21875rem] font-bold leading-relaxed text-[#1D1F1E]"}`}>
                 {frontLang === "id" ? currentWord?.word : (currentWord ? displayMeaning(currentWord.meaning) : "")}
               </p>
               {frontLang === "id" && currentWord?.example && (
@@ -328,7 +436,7 @@ export default function StudyMode() {
               >
                 <Bookmark size={20} strokeWidth={1.8} fill={isMarked ? "currentColor" : "none"} />
               </button>
-              <p className={`mb-3 text-center ${frontLang === "id" ? "font-gothic text-lg font-bold text-[#1D1F1E]" : "font-word text-[1.875rem] font-semibold leading-snug text-[#104B60]"}`}>
+              <p className={`mb-3 text-center ${frontLang === "id" ? "font-gothic text-[1.21875rem] font-bold text-[#1D1F1E]" : "font-word text-[1.78125rem] font-semibold leading-snug text-[#104B60]"}`}>
                 {frontLang === "id" ? (currentWord ? displayMeaning(currentWord.meaning) : "") : currentWord?.word}
               </p>
               {frontLang === "id" && currentWord?.exampleMeaning && (
@@ -362,7 +470,7 @@ export default function StudyMode() {
         </button>
       </div>
       <div className="shrink-0 pt-3.5 pb-[30px] flex items-center justify-center gap-3">
-        <button onClick={goPrev} disabled={currentIndex === 0 || isAutoPlaying}
+        <button onClick={() => goPrev()} disabled={currentIndex === 0 || isAutoPlaying}
           className={`${BTN} ${BTN_OFF}`}>
           <ChevronLeft size={20} />
         </button>
@@ -378,7 +486,7 @@ export default function StudyMode() {
           className={`${BTN} ${isAutoPlaying && isAutoRandom ? BTN_ON : BTN_OFF}`}>
           {isAutoPlaying && isAutoRandom ? <Square size={18} /> : <Shuffle size={20} />}
         </button>
-        <button onClick={goNext} disabled={currentIndex === displayWords.length - 1 || isAutoPlaying}
+        <button onClick={() => goNext()} disabled={currentIndex === displayWords.length - 1 || isAutoPlaying}
           className={`${BTN} ${BTN_OFF}`}>
           <ChevronRight size={20} />
         </button>
