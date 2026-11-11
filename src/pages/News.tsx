@@ -12,6 +12,7 @@ import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT }
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import WordMiniSheet from "@/components/WordMiniSheet";
+import { isBackCloseEntry } from "@/hooks/useBackClose";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import PlayButton from "@/components/PlayButton";
@@ -423,7 +424,8 @@ const News = () => {
       writeReturnTicket("news", selected.date + ":" + articleIdx, currentScrollY(), flipped);
     }
     // 기사 칸은 히스토리에 그대로 둡니다 (이야기 화면과 같은 이유).
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=news");
+    // 단어 시트(WordMiniSheet)가 쌓은 칸 위에서 떠나면 그 칸을 갈아 끼웁니다 — 돌아왔을 때 뒤로가기가 헛돌지 않게
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=news", { replace: isBackCloseEntry() });
   };
 
   const savePopupWord = () => {
@@ -552,7 +554,7 @@ const News = () => {
               )}
           </div>
           <p className="text-center text-muted-foreground text-xs mt-3">
-            {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 해석, 단어를 탭하면 뜻이 나옵니다"}
+            {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 해석이 보입니다"}
           </p>
         </div>
 
