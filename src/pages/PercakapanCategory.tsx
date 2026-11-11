@@ -220,7 +220,7 @@ const PercakapanCategory = () => {
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="flex items-center gap-1.5 text-[0.96875rem] leading-tight" style={{ color: "#1D1F1E" }}>
+                  <p className="flex items-center gap-1.5 text-[0.875rem] leading-tight" style={{ color: "#1D1F1E" }}>
                     <span className="min-w-0 truncate">{s.title}</span>
                     {s.custom ? (
                       <span className="shrink-0 h-[5px] w-[5px] rounded-full bg-muted-foreground/45" />
