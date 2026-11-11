@@ -240,14 +240,14 @@ const GameKata = () => {
   return (
     <GameScreen id="kata">
       <div className="h-10 shrink-0 flex items-center justify-between gap-3">
-        <span className="font-gothic text-[12px] truncate" style={{ color: G.sub }}>
+        <span className="font-gothic text-[11px] truncate" style={{ color: G.sub }}>
           {statusText}
         </span>
         {!rec.done || rec.hint ? (
           <button
             type="button"
             onClick={showHint}
-            className="h-[30px] max-w-[60%] px-3 rounded-[15px] font-gothic text-[12px] font-bold truncate shrink-0"
+            className="h-[30px] max-w-[60%] px-3 rounded-[15px] font-gothic text-[11px] font-bold truncate shrink-0"
             style={{ background: G.goldBg, color: G.goldText }}
           >
             {rec.hint ? "뜻 · " + answer.meaning : "뜻 힌트"}
@@ -289,7 +289,7 @@ const GameKata = () => {
                 return (
                   <span
                     key={c}
-                    className="w-[52px] h-[52px] rounded-[10px] box-border flex items-center justify-center font-word text-[24px] font-semibold uppercase"
+                    className="w-[52px] h-[52px] rounded-[10px] box-border flex items-center justify-center font-word text-[22px] font-semibold uppercase"
                     style={style}
                   >
                     {ch}
@@ -306,7 +306,7 @@ const GameKata = () => {
         >
           {notice ? (
             <span
-              className="px-3.5 py-1.5 rounded-full font-gothic text-[13px] font-semibold text-white"
+              className="px-3.5 py-1.5 rounded-full font-gothic text-[12px] font-semibold text-white"
               style={{ background: G.text, boxShadow: CARD_SHADOW }}
             >
               {notice}
@@ -320,11 +320,11 @@ const GameKata = () => {
           className="mt-auto pt-4"
         >
           <div className="rounded-[20px] bg-white px-5 pt-5 pb-4 text-center" style={{ boxShadow: CARD_SHADOW }}>
-            <p className="font-gothic text-[12px] font-semibold" style={{ color: G.mute }}>
+            <p className="font-gothic text-[11px] font-semibold" style={{ color: G.mute }}>
               {rec.won ? "정답입니다" : "오늘의 단어"}
             </p>
             <div className="mt-1.5 flex items-center justify-center gap-2.5">
-              <span className="relative font-word text-[26px] font-semibold" style={{ color: G.deep }}>
+              <span className="relative font-word text-[24px] font-semibold" style={{ color: G.deep }}>
                 {answer.word}
                 {floatOn && gained > 0 ? <FloatPoint text={"+" + gained} /> : null}
               </span>
@@ -338,15 +338,15 @@ const GameKata = () => {
                 <IconSpeaker size={16} small />
               </button>
             </div>
-            <p className="mt-1 font-gothic text-[16px] font-semibold" style={{ color: G.text }}>
+            <p className="mt-1 font-gothic text-[15px] font-semibold" style={{ color: G.text }}>
               {answer.meaning}
             </p>
-            <p className="mt-3 font-gothic text-[13px]" style={{ color: G.sub }}>
+            <p className="mt-3 font-gothic text-[12px]" style={{ color: G.sub }}>
               {rec.won
                 ? rec.guesses.length + "번 만에 맞혔습니다" + (streak > 0 ? " · 연속 " + streak + "일" : "")
                 : "내일 새 퍼즐에 다시 도전해 보세요"}
             </p>
-            <p className="mt-0.5 font-gothic text-[12px]" style={{ color: G.mute }}>
+            <p className="mt-0.5 font-gothic text-[11px]" style={{ color: G.mute }}>
               새 퍼즐은 한국 시간 자정에 열립니다
             </p>
             <SecondaryButton
@@ -371,7 +371,7 @@ const GameKata = () => {
                     onClick={() => press(k)}
                     className={
                       "h-11 rounded-[7px] flex items-center justify-center font-gothic font-semibold uppercase active:opacity-70 " +
-                      (wide ? "text-[12px] font-bold" : "text-[14px]")
+                      (wide ? "text-[11px] font-bold" : "text-[13px]")
                     }
                     style={{
                       width: wide ? 48 : 30,
