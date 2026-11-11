@@ -87,7 +87,7 @@ const shortCat = (c: string) => (c || "").replace("인도네시아 ", "").trim()
 
 const Chip = ({ children, tone }: { children: ReactNode; tone: "amber" | "grey" }) => (
   <span
-    className="h-[22px] px-[9px] rounded-full flex items-center font-gothic text-[0.71875rem] font-semibold whitespace-nowrap min-w-0 truncate"
+    className="h-[22px] px-[9px] rounded-full flex items-center font-gothic text-[0.65625rem] font-semibold whitespace-nowrap min-w-0 truncate"
     style={tone === "amber" ? { background: C.amberBg, color: C.amberFg } : { background: C.greyBg, color: C.sub }}
   >
     {children}
@@ -640,7 +640,7 @@ const Story = () => {
         {header(closeCard, "목록으로")}
 
         {/* 화면 전체에서 옆으로 밀면 뒤집힙니다 (카드 아래 빈 곳 포함) */}
-        <div {...swipeHandlers} className="px-4 pt-4 pb-6" style={{ minHeight: "calc(100dvh - 61px)" }}>
+        <div {...swipeHandlers} className="px-4 pt-4 pb-6" style={{ minHeight: "calc(100dvh - 61px - var(--kata-tabbar-h, 0px))" }}>
           <div className="relative" style={CARD_STYLE}>
             {!flipped ? (
               <div style={{ padding: "18px 18px 22px" }}>
@@ -805,8 +805,8 @@ const Story = () => {
               <BookArt />
             </span>
             <span className="flex-1 min-w-0">
-              <span className="block text-[1.0625rem] font-semibold" style={{ color: C.txt }}>오늘의 이야기</span>
-              <span className="block mt-[3px] font-gothic text-[0.78125rem]" style={{ color: C.sub }}>
+              <span className="block text-[0.96875rem] font-semibold" style={{ color: C.txt }}>오늘의 이야기</span>
+              <span className="block mt-[3px] font-gothic text-[0.71875rem]" style={{ color: C.sub }}>
                 난이도를 고르고 새 이야기를 불러옵니다
               </span>
             </span>
@@ -817,7 +817,7 @@ const Story = () => {
           <button
             onClick={handleGenerate}
             disabled={generating || blocked}
-            className="mt-3.5 w-full h-[50px] rounded-2xl flex items-center justify-center gap-2 font-gothic text-[0.9375rem] font-semibold"
+            className="mt-3.5 w-full h-[50px] rounded-2xl flex items-center justify-center gap-2 font-gothic text-[0.875rem] font-semibold"
             style={
               blocked
                 ? { background: "#E9EDEF", color: C.mute }
@@ -831,7 +831,7 @@ const Story = () => {
             )}
           </button>
           {blocked ? (
-            <p className="mt-2.5 text-center font-gothic text-[0.78125rem]" style={{ color: C.sub }}>
+            <p className="mt-2.5 text-center font-gothic text-[0.71875rem]" style={{ color: C.sub }}>
               {freeUsed
                 ? "오늘의 이야기를 불러왔습니다 · 내일 새 이야기가 열립니다"
                 : "오늘 불러올 수 있는 이야기를 모두 불러왔습니다 · 내일 다시 열립니다"}
@@ -851,7 +851,7 @@ const Story = () => {
         {/* 지난 이야기 */}
         {stories.length > 0 ? (
           <>
-            <p className="mt-3.5 mx-1 font-gothic text-[0.875rem] font-bold tracking-[0.02em]" style={{ color: "#3B4245" }}>
+            <p className="mt-3.5 mx-1 font-gothic text-[0.8125rem] font-bold tracking-[0.02em]" style={{ color: "#3B4245" }}>
               지난 이야기
             </p>
             {stories.map((s) => (
@@ -861,12 +861,12 @@ const Story = () => {
                 className="w-full text-left min-w-0 active:opacity-80"
                 style={{ ...CARD_STYLE, padding: "14px 16px" }}
               >
-                <p className="font-word text-[1.0625rem] font-semibold break-words" style={{ color: C.deep }}>{s.title}</p>
-                <p className="mt-[3px] font-gothic text-[0.8125rem] break-words" style={{ color: C.sub }}>{s.titleKo}</p>
+                <p className="font-word text-[0.96875rem] font-semibold break-words" style={{ color: C.deep }}>{s.title}</p>
+                <p className="mt-[3px] font-gothic text-[0.75rem] break-words" style={{ color: C.sub }}>{s.titleKo}</p>
                 <div className="mt-2.5 flex items-center gap-1.5 min-w-0">
                   <Chip tone="amber">{shortCat(s.category)}</Chip>
                   <Chip tone="grey">난이도 {s.difficulty}</Chip>
-                  <span className="ml-auto shrink-0 font-gothic text-[0.75rem]" style={{ color: C.mute }}>{fmtDate(s.createdAt)}</span>
+                  <span className="ml-auto shrink-0 font-gothic text-[0.6875rem]" style={{ color: C.mute }}>{fmtDate(s.createdAt)}</span>
                 </div>
               </button>
             ))}
