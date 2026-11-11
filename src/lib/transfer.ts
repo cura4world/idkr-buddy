@@ -31,6 +31,7 @@ import {
 } from "@/lib/store";
 import { MEMBER_BASE, memberHeaders } from "@/lib/member";
 import { pushMyLogs } from "@/lib/medaliSync";
+import { FONT_BASE_KEY, adoptLegacyFontStep } from "@/lib/fontScale";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 const SEED_SYNC_KEY = "shared_seed_version";
@@ -61,6 +62,7 @@ export interface BundleSummary {
 // 보낸 쪽 값으로 바꾸는 화면 설정
 const SETTING_KEYS = [
   "app-font-scale-step",
+  FONT_BASE_KEY, // 글자 크기 기준 표시 — 없으면 2026-11-11 이전 묶음이라 단계를 한 칸 옮깁니다
   "app-wide-mode",
   "tts-voice",
   "story-difficulty",
@@ -499,6 +501,8 @@ function mergeLocalStorage(b: PersonalBundle): void {
     const v = b.ls[k];
     if (typeof v === "string" && v !== "") lsSet(k, v);
   }
+  // 글자 크기 기준(15.2px)을 바꾸기 전에 만든 묶음이면, 방금 넣은 단계를 새 기준으로 옮깁니다(fontScale.ts)
+  if (b.ls["app-font-scale-step"] && !b.ls[FONT_BASE_KEY]) adoptLegacyFontStep();
   for (const k of FILL_IF_EMPTY_KEYS) {
     const v = b.ls[k];
     const cur = lsGet(k);
