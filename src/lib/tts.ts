@@ -611,6 +611,76 @@ class TtsPlayer {
     this.playSequence(urls, 0, myToken);
   }
 
+  // ── 추가 전용 (2026-11-11): 목소리를 정해 한 번 읽고, 다 읽을 때까지 기다리기 ─────────
+  // 카드 자동재생이 "다 읽은 뒤 다음 카드로" 넘어가려고 씁니다. 기존 toggle/play 는 그대로입니다.
+  // voice 를 주면 설정의 목소리 대신 그 목소리로 읽습니다(카드: 한국어 뜻 = 남성).
+  // 캐시 이름은 play() 와 같은 규칙이라, 같은 글·같은 목소리는 서로 다시 만들지 않습니다.
+  private async urlsFor(key: string, text: string, voiceName: string, isCancelled: () => boolean): Promise<string[] | null> {
+    const chunks = splitForTts(text);
+    const kind = ttsKindForKey(key);
+    const unit = kind === "longread" ? key : "";
+    const urls: string[] = [];
+    for (let i = 0; i < chunks.length; i++) {
+      if (isCancelled()) return null;
+      const ckey = key + "::v=" + voiceName + "::" + i + "/" + chunks.length + (key.indexOf("say:") === 0 ? SAY_CACHE_VER : "");
+      let url = await getCachedAudio(ckey);
+      if (!url) {
+        url = await generateAudioForText(chunks[i], voiceName, 0, TTS_MODEL, true, kind, unit);
+        await saveCachedAudio(ckey, url);
+      }
+      urls.push(url);
+    }
+    return urls;
+  }
+
+  /** 미리 만들어 캐시에 넣어 둡니다(재생하지 않음). 실패해도 조용히 넘어갑니다. */
+  async prefetch(key: string, text: string, voice?: TtsVoiceId): Promise<void> {
+    const t = String(text || "").trim();
+    if (!t) return;
+    const voiceName = voiceNameOf(voice || getTtsVoice());
+    try { await this.urlsFor(key, t, voiceName, () => false); } catch (e) { /* 무시 */ }
+  }
+
+  /**
+   * 한 번 읽고 다 읽으면 끝나는 Promise. 중간에 stop()·다른 재생이 시작되면 그때 끝납니다.
+   * 만들기에 실패하면 false 로 끝납니다(소리 없이) — 부르는 쪽이 다음으로 넘어가면 됩니다.
+   */
+  async playOnce(key: string, text: string, voice?: TtsVoiceId): Promise<boolean> {
+    const t = String(text || "").trim();
+    if (!t) return false;
+    this.stop();
+    const myToken = ++this.token;
+    this.emit({ state: "loading", key, usedFallback: false });
+    const voiceName = voiceNameOf(voice || getTtsVoice());
+    let urls: string[] | null = null;
+    try {
+      urls = await this.urlsFor(key, t, voiceName, () => myToken !== this.token);
+    } catch (e) {
+      if (myToken === this.token) this.emit({ state: "idle" });
+      return false;
+    }
+    if (!urls || myToken !== this.token) return false;
+    for (let i = 0; i < urls.length; i++) {
+      if (myToken !== this.token) return false;
+      const ok = await new Promise<boolean>((resolve) => {
+        const audio = new Audio(urls![i]);
+        this.audio = audio;
+        let settled = false;
+        const end = (v: boolean) => { if (!settled) { settled = true; clearInterval(watch); resolve(v); } };
+        // stop()·다른 재생으로 토큰이 바뀌면 끝난 것으로 칩니다
+        const watch = setInterval(() => { if (myToken !== this.token) end(false); }, 200);
+        audio.onended = () => end(true);
+        audio.onerror = () => end(true);
+        audio.play()
+          .then(() => { if (myToken === this.token) this.emit({ state: "playing" }); })
+          .catch(() => end(false));
+      });
+      if (!ok) return false;
+    }
+    if (myToken === this.token) { this.audio = null; this.emit({ state: "idle" }); }
+    return true;
+  }
+
   private playSequence(urls: string[], idx: number, myToken: number) {
     if (myToken !== this.token) return;
     if (idx >= urls.length) { this.emit({ state: "idle" }); this.audio = null; return; }
