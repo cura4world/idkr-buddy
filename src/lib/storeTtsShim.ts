@@ -9,28 +9,43 @@
 
 import { ttsPlayer } from "@/lib/tts";
 import { isStoreApp } from "@/lib/platform";
+import { hasNativeTts, isWordLike, speakNative, stopNative } from "@/lib/nativeTts";
 
 let speakingText = "";
 let inStop = false;
 
+function speakGemini(t: string): void {
+  // ttsPlayer 가 실패 후 폴백으로 같은 글을 다시 넘긴 경우 → 무시 (무한 반복 방지)
+  if (speakingText === t) return;
+  speakingText = t;
+  ttsPlayer
+    .toggle("say:" + t, t)
+    .catch(() => {})
+    .finally(() => {
+      if (speakingText === t) speakingText = "";
+    });
+}
+
 const shim = {
-  speak(text: string, _langCode?: string): void {
+  speak(text: string, langCode?: string): void {
     const t = String(text || "").trim();
     if (!t) return;
-    // ttsPlayer 가 실패 후 폴백으로 같은 글을 다시 넘긴 경우 → 무시 (무한 반복 방지)
-    if (speakingText === t) return;
-    speakingText = t;
-    ttsPlayer
-      .toggle("say:" + t, t)
-      .catch(() => {})
-      .finally(() => {
-        if (speakingText === t) speakingText = "";
+    // 2026-11-11 사용자 요청: 인도네시아어 "낱말"만 폰 내장 음성(예전 관리자판 목소리, 누르면 바로).
+    // 문장·예문·한국어는 그대로 Gemini 음성. 폰 음성을 못 쓰면(통로 없음·음성 없음) Gemini 로 대신합니다.
+    if (langCode !== "ko-KR" && isWordLike(t) && hasNativeTts()) {
+      try { ttsPlayer.stop(); } catch (e) {}
+      speakNative(t, "id-ID").then((ok) => {
+        if (!ok) speakGemini(t);
       });
+      return;
+    }
+    speakGemini(t);
   },
   stop(): void {
     if (inStop) return; // ttsPlayer.stop() 안에서 다시 불린 경우
     inStop = true;
     try {
+      stopNative();
       ttsPlayer.stop();
     } catch (e) {
       // 무시
