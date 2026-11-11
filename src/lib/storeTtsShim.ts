@@ -1,11 +1,12 @@
 // src/lib/storeTtsShim.ts
-// 스토어 앱(공개판)에는 폰 내장 음성(AndroidTTS)을 넣지 않습니다 — 품질이 낮아 앱 인상을 해칩니다.
-// 그런데 단어 발음 듣기 같은 짧은 읽기는 화면 20여 곳이 window.AndroidTTS.speak(...) 를 직접 부릅니다.
-// 그 화면들을 하나하나 고치는 대신, 스토어 앱에서만 같은 이름의 객체를 Gemini 음성(ttsPlayer)으로 채워 넣습니다.
+// 단어 발음 듣기 같은 짧은 읽기는 화면 20여 곳이 window.AndroidTTS.speak(...) 를 직접 부릅니다.
+// 그 화면들을 하나하나 고치는 대신, 스토어 앱에서만 같은 이름의 객체를 채워 넣습니다.
+//  - 인도네시아어 낱말(짧고 한글이 없음)은 폰 내장 음성(KataNativeTTS, nativeTts.ts) — 2026-11 사용자 요청
+//  - 그 밖의 글(한국어·문장)은 Gemini 음성(ttsPlayer)
 //
 // 주의: ttsPlayer 는 생성에 실패하면 AndroidTTS.speak 로, 멈출 때는 AndroidTTS.stop 으로 넘어갑니다.
 // 그대로 두면 서로를 끝없이 부르므로 두 방향 모두 재진입을 막습니다.
-// tts.ts 는 한 줄도 바꾸지 않습니다(저장소 규칙: 사용법 변경 금지).
+// tts.ts 는 기존 사용법을 바꾸지 않습니다(저장소 규칙). prefetch·playOnce 는 추가만 했습니다.
 
 import { ttsPlayer } from "@/lib/tts";
 import { isStoreApp } from "@/lib/platform";
