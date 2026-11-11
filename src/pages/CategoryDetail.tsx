@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import { useParams, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, Word, Category, reorderWords, deleteWord, deleteCategory, archiveMyWordbook, nextArchiveName, moveWordsToCategory } from "@/lib/store";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
@@ -217,6 +217,54 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   useBackClose(archiveOpen, () => setArchiveOpen(false));
   useBackClose(moveOpen, () => setMoveOpen(false));
   useBackClose(deleteCatOpen, () => setDeleteCatOpen(false));
+
+  // 화면을 떠나는 순간(레이아웃 정리 단계, 동기)부터 스크롤 기록을 멈춥니다
+  const scrollFrozenRef = useRef(false);
+  useLayoutEffect(() => {
+    scrollFrozenRef.current = false;
+    return () => { scrollFrozenRef.current = true; };
+  }, [id]);
+  // 단어장마다 마지막으로 보던 위치를 기억합니다(2026-11-11 사용자 요청).
+  // 처음 여는 단어장은 맨 위부터, 한 번 본 단어장은 지난번 보던 자리부터 보입니다.
+  // (앱 공용 ScrollManager 가 먼저 맨 위로 올린 뒤, 이 효과가 단어장 자리로 내립니다.)
+  useEffect(() => {
+    if (!id) return;
+    const key = "wb-scroll:" + id;
+    let saved = 0;
+    try { saved = Math.max(0, Number(localStorage.getItem(key) || "0") || 0); } catch (e) { saved = 0; }
+    let lastY = saved;
+    let raf = 0;
+    let tries = 0;
+    const apply = () => {
+      raf = 0;
+      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      // 단어 목록이 다 그려질 때까지 잠깐 기다립니다
+      if (saved > 0 && max < saved && tries < 40) {
+        tries++;
+        raf = window.requestAnimationFrame(apply);
+        return;
+      }
+      try { window.scrollTo(0, Math.min(saved, max)); } catch (e) {}
+    };
+    raf = window.requestAnimationFrame(apply);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const write = () => {
+      try { localStorage.setItem(key, String(Math.round(lastY))); } catch (e) {}
+    };
+    const onScroll = () => {
+      if (scrollFrozenRef.current) return; // 화면이 바뀌는 중(새 화면 때문에 줄어든 값은 적지 않음)
+      lastY = window.scrollY || 0;
+      if (timer) return;
+      timer = setTimeout(() => { timer = null; write(); }, 300);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) window.cancelAnimationFrame(raf);
+      if (timer) { clearTimeout(timer); timer = null; }
+      write(); // 마지막으로 받은 스크롤 값(화면이 바뀌며 줄어든 값이 아님)
+    };
+  }, [id]);
   // 기본 단어장 색연필 그림 (그 권의 파일만, 열 때 받아 옴)
   const [scenes, setScenes] = useState<Record<string, IllustScene>>({});
   const plan = usePlan();
