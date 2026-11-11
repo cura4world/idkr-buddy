@@ -11,6 +11,7 @@ import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT }
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import WordMiniSheet from "@/components/WordMiniSheet";
+import { isBackCloseEntry } from "@/hooks/useBackClose";
 import { headwordInSentence } from "@/lib/dictionary";
 import { fetchChapterKo, getBook } from "@/lib/bible";
 import { hasGeminiApiKey } from "@/lib/gemini";
@@ -381,11 +382,12 @@ const PhraseDetail = () => {
   };
 
   // 어느 문장이었는지는 주소(?s=...)로 저절로 돌아오므로 읽던 자리만 표로 적어 둡니다.
-  // 단어 팝업이 히스토리를 쌓지 않는 화면이라 replace 는 주지 않습니다.
+  // 단어 팝업(WordMiniSheet)이 히스토리 칸을 쌓으므로, 그 칸 위에서 떠날 때는 replace 로 갈아 끼웁니다.
   const openInDictionary = () => {
     if (!popupWord) return;
     writeReturnTicket("phrase", sentence, currentScrollY(), false);
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=phrase");
+    // 단어 시트(WordMiniSheet)가 쌓은 칸 위에서 떠나면 그 칸을 갈아 끼웁니다 — 돌아왔을 때 뒤로가기가 헛돌지 않게
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=phrase", { replace: isBackCloseEntry() });
   };
 
   const savePopupWord = () => {
