@@ -778,9 +778,6 @@ jobs:
                       v.setPadding(b.left, b.top, b.right, b.bottom);
                       return WindowInsetsCompat.CONSUMED;
                   });
-                  WindowInsetsControllerCompat bars = WindowCompat.getInsetsController(getWindow(), root);
-                  bars.setAppearanceLightStatusBars(true);
-                  bars.setAppearanceLightNavigationBars(true);
 
                   webView = new WebView(this);
                   WebSettings settings = webView.getSettings();
@@ -864,6 +861,11 @@ jobs:
                   root.addView(webView, new FrameLayout.LayoutParams(
                       FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
                   setContentView(root);
+                  // 상단바·하단바 글자색은 화면을 붙인 "뒤에" 정합니다. 붙이기 전에 부르면 DecorView 가 없어
+                  // Android 16(갤럭시 폴드6)에서 NullPointerException 으로 앱이 바로 꺼졌습니다(2026-11-11, 미리보기 APK).
+                  WindowInsetsControllerCompat bars = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+                  bars.setAppearanceLightStatusBars(true);
+                  bars.setAppearanceLightNavigationBars(true);
 
                   if (savedInstanceState != null) {
                       webView.restoreState(savedInstanceState);
