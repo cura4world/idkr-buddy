@@ -268,7 +268,7 @@ export default function QuizMode() {
           <button
             type="button"
             onClick={() => speak(currentQ.word.word)}
-            className="font-word text-[1.75rem] font-semibold text-[#104B60] active:opacity-70"
+            className="font-word text-[1.65625rem] font-semibold text-[#104B60] active:opacity-70"
             title="발음 듣기"
           >
             {displayWord(currentQ.word.word, currentQ.word.example)}
