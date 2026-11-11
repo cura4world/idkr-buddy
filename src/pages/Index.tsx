@@ -592,7 +592,16 @@ const Index = () => {
   const goSearch = (term?: string) => {
     const t = (term !== undefined ? term : query).trim();
     if (!t) return;
-    navigate("/dictionary?q=" + encodeURIComponent(t));
+    // 최근 검색 목록이 열려 쌓아 둔 칸이 있으면 그 칸을 사전으로 바꿔 씁니다.
+    // 그냥 쌓으면 사전에서 돌아온 뒤 뒤로가기 한 번이 아무 일도 하지 않습니다(빈 칸이 남음, 2026-11-12 폰 확인).
+    const replaceHist = histPushedRef.current;
+    if (histOpenRef.current) {
+      histOpenRef.current = false;
+      histPushedRef.current = false;
+      if (hideHistoryRef.current) window.clearTimeout(hideHistoryRef.current);
+      setShowHistory(false);
+    }
+    navigate("/dictionary?q=" + encodeURIComponent(t), { replace: replaceHist });
   };
 
   const speechSupported =
