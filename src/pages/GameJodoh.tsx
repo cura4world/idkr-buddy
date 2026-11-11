@@ -396,7 +396,7 @@ const GameJodoh = () => {
             right={<Stat icon="check" label="맞힌 쌍" value={score} />}
           />
           <TimeBar pct={(secLeft / ROUND_SEC) * 100} />
-          <p className="mt-[18px] text-center font-gothic text-[12px]" style={{ color: G.mute }}>
+          <p className="mt-[18px] text-center font-gothic text-[11px]" style={{ color: G.mute }}>
             같은 뜻끼리 연결하세요 · 맞히면 새 단어가 들어옵니다
           </p>
           <div className="mt-3.5 grid grid-cols-2 gap-x-3 gap-y-2.5">
@@ -413,14 +413,14 @@ const GameJodoh = () => {
                   {p ? (
                     side === "L" ? (
                       <span
-                        className="font-word text-[18px] font-semibold leading-tight break-words"
+                        className="font-word text-[16.5px] font-semibold leading-tight break-words"
                         style={{ color: G.deep }}
                       >
                         {p.word}
                       </span>
                     ) : (
                       <span
-                        className="font-gothic text-[15.5px] font-semibold leading-tight break-keep"
+                        className="font-gothic text-[14.5px] font-semibold leading-tight break-keep"
                         style={{ color: G.text }}
                       >
                         {p.meaning}
