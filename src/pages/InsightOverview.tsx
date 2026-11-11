@@ -113,8 +113,8 @@ const Section = ({ title, rows, defaultOpen }: { title: string; rows: Row[]; def
         <dl className="divide-y divide-gray-100 border-t border-sky-300/40">
           {rows.map((r) => (
             <div key={r.label} className="px-4 py-2.5 flex gap-3">
-              <dt className="w-24 shrink-0 text-xs font-gothic font-semibold text-gray-400 pt-0.5">{r.label}</dt>
-              <dd className="flex-1 text-sm font-gothic text-gray-800 leading-relaxed">{r.value}</dd>
+              <dt className="w-24 shrink-0 text-[0.6875rem] font-gothic font-semibold text-gray-400 pt-0.5">{r.label}</dt>
+              <dd className="flex-1 text-[0.8125rem] font-gothic text-gray-800 leading-relaxed">{r.value}</dd>
             </div>
           ))}
         </dl>
