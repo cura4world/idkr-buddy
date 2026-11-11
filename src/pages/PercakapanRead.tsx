@@ -25,6 +25,26 @@ import { medaliEngine } from "@/lib/medali";
 import PointFloat from "@/components/PointFloat";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
+import { headwordInSentence } from "@/lib/dictionary";
+
+// 단어 팝업의 발음 듣기 — 다른 화면과 같은 방식(AndroidTTS 우선, 없으면 speechSynthesis).
+// 공개판에서는 AndroidTTS 자리에 storeTtsShim 이 있어 낱말은 폰 내장 음성으로 읽습니다.
+const speakWord = (text: string) => {
+  const t = String(text || "").trim();
+  if (!t) return;
+  const w = window as any;
+  if (w.AndroidTTS) {
+    try { w.AndroidTTS.speak(t, "id-ID"); } catch (e) {}
+    return;
+  }
+  try {
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = "id-ID";
+    u.rate = 0.9;
+    speechSynthesis?.cancel?.();
+    setTimeout(() => { try { speechSynthesis?.speak?.(u); } catch (e) {} }, 150);
+  } catch (e) {}
+};
 import PhraseFindBar from "@/components/PhraseFindBar";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { isBackCloseEntry } from "@/hooks/useBackClose";
@@ -301,7 +321,8 @@ const PercakapanRead = () => {
     // 글자를 고르는 중이면 팝업을 열지 않습니다
     const liveSel = window.getSelection();
     if (liveSel && !liveSel.isCollapsed) return;
-    const word = cleanPhrase(rawToken);
+    // 문장 첫머리라서 대문자인 낱말만 소문자로(Saya → saya). 문장 가운데의 사람 이름 등은 그대로.
+    const word = headwordInSentence(cleanPhrase(rawToken), sentence);
     if (!word) return;
     const key = word.toLowerCase();
     const reqId = ++popupReqId.current;
@@ -564,9 +585,6 @@ const PercakapanRead = () => {
                 );
               })}
             </div>
-            <p className="mt-3.5 text-center font-gothic text-[0.75rem]" style={{ color: "#9AA1A6" }}>
-              단어를 누르면 뜻이 나옵니다
-            </p>
           </>
         )}
       </div>
@@ -588,6 +606,7 @@ const PercakapanRead = () => {
           onSave={savePopupWord}
           onPickTarget={openWbPicker}
           onDictionary={openInDictionary}
+          onSpeak={() => speakWord(popupWord)}
         />
       )}
 
