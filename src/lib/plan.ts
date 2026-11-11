@@ -45,7 +45,9 @@ export function getPreviewTier(): Tier | null {
     const v = localStorage.getItem(PREVIEW_TIER_KEY);
     if (v === "free" || v === "trial" || v === "plus" || v === "special" || v === "admin") return v;
   } catch (e) {}
-  return "free";
+  // 아직 고르지 않았으면 관리자 — 출시 전 검사에서 잠김 없이 모든 화면을 보도록(2026-11-11 사용자 요청).
+  // 무료·Plus 화면은 미리보기 패널에서 골라 확인합니다.
+  return "admin";
 }
 
 export function setPreviewTier(t: Tier): void {
