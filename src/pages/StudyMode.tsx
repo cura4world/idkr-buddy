@@ -41,6 +41,11 @@ export default function StudyMode() {
   const touchStartY = useRef<number | null>(null);
   const swipingRef = useRef(false);
   const swipeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 자동재생 실행 번호 (runAutoPlay)
+  const autoRunRef = useRef(0);
+  // 이 화면에서 스피커를 한 번이라도 눌렀는가 — 누른 적이 있을 때만 뒤집은 카드의 뒷면 음성을 미리 만듭니다
+  // (듣지 않는 카드까지 만들면 공개판 음성 한도를 씀)
+  const usedSpeakerRef = useRef(false);
   const [savedIds, setSavedIds] = useState<string[]>(() => getSavedWordIds());
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [isAutoRandom, setIsAutoRandom] = useState(false);
@@ -180,7 +185,7 @@ export default function StudyMode() {
 
   // 손으로 뒤집으면 뒷면 음성을 미리 만들어 둡니다(스피커를 누르면 바로 나오게)
   useEffect(() => {
-    if (!isFlipped || isAutoPlaying || !currentWord) return;
+    if (!isFlipped || isAutoPlaying || !currentWord || !usedSpeakerRef.current) return;
     const { text, lang } = getSpeakTarget(currentWord, true);
     prefetchSpeak(text, lang);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -212,22 +217,26 @@ export default function StudyMode() {
   }, [reviewFilter, displayWords.length, words.length]);
 
   // bySwipe: 손으로 밀어 넘긴 경우(들어오는 방향은 handleTouchEnd 가 정함). 버튼이면 예전처럼 살짝 들어옵니다.
+  // leaving: 밀어 넘기는 카드가 아직 날아가는 중이면 버튼을 무시합니다(두 장이 한꺼번에 넘어가지 않게)
   const goNext = useCallback((bySwipe?: boolean) => {
+    if (bySwipe !== true && leaving) return;
     if (currentIndex < displayWords.length - 1) {
       if (bySwipe !== true) setEnterFrom(null);
       setSlideDir(1); setIsFlipped(false); setIsBreathing(false); setCurrentIndex((i) => i + 1);
     }
-  }, [currentIndex, displayWords.length]);
+  }, [currentIndex, displayWords.length, leaving]);
 
   const goPrev = useCallback((bySwipe?: boolean) => {
+    if (bySwipe !== true && leaving) return;
     if (currentIndex > 0) {
       if (bySwipe !== true) setEnterFrom(null);
       setSlideDir(-1); setIsFlipped(false); setIsBreathing(false); setCurrentIndex((i) => i - 1);
     }
-  }, [currentIndex]);
+  }, [currentIndex, leaving]);
 
   const cancelOperations = () => {
     isAutoPlayingRef.current = false;
+    autoRunRef.current += 1;
     if (autoPlayRef.current) { clearTimeout(autoPlayRef.current); autoPlayRef.current = null; }
     try { speechSynthesis?.cancel?.(); } catch(e) {}
     try { (window as any).AndroidTTS?.stop?.(); } catch(e) {}
@@ -242,6 +251,7 @@ export default function StudyMode() {
 
   const stopAutoPlay = useCallback(() => {
     isAutoPlayingRef.current = false;
+    autoRunRef.current += 1;
     setIsAutoPlaying(false); setIsAutoRandom(false); setIsScreenLocked(false);
     if (autoPlayRef.current) { clearTimeout(autoPlayRef.current); autoPlayRef.current = null; }
     try { speechSynthesis?.cancel?.(); } catch(e) {}
@@ -250,12 +260,15 @@ export default function StudyMode() {
     releaseWakeLock();
   }, []);
 
-  const runAutoPlay = useCallback(async (index: number, playWords: Word[], lang: "id" | "ko") => {
-    if (!isAutoPlayingRef.current) return;
+  // run: 이 재생의 번호. 멈췄다가 곧바로 다시 재생하면, 음성을 기다리던 옛 재생은 번호가 달라 스스로 끝납니다
+  // (playOnce 가 Gemini 음성을 만드는 몇 초 동안 두 재생이 겹쳐 카드가 튀던 것 방지).
+  const runAutoPlay = useCallback(async (index: number, playWords: Word[], lang: "id" | "ko", run: number = autoRunRef.current) => {
+    const alive = () => isAutoPlayingRef.current && run === autoRunRef.current;
+    if (!alive()) return;
     if (index >= playWords.length) {
       if (isLoopingRef.current) {
         const nextWords = autoRandomRef.current ? [...playWords].sort(() => Math.random() - 0.5) : playWords;
-        runAutoPlay(0, nextWords, lang); return;
+        runAutoPlay(0, nextWords, lang, run); return;
       }
       isAutoPlayingRef.current = false;
       setIsAutoPlaying(false); setIsAutoRandom(false); setIsScreenLocked(false);
@@ -267,21 +280,21 @@ export default function StudyMode() {
     setIsFlipped(false); setIsBreathing(false); setCurrentIndex(index);
     // 카드가 옆면(90도)을 지나는 순간 다음 단어로 교체: 뒤집는 모션은 유지하고 이전 단어 앞면은 보이지 않음
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(() => { setAutoCurrentWord(playWords[index]); resolve(); }, 300); });
-    if (!isAutoPlayingRef.current) return;
+    if (!alive()) return;
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(() => { resolve(); }, 350); });
-    if (!isAutoPlayingRef.current) return;
+    if (!alive()) return;
     // 앞면을 읽는 동안 뒷면 음성을 미리 만들어 둡니다(뒷면 한국어 음성이 늦게 와 끊기던 것)
     { const backLang0: "id" | "ko" = lang === "id" ? "ko" : "id"; prefetchSpeak(lang === "id" ? playWords[index].meaning : playWords[index].word, backLang0); }
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(async () => { const frontText = lang === "id" ? playWords[index].word : playWords[index].meaning; await speak(frontText, lang); resolve(); }, 1000); });
-    if (!isAutoPlayingRef.current) return;
+    if (!alive()) return;
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(() => { setIsFlipped(true); resolve(); }, 1500); });
-    if (!isAutoPlayingRef.current) return;
+    if (!alive()) return;
     // 다음 카드 앞면도 미리
     { const nx = playWords[index + 1]; if (nx) prefetchSpeak(lang === "id" ? nx.word : nx.meaning, lang); }
     // 뒷면은 다 읽을 때까지 기다린 뒤에야 다음 카드로 넘어갑니다
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(async () => { const backLang: "id" | "ko" = lang === "id" ? "ko" : "id"; const backText = lang === "id" ? playWords[index].meaning : playWords[index].word; await speak(backText, backLang); resolve(); }, 700); });
-    if (!isAutoPlayingRef.current) return;
-    autoPlayRef.current = setTimeout(() => { runAutoPlay(index + 1, playWords, lang); }, 1500);
+    if (!alive()) return;
+    autoPlayRef.current = setTimeout(() => { runAutoPlay(index + 1, playWords, lang, run); }, 1500);
   }, []);
 
   const startAutoPlay = (random: boolean) => {
@@ -289,6 +302,7 @@ export default function StudyMode() {
     const sourceWords = reviewFilter ? words.filter((w) => savedIds.includes(w.id)) : words;
     if (sourceWords.length === 0) return;
     const playWords = random ? [...sourceWords].sort(() => Math.random() - 0.5) : [...sourceWords];
+    autoRunRef.current += 1;
     autoRandomRef.current = random; isAutoPlayingRef.current = true;
     setSlideDir(1); setIsAutoRandom(random); setIsAutoPlaying(true); setCurrentIndex(0); setIsFlipped(false);
     setAutoCurrentWord(playWords[0]); requestWakeLock(); runAutoPlay(0, playWords, frontLang);
@@ -459,7 +473,7 @@ export default function StudyMode() {
           className={`${BTN} ${isRandom ? BTN_ON : BTN_OFF}`}>
           <Shuffle size={20} />
         </button>
-        <button onClick={() => { if (!currentWord) return; const { text, lang } = getSpeakTarget(currentWord, isFlipped); speak(text, lang); }}
+        <button onClick={() => { if (!currentWord) return; usedSpeakerRef.current = true; const { text, lang } = getSpeakTarget(currentWord, isFlipped); speak(text, lang); }}
           disabled={!currentWord || isAutoPlaying}
           className={`${BTN} ${BTN_OFF}`}>
           <Volume2 size={20} />
