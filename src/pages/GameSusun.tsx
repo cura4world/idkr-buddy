@@ -284,11 +284,11 @@ const GameSusun = () => {
               transition: "box-shadow 150ms ease",
             }}
           >
-            <p className="font-gothic text-[12px] font-semibold" style={{ color: G.mute }}>
+            <p className="font-gothic text-[11px] font-semibold" style={{ color: G.mute }}>
               이 뜻이 되도록 단어 놓기
             </p>
             {/* 힌트 = 해석. 이걸 보고 어순을 만드는 게 이 게임입니다. */}
-            <p className="mt-2 text-[16px] leading-[1.6] break-keep" style={{ color: G.text }}>
+            <p className="mt-2 text-[15px] leading-[1.6] break-keep" style={{ color: G.text }}>
               {current.sentenceKo || current.meaning}
             </p>
 
@@ -300,7 +300,7 @@ const GameSusun = () => {
               {answer.map((t) => (
                 <span
                   key={t.id}
-                  className="h-10 px-3.5 rounded-xl flex items-center font-word text-[18px]"
+                  className="h-10 px-3.5 rounded-xl flex items-center font-word text-[16.5px]"
                   style={{
                     background: G.tealBg,
                     // 완성된 문장에서 표제어만 색으로 짚어 줍니다
@@ -324,7 +324,7 @@ const GameSusun = () => {
                 key={t.id}
                 type="button"
                 onClick={() => handleTile(t)}
-                className="h-11 px-4 rounded-xl box-border flex items-center font-word text-[18px]"
+                className="h-11 px-4 rounded-xl box-border flex items-center font-word text-[16.5px]"
                 style={
                   shakeId === t.id
                     ? { background: G.badBg, border: "1px solid " + G.badBd, color: G.text, transform: "translateX(2px)" }
