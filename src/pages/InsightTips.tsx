@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import { ReadingTracker } from "@/lib/readingTimer";
-import { ArrowLeft, Lightbulb, Sparkles, Loader2, Volume2, Trash2, BookOpen, ChevronDown } from "lucide-react";
+import { ArrowLeft, Lightbulb, Loader2, Volume2, Trash2, BookOpen, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { generateTip, saveTip, listTips, deleteTip, TipRecord } from "@/lib/tips";
 import { hasGeminiApiKey } from "@/lib/gemini";
@@ -159,7 +159,8 @@ const InsightTips = () => {
       <button
         onClick={handleGenerate}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-gothic font-semibold bg-[#2C6D63] text-white disabled:opacity-60 active:scale-[0.99] transition-transform mb-5"
+        // 2026-11-11 사용자 요청: 높이를 조금 줄이고(약 52 → 44px) 앞 아이콘을 반짝이 대신 전구로
+        className="w-full h-[44px] flex items-center justify-center gap-2 rounded-2xl text-sm font-gothic font-semibold bg-[#2C6D63] text-white disabled:opacity-60 active:scale-[0.99] transition-transform mb-5"
       >
         {loading ? (
           <>
@@ -167,7 +168,7 @@ const InsightTips = () => {
           </>
         ) : (
           <>
-            <Sparkles size={17} /> 정보 가져오기
+            <Lightbulb size={17} strokeWidth={1.9} /> 정보 가져오기
           </>
         )}
       </button>
