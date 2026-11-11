@@ -4,9 +4,14 @@
 
 const KEY = "app-font-scale-step";
 
-// 단계: 0~8 (기본 3 = 100%). 한 단계 = 5%.
+import { isStoreApp } from "./platform";
+
+// 단계: 0~8. 한 단계 = 5%.
+// 기본값: 관리자판·회원판·브라우저는 3(100%), 공개판(스토어 앱·미리보기)은 2(95%).
+// 공개판 첫 실행 글자가 관리자판(같은 폰)보다 한 단계(5%) 크게 보여, 그 크기에 맞춰 한 단계 낮췄습니다(2026-11-11 폰 비교).
+// 이미 크기를 고른 기기는 저장된 값을 그대로 씁니다.
 const STEPS = [0.85, 0.90, 0.95, 1.0, 1.05, 1.10, 1.15, 1.20, 1.25];
-const DEFAULT_STEP = 3;
+const DEFAULT_STEP = isStoreApp() ? 2 : 3;
 const BASE_PX = 16; // 기본 루트 폰트 크기
 
 export function getFontStep(): number {
