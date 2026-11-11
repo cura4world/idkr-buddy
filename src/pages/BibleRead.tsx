@@ -1111,9 +1111,8 @@ const BibleRead = () => {
               )}
         </div>
         <p className="text-center text-muted-foreground text-xs mt-3">
-          {showId
-            ? "단어를 탭하면 뜻, 블럭 지정 후 색을 고르면 형광펜"
-            : "블럭 지정 후 색을 고르면 형광펜"}
+          {/* "단어를 탭하면 뜻" 안내는 2026-11-11 사용자 요청으로 앱 전체에서 뺐습니다 */}
+          {"블럭 지정 후 색을 고르면 형광펜"}
         </p>
 
         {/* 이전 장 / 다음 장 */}
