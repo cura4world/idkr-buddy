@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Volume1, Volume2, Loader2, RotateCcw, Plus, Check, X, Bookmark, ChevronDown } from "lucide-react";
+import { ArrowLeft, Volume1, Loader2, RotateCcw, Bookmark } from "lucide-react";
 import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import { getPhraseDetail, PhraseDetail as PhraseDetailData } from "@/lib/phrase";
@@ -10,6 +10,8 @@ import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
+import WordMiniSheet from "@/components/WordMiniSheet";
+import { headwordInSentence } from "@/lib/dictionary";
 import { fetchChapterKo, getBook } from "@/lib/bible";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import SettingsDialog from "@/components/SettingsDialog";
@@ -311,15 +313,16 @@ const PhraseDetail = () => {
   const openPhrasePopup = () => {
     const s = takeSelPhrase();
     if (!s.phrase) return;
-    openWordPopup(s.phrase);
+    openWordPopup(s.phrase, s.sentence);
   };
 
   // 조회 순서: 화면 캐시 → 폰 저장소(IndexedDB) → Gemini API
-  const openWordPopup = async (rawToken: string) => {
+  const openWordPopup = async (rawToken: string, sentence?: string) => {
     // 글자를 고르는 중이면 팝업을 열지 않습니다
     const liveSel = window.getSelection();
     if (liveSel && !liveSel.isCollapsed) return;
-    const word = cleanPhrase(rawToken);
+    // 문장 첫머리라서 대문자인 낱말만 소문자로(Besar → besar). 문장 가운데의 이름 등은 그대로.
+    const word = headwordInSentence(cleanPhrase(rawToken), sentence);
     if (!word) return;
     const key = word.toLowerCase();
     const reqId = ++popupReqId.current;
@@ -409,7 +412,7 @@ const PhraseDetail = () => {
       return (
         <span key={"t" + ti} data-idw="1">
           <span
-            onClick={(e) => { e.stopPropagation(); openWordPopup(tok); }}
+            onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
             className="cursor-pointer rounded active:bg-primary/20"
           >
             {pre}
@@ -460,7 +463,8 @@ const PhraseDetail = () => {
           <p
             className={
               "m-0 mt-2.5 font-word font-semibold text-[#104B60] " +
-              (isAyat ? "text-[1.1875rem] leading-[1.6]" : "text-[1.375rem] leading-[1.5]")
+              // 2026-11-11 사용자 요청으로 한 단계 작게 (22 → 20.5px, 성경 구절 19 → 17.5px)
+              (isAyat ? "text-[1.09375rem] leading-[1.6]" : "text-[1.28125rem] leading-[1.5]")
             }
           >
             {renderTokens(item.id)}
@@ -471,7 +475,6 @@ const PhraseDetail = () => {
           {refLabel ? (
             <p className="m-0 mt-2 font-word text-[0.84375rem] text-[#4B6560]">{refLabel}</p>
           ) : null}
-          <p className="m-0 mt-2.5 font-gothic text-[0.71875rem] text-[#4B6560]">점선 단어를 누르면 뜻이 나옵니다</p>
         </section>
 
         {loading ? (
@@ -599,87 +602,25 @@ const PhraseDetail = () => {
 
       {/* 단어 미니 팝업 */}
       <PhraseFindBar phrase={selPhrase} onFind={openPhrasePopup} hidden={!!popupWord} />
+      {/* 단어 팝업 — 2026-11-11 사용자 요청으로 이야기·회화집과 같은 공용 시트(WordMiniSheet)로 통일 */}
       {popupWord && (
-        <div className="fixed inset-0 z-50" onClick={() => setPopupWord(null)}>
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className="absolute bottom-0 left-0 right-0 max-w-lg mx-auto bg-card rounded-t-2xl px-5 pt-5 pb-7"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <p className="text-lg font-bold text-foreground break-words min-w-0 font-word">{popupWord}</p>
-              <button
-                onClick={() => speak(popupWord, "id")}
-                className="shrink-0 w-8 h-8 rounded-full bg-[#E3EEEC] text-[#2C6D63] flex items-center justify-center active:opacity-80"
-                title="발음 듣기"
-              >
-                <Volume2 size={15} />
-              </button>
-              <span className="flex-1" />
-              <button
-                onClick={() => setPopupWord(null)}
-                className="shrink-0 w-8 h-8 rounded-full bg-black/5 text-muted-foreground flex items-center justify-center"
-                title="닫기"
-              >
-                <X size={15} />
-              </button>
-            </div>
-            {popupLoading ? (
-              <div className="flex items-center gap-2 text-muted-foreground mt-2 text-sm">
-                <Loader2 size={15} className="animate-spin" /> 뜻을 찾는 중입니다
-              </div>
-            ) : (
-              <>
-                <p className="text-sm font-bold text-foreground mt-1.5 break-words font-gothic">{popupMeaning}</p>
-                {popupInfo && (
-                  <p className="text-xs text-muted-foreground mt-1 break-words font-gothic">{popupInfo}</p>
-                )}
-              </>
-            )}
-            <div className="flex gap-2 mt-4">
-              <div className="flex-1 min-w-0 flex items-stretch overflow-hidden rounded-full text-xs font-medium">
-                <button
-                  onClick={savePopupWord}
-                  disabled={popupSaved || popupLoading || !popupMeaning || isFailedMeaning(popupMeaning) || !saveTargetId}
-                  className={`flex-1 min-w-0 flex items-center justify-center gap-1 py-2 ${
-                    popupSaved || !saveTargetId
-                      ? "bg-black/5 text-muted-foreground"
-                      : "bg-primary text-white disabled:opacity-50"
-                  }`}
-                >
-                  {popupSaved ? <Check size={13} className="shrink-0" /> : <Plus size={13} className="shrink-0" />}
-                  <span className="truncate">
-                    {popupSaved ? "저장됨" : saveTargetId ? saveTargetName : "단어장을 먼저 만들어 주세요"}
-                  </span>
-                </button>
-                {/* 담긴 뒤에도 다른 단어장에는 담을 수 있어야 하므로 ⌄ 는 잠그지 않습니다 */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); openWbPicker(); }}
-                  title="담을 단어장 고르기"
-                  className={`shrink-0 flex items-center px-2.5 border-l ${
-                    popupSaved || !saveTargetId
-                      ? "border-black/5 bg-black/5 text-muted-foreground"
-                      : "border-white/30 bg-primary text-white"
-                  }`}
-                >
-                  <ChevronDown size={13} />
-                </button>
-              </div>
-              <button
-                onClick={copyPopupWord}
-                className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-foreground/80"
-              >
-                복사
-              </button>
-              <button
-                onClick={openInDictionary}
-                className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-foreground/80"
-              >
-                사전에서 보기
-              </button>
-            </div>
-          </div>
-        </div>
+        <WordMiniSheet
+          word={popupWord}
+          loading={popupLoading}
+          meaning={popupMeaning}
+          info={popupInfo}
+          saved={popupSaved}
+          saveDisabled={popupLoading || !popupMeaning || isFailedMeaning(popupMeaning)}
+          saveTargetId={saveTargetId}
+          saveTargetName={saveTargetName}
+          widthClass="max-w-lg"
+          onClose={() => setPopupWord(null)}
+          onSave={savePopupWord}
+          onPickTarget={openWbPicker}
+          onDictionary={openInDictionary}
+          onSpeak={() => speak(popupWord, "id")}
+          onCopy={copyPopupWord}
+        />
       )}
 
       {/* 담을 단어장 고르는 시트 — 팝업(z-50)보다 위에 오도록 한 단계 더 띄웁니다 */}
