@@ -1,6 +1,6 @@
 // src/components/LevelCircles.tsx
 // 난이도 하/중/상 동그라미 (아래 점 1~3개). 쉬움·보통·어려움 같은 글자는 쓰지 않습니다.
-// 시안: ST1-List(이야기, 60px · 세 칸 고르게) / PC4-Make(회화집 만들기, 46px · 가운데 모음).
+// 시안: ST1-List(이야기, 52px · 세 칸 고르게 — 시안은 60px) / PC4-Make(회화집 만들기, 46px · 가운데 모음).
 // 이야기와 회화집 만들기만 씁니다.
 
 export type LevelValue = "하" | "중" | "상";
@@ -11,7 +11,7 @@ const ALL: LevelValue[] = ["하", "중", "상"];
 interface Props {
   value: LevelValue;
   onChange: (v: LevelValue) => void;
-  /** "story" = 60px 동그라미를 세 칸에 고르게, "make" = 46px 동그라미를 가운데로 모아 */
+  /** "story" = 52px 동그라미를 세 칸에 고르게, "make" = 46px 동그라미를 가운데로 모아 */
   variant: "story" | "make";
   /** 보여 줄 난이도와 순서 (회화집은 lib 의 PERCAKAPAN_LEVELS). 없으면 하·중·상 */
   levels?: readonly LevelValue[];
@@ -21,7 +21,8 @@ interface Props {
 const LevelCircles = ({ value, onChange, variant, levels, disabled }: Props) => {
   const LEVELS = (levels && levels.length ? levels : ALL).map((v) => ({ v, n: DOTS[v] || 2 }));
   const big = variant === "story";
-  const size = big ? 60 : 46;
+  // 이야기 동그라미는 2026-11-11 사용자 요청으로 글자 두 단계(19→16px)와 함께 60→52px 로 줄였습니다
+  const size = big ? 52 : 46;
   const wrapClass = big ? "grid grid-cols-3 gap-2" : "flex justify-center gap-7";
   return (
     <div className={wrapClass} role="radiogroup" aria-label="난이도">
@@ -40,7 +41,7 @@ const LevelCircles = ({ value, onChange, variant, levels, disabled }: Props) => 
             <span
               className={
                 "box-border flex items-center justify-center rounded-full font-gothic font-bold " +
-                (big ? "text-[1.1875rem]" : "text-[1rem]")
+                (big ? "text-[1rem]" : "text-[1rem]")
               }
               style={{
                 width: size,
