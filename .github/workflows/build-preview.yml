@@ -310,6 +310,12 @@ jobs:
           import android.webkit.WebViewClient;
           import android.widget.FrameLayout;
           import android.widget.Toast;
+          import android.content.SharedPreferences;
+          import android.webkit.RenderProcessGoneDetail;
+          import android.widget.ScrollView;
+          import android.widget.TextView;
+          import java.io.PrintWriter;
+          import java.io.StringWriter;
 
           import androidx.activity.OnBackPressedCallback;
           import androidx.annotation.NonNull;
@@ -616,7 +622,71 @@ jobs:
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
+                  // 2026-11-11 사용자 폰에서 "반짝하고 안 열림". 로그를 볼 수 없어서, 멈춘 이유를 화면에 보여 줍니다.
+                  installCrashCatcher();
+                  String last = takeLastCrash();
+                  if (last != null) {
+                      showCrash("지난번 실행이 멈춘 이유", last);
+                      return;
+                  }
+                  try {
+                      startApp(savedInstanceState);
+                  } catch (Throwable t) {
+                      showCrash("시작하다 멈춘 이유", stackOf(t));
+                  }
+              }
 
+              // ── 멈춘 이유 기록·보여 주기 (진단용) ─────────────────────
+              private static String stackOf(Throwable t) {
+                  StringWriter sw = new StringWriter();
+                  t.printStackTrace(new PrintWriter(sw));
+                  return sw.toString();
+              }
+
+              private void saveCrash(String text) {
+                  try {
+                      getSharedPreferences("kata-crash", MODE_PRIVATE).edit().putString("last", text).commit();
+                  } catch (Throwable ignored) {
+                  }
+              }
+
+              private void installCrashCatcher() {
+                  final Thread.UncaughtExceptionHandler prev = Thread.getDefaultUncaughtExceptionHandler();
+                  Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                      @Override
+                      public void uncaughtException(Thread th, Throwable e) {
+                          saveCrash("thread " + th.getName() + "\n" + stackOf(e));
+                          if (prev != null) prev.uncaughtException(th, e);
+                      }
+                  });
+              }
+
+              @Nullable
+              private String takeLastCrash() {
+                  SharedPreferences p = getSharedPreferences("kata-crash", MODE_PRIVATE);
+                  String s = p.getString("last", null);
+                  if (s != null) p.edit().remove("last").commit();
+                  return s;
+              }
+
+              private void showCrash(String title, String text) {
+                  ScrollView sv = new ScrollView(this);
+                  sv.setBackgroundColor(Color.WHITE);
+                  TextView tv = new TextView(this);
+                  tv.setTextIsSelectable(true);
+                  tv.setTextColor(Color.BLACK);
+                  tv.setTextSize(12);
+                  int pad = (int) (16 * getResources().getDisplayMetrics().density);
+                  tv.setPadding(pad, pad * 3, pad, pad * 3);
+                  String head = title + " — 이 화면을 캡처해서 보내 주세요. 앱을 다시 열면 평소처럼 시작합니다.";
+                  String device = Build.MANUFACTURER + " " + Build.MODEL + " · Android " + Build.VERSION.RELEASE
+                      + " (SDK " + Build.VERSION.SDK_INT + ") · " + BuildConfig.VERSION_NAME;
+                  tv.setText(head + "\n\n" + device + "\n\n" + text);
+                  sv.addView(tv);
+                  setContentView(sv);
+              }
+
+              private void startApp(Bundle savedInstanceState) {
                   assetLoader = new WebViewAssetLoader.Builder()
                       .setDomain(ASSET_HOST)
                       .addPathHandler("/idkr-buddy/", new SpaAssetHandler())
@@ -662,6 +732,23 @@ jobs:
                       @Override
                       public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                           return assetLoader.shouldInterceptRequest(request.getUrl());
+                      }
+
+                      // 웹 화면 프로세스가 죽으면, 이것을 처리하지 않을 때 앱 전체가 함께 꺼집니다.
+                      @Override
+                      public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                          String why = (Build.VERSION.SDK_INT >= 26 && detail != null && !detail.didCrash())
+                              ? "메모리가 모자라 웹 화면이 닫혔습니다"
+                              : "웹 화면 프로세스가 멈췄습니다";
+                          try {
+                              if (webView != null) {
+                                  webView.destroy();
+                                  webView = null;
+                              }
+                          } catch (Throwable ignored) {
+                          }
+                          showCrash(why, "onRenderProcessGone");
+                          return true;
                       }
 
                       @Override
