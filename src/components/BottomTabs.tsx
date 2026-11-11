@@ -1,7 +1,9 @@
 // src/components/BottomTabs.tsx
 // 공개판(스토어 앱) 하단 탭 — 홈 · 내 단어장 · 게임 · 내 정보 (시안 H5·H6·ME1~3·G1·G2).
 //
-// 네 화면(탭 뿌리)에서만 보입니다. 관리자판·회원판·브라우저에는 나오지 않습니다.
+// 공개판의 거의 모든 화면에 보입니다(카드·퀴즈·게임 진행·지도처럼 화면 전체를 쓰는 곳만 숨김, 2026-11-11).
+// 하위 화면에서는 그 화면이 속한 탭에 불이 켜지고, 누르면 그 탭 첫 화면으로 갑니다.
+// 관리자판·회원판·브라우저에는 나오지 않습니다.
 //
 // 뒤로가기: 안드로이드 뒤로가기는 웹뷰 히스토리를 따릅니다(스토어 앱 네이티브).
 //   · 홈에서 다른 탭으로 갈 때만 히스토리를 한 칸 쌓고(state.tabFromHome),
@@ -32,11 +34,32 @@ export const TABBAR_CSS = "calc(" + TABBAR_PX + "px + env(safe-area-inset-bottom
 const DEEP = "#104B60";
 const MUTED = "#646C72";
 
-/** 이 경로에서 탭 막대를 보이는가 (공개판 + 탭 뿌리 네 화면) */
+function trimSlash(pathname: string): string {
+  return pathname.length > 1 && pathname.charAt(pathname.length - 1) === "/" ? pathname.slice(0, -1) : pathname;
+}
+
+/** 화면 전체를 쓰는 곳 — 카드·퀴즈·게임 진행·지도. 여기서만 탭 막대를 숨깁니다(2026-11-11 사용자 요청: 하위 화면에도 탭). */
+function isImmersive(p: string): boolean {
+  if (p.indexOf("/study/") === 0 || p.indexOf("/quiz/") === 0) return true;
+  if (p === "/saved/study" || p === "/saved/quiz") return true;
+  if (p.indexOf("/permainan/") === 0) return true;
+  if (p === "/map") return true;
+  return false;
+}
+
+/** 이 경로에서 탭 막대를 보이는가 (공개판에서 화면 전체를 쓰는 곳을 뺀 모든 화면) */
 export function showsBottomTabs(pathname: string): boolean {
   if (!isStoreApp()) return false;
-  const p = pathname.length > 1 && pathname.charAt(pathname.length - 1) === "/" ? pathname.slice(0, -1) : pathname;
-  return TAB_ROOTS.indexOf(p) >= 0;
+  return !isImmersive(trimSlash(pathname));
+}
+
+/** 하위 화면이 어느 탭 아래에 있는가 — 그 탭에 불을 켭니다 */
+function sectionOf(p: string): string {
+  if (TAB_ROOTS.indexOf(p) >= 0) return p;
+  if (p.indexOf("/saved") === 0) return TAB_WORDS;
+  if (p.indexOf("/permainan") === 0) return TAB_GAME;
+  if (p === "/plus" || p.indexOf("/about") === 0) return TAB_ME;
+  return TAB_HOME;
 }
 
 /** 닉네임 — 훈장 비교에 쓰는 아이디(6자 이내)가 곧 닉네임입니다. 없으면 Google 이름의 첫 낱말. */
@@ -156,13 +179,18 @@ const BottomTabs = () => {
 
   if (!shown) return null;
 
-  const path = location.pathname.length > 1 && location.pathname.charAt(location.pathname.length - 1) === "/"
-    ? location.pathname.slice(0, -1)
-    : location.pathname;
+  const path = trimSlash(location.pathname);
+  const isRoot = TAB_ROOTS.indexOf(path) >= 0;
+  const section = sectionOf(path);
   const st = (location.state || null) as { tabFromHome?: boolean } | null;
   const fromHomeFlag = !!(st && st.tabFromHome);
 
   const go = (to: string) => {
+    // 하위 화면에서 누르면 그 탭 첫 화면으로 갑니다(히스토리를 한 칸 쌓으므로 뒤로가기로 하위 화면에 돌아옵니다)
+    if (!isRoot) {
+      navigate(to);
+      return;
+    }
     if (to === path) {
       try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) { window.scrollTo(0, 0); }
       return;
@@ -181,7 +209,7 @@ const BottomTabs = () => {
 
   // 컴포넌트가 아니라 함수로 그립니다(렌더마다 새 컴포넌트가 되어 사진이 다시 불러와지지 않게)
   const tab = (to: string, label: string, icon: React.ReactNode) => {
-    const on = path === to;
+    const on = section === to;
     return (
       <button
         key={to}
@@ -216,8 +244,8 @@ const BottomTabs = () => {
             className="mx-auto max-w-lg grid grid-cols-4"
             style={{ height: TABBAR_PX, paddingBottom: 6, boxSizing: "border-box" }}
           >
-            {tab(TAB_HOME, "홈", <HomeIcon on={path === TAB_HOME} />)}
-            {tab(TAB_WORDS, "내 단어장", <StarIcon on={path === TAB_WORDS} />)}
+            {tab(TAB_HOME, "홈", <HomeIcon on={section === TAB_HOME} />)}
+            {tab(TAB_WORDS, "내 단어장", <StarIcon on={section === TAB_WORDS} />)}
             {tab(TAB_GAME, "게임", <GameIcon />)}
             {tab(TAB_ME, "내 정보", <ProfileAvatar size={26} fontPx={12} session={session} name={name} />)}
           </div>
