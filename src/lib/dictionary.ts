@@ -115,6 +115,37 @@ const PROPER_NOUNS = new Set([
   "ramadan", "idul", "natal", "lebaran", "pancasila", "asia", "amerika", "eropa",
 ]);
 
+/**
+ * 글 속에서 누른 낱말의 표제어. 문장 첫머리라서 대문자인 낱말(Saya, Besar)만 소문자로 낮추고,
+ * 문장 가운데의 대문자 낱말(사람 이름·땅 이름)은 그대로 둡니다. (2026-11-11 — 회화집·오늘의 문장 팝업)
+ * sentence 를 모르면 normalizeHeadword 와 같습니다.
+ */
+export function headwordInSentence(word: string, sentence?: string): string {
+  const w = String(word || "").trim();
+  if (!w) return w;
+  const s = String(sentence || "").trim();
+  if (!s) return normalizeHeadword(w);
+  const marks = "\"'“”‘’([{«-—–…";
+  const ends = ".!?…:";
+  // 문장 맨 앞이거나, 문장 끝 부호 바로 뒤에 오는 낱말인가
+  let atStart = false;
+  const tokens = s.split(new RegExp("\\s+"));
+  let prevEnded = true;
+  for (let i = 0; i < tokens.length; i++) {
+    let t = tokens[i];
+    let a = 0;
+    while (a < t.length && marks.indexOf(t[a]) >= 0) a++;
+    t = t.slice(a);
+    const bare = t.replace(new RegExp("[.,!?;:\"'”’)\\]}»…]+$"), "");
+    if (bare === w || bare === w.split(new RegExp("\\s+"))[0]) {
+      atStart = prevEnded;
+      break;
+    }
+    prevEnded = t.length > 0 && ends.indexOf(t[t.length - 1]) >= 0;
+  }
+  return atStart ? normalizeHeadword(w) : w;
+}
+
 // 이야기 단어 시트(Story.tsx)도 같은 규칙으로 표제어를 정리합니다.
 export function normalizeHeadword(w: string): string {
   const t = w.trim();
