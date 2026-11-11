@@ -14,6 +14,7 @@ import {
   KoWordResult,
   KoSentenceResult,
   InputKind,
+  normalizeHeadword,
 } from "@/lib/dictionary";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
@@ -26,6 +27,7 @@ import { publicAiErrorText } from "@/lib/aiErrors";
 import { dropReturnTicket } from "@/lib/readReturn";
 import { medaliEngine } from "@/lib/medali";
 import { useBackClose } from "@/hooks/useBackClose";
+import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // TTS: AndroidTTS 우선, 없으면 speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -209,18 +211,6 @@ function renderPattern(text: string): React.ReactNode[] {
   });
 }
 
-// "복숭아" → "복숭아로", "사람" → "사람으로" (받침에 따라 조사 선택)
-function withRo(word: string): string {
-  const t = (word || "").trim();
-  if (!t) return t;
-  const code = t.charCodeAt(t.length - 1);
-  if (code >= 0xac00 && code <= 0xd7a3) {
-    const jong = (code - 0xac00) % 28;
-    return t + (jong === 0 || jong === 8 ? "로" : "으로"); // 받침 없음 / ㄹ 받침 → "로"
-  }
-  return t + "로";
-}
-
 // 끊어읽기 문장: "/"로 연결하고 문장 끝 마침표를 보장합니다.
 function chunkedSentence(r: IdSentenceResult): string {
   const base =
@@ -245,11 +235,16 @@ const Dictionary = () => {
   const [koWord, setKoWord] = useState<KoWordResult | null>(null);
   const [koSentence, setKoSentence] = useState<KoSentenceResult | null>(null);
   const [error, setError] = useState("");
-  // 한국어 단어 결과에서 인니어 표제어를 눌러 들어왔을 때, 돌아갈 한국어 단어
-  const [koBackTerm, setKoBackTerm] = useState<string | null>(null);
   // 지금 화면에 떠 있는 결과의 검색어. query는 검색 직후 비워지므로 따로 들고 있어야
   // "다시 검색"이 무엇을 다시 찾을지 알 수 있습니다.
   const [lastTerm, setLastTerm] = useState("");
+  // 검색 결과마다 히스토리 칸을 하나씩 둡니다(2026-11-11 사용자 요청 — 예전 "← 사과로" 버튼 대신).
+  // 결과 안에서 낱말을 눌러 다시 찾으면 칸을 쌓고, 폰의 뒤로가기는 바로 전에 보던 결과로 돌아갑니다.
+  // 칸의 state 에 kataDict(검색어)를 적어 두고, popstate 에서 그 검색어를 캐시로 다시 띄웁니다.
+  const lastTermRef = useRef("");
+  const sheetBackPendingRef = useRef(false); // 담을 단어장 시트를 버튼으로 닫으며 뺀 칸
+  const autoQueryPendingRef = useRef(false); // 주소(?q=)로 들어온 첫 검색
+  const pendingPushRef = useRef<string | null>(null); // 최근 검색 플로팅이 닫히는 동안 미뤄 둔 칸
 
   const [saved, setSaved] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -299,11 +294,51 @@ const Dictionary = () => {
     return "검색에 실패했습니다. 잠시 후 다시 시도해주세요.";
   };
 
-  // backTerm: 한국어 단어 결과의 인니어 표제어를 눌러 들어온 경우, 돌아갈 한국어 단어
+  // 히스토리 칸 기록 — "push": 새 칸(뒤로가기로 지금 결과로 돌아옴) / "replace": 지금 칸에 적기 / "none": 안 건드림(뒤로가기로 되돌아온 경우)
+  const recordEntry = (w: string, mode: "push" | "replace" | "none") => {
+    if (mode === "none") return;
+    try {
+      const cur = (window.history.state || {}) as Record<string, unknown>;
+      const next: Record<string, unknown> = { ...cur, kataDict: w };
+      delete next.kataBackClose; // 창 닫기용 칸 표시는 옮겨 적지 않습니다
+      delete next.dictHistoryPanel;
+      delete next.dictSaveSheet;
+      if (mode === "replace") {
+        window.history.replaceState(next, "");
+        return;
+      }
+      // 최근 검색 플로팅이 닫히며 뺀 칸이 아직 처리 중이면, 그 뒤에 쌓습니다(순서가 꼬이지 않게).
+      if (histBackPendingRef.current) {
+        pendingPushRef.current = w;
+        return;
+      }
+      window.history.pushState(next, "");
+    } catch (e) {
+      // 히스토리를 못 쓰면 뒤로가기가 이전 화면으로 갈 뿐입니다
+    }
+  };
+
   // forceRefresh: 캐시를 무시하고 새로 받아 캐시를 덮어씀 ("다시 검색" 버튼)
-  const handleSearch = async (term?: string, backTerm?: string, forceRefresh?: boolean) => {
+  // entry: 히스토리 칸 기록 방식. 지정하지 않으면 지금 칸에 결과가 없을 때만 적고(첫 검색은 이 화면 칸),
+  //        이미 다른 결과를 보고 있으면 새 칸을 쌓습니다.
+  const handleSearch = async (term?: string, entry?: "push" | "replace" | "none", forceRefresh?: boolean) => {
     const w = (term ?? query).trim();
     if (!w) return;
+    // 같은 결과를 다시 찾으면 칸을 쌓지 않습니다
+    let mode: "push" | "replace" | "none" = entry || "push";
+    if (!entry) {
+      const curTerm = (() => {
+        try {
+          const s = window.history.state as Record<string, unknown> | null;
+          return s && typeof s.kataDict === "string" ? (s.kataDict as string) : "";
+        } catch (e) {
+          return "";
+        }
+      })();
+      if (lastTermRef.current && lastTermRef.current === w) mode = "none";
+      else if (!lastTermRef.current && !curTerm && autoQueryPendingRef.current) mode = "replace";
+    }
+    autoQueryPendingRef.current = false;
     if (!hasGeminiApiKey()) {
       setError(errorMessage("NO_API_KEY"));
       setResult(null);
@@ -324,8 +359,9 @@ const Dictionary = () => {
       setKoSentence(null);
       setSaved(false);
       setKind(detected);
-      setKoBackTerm(backTerm ? backTerm.trim() : null);
       setLastTerm(w); // "다시 검색" 버튼이 쓸 현재 검색어
+      if (lastTermRef.current !== w) recordEntry(w, mode);
+      lastTermRef.current = w;
     };
 
     // 결과를 띄운 뒤 공통 마무리 (히스토리 기록 + 뒤로가기용 상태 쌓기)
@@ -390,6 +426,45 @@ const Dictionary = () => {
     }
   };
 
+  // 인니어 문장 결과의 표제 문장: 낱말마다 눌러서 사전 검색 (끊어읽기 "/" 와 문장부호는 누르지 않음)
+  const renderTappableSentence = (text: string): React.ReactNode[] => {
+    const marks = ".,!?;:\"'()[]{}<>…«»“”‘’";
+    const out: React.ReactNode[] = [];
+    const parts = text.split(new RegExp("(\\s+)"));
+    parts.forEach((tok, i) => {
+      if (!tok) return;
+      if (!tok.trim() || tok === "/") {
+        out.push(<Fragment key={i}>{tok}</Fragment>);
+        return;
+      }
+      let s = 0;
+      let e = tok.length;
+      while (s < e && marks.indexOf(tok[s]) >= 0) s++;
+      while (e > s && marks.indexOf(tok[e - 1]) >= 0) e--;
+      const core = tok.slice(s, e);
+      if (!core || !new RegExp("[A-Za-z\\u00C0-\\u024F]").test(core)) {
+        out.push(<Fragment key={i}>{tok}</Fragment>);
+        return;
+      }
+      out.push(
+        <Fragment key={i}>
+          {tok.slice(0, s)}
+          <button
+            type="button"
+            onClick={() => handleSearch(normalizeHeadword(core))}
+            className="inline p-0 m-0 bg-transparent border-0 text-left underline decoration-dotted decoration-[#104B60]/35 underline-offset-[5px] active:opacity-60"
+            style={{ font: "inherit", color: "inherit", letterSpacing: "inherit" }}
+            title={'"' + core + '" 사전 검색'}
+          >
+            {core}
+          </button>
+          {tok.slice(e)}
+        </Fragment>
+      );
+    });
+    return out;
+  };
+
   // 결과 화면 상태만 초기화 (히스토리는 건드리지 않음)
   const resetToHome = () => {
     setResult(null);
@@ -399,8 +474,8 @@ const Dictionary = () => {
     setError("");
     setKind(null);
     setQuery("");
-    setKoBackTerm(null);
     setLastTerm("");
+    lastTermRef.current = "";
     setHistory(loadHistory());
   };
 
@@ -462,7 +537,8 @@ const Dictionary = () => {
     setSaveSheetOpen(false);
     if (sheetPushedRef.current) {
       sheetPushedRef.current = false;
-      try { window.history.back(); } catch (e) {}
+      try { sheetBackPendingRef.current = true; window.history.back(); }
+      catch (e) { sheetBackPendingRef.current = false; }
     }
   };
 
@@ -481,17 +557,55 @@ const Dictionary = () => {
   }, [showHistory]);
 
   // 폰의 뒤로가기
+  // 칸을 되돌아갈 때는 그 칸에 적힌 검색어(kataDict)의 결과를 다시 띄웁니다(캐시라 바로 뜸).
+  // 검색어가 없는 칸이면 사전 첫 화면입니다. 시트·플로팅이 닫히는 뒤로가기는 결과를 건드리지 않습니다.
+  const searchRef = useRef(handleSearch);
+  searchRef.current = handleSearch;
+  const resetRef = useRef(resetToHome);
+  resetRef.current = resetToHome;
   useEffect(() => {
-    const onPop = () => {
+    const onPop = (ev: PopStateEvent) => {
+      const panelBack = histBackPendingRef.current;
+      const sheetBack = sheetBackPendingRef.current;
       histBackPendingRef.current = false;
+      sheetBackPendingRef.current = false;
+      let closedSomething = false;
       if (sheetOpenRef.current) {
         sheetOpenRef.current = false;
         sheetPushedRef.current = false;
         setSaveSheetOpen(false);
+        closedSomething = true;
       } else if (histOpenRef.current) {
         histOpenRef.current = false;
         histPushedRef.current = false;
         setShowHistory(false);
+        closedSomething = true;
+      }
+      // 플로팅이 닫히는 동안 미뤄 둔 검색 칸을 이제 쌓습니다.
+      if (panelBack && pendingPushRef.current) {
+        const w = pendingPushRef.current;
+        pendingPushRef.current = null;
+        try {
+          const cur = (window.history.state || {}) as Record<string, unknown>;
+          const next: Record<string, unknown> = { ...cur, kataDict: w };
+          delete next.kataBackClose;
+          delete next.dictHistoryPanel;
+          delete next.dictSaveSheet;
+          window.history.pushState(next, "");
+        } catch (e) {}
+      } else if (!panelBack && !sheetBack && !closedSomething) {
+        // 진짜 뒤로가기: 사전 화면 안의 이전 결과로 (다른 화면으로 나가는 중이면 아무것도 하지 않음)
+        let onDict = false;
+        try { onDict = window.location.pathname.indexOf("/dictionary") >= 0; } catch (e) {}
+        if (onDict) {
+          const st = (ev && ev.state) as Record<string, unknown> | null;
+          const t = st && typeof st.kataDict === "string" ? (st.kataDict as string) : "";
+          if (t) {
+            if (t !== lastTermRef.current) searchRef.current(t, "none");
+          } else if (lastTermRef.current) {
+            resetRef.current();
+          }
+        }
       }
       // 플로팅이 닫히길 기다리던 시트가 있으면 이제 엽니다.
       if (wantSheetRef.current) {
@@ -509,7 +623,9 @@ const Dictionary = () => {
   const isHome = !loading && !error && !result && !idSentence && !koWord && !koSentence;
 
   // ---- 음성 검색 ----
-  const [voiceLang, setVoiceLang] = useState<"ko" | "id">("ko"); // 듣기 언어
+  // 듣기 언어 — 마이크 옆 한/IN 버튼으로 바꾸고 기기에 기억합니다(홈과 같은 값)
+  const [voiceLang, setVoiceLangState] = useState<"ko" | "id">(() => loadVoiceLang());
+  const setVoiceLang = (v: "ko" | "id") => { setVoiceLangState(v); saveVoiceLang(v); };
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 
@@ -596,9 +712,20 @@ const Dictionary = () => {
     if (autoQueryDone.current) return;
     autoQueryDone.current = true;
     try {
+      // 다시 들어온 칸에 검색어가 적혀 있으면(다른 화면에 갔다가 뒤로 돌아옴) 그 결과를 그대로 띄웁니다.
+      const st = window.history.state as Record<string, unknown> | null;
+      const kept = st && typeof st.kataDict === "string" ? (st.kataDict as string) : "";
+      if (kept) {
+        handleSearch(kept, "none");
+        return;
+      }
       const params = new URLSearchParams(window.location.search);
       const q = params.get("q");
-      if (q) handleSearch(q);
+      if (q) {
+        // 주소로 받은 첫 검색은 이 화면 칸 자체에 적습니다(뒤로가기 = 들어오기 전 화면)
+        autoQueryPendingRef.current = true;
+        handleSearch(q);
+      }
     } catch (e) {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -661,19 +788,8 @@ const Dictionary = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 검색했던 한국어 단어로 돌아가기 플로팅 버튼 (인니어 표제어를 눌러 들어온 경우)
-          이건 같은 화면 안에서 이전 검색 결과를 다시 띄우는 것이라
-          폰의 뒤로가기로는 돌아갈 수 없어 남겨 둡니다. */}
-      {koBackTerm && !isHome && (
-        <button
-          onClick={() => handleSearch(koBackTerm)}
-          className="fixed right-5 z-40 flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-2.5 text-sm font-medium shadow-lg"
-          style={{ bottom: "calc(1.25rem + var(--kata-tabbar-h, 0px))" }}
-          title={`"${koBackTerm}" 검색 결과로 돌아가기`}
-        >
-          <ArrowLeft size={16} /> {withRo(koBackTerm)}
-        </button>
-      )}
+      {/* 예전의 "← 사과로" 돌아가기 플로팅 버튼은 2026-11-11 사용자 요청으로 뺐습니다.
+          이제 결과마다 히스토리 칸이 있어 폰의 뒤로가기로 바로 전 결과로 돌아갑니다. */}
 
       <div className={isHome ? "px-4 pt-4 pb-0 flex-1 min-h-0 flex flex-col" : "px-4 pt-4 pb-10 flex flex-col gap-3"}>
         {/* 검색창 (시안: 46px 알약 + 청록 동그라미 "검색") */}
@@ -700,6 +816,17 @@ const Dictionary = () => {
               autoCapitalize="none"
               autoCorrect="off"
             />
+            {/* 음성 검색 언어 (한 / IN) — 누를 때마다 바뀝니다 */}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setVoiceLang(voiceLang === "ko" ? "id" : "ko")}
+              className="shrink-0 h-6 w-7 rounded-full bg-[#EEF3F2] text-[#2C6D63] font-gothic text-[11px] font-bold"
+              title="음성 검색 언어 바꾸기"
+              aria-label={voiceLang === "ko" ? "음성 검색 언어: 한국어" : "음성 검색 언어: 인도네시아어"}
+            >
+              {voiceLangLabel(voiceLang)}
+            </button>
             {/* 마이크 */}
             <button
               onClick={startVoice}
@@ -834,8 +961,10 @@ const Dictionary = () => {
             {/* 끊어읽기: 인니어 / 한국어 (단어 결과와 같은 연민트 표제 카드) */}
             <HeroCard>
               <div className="flex min-w-0 items-start justify-between gap-2">
-                <p className="m-0 min-w-0 break-words font-word text-[1.1875rem] font-semibold leading-[1.5] text-[#104B60]">
-                  {chunkedSentence(idSentence)}
+                {/* 문장 글자는 2026-11-11 사용자 요청으로 한 단계 작게(19 → 17.5px).
+                    이 표제 문장 안의 낱말만 누르면 그 낱말을 사전에서 찾습니다(아래 단어 분석 등은 그대로). */}
+                <p className="m-0 min-w-0 break-words font-word text-[1.09375rem] font-semibold leading-[1.6] text-[#104B60]">
+                  {renderTappableSentence(chunkedSentence(idSentence))}
                 </p>
                 <HeroSpeaker onClick={() => speak(idSentence.original, "id")} title="문장 듣기" />
               </div>
@@ -928,12 +1057,9 @@ const Dictionary = () => {
         )}
 
         {/* (3) 한국어 단어 결과 → 인니어 단어들 (빈도순) */}
+        {/* 검색한 한국어 단어 제목·안내 줄은 2026-11-11 사용자 요청으로 뺐습니다 — 바로 1, 2, 3 후보가 나옵니다 */}
         {!loading && koWord && (
           <>
-            <HeroCard>
-              <h2 className="m-0 break-words text-[1.25rem] font-semibold leading-[1.35] text-[#104B60]">{koWord.query}</h2>
-              <p className="m-0 mt-1.5 font-gothic text-[0.75rem] text-[#4B6560]">인니어 단어를 누르면 그 단어의 풀이가 나옵니다</p>
-            </HeroCard>
             <BodyCard>
               <section className="flex flex-col gap-2.5">
                 {koWord.candidates.map((c, i) => (
@@ -942,7 +1068,7 @@ const Dictionary = () => {
                       <span className="w-3.5 shrink-0 font-word text-[0.9375rem] italic text-[#B59B6A]">{i + 1}</span>
                       {/* 표제어를 누르면 그 인니어 단어로 바로 사전 검색 */}
                       <button
-                        onClick={() => handleSearch(c.id, koWord.query)}
+                        onClick={() => handleSearch(c.id)}
                         className="min-w-0 break-words text-left font-word text-[1.125rem] font-semibold text-[#104B60] underline decoration-dotted decoration-[#104B60]/40 underline-offset-4 active:opacity-70"
                         title={`"${c.id}" 사전 검색`}
                       >
@@ -958,7 +1084,8 @@ const Dictionary = () => {
                         <SpeakIcon size={15} />
                       </button>
                     </div>
-                    <p className="m-0 break-words pl-6 text-[0.9375rem] font-semibold">{c.meaning}</p>
+                    {/* 뜻(예: 과일 사과)은 2026-11-11 사용자 요청으로 한 단계 작게(15 → 13.5px) */}
+                    <p className="m-0 break-words pl-6 text-[0.84375rem] font-semibold">{c.meaning}</p>
                     {(c.nuance || c.situation) && (
                       <p className="m-0 break-words pl-6 font-gothic text-[0.8125rem] leading-[1.6] text-[#5E5D57]">{[c.nuance, c.situation].filter(Boolean).join(", ")}</p>
                     )}
@@ -982,7 +1109,8 @@ const Dictionary = () => {
         {!loading && koSentence && (
           <>
             <HeroCard>
-              <p className="m-0 break-words text-[1.0625rem] font-semibold leading-[1.55]">{koSentence.query}</p>
+              {/* 검색한 한국어 문장 — 2026-11-11 사용자 요청으로 한 단계 작게(17 → 15.5px) */}
+              <p className="m-0 break-words text-[0.96875rem] font-semibold leading-[1.55]">{koSentence.query}</p>
             </HeroCard>
             <BodyCard>
               {[{ label: "구어체", bg: "#DDF0EA", fg: "#245A51", v: koSentence.casual }, { label: "문어체", bg: "#DCEAF6", fg: "#24506F", v: koSentence.formal }].map((row, i) => (
