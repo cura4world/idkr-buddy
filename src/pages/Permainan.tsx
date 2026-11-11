@@ -208,15 +208,15 @@ const Permainan = () => {
               </span>
               <span className="flex-1 min-w-0">
                 <span className="flex items-baseline gap-[7px] min-w-0">
-                  <span className="text-[15.5px] font-semibold shrink-0" style={{ color: G.text }}>
+                  <span className="text-[14.5px] font-semibold shrink-0" style={{ color: G.text }}>
                     {m.ko}
                   </span>
-                  <span className="font-word text-[12px] truncate" style={{ color: G.faint }}>
+                  <span className="font-word text-[11px] truncate" style={{ color: G.faint }}>
                     {m.name}
                   </span>
                   {rec ? (
                     <span
-                      className="ml-auto font-gothic text-[11.5px] font-semibold shrink-0"
+                      className="ml-auto font-gothic text-[10.5px] font-semibold shrink-0"
                       style={{ color: G.faint }}
                     >
                       {rec}
@@ -224,7 +224,7 @@ const Permainan = () => {
                   ) : null}
                 </span>
                 <span
-                  className="block mt-[3px] font-gothic text-[12.5px] leading-[1.5] break-keep"
+                  className="block mt-[3px] font-gothic text-[11.5px] leading-[1.5] break-keep"
                   style={{ color: G.sub }}
                 >
                   {m.desc}
@@ -236,7 +236,7 @@ const Permainan = () => {
         })}
 
         {plus ? (
-          <p className="mt-1.5 text-center font-gothic text-[11.5px]" style={{ color: G.faint }}>
+          <p className="mt-1.5 text-center font-gothic text-[10.5px]" style={{ color: G.faint }}>
             게임에서 맞힌 단어는 Medali Bintang에 쌓입니다
           </p>
         ) : null}
