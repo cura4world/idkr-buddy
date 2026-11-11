@@ -379,7 +379,7 @@ const Percakapan = () => {
                     {c.emoji}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block truncate text-[0.96875rem]" style={{ color: C.txt }}>{c.title}</span>
+                    <span className="block truncate text-[0.875rem]" style={{ color: C.txt }}>{c.title}</span>
                     <span className="block mt-px truncate font-word text-[0.75rem]" style={{ color: C.sub }}>{c.titleId}</span>
                   </span>
                   <span className="shrink-0 font-gothic text-[0.78125rem]" style={{ color: C.mute }}>{c.count}개</span>
