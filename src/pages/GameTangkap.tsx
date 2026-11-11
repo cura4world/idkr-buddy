@@ -122,7 +122,7 @@ export function choiceStyle(
 
 const Pill = ({ text, tone }: { text: string; tone: "fall" | "caught" }) => (
   <span
-    className="h-12 px-5 rounded-3xl flex items-center font-word text-[24px] font-semibold whitespace-nowrap"
+    className="h-12 px-5 rounded-3xl flex items-center font-word text-[22px] font-semibold whitespace-nowrap"
     style={
       tone === "caught"
         ? { background: G.teal, color: "#FFFFFF", boxShadow: "0 4px 14px rgba(16,40,50,0.10)" }
@@ -446,7 +446,7 @@ const GameTangkap = () => {
             ) : reveal ? (
               <span className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 px-4 text-center">
                 <Pill text={question.word} tone="fall" />
-                <span className="font-gothic text-[16px] font-semibold leading-snug break-keep" style={{ color: G.ok }}>
+                <span className="font-gothic text-[15px] font-semibold leading-snug break-keep" style={{ color: G.ok }}>
                   {reveal}
                 </span>
               </span>
@@ -463,7 +463,7 @@ const GameTangkap = () => {
                 key={c}
                 type="button"
                 onClick={() => handleChoice(c)}
-                className="h-[54px] rounded-2xl box-border px-[18px] flex items-center text-left font-gothic text-[16px] font-medium"
+                className="h-[54px] rounded-2xl box-border px-[18px] flex items-center text-left font-gothic text-[15px] font-medium"
                 style={{ ...choiceStyle(c, question.truth, picked, caught, !!reveal), transition: "background-color 120ms ease" }}
               >
                 <span className="truncate">{c}</span>
