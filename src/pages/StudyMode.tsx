@@ -133,6 +133,8 @@ export default function StudyMode() {
     const clean = text.replace(new RegExp("~", "g"), "무엇무엇").replace(new RegExp("\\s*/\\s*", "g"), ", ");
     if (isStoreApp()) {
       if (lang === "id" && isWordLike(clean) && hasNativeTts()) {
+        // 만드는 중이던 Gemini 음성(예: 뒷면 한국어)이 폰 음성 뒤에 늦게 나오지 않게 먼저 멈춥니다
+        try { ttsPlayer.stop(); } catch (e) {}
         const ok = await speakNative(clean, "id-ID");
         if (ok) return;
       }
@@ -256,7 +258,7 @@ export default function StudyMode() {
     if (autoPlayRef.current) { clearTimeout(autoPlayRef.current); autoPlayRef.current = null; }
     try { speechSynthesis?.cancel?.(); } catch(e) {}
     try { (window as any).AndroidTTS?.stop?.(); } catch(e) {}
-    setIsFlipped(false); setCurrentIndex(0); setAutoCurrentWord(undefined);
+    setIsFlipped(false); setCurrentIndex(0); setAutoCurrentWord(undefined); setEnterFrom(null);
     releaseWakeLock();
   }, []);
 
@@ -297,7 +299,15 @@ export default function StudyMode() {
     autoPlayRef.current = setTimeout(() => { runAutoPlay(index + 1, playWords, lang, run); }, 1500);
   }, []);
 
+  // 밀어 넘기던 카드를 그 자리에서 정리합니다 — 자동재생·섞기·언어 전환이 날아가는 중에 눌려도
+  // 늦게 도는 넘김(goNext(true))이 새 순서의 카드를 하나 건너뛰지 않게, 지난 등장 방향도 지웁니다.
+  const cancelSwipe = () => {
+    if (swipeTimer.current) { clearTimeout(swipeTimer.current); swipeTimer.current = null; }
+    setLeaving(0); setDragX(0); setEnterFrom(null);
+  };
+
   const startAutoPlay = (random: boolean) => {
+    cancelSwipe();
     if (isAutoPlaying) { stopAutoPlay(); return; }
     const sourceWords = reviewFilter ? words.filter((w) => savedIds.includes(w.id)) : words;
     if (sourceWords.length === 0) return;
@@ -464,12 +474,12 @@ export default function StudyMode() {
         </div>
       </div>
       <div className="shrink-0 pt-3.5 flex justify-center gap-3">
-        <button onClick={() => { if (isAutoPlaying) return; setFrontLang((l) => (l === "id" ? "ko" : "id")); setIsFlipped(false); setCurrentIndex(0); }}
+        <button onClick={() => { if (isAutoPlaying) return; cancelSwipe(); setFrontLang((l) => (l === "id" ? "ko" : "id")); setIsFlipped(false); setCurrentIndex(0); }}
           disabled={isAutoPlaying}
           className={`${BTN} ${frontLang === "ko" ? BTN_ON : BTN_OFF}`}>
           <span className="font-word text-sm font-semibold">{frontLang === "id" ? "IN" : "KO"}</span>
         </button>
-        <button onClick={() => { setIsRandom((r) => !r); setCurrentIndex(0); setIsFlipped(false); }} disabled={isAutoPlaying}
+        <button onClick={() => { cancelSwipe(); setIsRandom((r) => !r); setCurrentIndex(0); setIsFlipped(false); }} disabled={isAutoPlaying}
           className={`${BTN} ${isRandom ? BTN_ON : BTN_OFF}`}>
           <Shuffle size={20} />
         </button>
