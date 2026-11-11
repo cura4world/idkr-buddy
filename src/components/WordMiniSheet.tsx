@@ -5,7 +5,7 @@
 // 앱의 단어 팝업은 모두 이것 하나를 씁니다(이야기·회화집·오늘의 문장, 관리자판의 뉴스·묵상·기도·성경·설교문·일대일).
 // 모양을 고칠 때는 여기만 고치면 모든 화면이 같이 바뀝니다.
 
-import { Check, ChevronDown, Loader2, Plus, Volume1, X } from "lucide-react";
+import { Check, ChevronDown, Copy, Loader2, Plus, Volume1, X } from "lucide-react";
 import { useBackClose } from "@/hooks/useBackClose";
 
 interface Props {
@@ -156,14 +156,17 @@ const WordMiniSheet = ({
               <ChevronDown size={15} strokeWidth={2.4} />
             </button>
           </div>
+          {/* 복사는 글자 대신 아이콘 — "내 단어장에 담기" 글자가 잘리지 않게 폭을 아낍니다 */}
           {onCopy ? (
             <button
               type="button"
               onClick={onCopy}
-              className="shrink-0 h-[40px] px-3 rounded-[14px] font-gothic text-[0.875rem] font-semibold"
+              className="shrink-0 w-10 h-[40px] rounded-[14px] flex items-center justify-center"
               style={{ background: "#F1F4F5", color: "#1D1F1E" }}
+              title="복사"
+              aria-label="복사"
             >
-              복사
+              <Copy size={16} strokeWidth={2} />
             </button>
           ) : null}
           <button
