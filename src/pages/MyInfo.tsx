@@ -116,7 +116,7 @@ const I_USERX = (
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <p
     className="font-gothic"
-    style={{ margin: "14px 4px 0", fontSize: rem(14), fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
+    style={{ margin: "14px 4px 0", fontSize: rem(13), fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
   >
     {children}
   </p>
@@ -147,11 +147,11 @@ const Row = ({ icon, label, value, onClick, last, danger, chevron = true, right 
     style={{ minHeight: 52, padding: "0 12px 0 16px", borderBottom: last ? "0" : "1px solid " + LINE }}
   >
     <span className="flex shrink-0" style={{ color: danger ? "#B5524A" : MUTED }}>{icon}</span>
-    <span className="flex-1 min-w-0 truncate" style={{ fontSize: rem(15), color: danger ? "#B5524A" : INK }}>
+    <span className="flex-1 min-w-0 truncate" style={{ fontSize: rem(14), color: danger ? "#B5524A" : INK }}>
       {label}
     </span>
     {value ? (
-      <span className="font-gothic shrink-0 truncate" style={{ maxWidth: "55%", fontSize: rem(13), color: MUTED }}>
+      <span className="font-gothic shrink-0 truncate" style={{ maxWidth: "55%", fontSize: rem(12), color: MUTED }}>
         {value}
       </span>
     ) : null}
@@ -548,15 +548,15 @@ const MyInfo = () => {
             <ProfileAvatar size={56} fontPx={22} session={session} name={displayName} />
             <span className="flex-1 min-w-0">
               <span className="flex items-center" style={{ gap: 8 }}>
-                <span className="truncate" style={{ fontSize: rem(18), fontWeight: 600 }}>{displayName}</span>
+                <span className="truncate" style={{ fontSize: rem(16.5), fontWeight: 600 }}>{displayName}</span>
                 <span
                   className="shrink-0 flex items-center font-gothic"
-                  style={{ height: 22, padding: "0 9px", borderRadius: 11, background: badge.bg, color: badge.fg, fontSize: rem(11.5), fontWeight: 700 }}
+                  style={{ height: 22, padding: "0 9px", borderRadius: 11, background: badge.bg, color: badge.fg, fontSize: rem(10.5), fontWeight: 700 }}
                 >
                   {badge.text}
                 </span>
               </span>
-              <span className="block font-gothic" style={{ marginTop: 4, fontSize: rem(12.5), color: MUTED }}>{subLine}</span>
+              <span className="block font-gothic" style={{ marginTop: 4, fontSize: rem(11.5), color: MUTED }}>{subLine}</span>
             </span>
           </div>
         </Card>
@@ -615,10 +615,10 @@ const MyInfo = () => {
         <SectionTitle>학습 기록</SectionTitle>
         <Card style={{ padding: "16px 16px 14px" }}>
           <div className="flex items-center justify-between">
-            <span className="font-gothic" style={{ fontSize: rem(13), fontWeight: 600, color: MUTED }}>공부 시간</span>
+            <span className="font-gothic" style={{ fontSize: rem(12), fontWeight: 600, color: MUTED }}>공부 시간</span>
             <span
               className="flex font-gothic"
-              style={{ height: 30, borderRadius: 15, background: "#F1F4F5", padding: 3, boxSizing: "border-box", fontSize: rem(12), fontWeight: 600 }}
+              style={{ height: 30, borderRadius: 15, background: "#F1F4F5", padding: 3, boxSizing: "border-box", fontSize: rem(11), fontWeight: 600 }}
             >
               {([0, 1] as const).map((b) => (
                 <button
@@ -643,14 +643,14 @@ const MyInfo = () => {
           <p className="flex items-baseline" style={{ margin: "10px 0 0", gap: 6 }}>
             {hm.h > 0 ? (
               <>
-                <span className="font-word" style={{ fontSize: rem(30), fontWeight: 600, color: DEEP }}>{hm.h}</span>
-                <span style={{ fontSize: rem(14) }}>시간</span>
+                <span className="font-word" style={{ fontSize: rem(27.5), fontWeight: 600, color: DEEP }}>{hm.h}</span>
+                <span style={{ fontSize: rem(13) }}>시간</span>
               </>
             ) : null}
-            <span className="font-word" style={{ fontSize: rem(30), fontWeight: 600, color: DEEP }}>{hm.m}</span>
-            <span style={{ fontSize: rem(14) }}>분</span>
+            <span className="font-word" style={{ fontSize: rem(27.5), fontWeight: 600, color: DEEP }}>{hm.m}</span>
+            <span style={{ fontSize: rem(13) }}>분</span>
           </p>
-          <p className="font-gothic" style={{ margin: "2px 0 0", fontSize: rem(12.5), color: MUTED }}>
+          <p className="font-gothic" style={{ margin: "2px 0 0", fontSize: rem(11.5), color: MUTED }}>
             하루 평균 {hmText(view.avgMs)} ·{" "}
             {diffSame ? (
               prevName + " 같은 기간과 같음"
@@ -677,7 +677,7 @@ const MyInfo = () => {
               );
             })}
           </div>
-          <div className="flex justify-between font-gothic" style={{ marginTop: 6, fontSize: rem(11), color: FAINT }}>
+          <div className="flex justify-between font-gothic" style={{ marginTop: 6, fontSize: rem(10.5), color: FAINT }}>
             <span>{view.month + 1}월 1일</span>
             <span className="flex items-center" style={{ gap: 4 }}>
               <span style={{ width: 12, borderTop: "1.5px dashed #C9CFD3" }} />
@@ -697,17 +697,17 @@ const MyInfo = () => {
               className="text-left active:opacity-80"
               style={{ borderRadius: 14, background: "#FBF1EC", padding: "12px 10px 12px 12px" }}
             >
-              <p className="flex items-center font-gothic" style={{ margin: 0, gap: 5, fontSize: rem(12), fontWeight: 600, color: "#B5643C" }}>
+              <p className="flex items-center font-gothic" style={{ margin: 0, gap: 5, fontSize: rem(11), fontWeight: 600, color: "#B5643C" }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="#E8875A" aria-hidden="true">
                   <path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" />
                 </svg>
                 이번 주 불꽃
               </p>
-              <p className="font-word" style={{ margin: "4px 0 0", fontSize: rem(24), fontWeight: 600, color: INK }}>
+              <p className="font-word" style={{ margin: "4px 0 0", fontSize: rem(22), fontWeight: 600, color: INK }}>
                 {medal.week}
-                <span className="font-gothic" style={{ fontSize: rem(12), fontWeight: 500, color: MUTED }}> 점</span>
+                <span className="font-gothic" style={{ fontSize: rem(11), fontWeight: 500, color: MUTED }}> 점</span>
               </p>
-              <p className="font-gothic" style={{ margin: "4px 0 0", fontSize: rem(11), lineHeight: 1.5, letterSpacing: "-0.02em", color: "#8A6A5A", whiteSpace: "nowrap" }}>
+              <p className="font-gothic" style={{ margin: "4px 0 0", fontSize: rem(10.5), lineHeight: 1.5, letterSpacing: "-0.02em", color: "#8A6A5A", whiteSpace: "nowrap" }}>
                 학습을 통해 쌓이는 이번 주 점수,<br />매주 월요일 갱신
               </p>
             </button>
@@ -717,17 +717,17 @@ const MyInfo = () => {
               className="text-left active:opacity-80"
               style={{ borderRadius: 14, background: "#FBF5E6", padding: "12px 10px 12px 12px" }}
             >
-              <p className="flex items-center font-gothic" style={{ margin: 0, gap: 5, fontSize: rem(12), fontWeight: 600, color: "#94723A" }}>
+              <p className="flex items-center font-gothic" style={{ margin: 0, gap: 5, fontSize: rem(11), fontWeight: 600, color: "#94723A" }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="#E0B04A" aria-hidden="true">
                   <path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.3 6L12 16.4 6.6 19.4l1.3-6L3.4 9.3l6-.7z" />
                 </svg>
                 모은 별
               </p>
-              <p className="font-word" style={{ margin: "4px 0 0", fontSize: rem(24), fontWeight: 600, color: INK }}>
+              <p className="font-word" style={{ margin: "4px 0 0", fontSize: rem(22), fontWeight: 600, color: INK }}>
                 {medal.stars}
-                <span className="font-gothic" style={{ fontSize: rem(12), fontWeight: 500, color: MUTED }}> 단어</span>
+                <span className="font-gothic" style={{ fontSize: rem(11), fontWeight: 500, color: MUTED }}> 단어</span>
               </p>
-              <p className="font-gothic" style={{ margin: "4px 0 0", fontSize: rem(11), lineHeight: 1.5, letterSpacing: "-0.02em", color: "#8A7A55", whiteSpace: "nowrap" }}>
+              <p className="font-gothic" style={{ margin: "4px 0 0", fontSize: rem(10.5), lineHeight: 1.5, letterSpacing: "-0.02em", color: "#8A7A55", whiteSpace: "nowrap" }}>
                 여러 번 맞혀 확실히 외운<br />단어 수, 계속 누적
               </p>
             </button>
@@ -738,17 +738,17 @@ const MyInfo = () => {
                 <span
                   className="shrink-0 flex items-center justify-center font-gothic"
                   style={{
-                    width: 30, height: 30, borderRadius: 15, fontSize: rem(12), fontWeight: 700,
+                    width: 30, height: 30, borderRadius: 15, fontSize: rem(11), fontWeight: 700,
                     background: r.me ? "#E9E4F5" : "#E6F0EC", color: r.me ? "#5B4A8A" : "#3F7F6E",
                   }}
                 >
                   {r.initial || "K"}
                 </span>
-                <span className="flex-1 min-w-0 truncate" style={{ fontSize: rem(14.5) }}>
+                <span className="flex-1 min-w-0 truncate" style={{ fontSize: rem(13.5) }}>
                   {r.name}
-                  {r.me ? <span className="font-gothic" style={{ fontSize: rem(11.5), color: FAINT }}> 나</span> : null}
+                  {r.me ? <span className="font-gothic" style={{ fontSize: rem(10.5), color: FAINT }}> 나</span> : null}
                 </span>
-                <span className="font-word" style={{ fontSize: rem(15), fontWeight: 600 }}>{r.pts}</span>
+                <span className="font-word" style={{ fontSize: rem(14), fontWeight: 600 }}>{r.pts}</span>
               </div>
             ))}
           </div>
@@ -777,7 +777,7 @@ const MyInfo = () => {
             <Row icon={I_USERX} label="계정 삭제" danger chevron={false} onClick={() => setDeleteConfirm(true)} last />
           </Card>
         ) : null}
-        <p className="text-center font-gothic" style={{ margin: "6px 0 0", fontSize: rem(11.5), color: FAINT }}>
+        <p className="text-center font-gothic" style={{ margin: "6px 0 0", fontSize: rem(10.5), color: FAINT }}>
           Kata kata {version} · <a href={TERMS_URL} className="underline-offset-2">이용약관</a> ·{" "}
           <a href={PRIVACY_URL} className="underline-offset-2">개인정보처리방침</a> ·{" "}
           {/* 사진 출처(S55) — 지도 사진의 작가·라이선스는 여기 한곳에 모읍니다. 경로는 PhotoCredits.tsx 의 PHOTO_CREDITS_PATH */}
@@ -793,7 +793,7 @@ const MyInfo = () => {
           <DialogHeader>
             <DialogTitle className="font-body text-gray-900">닉네임</DialogTitle>
           </DialogHeader>
-          <p className="font-gothic text-xs leading-relaxed text-muted-foreground">
+          <p className="font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
             훈장 점수 옆에 보이는 이름입니다. 한글·영문·숫자 6자 이내로 적어 주세요.
           </p>
           <input
@@ -801,14 +801,14 @@ const MyInfo = () => {
             onChange={(e) => setNickInput(e.target.value.slice(0, 12))}
             onKeyDown={(e) => { if (e.key === "Enter") saveNick(); }}
             maxLength={12}
-            className="h-11 w-full rounded-xl border border-border bg-white px-3 text-[0.9375rem] outline-none focus:border-primary"
+            className="h-11 w-full rounded-xl border border-border bg-white px-3 text-[0.875rem] outline-none focus:border-primary"
             autoCapitalize="none"
             autoCorrect="off"
           />
           <button
             type="button"
             onClick={saveNick}
-            className="h-11 w-full rounded-xl text-white font-gothic text-[0.875rem] font-semibold"
+            className="h-11 w-full rounded-xl text-white font-gothic text-[0.8125rem] font-semibold"
             style={{ background: TEAL }}
           >
             저장
@@ -828,7 +828,7 @@ const MyInfo = () => {
               onClick={() => changeFont(-1)}
               disabled={fontStep <= 0}
               aria-label="글자 작게"
-              className="w-11 h-11 rounded-full border border-border text-lg disabled:opacity-40"
+              className="w-11 h-11 rounded-full border border-border text-[1.03125rem] disabled:opacity-40"
             >
               −
             </button>
@@ -846,12 +846,12 @@ const MyInfo = () => {
               onClick={() => changeFont(1)}
               disabled={fontStep >= getStepCount() - 1}
               aria-label="글자 크게"
-              className="w-11 h-11 rounded-full border border-border text-lg disabled:opacity-40"
+              className="w-11 h-11 rounded-full border border-border text-[1.03125rem] disabled:opacity-40"
             >
               +
             </button>
           </div>
-          <p className="font-gothic text-xs leading-relaxed text-muted-foreground">
+          <p className="font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
             앱 전체 글자 크기입니다. 이 기기에만 적용됩니다.
           </p>
         </DialogContent>
@@ -869,7 +869,7 @@ const MyInfo = () => {
                 key={v.id}
                 type="button"
                 onClick={() => { setVoice(v.id); setTtsVoice(v.id); }}
-                className="flex-1 h-11 rounded-xl border font-gothic text-[0.875rem] font-semibold"
+                className="flex-1 h-11 rounded-xl border font-gothic text-[0.8125rem] font-semibold"
                 style={voice === v.id
                   ? { background: TEAL, borderColor: TEAL, color: "#FFFFFF" }
                   : { background: "#FFFFFF", borderColor: "#DDE3E6", color: INK }}
@@ -878,7 +878,7 @@ const MyInfo = () => {
               </button>
             ))}
           </div>
-          <p className="font-gothic text-xs leading-relaxed text-muted-foreground">
+          <p className="font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
             이야기·회화의 "전체 듣기"에 쓰이는 목소리입니다. 이 기기에만 적용됩니다.
           </p>
         </DialogContent>
@@ -890,7 +890,7 @@ const MyInfo = () => {
           <DialogHeader>
             <DialogTitle className="font-body text-gray-900">새 폰으로 옮기기</DialogTitle>
           </DialogHeader>
-          <p className="font-gothic text-xs leading-relaxed text-muted-foreground">
+          <p className="font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
             내 단어장·직접 넣은 단어·설정을 백업 파일로 저장하세요. 새 폰에서 이 화면의
             "백업 파일 불러오기"로 그 파일을 고르면 지금 있는 것과 합쳐집니다.
           </p>
@@ -898,7 +898,7 @@ const MyInfo = () => {
             type="button"
             onClick={saveBackupFile}
             disabled={moveBusy}
-            className="h-11 w-full rounded-xl text-white font-gothic text-[0.875rem] font-semibold disabled:opacity-60"
+            className="h-11 w-full rounded-xl text-white font-gothic text-[0.8125rem] font-semibold disabled:opacity-60"
             style={{ background: TEAL }}
           >
             백업 파일 저장
@@ -907,7 +907,7 @@ const MyInfo = () => {
             type="button"
             onClick={() => setRestoreOpen(true)}
             disabled={moveBusy}
-            className="h-11 w-full rounded-xl border font-gothic text-[0.875rem] font-semibold disabled:opacity-60"
+            className="h-11 w-full rounded-xl border font-gothic text-[0.8125rem] font-semibold disabled:opacity-60"
             style={{ background: "#FFFFFF", borderColor: "#DDE3E6", color: INK }}
           >
             백업 파일 불러오기
@@ -921,8 +921,8 @@ const MyInfo = () => {
       <AlertDialog open={ttsConfirm} onOpenChange={setTtsConfirm}>
         <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-body text-base text-gray-900">저장된 읽기 음성을 비우시겠습니까?</AlertDialogTitle>
-            <AlertDialogDescription className="font-gothic text-xs leading-relaxed">
+            <AlertDialogTitle className="font-body text-[0.9375rem] text-gray-900">저장된 읽기 음성을 비우시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription className="font-gothic text-[0.6875rem] leading-relaxed">
               이 폰에 받아 둔 음성 파일이 지워집니다. 다음에 들으면 새로 받아 옵니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -937,8 +937,8 @@ const MyInfo = () => {
       <AlertDialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
         <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-body text-base text-gray-900">계정을 지우시겠습니까?</AlertDialogTitle>
-            <AlertDialogDescription className="font-gothic text-xs leading-relaxed">
+            <AlertDialogTitle className="font-body text-[0.9375rem] text-gray-900">계정을 지우시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription className="font-gothic text-[0.6875rem] leading-relaxed">
               서버의 계정·사용 기록·구독 연결이 지워지고 되돌릴 수 없습니다. 이 폰의 단어장은 그대로 남습니다.
               구독 중이라면 결제는 Google Play 에서 따로 해지해야 합니다.
             </AlertDialogDescription>
