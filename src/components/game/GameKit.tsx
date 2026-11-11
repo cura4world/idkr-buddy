@@ -306,8 +306,8 @@ export const Stat = ({
 }) => (
   <span className="relative flex items-center gap-1.5" style={{ color: G.sub }}>
     {icon === "clock" ? <IconClock /> : icon === "check" ? <IconCheck /> : null}
-    <span className="font-gothic text-[12px]">{label}</span>
-    <span className="font-word text-[16px] font-semibold tabular-nums" style={{ color: G.text }}>
+    <span className="font-gothic text-[11px]">{label}</span>
+    <span className="font-word text-[15px] font-semibold tabular-nums" style={{ color: G.text }}>
       {value}
     </span>
   </span>
@@ -368,7 +368,7 @@ export const PrimaryButton = ({
     type="button"
     onClick={onClick}
     className={
-      "h-[50px] rounded-2xl font-gothic text-[15px] font-semibold text-white active:opacity-90 " + (className || "")
+      "h-[50px] rounded-2xl font-gothic text-[14px] font-semibold text-white active:opacity-90 " + (className || "")
     }
     style={{ background: G.teal }}
   >
@@ -389,7 +389,7 @@ export const SecondaryButton = ({
     type="button"
     onClick={onClick}
     className={
-      "h-[50px] rounded-2xl bg-white font-gothic text-[15px] font-semibold active:bg-[#F1F4F5] " + (className || "")
+      "h-[50px] rounded-2xl bg-white font-gothic text-[14px] font-semibold active:bg-[#F1F4F5] " + (className || "")
     }
     style={{ border: "1px solid " + G.line, color: G.text }}
   >
@@ -398,7 +398,7 @@ export const SecondaryButton = ({
 );
 
 export const GameLoading = () => (
-  <p className="pt-16 text-center font-gothic text-[14px]" style={{ color: G.mute }}>
+  <p className="pt-16 text-center font-gothic text-[13px]" style={{ color: G.mute }}>
     준비 중입니다
   </p>
 );
@@ -408,10 +408,10 @@ export const GameEmpty = ({ text, sub }: { text: string; sub?: string }) => {
   const navigate = useNavigate();
   return (
     <div className="mt-2 rounded-[20px] bg-white px-5 py-10 text-center" style={{ boxShadow: CARD_SHADOW }}>
-      <p className="text-[16px] font-semibold" style={{ color: G.text }}>
+      <p className="text-[15px] font-semibold" style={{ color: G.text }}>
         {text}
       </p>
-      <p className="mt-1.5 font-gothic text-[13px] leading-relaxed" style={{ color: G.sub }}>
+      <p className="mt-1.5 font-gothic text-[12px] leading-relaxed" style={{ color: G.sub }}>
         {sub || "사전에서 단어를 찾아보거나 단어장에 담아 보세요"}
       </p>
       <PrimaryButton onClick={() => navigate("/dictionary")} className="mt-6 w-full max-w-[14rem]">
@@ -443,15 +443,15 @@ export const GameReady = ({
       >
         <GameIcon id={id} size={26} />
       </span>
-      <p className="mt-4 text-[18px] font-semibold" style={{ color: G.text }}>
+      <p className="mt-4 text-[16.5px] font-semibold" style={{ color: G.text }}>
         {m.ko}
       </p>
-      <p className="mt-0.5 font-word text-[13px]" style={{ color: G.faint }}>
+      <p className="mt-0.5 font-word text-[12px]" style={{ color: G.faint }}>
         {m.name}
       </p>
       <div className="mt-3 space-y-0.5">
         {lines.map((l) => (
-          <p key={l} className="font-gothic text-[13.5px] leading-relaxed" style={{ color: G.sub }}>
+          <p key={l} className="font-gothic text-[12.5px] leading-relaxed" style={{ color: G.sub }}>
             {l}
           </p>
         ))}
@@ -478,7 +478,7 @@ export const FloatPoint = ({ text }: { text: string }) => {
   }, []);
   return (
     <span
-      className="pointer-events-none absolute left-full top-0 ml-1 font-gothic text-sm font-semibold"
+      className="pointer-events-none absolute left-full top-0 ml-1 font-gothic text-[0.8125rem] font-semibold"
       style={{
         color: MEDALI_COLORS.emas,
         opacity: on ? 0 : 1,
@@ -526,12 +526,12 @@ export const GameResult = ({ label, value, best, bestText, gained, floatOn, star
   return (
     <div className="flex-1 flex flex-col gap-3 pt-2">
       <div className="rounded-[20px] bg-white px-4 pt-[26px] pb-[22px] text-center" style={{ boxShadow: CARD_SHADOW }}>
-        <p className="font-gothic text-[12px] font-semibold" style={{ color: G.mute }}>
+        <p className="font-gothic text-[11px] font-semibold" style={{ color: G.mute }}>
           {label}
         </p>
         <p className="mt-1.5 flex justify-center">
           <span
-            className="relative font-word text-[44px] font-semibold leading-none tabular-nums"
+            className="relative font-word text-[40.5px] font-semibold leading-none tabular-nums"
             style={{ color: G.teal }}
           >
             {value}
@@ -540,7 +540,7 @@ export const GameResult = ({ label, value, best, bestText, gained, floatOn, star
         </p>
         {best ? (
           <p
-            className="mt-3 mx-auto inline-flex items-center gap-[5px] h-[26px] px-[11px] rounded-[13px] font-gothic text-[12px] font-bold"
+            className="mt-3 mx-auto inline-flex items-center gap-[5px] h-[26px] px-[11px] rounded-[13px] font-gothic text-[11px] font-bold"
             style={{ background: G.goldBg, color: G.goldText }}
           >
             <IconStar size={12} />
@@ -548,7 +548,7 @@ export const GameResult = ({ label, value, best, bestText, gained, floatOn, star
           </p>
         ) : bestText ? (
           <p
-            className="mt-3 mx-auto inline-flex items-center h-[26px] px-[11px] rounded-[13px] font-gothic text-[12px] font-semibold"
+            className="mt-3 mx-auto inline-flex items-center h-[26px] px-[11px] rounded-[13px] font-gothic text-[11px] font-semibold"
             style={{ background: G.soft, color: G.sub }}
           >
             {bestText}
@@ -558,11 +558,11 @@ export const GameResult = ({ label, value, best, bestText, gained, floatOn, star
 
       {starWords.length > 0 ? (
         <div className="rounded-[20px] bg-white px-4 py-3.5" style={{ boxShadow: CARD_SHADOW }}>
-          <p className="flex items-center gap-1.5 font-gothic text-[12px] font-semibold" style={{ color: G.sub }}>
+          <p className="flex items-center gap-1.5 font-gothic text-[11px] font-semibold" style={{ color: G.sub }}>
             <IconStar size={13} />
             별이 된 단어
           </p>
-          <p className="mt-1.5 font-word text-[17px] font-semibold break-words" style={{ color: G.deep }}>
+          <p className="mt-1.5 font-word text-[15.5px] font-semibold break-words" style={{ color: G.deep }}>
             {starWords.join(", ")}
           </p>
         </div>
@@ -580,15 +580,15 @@ export const GameResult = ({ label, value, best, bestText, gained, floatOn, star
               }}
             >
               <span className="flex-1 min-w-0">
-                <span className="block font-word text-[17px] font-semibold truncate" style={{ color: G.deep }}>
+                <span className="block font-word text-[15.5px] font-semibold truncate" style={{ color: G.deep }}>
                   {r.word}
                 </span>
-                <span className="block mt-0.5 font-gothic text-[13.5px] truncate" style={{ color: G.sub }}>
+                <span className="block mt-0.5 font-gothic text-[12.5px] truncate" style={{ color: G.sub }}>
                   {r.meaning}
                 </span>
               </span>
               <span
-                className="shrink-0 h-6 px-[9px] rounded-xl flex items-center font-gothic text-[11.5px] font-medium"
+                className="shrink-0 h-6 px-[9px] rounded-xl flex items-center font-gothic text-[10.5px] font-medium"
                 style={{ background: G.soft, color: G.sub }}
               >
                 {SOURCE_LABEL[r.source]}
