@@ -36,7 +36,7 @@ import type { MapContentEntry, MapWord } from "@/lib/mapContent";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { isStoreApp } from "@/lib/platform";
 import { usePlan } from "@/lib/plan";
-import { addWordIfAbsent, hasWordInCategory, ensureMapWordbook, MAP_WORDBOOK_ID, getWordsByCategory, deleteWord } from "@/lib/store";
+import { addWord, addWordIfAbsent, hasWordInCategory, ensureMapWordbook, MAP_WORDBOOK_ID, getWordsByCategory, deleteWord } from "@/lib/store";
 
 const KMIN = 1;
 // 최대 64배. 탭 허용 반경이 56px이라 32배에서는 지도 좌표 4.5 이내의 두 핀을
@@ -629,23 +629,33 @@ const IndoMap = () => {
   // 단어 담기 — "지도에서 배운 단어" 단어장에만 담습니다 (처음 담을 때 폴더가 생깁니다).
   // 중복 방지와 Medali 저장 점수는 addWordIfAbsent 안에서 처리됩니다.
   // 2026-11-11 사용자 요청: 한 번 더 누르면 담기를 취소합니다(그 단어장에서 뺌).
+  const cancelledMapWordsRef = useRef<Set<string>>(new Set());
   const saveMapWord = (w: MapWord) => {
     if (savedWords[w.word]) {
       const target = w.word.trim().toLowerCase();
       const found = getWordsByCategory(MAP_WORDBOOK_ID).filter((x) => x.word.trim().toLowerCase() === target);
       found.forEach((x) => deleteWord(x.id));
+      cancelledMapWordsRef.current.add(w.word);
       setSavedWords((prev) => ({ ...prev, [w.word]: false }));
       toast("담기를 취소했습니다");
       return;
     }
     ensureMapWordbook();
-    const r = addWordIfAbsent({
+    const entry = {
       word: w.word,
       meaning: w.meaning,
       example: w.example,
       exampleMeaning: w.exampleKo,
       categoryId: MAP_WORDBOOK_ID,
-    });
+    };
+    // 담기를 취소했다가 다시 담는 단어는 점수(Medali)를 또 주지 않습니다 — 담기·취소를 반복해 점수를 쌓지 않게
+    let r: { added: boolean };
+    if (cancelledMapWordsRef.current.has(w.word)) {
+      r = { added: !hasWordInCategory(MAP_WORDBOOK_ID, w.word) };
+      if (r.added) addWord(entry);
+    } else {
+      r = addWordIfAbsent(entry);
+    }
     setSavedWords((prev) => ({ ...prev, [w.word]: true }));
     toast.success(r.added ? "지도에서 배운 단어에 담았습니다" : "이미 담긴 단어입니다");
   };
