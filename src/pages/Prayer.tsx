@@ -21,6 +21,7 @@ import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT }
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import WordMiniSheet from "@/components/WordMiniSheet";
+import { isBackCloseEntry } from "@/hooks/useBackClose";
 import { hasClaudeApiKey } from "@/lib/claude";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import SettingsDialog from "@/components/SettingsDialog";
@@ -664,7 +665,8 @@ const Prayer = () => {
     // 돌아올 자리를 표로 한 장 적어 둡니다 (어느 기도문 + 스크롤 + 보고 있던 면)
     if (current) writeReturnTicket("prayer", current.id, currentScrollY(), flipped);
     // 기도문 칸은 히스토리에 그대로 둡니다 (이야기 화면과 같은 이유).
-    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=prayer");
+    // 단어 시트(WordMiniSheet)가 쌓은 칸 위에서 떠나면 그 칸을 갈아 끼웁니다 — 돌아왔을 때 뒤로가기가 헛돌지 않게
+    navigate("/dictionary?q=" + encodeURIComponent(popupWord) + "&from=prayer", { replace: isBackCloseEntry() });
   };
 
   const savePopupWord = () => {
@@ -901,7 +903,7 @@ const Prayer = () => {
               )}
           </div>
           <p className="text-center text-muted-foreground text-xs mt-3">
-            {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 번역, 단어를 탭하면 뜻이 나옵니다"}
+            {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 번역이 보입니다"}
           </p>
         </div>
 
