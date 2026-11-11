@@ -52,6 +52,7 @@ import NotFound from "./pages/NotFound";
 import Plus from "./pages/Plus";
 import MyInfo from "./pages/MyInfo";
 import BottomTabs from "@/components/BottomTabs";
+import ScrollManager from "@/components/ScrollManager";
 import LoginGate from "@/components/LoginGate";
 import HiddenInPublic from "@/components/HiddenInPublic";
 import { installStoreTtsShim } from "@/lib/storeTtsShim";
@@ -92,6 +93,8 @@ const App = () => (
       <Sonner duration={2000} />
       <BrowserRouter basename="/idkr-buddy">
         <LoginGate>
+        {/* 화면을 옮길 때 스크롤 위치: 새 화면은 맨 위, 뒤로가기는 보던 자리 (Routes 보다 앞에 둠) */}
+        <ScrollManager />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/phrase" element={<PhraseDetail />} />
