@@ -371,11 +371,11 @@ const GameEja = () => {
               transition: "box-shadow 150ms ease",
             }}
           >
-            <p className="font-gothic text-[12px] font-semibold" style={{ color: G.mute }}>
+            <p className="font-gothic text-[11px] font-semibold" style={{ color: G.mute }}>
               뜻
             </p>
             <div className="mt-1.5 flex items-center gap-2.5 max-w-full">
-              <span className="min-w-0 font-gothic text-[22px] font-semibold text-center break-keep" style={{ color: G.text }}>
+              <span className="min-w-0 font-gothic text-[20px] font-semibold text-center break-keep" style={{ color: G.text }}>
                 {current.meaning}
               </span>
               <button
@@ -431,7 +431,7 @@ const GameEja = () => {
                 key={t.id}
                 type="button"
                 onClick={() => handleTile(t)}
-                className="w-[52px] h-[52px] rounded-[14px] box-border flex items-center justify-center font-word text-[20px] font-semibold"
+                className="w-[52px] h-[52px] rounded-[14px] box-border flex items-center justify-center font-word text-[18.5px] font-semibold"
                 style={
                   shakeId === t.id
                     ? { background: G.badBg, border: "1px solid " + G.badBd, color: G.text, transform: "translateX(2px)" }
