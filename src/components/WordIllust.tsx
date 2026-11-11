@@ -216,10 +216,11 @@ function measure(row: HTMLElement, p: Placed): FitResult | null {
     }
   }
 
-  // 위: 카드 위 끝에서 2px 까지 (장면 t 는 -10~-14). 아래: 예문 상자 위 끝 바로 앞까지.
+  // 위: 카드 위 끝에서 8px 아래까지 (예전 2px — 카드 천장에 붙어 보이는 그림이 많아
+  //     2026-11-11 사용자 요청으로 전체를 조금 내림). 아래: 예문 상자 위 끝 바로 앞까지.
   const card = row.parentElement;
   const cr = card ? card.getBoundingClientRect() : null;
-  const topLimit = cr ? (cr.top - rr.top) / sc - 2 : -14;
+  const topLimit = cr ? (cr.top - rr.top) / sc + 8 : -6;
   const next = row.nextElementSibling;
   const bottomLimit = next
     ? (next.getBoundingClientRect().top - rr.top) / sc - 1
@@ -236,7 +237,8 @@ function measure(row: HTMLElement, p: Placed): FitResult | null {
     bottomLimit,
     h: s.h,
     r: typeof s.r === "number" ? s.r : 56,
-    t: typeof s.t === "number" ? s.t : -12,
+    // 장면이 원하는 위치보다 6px 아래를 바랍니다(위 topLimit 와 함께 그림 전체를 조금 내림)
+    t: (typeof s.t === "number" ? s.t : -12) + 6,
     aspect: p.aspect,
     minH: ILLUST_MIN_H,
   });
