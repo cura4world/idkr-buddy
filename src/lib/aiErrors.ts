@@ -23,8 +23,13 @@ const UNAVAILABLE_CODES = ["NOT_AVAILABLE", "INVALID_API_KEY", "API_KEY", "REQUE
 /** 공개판에서 이 오류 코드를 대신할 문장. 공개판이 아니거나 해당 코드가 아니면 null. */
 export function publicAiErrorText(code: string): string | null {
   if (!isStoreApp()) return null;
-  if (SESSION_CODES.indexOf(code) >= 0) return SESSION_EXPIRED_TEXT;
-  if (UNAVAILABLE_CODES.indexOf(code) >= 0) return AI_UNAVAILABLE_TEXT;
+  // 미리보기 앱은 로그인 없이 패널의 키로 직접 부르므로, 실제 원인을 알 수 있게 오류 코드를 붙입니다(2026-11-11 진단용).
+  const tail = isPreviewBuild() ? " (" + code + ")" : "";
+  if (SESSION_CODES.indexOf(code) >= 0) {
+    if (isPreviewBuild() && code === "NO_API_KEY") return "Gemini 키가 없습니다. 왼쪽 '미리보기' 탭에서 키를 넣으세요." + tail;
+    return SESSION_EXPIRED_TEXT + tail;
+  }
+  if (UNAVAILABLE_CODES.indexOf(code) >= 0) return AI_UNAVAILABLE_TEXT + tail;
   return null;
 }
 
