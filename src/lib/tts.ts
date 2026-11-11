@@ -623,15 +623,27 @@ class TtsPlayer {
     for (let i = 0; i < chunks.length; i++) {
       if (isCancelled()) return null;
       const ckey = key + "::v=" + voiceName + "::" + i + "/" + chunks.length + (key.indexOf("say:") === 0 ? SAY_CACHE_VER : "");
-      let url = await getCachedAudio(ckey);
-      if (!url) {
-        url = await generateAudioForText(chunks[i], voiceName, 0, TTS_MODEL, true, kind, unit);
-        await saveCachedAudio(ckey, url);
+      // 같은 조각을 미리 만들기(prefetch)와 읽기(playOnce)가 동시에 요청하면 한 번만 만듭니다
+      let job = this.inflight.get(ckey);
+      if (!job) {
+        const chunk = chunks[i];
+        job = (async () => {
+          let u = await getCachedAudio(ckey);
+          if (!u) {
+            u = await generateAudioForText(chunk, voiceName, 0, TTS_MODEL, true, kind, unit);
+            await saveCachedAudio(ckey, u);
+          }
+          return u;
+        })();
+        this.inflight.set(ckey, job);
+        const done = () => { this.inflight.delete(ckey); };
+        job.then(done, done);
       }
-      urls.push(url);
+      urls.push(await job);
     }
     return urls;
   }
+  private inflight = new Map<string, Promise<string>>();
 
   /** 미리 만들어 캐시에 넣어 둡니다(재생하지 않음). 실패해도 조용히 넘어갑니다. */
   async prefetch(key: string, text: string, voice?: TtsVoiceId): Promise<void> {
