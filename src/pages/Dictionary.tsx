@@ -156,9 +156,9 @@ const RowSpeaker = ({ onClick, title }: { onClick: () => void; title: string }) 
 );
 
 // 예문 한 줄 (번호 · 인니어 · 한국어 · 스피커)
-const ExampleRow = ({ n, id, ko }: { n: number; id: string; ko: string }) => (
+// 예문 앞 번호는 2026-11-11 사용자 요청으로 뺐습니다
+const ExampleRow = ({ id, ko }: { id: string; ko: string }) => (
   <div className="flex min-w-0 items-start gap-2.5">
-    <span className="w-3.5 shrink-0 font-word text-[0.9375rem] italic leading-[1.45] text-[#B59B6A]">{n}</span>
     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
       <p className="m-0 break-words font-word text-[1rem] leading-[1.45]">{id}</p>
       {ko ? <p className="m-0 break-words text-[0.8125rem] leading-[1.5] text-[#5E5D57]">{ko}</p> : null}
@@ -1040,9 +1040,9 @@ const Dictionary = () => {
                   <h2 className="m-0 min-w-0 break-words font-word text-[1.5rem] font-semibold leading-[1.25] text-[#104B60]">{result.word}</h2>
                   <HeroSpeaker onClick={() => speak(result.word, "id")} title="발음 듣기" />
                 </div>
-                <p className="m-0 mt-2 break-words text-[1.0625rem] font-semibold">{result.meaning}</p>
+                <p className="m-0 mt-2 break-words text-[0.90625rem] font-semibold">{result.meaning}</p>
                 {result.meaningDetail && (
-                  <p className="m-0 mt-1 break-words font-gothic text-[0.8125rem] leading-[1.65] text-[#3F5550]">{latinSpans(result.meaningDetail)}</p>
+                  <p className="m-0 mt-1 break-words font-gothic text-[0.78125rem] leading-[1.65] text-[#3F5550]">{latinSpans(result.meaningDetail)}</p>
                 )}
               </HeroCard>
 
@@ -1053,7 +1053,7 @@ const Dictionary = () => {
                     <section className="flex flex-col gap-3">
                       <SectionTitle>예문</SectionTitle>
                       {result.examples.map((ex, i) => (
-                        <ExampleRow key={i} n={i + 1} id={ex.id} ko={ex.ko} />
+                        <ExampleRow key={i} id={ex.id} ko={ex.ko} />
                       ))}
                     </section>
                   )}
@@ -1101,12 +1101,12 @@ const Dictionary = () => {
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="rounded-2xl bg-card px-3.5 py-3">
                   <p className="m-0 font-gothic text-[0.75rem] text-[#5B6469]">회화 사용빈도</p>
-                  <p className="m-0 mt-1 font-gothic text-[0.9375rem] font-bold text-[#B4501F]">{FREQ_LABEL[freq]}</p>
+                  <p className="m-0 mt-1 font-gothic text-[0.84375rem] font-bold text-[#B4501F]">{FREQ_LABEL[freq]}</p>
                   <Bars n={freq} on="#EC7F51" />
                 </div>
                 <div className="rounded-2xl bg-card px-3.5 py-3">
                   <p className="m-0 font-gothic text-[0.75rem] text-[#5B6469]">난이도</p>
-                  <p className="m-0 mt-1 font-gothic text-[0.9375rem] font-bold text-[#2C6D63]">{DIFF_LABEL[diff]}</p>
+                  <p className="m-0 mt-1 font-gothic text-[0.84375rem] font-bold text-[#2C6D63]">{DIFF_LABEL[diff]}</p>
                   <Bars n={diff} on="#2C6D63" />
                 </div>
               </div>
@@ -1120,7 +1120,7 @@ const Dictionary = () => {
                 <button
                   onClick={handleSaveToWordbook}
                   disabled={saveOff}
-                  className={`flex h-[52px] min-w-0 flex-1 items-center justify-center gap-1.5 px-3 ${
+                  className={`flex h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 px-3 ${
                     saved
                       ? "bg-[#E3EEEC] text-[#2C6D63]"
                       : !saveTargetId
@@ -1143,7 +1143,7 @@ const Dictionary = () => {
                   onClick={(e) => { e.stopPropagation(); openSaveSheet(); }}
                   title="담을 단어장 고르기"
                   aria-label="담을 단어장 고르기"
-                  className={`flex h-[52px] w-[54px] shrink-0 items-center justify-center border-l ${
+                  className={`flex h-[44px] w-[54px] shrink-0 items-center justify-center border-l ${
                     saved
                       ? "border-[#2C6D63]/15 bg-[#E3EEEC] text-[#2C6D63]"
                       : !saveTargetId
