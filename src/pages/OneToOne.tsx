@@ -22,6 +22,25 @@ import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
+import WordMiniSheet from "@/components/WordMiniSheet";
+
+// 단어 팝업의 발음 듣기 (다른 화면과 같은 방식: AndroidTTS 우선, 없으면 speechSynthesis)
+const speakPopupWord = (text: string) => {
+  const t = String(text || "").trim();
+  if (!t) return;
+  const w = window as any;
+  if (w.AndroidTTS) {
+    try { w.AndroidTTS.speak(t, "id-ID"); } catch (e) {}
+    return;
+  }
+  try {
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = "id-ID";
+    u.rate = 0.9;
+    speechSynthesis?.cancel?.();
+    setTimeout(() => { try { speechSynthesis?.speak?.(u); } catch (e) {} }, 150);
+  } catch (e) {}
+};
 import { cleanToken } from "@/lib/phraseSelect";
 
 // pdfjs-dist는 300KB가 넘는 라이브러리라, 일대일 화면을 실제로 열 때만 불러옵니다
@@ -643,77 +662,26 @@ const OneToOne = () => {
       </div>
 
       {/* 단어 미니 팝업 */}
+      {/* 단어 팝업 — 2026-11-11 사용자 요청으로 이야기·회화집과 같은 공용 시트(WordMiniSheet)로 통일 */}
       {popupWord && (
-        <div className="fixed inset-0 z-50" onClick={closeSub}>
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className="absolute bottom-0 left-0 right-0 mx-auto bg-card rounded-t-2xl px-5 pt-5 pb-7"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <p className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">{popupWord}</p>
-              <span className="flex-1" />
-              <button
-                onClick={closeSub}
-                className="shrink-0 w-8 h-8 rounded-full bg-black/5 text-gray-500 flex items-center justify-center"
-                title="닫기"
-              >
-                <X size={15} />
-              </button>
-            </div>
-            {popupLoading ? (
-              <div className="flex items-center gap-2 text-gray-400 mt-2 text-sm">
-                <Loader2 size={15} className="animate-spin" /> 뜻을 찾고 있어요...
-              </div>
-            ) : (
-              <>
-                <p className="text-sm font-bold text-gray-900 mt-1.5 break-words font-gothic">{popupMeaning}</p>
-                {popupInfo && (
-                  <p className="text-xs text-gray-500 mt-1 break-words font-gothic">{popupInfo}</p>
-                )}
-              </>
-            )}
-            <div className="flex gap-2 mt-4">
-              <div className="flex-1 min-w-0 flex items-stretch overflow-hidden rounded-full text-xs font-medium">
-                <button
-                  onClick={savePopupWord}
-                  disabled={popupSaved || popupLoading || !popupMeaning || isFailedMeaning(popupMeaning) || !saveTargetId}
-                  className={`flex-1 min-w-0 flex items-center justify-center gap-1 py-2 ${
-                    popupSaved || !saveTargetId ? "bg-gray-100 text-gray-400" : "bg-primary text-white disabled:opacity-50"
-                  }`}
-                >
-                  {popupSaved ? <Check size={13} className="shrink-0" /> : <Plus size={13} className="shrink-0" />}
-                  <span className="truncate">
-                    {popupSaved ? "저장됨" : saveTargetId ? saveTargetName : "단어장을 먼저 만들어 주세요"}
-                  </span>
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); openWbPicker(); }}
-                  title="담을 단어장 고르기"
-                  className={`shrink-0 flex items-center px-2.5 border-l ${
-                    popupSaved || !saveTargetId
-                      ? "border-gray-200 bg-gray-100 text-gray-400"
-                      : "border-white/30 bg-primary text-white"
-                  }`}
-                >
-                  <ChevronDown size={13} />
-                </button>
-              </div>
-              <button
-                onClick={copyPopupWord}
-                className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-gray-700"
-              >
-                복사
-              </button>
-              <button
-                onClick={openInDictionary}
-                className="shrink-0 rounded-full py-2 px-3.5 text-xs font-medium bg-black/5 text-gray-700"
-              >
-                사전에서 보기
-              </button>
-            </div>
-          </div>
-        </div>
+        <WordMiniSheet
+          word={popupWord}
+          loading={popupLoading}
+          meaning={popupMeaning}
+          info={popupInfo}
+          saved={popupSaved}
+          saveDisabled={popupLoading || !popupMeaning || isFailedMeaning(popupMeaning)}
+          saveTargetId={saveTargetId}
+          saveTargetName={saveTargetName}
+          widthClass={"max-w-lg"}
+          onClose={closeSub}
+          onSave={savePopupWord}
+          onPickTarget={openWbPicker}
+          onDictionary={openInDictionary}
+          onSpeak={() => speakPopupWord(popupWord)}
+          onCopy={copyPopupWord}
+          manageBack={false}
+        />
       )}
 
       <div className="relative z-[60]">
