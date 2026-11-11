@@ -36,7 +36,7 @@ import type { MapContentEntry, MapWord } from "@/lib/mapContent";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { isStoreApp } from "@/lib/platform";
 import { usePlan } from "@/lib/plan";
-import { addWordIfAbsent, hasWordInCategory, ensureMapWordbook, MAP_WORDBOOK_ID } from "@/lib/store";
+import { addWordIfAbsent, hasWordInCategory, ensureMapWordbook, MAP_WORDBOOK_ID, getWordsByCategory, deleteWord } from "@/lib/store";
 
 const KMIN = 1;
 // 최대 64배. 탭 허용 반경이 56px이라 32배에서는 지도 좌표 4.5 이내의 두 핀을
@@ -628,7 +628,16 @@ const IndoMap = () => {
   };
   // 단어 담기 — "지도에서 배운 단어" 단어장에만 담습니다 (처음 담을 때 폴더가 생깁니다).
   // 중복 방지와 Medali 저장 점수는 addWordIfAbsent 안에서 처리됩니다.
+  // 2026-11-11 사용자 요청: 한 번 더 누르면 담기를 취소합니다(그 단어장에서 뺌).
   const saveMapWord = (w: MapWord) => {
+    if (savedWords[w.word]) {
+      const target = w.word.trim().toLowerCase();
+      const found = getWordsByCategory(MAP_WORDBOOK_ID).filter((x) => x.word.trim().toLowerCase() === target);
+      found.forEach((x) => deleteWord(x.id));
+      setSavedWords((prev) => ({ ...prev, [w.word]: false }));
+      toast("담기를 취소했습니다");
+      return;
+    }
     ensureMapWordbook();
     const r = addWordIfAbsent({
       word: w.word,
@@ -722,6 +731,28 @@ const IndoMap = () => {
       history.pushState({ kkMapLand: true }, "");
       landPushedRef.current = true;
     } catch (e) {}
+  };
+
+  // 가로·세로 바꾸기를 부드럽게 (2026-11-11 사용자 요청)
+  // 화면이 돌며 지도가 다시 그려지는 순간이 툭 끊겨 보여서, 지도 색 막을 살짝 덮었다가(0.18초)
+  // 바꾸고, 새 크기로 다시 그려진 뒤(0.32초) 천천히 걷어 냅니다.
+  const [landFade, setLandFade] = useState(false);
+  const landFadeBusy = useRef(false);
+  const smoothLand = (toggle: () => void | Promise<void>) => {
+    if (landFadeBusy.current) return;
+    landFadeBusy.current = true;
+    setLandFade(true);
+    window.setTimeout(() => {
+      Promise.resolve()
+        .then(() => toggle())
+        .catch(() => {})
+        .then(() => {
+          window.setTimeout(() => {
+            setLandFade(false);
+            landFadeBusy.current = false;
+          }, 320);
+        });
+    }, 180);
   };
 
   // 진짜 회전 중에 시스템이 전체 화면을 풀면(뒤로가기 제스처 등) 가로 보기도 끝냅니다.
@@ -893,7 +924,7 @@ const IndoMap = () => {
           <button
             className={ZB + " mt-1.5"}
             style={ZB_STYLE}
-            onClick={() => (landscape ? exitLandscape() : void enterLandscape())}
+            onClick={() => smoothLand(() => (landscape ? exitLandscape() : enterLandscape()))}
             title={landscape ? "세로로 보기" : "가로로 보기"}
             aria-label={landscape ? "세로로 보기" : "가로로 보기"}
           >
@@ -906,7 +937,7 @@ const IndoMap = () => {
           <button
             className={ZB + " absolute right-3.5 top-3.5"}
             style={ZB_STYLE}
-            onClick={() => exitLandscape()}
+            onClick={() => smoothLand(() => exitLandscape())}
             title="가로 보기 닫기"
             aria-label="가로 보기 닫기"
           >
@@ -914,6 +945,17 @@ const IndoMap = () => {
           </button>
         ) : null}
       </div>
+
+      {/* 가로·세로 바꿀 때 잠깐 덮는 막 (smoothLand) */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 z-[70] pointer-events-none"
+        style={{
+          background: "#0b2f37",
+          opacity: landFade ? 1 : 0,
+          transition: landFade ? "opacity 0.18s ease-in" : "opacity 0.42s ease-out",
+        }}
+      />
 
       {/* 사진 확대 — 기존 화면 위에 팝업 애니메이션 */}
       {lightbox && (
@@ -952,6 +994,14 @@ const IndoMap = () => {
             className="absolute left-0 right-0 bottom-0 mx-auto max-w-[560px] bg-white rounded-t-[22px] flex flex-col"
             style={{ maxHeight: land === "css" ? "88%" : "75dvh", boxShadow: "0 -4px 24px rgba(5,20,24,0.18)" }}
             onClick={(e) => e.stopPropagation()}
+            // 지도에서 이름을 누른 손가락의 클릭이 방금 열린 시트의 사진(같은 자리)까지 눌러
+            // 사진이 바로 크게 열리던 것(2026-11-11 사용자 보고) — 열린 직후 0.5초는 시트 안 누름을 무시합니다.
+            onClickCapture={(e) => {
+              if (Date.now() - sheetOpenedAt.current < 500) {
+                e.stopPropagation();
+                e.preventDefault();
+              }
+            }}
           >
             <div className="w-9 h-1 rounded-full bg-[#DDE3E6] mx-auto mt-2.5 shrink-0" />
             <button
@@ -1064,15 +1114,14 @@ const IndoMap = () => {
                             <span className="flex-1 min-w-0 font-gothic text-[0.84375rem] text-[#4A5257]">{w.meaning}</span>
                             <button
                               onClick={() => saveMapWord(w)}
-                              disabled={!!savedWords[w.word]}
                               className={
                                 "w-8 h-8 rounded-full flex items-center justify-center shrink-0 " +
                                 (savedWords[w.word]
                                   ? "bg-[#2C6D63] text-white"
                                   : "bg-white border border-[#DDE3E6] text-[#646C72] active:bg-[#F1F4F5]")
                               }
-                              title={savedWords[w.word] ? "이미 담긴 단어" : "단어장에 담기"}
-                              aria-label={savedWords[w.word] ? "이미 담긴 단어" : "단어장에 담기"}
+                              title={savedWords[w.word] ? "담기 취소" : "단어장에 담기"}
+                              aria-label={savedWords[w.word] ? "담기 취소" : "단어장에 담기"}
                             >
                               {savedWords[w.word] ? <Check size={15} strokeWidth={2.4} /> : <Plus size={15} strokeWidth={2.2} />}
                             </button>
