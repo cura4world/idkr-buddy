@@ -601,7 +601,7 @@ const Story = () => {
       <p
         key={i}
         ref={(el) => { paraRefs.current["ko-" + i] = el; }}
-        className={"text-[1rem] leading-[1.85] break-words " + (i === 0 ? "mt-3" : "mt-2.5")}
+        className={"font-gothic text-[0.90625rem] leading-[1.8] break-words " + (i === 0 ? "mt-3" : "mt-2.5")}
         style={{ color: C.txt }}
       >
         {para}
@@ -696,7 +696,8 @@ const Story = () => {
             ) : (
               <div style={{ padding: 18 }}>
                 {/* 뒷면: 한국어 번역 + 배경 설명 */}
-                <h2 className="text-[1.125rem] font-semibold break-words" style={{ color: C.txt }}>{current.titleKo}</h2>
+                {/* 번역면 제목·본문: 2026-11-11 사용자 요청으로 한 단계 작게, 본문은 아래 "이 글을 더 이해하려면"과 같은 고딕 */}
+                <h2 className="text-[1.03125rem] font-semibold break-words" style={{ color: C.txt }}>{current.titleKo}</h2>
                 {renderKorean(current.korean)}
                 {current.background && current.background.length > 0 ? (
                   <div className="mt-[18px] rounded-[14px]" style={{ background: "#FBF5E6", padding: "14px 14px 12px" }}>
@@ -750,7 +751,8 @@ const Story = () => {
             )}
           </div>
           <p className="mt-3 text-center font-gothic text-[0.75rem]" style={{ color: C.mute }}>
-            {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 해석, 단어를 누르면 뜻이 나옵니다"}
+            {/* "단어를 누르면 뜻이 나옵니다" 안내는 2026-11-11 사용자 요청으로 모든 화면에서 뺐습니다 */}
+            {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 해석이 보입니다"}
           </p>
         </div>
 
@@ -817,7 +819,7 @@ const Story = () => {
           <button
             onClick={handleGenerate}
             disabled={generating || blocked}
-            className="mt-3.5 w-full h-[50px] rounded-2xl flex items-center justify-center gap-2 font-gothic text-[0.875rem] font-semibold"
+            className="mt-3.5 w-full h-[44px] rounded-2xl flex items-center justify-center gap-2 font-gothic text-[0.875rem] font-semibold"
             style={
               blocked
                 ? { background: "#E9EDEF", color: C.mute }
