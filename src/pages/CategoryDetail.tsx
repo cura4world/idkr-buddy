@@ -1011,7 +1011,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
             {isMine ? "모은 단어" : category.isShared ? gs.label : "보관한 단어장"}
           </p>
           <p className={"relative mt-0.5 flex items-baseline " + (isMine ? "gap-2" : "gap-1.5")}>
-            <span className={"font-word font-semibold " + (isMine ? "text-[1.875rem]" : "text-[1.75rem]")} style={{ color: ink }}>
+            <span className={"font-word font-semibold " + (isMine ? "text-[1.6875rem]" : "text-[1.5625rem]")} style={{ color: ink }}>
               {words.length}
             </span>
             <span className={"font-body text-[0.84375rem] " + (isMine ? "text-[#4D4766]" : "text-[#4B5356]")}>
@@ -1025,7 +1025,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
               type="button"
               onClick={goStudy}
               className="h-[46px] min-w-0 px-1.5 rounded-[14px] bg-white font-gothic font-semibold flex items-center justify-center gap-2 active:opacity-80"
-              style={{ color: ink, fontSize: "min(0.875rem, 15px)" }}
+              style={{ color: ink, fontSize: "min(0.8125rem, 14px)" }}
             >
               <span
                 className="rounded-[9px] flex items-center justify-center shrink-0"
@@ -1039,7 +1039,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
               type="button"
               onClick={goQuiz}
               className="h-[46px] min-w-0 px-1.5 rounded-[14px] bg-white font-gothic font-semibold flex items-center justify-center gap-2 active:opacity-80"
-              style={{ color: ink, fontSize: "min(0.875rem, 15px)" }}
+              style={{ color: ink, fontSize: "min(0.8125rem, 14px)" }}
             >
               <span
                 className="rounded-[9px] flex items-center justify-center shrink-0"
@@ -1167,7 +1167,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
                   {category.isShared ? <WordIllust scene={scenes[w.word]} measureKey={w.word + "|" + w.meaning} /> : null}
                   <div className="relative z-[1] flex-1 min-w-0 content-bump">
                     <p className="m-0 font-word text-[1.1875rem] font-semibold leading-[1.35] text-[#104B60] break-words">{w.word}</p>
-                    <p className="mt-px font-gothic text-[0.875rem] font-semibold text-[#34332F]">{displayMeaning(w.meaning)}</p>
+                    <p className="mt-px font-gothic text-[0.8125rem] font-semibold text-[#34332F]">{displayMeaning(w.meaning)}</p>
                   </div>
                   {!category.isShared ? (
                     <button
@@ -1253,7 +1253,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
           <div className="flex items-center gap-0.5">
             <div className="flex-1 min-w-0">
               <p className="m-0 font-word text-[1.1875rem] font-semibold leading-[1.35] text-[#104B60] truncate">{draggingWord.word}</p>
-              <p className="mt-px font-gothic text-[0.875rem] font-semibold text-[#34332F]">{displayMeaning(draggingWord.meaning)}</p>
+              <p className="mt-px font-gothic text-[0.8125rem] font-semibold text-[#34332F]">{displayMeaning(draggingWord.meaning)}</p>
             </div>
             <span className="w-[38px] h-[38px] shrink-0 rounded-full bg-[#E2F1EC] text-[#2C6D63] flex items-center justify-center">
               <SpeakerIcon size={18} />
@@ -1352,7 +1352,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
       </Dialog>
       {/* 고른 단어가 있을 때만 뜨는 아래 고정 바. 어두운 배경에서도 보이도록 불투명 bg-card 를 씁니다. */}
       {editable && selectedIds.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40" style={asTab ? { bottom: "var(--kata-tabbar-h, 0px)" } : undefined}>
+        <div className="fixed inset-x-0 bottom-0 z-40" style={{ bottom: "var(--kata-tabbar-h, 0px)" }}>
           <div className="mx-auto max-w-lg border-t border-border bg-card px-4 py-3 flex items-center gap-3">
             <span className="flex-1 min-w-0 text-[0.8125rem] font-body text-foreground">
               {selectedIds.length}개 선택
