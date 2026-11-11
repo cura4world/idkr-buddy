@@ -28,6 +28,8 @@ export default function PreviewPanel() {
   const [trialUsed, setTrialUsed] = useState<boolean>(previewTrialUsed());
   const [savedKey, setSavedKey] = useState<string>(getGeminiApiKey());
   const [keyInput, setKeyInput] = useState("");
+  const [keyCheck, setKeyCheck] = useState("");
+  const [checking, setChecking] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
   const [wiping, setWiping] = useState(false);
   const openRef = useRef(false);
@@ -80,15 +82,57 @@ export default function PreviewPanel() {
   const saveKey = () => {
     const k = keyInput.trim();
     if (!k) return;
-    setGeminiApiKey(k);
+    // 붙여 넣을 때 섞여 들어온 띄어쓰기·줄바꿈은 키에 없는 글자라 모두 뺍니다
+    setGeminiApiKey(k.split(" ").join("").split("\n").join("").split("\t").join(""));
     setSavedKey(getGeminiApiKey());
     setKeyInput("");
+    setKeyCheck("");
   };
 
   const removeKey = () => {
     setGeminiApiKey("");
     setSavedKey("");
     setKeyInput("");
+    setKeyCheck("");
+  };
+
+  // 키 확인 — 구글에 모델 목록 1개만 물어봅니다(요금 없음). 키가 틀렸거나 "웹사이트 제한"이 걸려 있으면
+  // 구글이 돌려준 이유를 그대로 보여 줍니다. 미리보기 앱은 주소가 appassets.androidplatform.net 이라
+  // 키에 cura4world.github.io 만 허용해 두었다면 여기서 막힙니다(2026-11-11 진단용).
+  const checkKey = async () => {
+    const k = getGeminiApiKey();
+    if (!k || checking) return;
+    setChecking(true);
+    setKeyCheck("");
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(() => ctrl.abort(), 10000);
+    try {
+      const res = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1&key=" + encodeURIComponent(k),
+        { signal: ctrl.signal },
+      );
+      if (res.ok) {
+        setKeyCheck("정상 — 구글이 이 키를 받아 줍니다.");
+      } else {
+        let reason = "";
+        let message = "";
+        try {
+          const j = await res.json();
+          const err = j && j.error ? j.error : null;
+          message = err && typeof err.message === "string" ? err.message : "";
+          const det = err && Array.isArray(err.details) ? err.details : [];
+          for (const d of det) {
+            if (d && typeof d.reason === "string") { reason = d.reason; break; }
+          }
+        } catch (e) {}
+        setKeyCheck("오류 " + res.status + (reason ? " · " + reason : "") + (message ? " — " + message.slice(0, 160) : ""));
+      }
+    } catch (e) {
+      setKeyCheck(ctrl.signal.aborted ? "응답이 없습니다(10초). 인터넷 연결을 확인하세요." : "구글에 연결하지 못했습니다(네트워크).");
+    } finally {
+      window.clearTimeout(timer);
+      setChecking(false);
+    }
   };
 
   const wipe = async () => {
@@ -215,6 +259,22 @@ export default function PreviewPanel() {
                   </button>
                 ) : null}
               </div>
+              {savedKey ? (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={checkKey}
+                    disabled={checking}
+                    className="h-9 rounded-[10px] border border-border px-3.5 text-[13px] font-semibold text-foreground active:bg-muted disabled:opacity-60 flex items-center gap-1.5"
+                  >
+                    {checking ? <Loader2 size={14} className="animate-spin" /> : null}
+                    키 확인
+                  </button>
+                  {keyCheck ? (
+                    <p className="mt-1.5 text-[12px] leading-relaxed break-words text-foreground">{keyCheck}</p>
+                  ) : null}
+                </div>
+              ) : null}
             </section>
 
             {/* 데이터 비우기 */}
