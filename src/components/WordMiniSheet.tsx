@@ -1,8 +1,9 @@
 // src/components/WordMiniSheet.tsx
 // 이야기·회화집 본문에서 단어를 누르면 아래에서 올라오는 작은 뜻 시트.
-// 시안: ST3-Front (단어 Lora 24px + 민트 스피커, 뜻 16px, 설명 13px,
-//       "내 단어장에 담기 | ⌄" 46px 청록 + "사전에서 보기" 46px 회색).
-// 이야기(Story.tsx)와 회화집 읽기(PercakapanRead.tsx)가 함께 씁니다. 다른 화면은 쓰지 않습니다.
+// 시안: ST3-Front (단어 Lora + 민트 스피커, 뜻, 설명 13px, "내 단어장에 담기 | ⌄" 청록 + "사전에서 보기" 회색).
+// 2026-11-11 사용자 요청으로 단어 24 → 22.5px, 뜻 16 → 14.5px, 버튼 높이 46 → 40px.
+// 앱의 단어 팝업은 모두 이것 하나를 씁니다(이야기·회화집·오늘의 문장, 관리자판의 뉴스·묵상·기도·성경·설교문·일대일).
+// 모양을 고칠 때는 여기만 고치면 모든 화면이 같이 바뀝니다.
 
 import { Check, ChevronDown, Loader2, Plus, Volume1, X } from "lucide-react";
 import { useBackClose } from "@/hooks/useBackClose";
@@ -24,6 +25,14 @@ interface Props {
   onDictionary: () => void;
   /** 단어 발음 듣기. 없으면 스피커를 그리지 않습니다 */
   onSpeak?: () => void;
+  /** 단어 복사 (예전 팝업에 있던 화면만 줌). 없으면 버튼을 그리지 않습니다 */
+  onCopy?: () => void;
+  /**
+   * 폰의 뒤로가기를 이 시트가 직접 처리할지 (기본 true).
+   * 화면이 팝업용 히스토리 칸을 따로 쌓아 닫는 경우(성경·설교문·일대일의 closeSub)는 false 로 주세요 —
+   * 둘 다 쌓으면 뒤로가기를 두 번 눌러야 닫힙니다.
+   */
+  manageBack?: boolean;
 }
 
 const TEAL = "#2C6D63";
@@ -43,10 +52,12 @@ const WordMiniSheet = ({
   onPickTarget,
   onDictionary,
   onSpeak,
+  onCopy,
+  manageBack,
 }: Props) => {
   const grey = saved || !saveTargetId;
   // 폰의 뒤로가기는 이 시트만 닫습니다(이야기 카드·회화 읽기 화면은 그대로). 시트는 열릴 때만 그려집니다.
-  useBackClose(true, onClose);
+  useBackClose(manageBack !== false, onClose);
   return (
     <div className="fixed inset-0 z-50" onClick={onClose}>
       <div className="absolute inset-0" style={{ background: "rgba(20,30,35,0.38)" }} />
@@ -61,7 +72,7 @@ const WordMiniSheet = ({
         <div className="mx-auto mb-[14px] h-1 w-9 rounded-full" style={{ background: "#DDE3E6" }} />
         <div className="flex items-center gap-2.5 min-w-0">
           <p
-            className="min-w-0 break-words font-word text-[1.5rem] font-semibold leading-tight"
+            className="min-w-0 break-words font-word text-[1.40625rem] font-semibold leading-tight"
             style={{ color: "#104B60" }}
           >
             {word}
@@ -97,7 +108,7 @@ const WordMiniSheet = ({
           </div>
         ) : (
           <>
-            <p className="mt-2 break-words font-gothic text-[1rem] font-semibold" style={{ color: "#1D1F1E" }}>
+            <p className="mt-2 break-words font-gothic text-[0.90625rem] font-semibold" style={{ color: "#1D1F1E" }}>
               {meaning}
             </p>
             {info ? (
@@ -114,7 +125,7 @@ const WordMiniSheet = ({
               type="button"
               onClick={onSave}
               disabled={saved || saveDisabled || !saveTargetId}
-              className="flex-1 min-w-0 h-[46px] flex items-center justify-center gap-1.5 px-2 disabled:cursor-default"
+              className="flex-1 min-w-0 h-[40px] flex items-center justify-center gap-1.5 px-2 disabled:cursor-default"
               style={
                 grey
                   ? { background: "#F1F4F5", color: "#9AA1A6" }
@@ -135,7 +146,7 @@ const WordMiniSheet = ({
               }}
               title="담을 단어장 고르기"
               aria-label="담을 단어장 고르기"
-              className="shrink-0 w-11 h-[46px] flex items-center justify-center"
+              className="shrink-0 w-11 h-[40px] flex items-center justify-center"
               style={
                 grey
                   ? { background: "#F1F4F5", color: "#9AA1A6", borderLeft: "1px solid #E3E7EA" }
@@ -145,10 +156,20 @@ const WordMiniSheet = ({
               <ChevronDown size={15} strokeWidth={2.4} />
             </button>
           </div>
+          {onCopy ? (
+            <button
+              type="button"
+              onClick={onCopy}
+              className="shrink-0 h-[40px] px-3 rounded-[14px] font-gothic text-[0.875rem] font-semibold"
+              style={{ background: "#F1F4F5", color: "#1D1F1E" }}
+            >
+              복사
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onDictionary}
-            className="shrink-0 h-[46px] px-3.5 rounded-[14px] font-gothic text-[0.875rem] font-semibold"
+            className="shrink-0 h-[40px] px-3.5 rounded-[14px] font-gothic text-[0.875rem] font-semibold"
             style={{ background: "#F1F4F5", color: "#1D1F1E" }}
           >
             사전에서 보기
