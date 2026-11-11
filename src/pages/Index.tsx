@@ -811,19 +811,20 @@ const Index = () => {
                 {dateLabel}
               </p>
               {/* PLUS 꼬리표의 아래 끝을 "Kata kata" 글자의 아랫단(기준선)에 맞춥니다(2026-11-11 사용자 요청).
-                  줄 높이 1 인 Lora 는 글자 상자 아래 끝이 기준선보다 약 0.134em 아래라, 그만큼 띄웁니다. */}
-              <div className="flex items-end" style={{ gap: 8 }}>
+                  둘 다 한 줄 안의 inline-block 으로 두고, 꼬리표는 overflow:hidden 이라 그 기준선이 아래 끝이 됩니다
+                  → 꼬리표 아래 끝 = 글자 기준선. 폰의 글자 확대(WebView 글자 크기)와 상관없이 정확히 맞습니다. */}
+              <div style={{ whiteSpace: "nowrap", lineHeight: 1 }}>
                 {/* 앱 이름은 한 줄. 글자 크기 115% 를 넘으면 32px 에서 멈춥니다(QA Q08 — 360px·125% 에서 두 줄로 꺾이던 것) */}
                 <h1
                   className="font-word text-white"
-                  style={{ margin: 0, fontSize: "min(" + hrem(28) + ", 32px)", fontWeight: 600, lineHeight: 1, whiteSpace: "nowrap" }}
+                  style={{ display: "inline-block", verticalAlign: "baseline", margin: 0, fontSize: "min(" + hrem(28) + ", 32px)", fontWeight: 600, lineHeight: 1, whiteSpace: "nowrap" }}
                 >
                   Kata kata<span style={{ color: "#F29B6B" }}>.</span>
                 </h1>
                 {plus ? (
                   <span
-                    className="font-gothic flex items-center shrink-0"
-                    style={{ height: 20, padding: "0 8px", borderRadius: 10, background: "#F6E7C4", color: "#5A4610", fontSize: "min(" + hrem(10.5) + ", 12px)", fontWeight: 700, letterSpacing: "0.06em", marginBottom: "calc(min(" + hrem(28) + ", 32px) * 0.134)" }}
+                    className="font-gothic"
+                    style={{ display: "inline-block", overflow: "hidden", verticalAlign: "baseline", marginLeft: 8, height: 20, lineHeight: "20px", padding: "0 8px", borderRadius: 10, background: "#F6E7C4", color: "#5A4610", fontSize: "min(" + hrem(10.5) + ", 12px)", fontWeight: 700, letterSpacing: "0.06em", textAlign: "center" }}
                   >
                     PLUS
                   </span>
