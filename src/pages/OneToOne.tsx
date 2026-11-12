@@ -42,6 +42,7 @@ const speakPopupWord = (text: string) => {
   } catch (e) {}
 };
 import { cleanToken } from "@/lib/phraseSelect";
+import { PUB, PUB_SOFT_BTN, PUB_SOFT_BTN_STYLE, PubNotice } from "@/components/PubKit";
 
 // pdfjs-dist는 300KB가 넘는 라이브러리라, 일대일 화면을 실제로 열 때만 불러옵니다
 // (정적 import 로 두면 앱을 켤 때마다 모든 화면이 이 무게를 함께 지게 됩니다).
@@ -507,7 +508,7 @@ const OneToOne = () => {
       await navigator.clipboard.writeText(popupWord);
       toast("복사되었습니다");
     } catch (e) {
-      toast("복사에 실패했어요");
+      toast("복사하지 못했습니다");
     }
   };
 
@@ -545,7 +546,8 @@ const OneToOne = () => {
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="shrink-0 font-gothic text-base font-semibold tracking-[0.04em]">One to One</h1>
+          {/* 2026-11-12: 다른 화면 헤더 규칙(고딕 대문자 · 자간 0.08em)에 맞춤 */}
+          <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">One to One</h1>
           <span className="ml-auto shrink-0 flex items-center gap-1">
             <button
               type="button"
@@ -572,18 +574,28 @@ const OneToOne = () => {
 
       <div className="px-4 pb-6">
         {loading ? (
-          <div className="flex items-center gap-2 text-gray-400 text-sm py-16 justify-center">
-            <Loader2 size={16} className="animate-spin" /> 교재를 불러오는 중...
+          <div className="mt-4">
+            <PubNotice>
+              <span className="inline-flex items-center gap-2">
+                <Loader2 size={16} className="animate-spin" /> 교재를 불러오는 중...
+              </span>
+            </PubNotice>
           </div>
         ) : errorMsg ? (
-          <div className="text-center py-16">
-            <p className="text-sm text-gray-600 font-gothic mb-3">{errorMsg}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium bg-sky-500 text-white"
+          <div className="mt-4">
+            <PubNotice
+              action={
+                <button
+                  onClick={() => window.location.reload()}
+                  className={PUB_SOFT_BTN}
+                  style={PUB_SOFT_BTN_STYLE}
+                >
+                  <RotateCcw size={14} /> 다시 시도
+                </button>
+              }
             >
-              <RotateCcw size={13} /> 다시 시도
-            </button>
+              {errorMsg}
+            </PubNotice>
           </div>
         ) : (
           <div
@@ -619,7 +631,8 @@ const OneToOne = () => {
               type="button"
               onClick={() => goPage(-1)}
               disabled={pageNum <= 1}
-              className="w-10 h-10 rounded-full bg-sky-500 text-white flex items-center justify-center disabled:opacity-30"
+              className="w-10 h-10 rounded-full flex items-center justify-center disabled:opacity-30"
+              style={{ background: PUB.teal, color: "#FFFFFF" }}
               aria-label="이전 쪽"
             >
               <ChevronLeft size={18} />
@@ -631,7 +644,8 @@ const OneToOne = () => {
               type="button"
               onClick={() => goPage(1)}
               disabled={pageNum >= numPages}
-              className="w-10 h-10 rounded-full bg-sky-500 text-white flex items-center justify-center disabled:opacity-30"
+              className="w-10 h-10 rounded-full flex items-center justify-center disabled:opacity-30"
+              style={{ background: PUB.teal, color: "#FFFFFF" }}
               aria-label="다음 쪽"
             >
               <ChevronRight size={18} />
