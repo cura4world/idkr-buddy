@@ -14,6 +14,7 @@ import {
   AdminMember, listMembers, createMember, releaseMemberDevice, revokeMember,
 } from "@/lib/memberAdmin";
 import { MemberRole } from "@/lib/member";
+import { PUB, PUB_CARD, PubChip, PubNotice } from "@/components/PubKit";
 
 const fmtDate = (ms: number) => {
   if (!ms) return "";
@@ -153,11 +154,13 @@ const MemberAdmin = () => {
       </header>
 
       {!isAdmin ? (
-        <p className="px-4 py-16 text-center text-sm text-muted-foreground font-gothic">관리자판에서만 쓸 수 있습니다</p>
+        <div className="px-4 pt-4">
+          <PubNotice>관리자판에서만 쓸 수 있습니다</PubNotice>
+        </div>
       ) : (
         <div className="px-4">
-          {/* 새 키 만들기 */}
-          <section className="mt-4 rounded-2xl border border-border bg-card p-4">
+          {/* 새 키 만들기 — 2026-11-12 공개판 디자인: 흰 카드 + 청록 버튼 */}
+          <section className="mt-4 p-4" style={PUB_CARD}>
             <p className="font-gothic text-sm font-semibold text-gray-900 flex items-center gap-1.5">
               <Plus size={15} /> 새 회원키
             </p>
@@ -174,14 +177,14 @@ const MemberAdmin = () => {
                   type="button"
                   onClick={() => setRole(r)}
                   className={"flex-1 h-9 rounded-lg border text-xs font-gothic " +
-                    (role === r ? "border-sky-500 bg-sky-500 text-white" : "border-border text-foreground/80")}
+                    (role === r ? "border-[#2C6D63] bg-[#2C6D63] text-white" : "border-[#E3E8EB] text-foreground/80")}
                 >
                   {r === "member" ? "회원판" : "관리자판"}
                 </button>
               ))}
             </div>
             {role === "admin" ? (
-              <p className="mt-1.5 text-xs text-red-500 font-gothic">관리자 키는 설교문과 이 관리 화면까지 열립니다. 형님 기기에만 쓰세요.</p>
+              <p className="mt-1.5 text-xs text-[#B5483A] font-gothic">관리자 키는 설교문과 이 관리 화면까지 열립니다. 형님 기기에만 쓰세요.</p>
             ) : null}
             <input
               value={folder}
@@ -199,7 +202,8 @@ const MemberAdmin = () => {
               type="button"
               onClick={handleCreate}
               disabled={creating || !name.trim()}
-              className="mt-3 w-full h-10 rounded-lg bg-sky-500 text-white text-sm font-gothic disabled:opacity-40 flex items-center justify-center gap-1.5"
+              className="mt-3 w-full h-10 rounded-2xl text-sm font-gothic font-semibold disabled:opacity-40 flex items-center justify-center gap-1.5"
+              style={{ background: PUB.teal, color: "#FFFFFF" }}
             >
               {creating ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />}
               만들기
@@ -207,7 +211,7 @@ const MemberAdmin = () => {
           </section>
 
           {/* 목록 */}
-          <p className="mt-6 mb-2 font-gothic text-xs text-muted-foreground">발급한 회원키</p>
+          <p className="mt-6 mx-1 mb-2 font-gothic text-[0.8125rem] font-bold tracking-[0.02em]" style={{ color: PUB.section }}>발급한 회원키</p>
           {loading ? (
             <div className="flex items-center gap-2 text-gray-400 text-sm py-10 justify-center">
               <Loader2 size={16} className="animate-spin" /> 불러오는 중...
@@ -223,15 +227,18 @@ const MemberAdmin = () => {
                 return (
                   <div
                     key={m.key}
-                    className={"rounded-2xl border bg-card p-3.5 " + (justMade === m.key ? "border-sky-400" : "border-border")}
+                    className="p-3.5"
+                    style={{
+                      ...PUB_CARD,
+                      boxShadow: justMade === m.key ? "0 0 0 1.5px #BFD8D2, 0 1px 3px rgba(16,40,50,0.06)" : PUB_CARD.boxShadow,
+                    }}
                   >
                     <div className="flex items-center gap-2">
                       <span className="font-gothic text-sm font-semibold text-gray-900">{m.name}</span>
-                      <span className={"text-[0.6875rem] px-2 py-0.5 rounded-full font-gothic " +
-                        (m.role === "admin" ? "bg-amber-100 text-amber-700" : "bg-sky-100 text-sky-700")}>
+                      <PubChip tone={m.role === "admin" ? "amber" : "teal"}>
                         {m.role === "admin" ? "관리자판" : "회원판"}
-                      </span>
-                      <span className={"ml-auto text-[0.6875rem] font-gothic " + (m.bound ? "text-emerald-600" : "text-muted-foreground")}>
+                      </PubChip>
+                      <span className={"ml-auto text-[0.6875rem] font-gothic " + (m.bound ? "text-[#2C6D63]" : "text-muted-foreground")}>
                         {m.bound ? "기기 연결됨 " + fmtDate(m.boundAt) : "아직 안 씀"}
                       </span>
                     </div>
@@ -272,7 +279,7 @@ const MemberAdmin = () => {
                         disabled={busy}
                         onClick={() => handleRevoke(m)}
                         className={"h-8 px-3 rounded-full border text-xs font-gothic flex items-center gap-1 disabled:opacity-40 " +
-                          (confirmRevoke === m.key ? "border-red-300 text-red-600 bg-red-50" : "border-border text-foreground/80 active:bg-muted")}
+                          (confirmRevoke === m.key ? "border-[#E6C2BB] text-[#B5483A] bg-[#FBF0EE]" : "border-border text-foreground/80 active:bg-muted")}
                       >
                         <Trash2 size={12} /> {confirmRevoke === m.key ? "한 번 더 누르면 끊습니다" : "끊기"}
                       </button>
