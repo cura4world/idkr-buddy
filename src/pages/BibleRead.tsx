@@ -681,7 +681,7 @@ const BibleRead = () => {
     if (!keys) return;
     const hit = keys.filter((k) => hl[k]);
     if (hit.length === 0) {
-      toast("고른 곳에는 형광펜이 없어요");
+      toast("고른 곳에는 형광펜이 없습니다");
       return;
     }
     const next: ChapterHl = { ...hl };
@@ -757,7 +757,7 @@ const BibleRead = () => {
       await navigator.clipboard.writeText(popupWord);
       toast("복사되었습니다");
     } catch (e) {
-      toast("복사에 실패했어요");
+      toast("복사하지 못했습니다");
     }
   };
 
@@ -813,7 +813,7 @@ const BibleRead = () => {
           {tappable ? (
             <span
               onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
-              className="cursor-pointer rounded active:bg-sky-500/20"
+              className="cursor-pointer rounded active:bg-[#E2F1EC]"
             >
               {tok}
             </span>
@@ -835,7 +835,7 @@ const BibleRead = () => {
       ) : null}
       {v.text ? (
         <p data-hlp="1" className="mb-2 text-[1em] leading-relaxed font-word text-gray-900">
-          <span className="text-sky-500/70 text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
+          <span className="text-[#9AA1A6] text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
           {renderTokens(v.text, "b" + v.verse + "-", "id", v.verse, true)}
         </p>
       ) : null}
@@ -858,12 +858,12 @@ const BibleRead = () => {
   const renderKoVerse = (v: BibleVerse, version: BibleVersion, withLabel: boolean, idShown = false) => (
     <p key={"k" + version + v.verse} data-hlp="1" className="mb-2 text-[0.875em] leading-relaxed font-gothic text-gray-600">
       {withLabel && !idShown ? (
-        <span className="mr-1.5 text-[0.625em] align-middle font-gothic font-semibold text-sky-500/80">
+        <span className="mr-1.5 text-[0.625em] align-middle font-gothic font-semibold text-[#2B5F86]/80">
           {koLabelOf(version)}
         </span>
       ) : null}
       {!idShown ? (
-        <span className="text-sky-500/70 text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
+        <span className="text-[#9AA1A6] text-[0.75em] align-super mr-1 select-none">{v.verse}</span>
       ) : null}
       {renderTokens(v.text, "k" + version + v.verse + "-", "ko" + version, v.verse, false)}
     </p>
@@ -934,12 +934,13 @@ const BibleRead = () => {
             <ArrowLeft size={20} />
           </button>
           <h1 className="shrink-0 font-gothic text-base font-semibold uppercase tracking-[0.08em]">ALKITAB</h1>
+          {/* 2026-11-12 공개판 디자인(docs/release/10-faith-stories.md S66): 하늘색 알약 → 연청록·청록 */}
           <span className="ml-auto shrink-0 flex items-center">
             <button
               ref={modePillRef}
               type="button"
               onClick={openModeMenu}
-              className="h-7 min-w-[108px] pl-3.5 pr-2.5 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-600 font-gothic text-[0.6875rem] inline-flex items-center justify-between gap-1"
+              className="h-7 min-w-[108px] pl-3.5 pr-2.5 rounded-full bg-[#E3EEEC] text-[#2C6D63] font-gothic text-[0.6875rem] font-semibold inline-flex items-center justify-between gap-1"
               title="보기 방식 고르기"
             >
               {pillLabel}
@@ -965,14 +966,14 @@ const BibleRead = () => {
           <button
             ref={bookPillRef}
             onClick={() => openDial("book", bookPillRef.current)}
-            className="shrink-0 inline-flex items-center min-w-0 max-w-[42vw] font-bold text-white bg-sky-500 rounded-full px-3.5 py-1 text-[0.8125rem]"
+            className="shrink-0 inline-flex items-center min-w-0 max-w-[42vw] font-bold text-white bg-[#2C6D63] rounded-full px-3.5 py-1 text-[0.8125rem]"
           >
             <span className="truncate">{bookLabel}</span>
           </button>
           <button
             ref={chapPillRef}
             onClick={() => openDial("chapter", chapPillRef.current)}
-            className="shrink-0 inline-flex items-center justify-center min-w-[44px] font-bold text-white bg-sky-500 rounded-full px-2.5 py-1 text-[0.8125rem]"
+            className="shrink-0 inline-flex items-center justify-center min-w-[44px] font-bold text-white bg-[#2C6D63] rounded-full px-2.5 py-1 text-[0.8125rem]"
           >
             {pos.chapter}
           </button>
@@ -1047,10 +1048,10 @@ const BibleRead = () => {
                 </div>
               ) : error ? (
                 <div className="text-center py-8">
-                  <p className="text-sm text-gray-600 font-gothic mb-3">본문을 불러오지 못했어요</p>
+                  <p className="text-sm text-gray-600 font-gothic mb-3">본문을 불러오지 못했습니다</p>
                   <button
                     onClick={() => loadChapter(pos)}
-                    className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium bg-sky-500 text-white"
+                    className="h-[34px] inline-flex items-center gap-1.5 rounded-full px-[13px] font-gothic text-[0.78125rem] font-semibold bg-[#E3EEEC] text-[#2C6D63]"
                   >
                     <RotateCcw size={13} /> 다시 시도
                   </button>
@@ -1073,7 +1074,7 @@ const BibleRead = () => {
                                 type="button"
                                 onClick={handlePullKo}
                                 disabled={koPulling}
-                                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-teal-700 text-white text-sm font-gothic active:bg-teal-800 disabled:opacity-60"
+                                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#2C6D63] text-white text-sm font-gothic font-semibold active:opacity-90 disabled:opacity-60"
                               >
                                 {koPulling ? <Loader2 size={14} className="animate-spin" /> : null}
                                 {koPulling ? "받는 중..." : "지금 받기"}
@@ -1153,7 +1154,7 @@ const BibleRead = () => {
                   onClick={() => toggleShow(k)}
                   className={
                     "w-full text-right px-3 h-8 flex items-center justify-end gap-1.5 whitespace-nowrap font-gothic text-[0.6875rem] " +
-                    (on ? "text-sky-600 font-bold" : "text-gray-700 active:bg-muted")
+                    (on ? "text-[#2C6D63] font-bold" : "text-gray-700 active:bg-muted")
                   }
                 >
                   <Check size={12} className={on ? "shrink-0" : "shrink-0 opacity-0"} />
