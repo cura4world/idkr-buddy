@@ -30,6 +30,7 @@ import { ttsPlayer } from "@/lib/tts";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
+import { PUB, PUB_CARD, PUB_BTN, PUB_BTN_STYLE, PUB_SOFT_BTN, PUB_SOFT_BTN_STYLE, PubSectionTitle, PubChip, PubNotice, PubNote } from "@/components/PubKit";
 
 
 /* 기도 메뉴 — 메인화면 목록과 같은 어법 (아이콘 + 한국어 + 인니어) */
@@ -49,20 +50,33 @@ const MENU_ID_NAMES: Record<string, string> = {
   etc: "Doa Lainnya",
 };
 
-const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="mb-2.5 px-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-    {children}
-  </p>
-);
+// 2026-11-12 공개판 디자인(docs/release/10-faith-stories.md S65): 소제목·목록 줄·카드를 인도네시아 이해(IN1)와 같게
+const SectionLabel = ({ children }: { children: React.ReactNode }) => <PubSectionTitle>{children}</PubSectionTitle>;
+
+// 기도 종류마다 차분한 타일 색 (홈 목록과 같은 짝)
+const MENU_TILES: Record<string, { bg: string; fg: string }> = {
+  meal: { bg: "#FFF3D6", fg: "#8A6A12" },
+  meeting: { bg: "#E4EEF6", fg: "#2B5F86" },
+  comfort: { bg: "#F4E8EC", fg: "#8A3E52" },
+  worship: { bg: "#ECE8F6", fg: "#5B4A8C" },
+  etc: { bg: "#EAF2DF", fg: "#4E6A2A" },
+  lords: { bg: "#E3EEEC", fg: "#2C6D63" },
+  creed: { bg: "#F1F4F5", fg: "#4D565B" },
+};
+const tileOf = (id: string) => MENU_TILES[id] || MENU_TILES.etc;
+
+const LIST_BOX = "overflow-hidden rounded-[18px]";
 
 const PrayerRow = ({
   icon: Icon,
+  tile,
   title,
   sub,
   onClick,
   last,
 }: {
   icon: LucideIcon;
+  tile: { bg: string; fg: string };
   title: string;
   sub: string;
   onClick: () => void;
@@ -72,18 +86,29 @@ const PrayerRow = ({
     type="button"
     onClick={onClick}
     className={
-      "w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-muted/60 transition-colors " +
-      (last ? "" : "border-b border-border")
+      "w-full flex items-center gap-3 py-3 pl-3.5 pr-3 text-left active:bg-muted/60 transition-colors " +
+      (last ? "" : "border-b border-[#EEF1F3]")
     }
   >
-    <Icon size={20} strokeWidth={1.6} className="text-muted-foreground shrink-0" />
+    <span
+      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+      style={{ background: tile.bg, color: tile.fg }}
+    >
+      <Icon size={20} strokeWidth={1.8} />
+    </span>
     <div className="flex-1 min-w-0">
-      <p className="text-[0.9375rem] leading-tight text-foreground truncate">{title}</p>
-      <p className="mt-0.5 font-word text-[0.71875rem] text-muted-foreground truncate">{sub}</p>
+      <p className="font-gothic text-[0.90625rem] leading-tight text-foreground truncate">{title}</p>
+      <p className="mt-px font-word text-[0.6875rem] truncate" style={{ color: PUB.sub }}>{sub}</p>
     </div>
-    <ChevronRight size={17} className="shrink-0 text-muted-foreground/50" />
+    <ChevronRight size={16} strokeWidth={2} className="shrink-0 text-[#B7BDC1]" />
   </button>
 );
+
+// 듣기 버튼은 이야기 카드와 같은 연청록 알약 (PlayButton 은 고치지 않고 className 으로만 덮음)
+const PLAY_PILL = "!h-[34px] !px-[13px] !py-0 !text-[0.78125rem] !font-semibold !bg-[#E2F1EC] !text-[#2C6D63] font-gothic";
+const INPUT_CLS =
+  "w-full rounded-xl border border-[#E3E8EB] bg-white px-3.5 py-2.5 text-[0.8125rem] text-foreground font-gothic outline-none focus:border-[#2C6D63] placeholder:text-[0.78125rem] placeholder:text-[#9AA1A6]";
+const Q_CLS = "font-gothic text-[0.875rem] font-bold mb-2.5";
 const LENGTH_KEY_PREFIX = "prayer-length-"; // 카테고리별 마지막 길이 기억
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -120,7 +145,8 @@ const textHash = (t: string): string => {
 };
 
 // 인도네시아어 기도문 글자 크기 단계 (기본: text-sm)
-const ID_FONT_SIZES = ["text-xs", "text-sm", "text-base", "text-lg", "text-xl"];
+// 2026-11-12: 카드에서 content-bump(한 단계 키움)를 뺐으므로, 예전에 보이던 크기 그대로 한 칸씩 올려 둡니다
+const ID_FONT_SIZES = ["text-sm", "text-base", "text-lg", "text-xl", "text-2xl"];
 const ID_FONT_KEY = "prayer-id-font-step";
 
 // 주기도문 (고정 카드 — 저장/삭제/재생성 없음)
@@ -495,9 +521,9 @@ const Prayer = () => {
       } else if (code === "NO_CREDIT") {
         toast("Claude 크레딧이 부족합니다. console.anthropic.com에서 충전해주세요");
       } else if (code === "RATE_LIMIT" || code === "OVERLOADED") {
-        toast("지금 요청이 많아요. 잠시 후 다시 시도해주세요");
+        toast("지금 요청이 많습니다. 잠시 후 다시 시도하세요");
       } else {
-        toast("기도문 생성에 실패했어요. 다시 시도해주세요");
+        toast("기도문을 만들지 못했습니다. 다시 시도하세요");
       }
     } finally {
       if (genToken.current === token) setGenerating(false);
@@ -557,9 +583,9 @@ const Prayer = () => {
       } else if (code === "NO_CREDIT") {
         toast("Claude 크레딧이 부족합니다. console.anthropic.com에서 충전해주세요");
       } else if (code === "RATE_LIMIT" || code === "OVERLOADED") {
-        toast("지금 요청이 많아요. 잠시 후 다시 시도해주세요");
+        toast("지금 요청이 많습니다. 잠시 후 다시 시도하세요");
       } else {
-        toast("수정에 실패했어요. 다시 시도해주세요");
+        toast("고치지 못했습니다. 다시 시도하세요");
       }
     } finally {
       if (genToken.current === token) setRevising(false);
@@ -656,7 +682,7 @@ const Prayer = () => {
       await navigator.clipboard.writeText(popupWord);
       toast("복사되었습니다");
     } catch (e) {
-      toast("복사에 실패했어요");
+      toast("복사하지 못했습니다");
     }
   };
 
@@ -688,7 +714,7 @@ const Prayer = () => {
       <span key={keyPrefix + ti} data-idw="1">
         <span
           onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
-          className="cursor-pointer rounded active:bg-emerald-500/20"
+          className="cursor-pointer rounded active:bg-[#E2F1EC]"
         >
           {tok}
         </span>{" "}
@@ -700,7 +726,7 @@ const Prayer = () => {
     return paragraphs.map((para, pi) => {
       const sentences = para.split(new RegExp("(?<=[.!?])\\s+")).filter(Boolean);
       return (
-        <p key={pi} className={"mb-4 leading-relaxed font-word text-gray-900 " + ID_FONT_SIZES[idFontStep]}>
+        <p key={pi} className={"mb-4 leading-[1.85] font-word " + ID_FONT_SIZES[idFontStep]} style={{ color: PUB.txt }}>
           {sentences.map((sent, si) => (
             <span key={si}>{renderTokens(sent, pi + "-" + si + "-")}</span>
           ))}
@@ -711,14 +737,14 @@ const Prayer = () => {
 
   const renderKorean = (text: string) =>
     text.split(new RegExp("\\n{2,}")).filter((p) => p.trim()).map((para, i) => (
-      <p key={i} className="mb-3 text-xs leading-relaxed text-gray-800 font-gothic">{para}</p>
+      <p key={i} className="mb-3 font-gothic text-[0.90625rem] leading-[1.8] break-words" style={{ color: PUB.txt }}>{para}</p>
     ));
 
   const chip = (selected: boolean) =>
-    "rounded-full px-3.5 py-2 text-sm font-medium font-gothic border transition-colors " +
+    "rounded-full px-3.5 h-[36px] text-[0.8125rem] font-semibold font-gothic border transition-colors " +
     (selected
-      ? "bg-emerald-500 text-white border-emerald-500"
-      : "bg-card text-gray-700 border-border/70 active:bg-emerald-500/10");
+      ? "bg-[#2C6D63] text-white border-[#2C6D63]"
+      : "bg-white text-[#4D565B] border-[#E3E8EB] active:bg-[#E3EEEC]");
 
   // ================================================================
   // 기도문 보기
@@ -731,7 +757,7 @@ const Prayer = () => {
     const idName = idNameParts.length > 1 ? idNameParts[1].trim() : current.situationLabel;
     return (
       <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
-        <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
+        <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
           <button
             onClick={closeSub}
             className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
@@ -746,7 +772,7 @@ const Prayer = () => {
             <button
               onClick={togglePin}
               className={`shrink-0 w-9 h-9 flex items-center justify-center ${
-                current.pinned ? "text-amber-400" : "text-muted-foreground hover:text-foreground/70"
+                current.pinned ? "text-[#C9862F]" : "text-muted-foreground hover:text-foreground/70"
               }`}
               title={current.pinned ? "고정 해제" : "고정"}
             >
@@ -766,23 +792,30 @@ const Prayer = () => {
           ) : null}
         </header>
 
-        <div className="px-4 py-4">
-          <div {...swipeHandlers} className="-mx-4 bg-card border-y border-border/60 px-4 py-5 min-h-[72vh] content-bump">
+        {/* 화면 전체에서 옆으로 밀면 뒤집힙니다 — 이야기 카드와 같은 흰 카드 (2026-11-12) */}
+        <div {...swipeHandlers} className="px-4 pt-4 pb-6" style={{ minHeight: "calc(100dvh - 61px - var(--kata-tabbar-h, 0px))" }}>
+          <div style={{ ...PUB_CARD, borderRadius: 20, padding: "18px 18px 22px" }}>
               {/* 제목(상황) 한 줄, 다음 줄 우측: 날짜 + 글자크기(-,+) 또는 연필 */}
               <div className="mb-3">
-                <div className="flex items-center gap-2">
-                  <span className={`inline-block min-w-0 truncate font-bold text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5 ${isLords ? "font-gothic text-sm" : "text-xs"}`}>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <PubChip tone="amber">
                     {isLords && !flipped ? idName : current.situationLabel}
-                  </span>
+                  </PubChip>
+                  <span className="flex-1" />
                   {!flipped && (
-                    <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <PlayButton cacheKey={"prayer-" + current.id + "-" + textHash(current.indonesian)} text={current.indonesian} label="기도 듣기" />
+                    <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <PlayButton
+                        cacheKey={"prayer-" + current.id + "-" + textHash(current.indonesian)}
+                        text={current.indonesian}
+                        label="기도 듣기"
+                        className={PLAY_PILL}
+                      />
                     </span>
                   )}
                 </div>
-                <div className="flex items-center justify-end gap-2 mt-1.5">
+                <div className="flex items-center justify-end gap-2 mt-2">
                   {!isLords && (
-                    <span className="text-xs text-gray-400 font-gothic">{fmtDate(current.createdAt)}</span>
+                    <span className="font-gothic text-[0.6875rem]" style={{ color: PUB.mute }}>{fmtDate(current.createdAt)}</span>
                   )}
                   {!flipped ? (
                     <>
@@ -828,12 +861,13 @@ const Prayer = () => {
                     <button
                       onClick={regenerate}
                       disabled={generating}
-                      className="flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[0.6875rem] font-medium font-gothic bg-emerald-500/10 text-emerald-700 disabled:opacity-50"
+                      className={PUB_SOFT_BTN + " flex-1 min-w-0"}
+                      style={PUB_SOFT_BTN_STYLE}
                     >
                       {generating ? (
-                        <><Loader2 size={12} className="animate-spin" /> 만드는 중...</>
+                        <><Loader2 size={14} className="animate-spin" /> 만드는 중...</>
                       ) : (
-                        <><RefreshCw size={12} /> 같은 설정 다시 만들기</>
+                        <><RefreshCw size={14} /> 같은 설정 다시 만들기</>
                       )}
                     </button>
                     {!delConfirm ? (
@@ -846,7 +880,7 @@ const Prayer = () => {
                       </button>
                     ) : (
                       <div className="shrink-0 flex items-center gap-1.5">
-                        <button onClick={doDelete} className="rounded-full py-2 px-3 text-xs font-medium font-gothic bg-red-500 text-white">
+                        <button onClick={doDelete} className="rounded-full py-2 px-3 text-xs font-semibold font-gothic bg-[#B5483A] text-white">
                           삭제
                         </button>
                         <button onClick={() => setDelConfirm(false)} className="rounded-full py-2 px-3 text-xs font-medium font-gothic bg-black/5 text-gray-600">
@@ -864,9 +898,11 @@ const Prayer = () => {
 
                   {/* 뒷면: 기도에 관한 말씀·명언 (주기도문 제외) */}
                   {!isLords && (
-                    <div className="rounded-lg bg-emerald-500/5 border border-emerald-200/60 px-3 py-2.5 mt-4">
-                      <p className="text-xs leading-relaxed text-gray-800 font-body">{quote.text}</p>
-                      <p className="text-[0.6875rem] text-gray-500 font-gothic mt-1">— {quote.source}</p>
+                    <div className="mt-[18px]">
+                      <PubNote>
+                        <p>{quote.text}</p>
+                        <p className="mt-1 text-[0.71875rem]" style={{ color: PUB.noteFg }}>— {quote.source}</p>
+                      </PubNote>
                     </div>
                   )}
                 </>
@@ -878,13 +914,14 @@ const Prayer = () => {
                     onChange={(e) => setKoDraft(e.target.value)}
                     disabled={revising}
                     rows={14}
-                    className="w-full rounded-lg border border-emerald-300/70 bg-white px-3 py-2.5 text-xs text-gray-900 font-gothic leading-relaxed outline-none focus:border-emerald-500 disabled:opacity-60"
+                    className="w-full rounded-xl border border-[#BFD8D2] bg-white px-3.5 py-3 text-[0.84375rem] text-foreground font-gothic leading-relaxed outline-none focus:border-[#2C6D63] disabled:opacity-60"
                   />
                   <div className="flex items-center gap-2 mt-3">
                     <button
                       onClick={applyKoEdit}
                       disabled={revising || !koDraft.trim()}
-                      className="flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-medium font-gothic bg-emerald-500 text-white disabled:opacity-50"
+                      className="flex-1 min-w-0 h-[40px] rounded-2xl flex items-center justify-center gap-1.5 font-gothic text-[0.8125rem] font-semibold disabled:opacity-50"
+                      style={PUB_BTN_STYLE}
                     >
                       {revising ? (
                         <><Loader2 size={13} className="animate-spin" /> 기도문을 고치는 중...</>
@@ -894,7 +931,8 @@ const Prayer = () => {
                     </button>
                     <button
                       onClick={() => { if (!revising) setEditingKo(false); }}
-                      className="shrink-0 rounded-full py-2.5 px-4 text-xs font-medium font-gothic bg-black/5 text-gray-600"
+                      className="shrink-0 h-[40px] rounded-2xl px-4 font-gothic text-[0.8125rem] font-semibold"
+                      style={{ background: PUB.greyBg, color: PUB.sub }}
                     >
                       취소
                     </button>
@@ -902,7 +940,7 @@ const Prayer = () => {
                 </>
               )}
           </div>
-          <p className="text-center text-muted-foreground text-xs mt-3">
+          <p className="mt-3 text-center font-gothic text-[0.75rem]" style={{ color: PUB.mute }}>
             {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 번역이 보입니다"}
           </p>
         </div>
@@ -957,7 +995,7 @@ const Prayer = () => {
       !generating;
     return (
       <div className={"min-h-screen w-full " + widthClass + " mx-auto overflow-x-clip bg-background"}>
-        <header className="sticky top-0 z-10 bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-2">
+        <header className="sticky top-0 z-30 bg-background text-foreground border-b border-border px-4 py-3 flex items-center gap-3">
           <button
             onClick={closeSub}
             className="text-foreground hover:text-foreground/70 w-9 h-9 flex items-center justify-center -ml-1 shrink-0"
@@ -965,7 +1003,7 @@ const Prayer = () => {
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="flex-1 min-w-0 text-base font-semibold">{cat.emoji} {cat.label}</h1>
+          <h1 className="flex-1 min-w-0 truncate text-base font-semibold">{cat.label}</h1>
           {canWide ? (
             <button
               type="button"
@@ -980,21 +1018,21 @@ const Prayer = () => {
         </header>
 
         <div className="px-4 py-4 pb-32">
-          <div className="bg-card border border-border/60 rounded-xl px-5 py-5">
+          <div style={{ ...PUB_CARD, borderRadius: 20, padding: "18px 16px 20px" }}>
             {/* 상황 선택 */}
             {cat.id === "etc" ? (
               <>
-                <p className="text-sm font-bold text-gray-900 font-gothic mb-2.5">어떤 상황인가요?</p>
+                <p className={Q_CLS} style={{ color: PUB.txt }}>어떤 상황인가요?</p>
                 <input
                   value={customText}
                   onChange={(e) => setCustomText(e.target.value)}
                   placeholder="예: 이사한 가정을 위한 기도"
-                  className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-foreground font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-muted-foreground"
+                  className={INPUT_CLS + " mb-5"}
                 />
               </>
             ) : (
               <>
-                <p className="text-sm font-bold text-gray-900 font-gothic mb-2.5">
+                <p className={Q_CLS} style={{ color: PUB.txt }}>
                   {cat.needsPhase ? "어떤 모임인가요?" : "어떤 자리인가요?"}
                 </p>
                 <div className="flex flex-wrap gap-2 mb-5">
@@ -1008,8 +1046,8 @@ const Prayer = () => {
                   <input
                     value={customText}
                     onChange={(e) => setCustomText(e.target.value)}
-                    placeholder="상황을 직접 적어주세요"
-                    className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-foreground font-gothic -mt-2 mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-muted-foreground"
+                    placeholder="상황을 직접 적어 주세요"
+                    className={INPUT_CLS + " -mt-2 mb-5"}
                   />
                 )}
               </>
@@ -1018,7 +1056,7 @@ const Prayer = () => {
             {/* 모임: 시작/마침 */}
             {cat.needsPhase && (
               <>
-                <p className="text-sm font-bold text-gray-900 font-gothic mb-2.5">시작 기도인가요, 마침 기도인가요?</p>
+                <p className={Q_CLS} style={{ color: PUB.txt }}>시작 기도인가요, 마침 기도인가요?</p>
                 <div className="flex flex-wrap gap-2 mb-5">
                   <button onClick={() => setPhase("open")} className={chip(phase === "open")}>모임 시작</button>
                   <button onClick={() => setPhase("close")} className={chip(phase === "close")}>모임 마침</button>
@@ -1027,25 +1065,25 @@ const Prayer = () => {
             )}
 
             {/* 이름 (선택) */}
-            <p className="text-sm font-bold text-gray-900 font-gothic mb-1.5">이름 <span className="text-gray-400 font-normal">(선택)</span></p>
+            <p className={Q_CLS + " !mb-1.5"} style={{ color: PUB.txt }}>이름 <span className="font-normal" style={{ color: PUB.mute }}>(선택)</span></p>
             <input
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
-              placeholder="예: Johan (비워두면 이름 없이)"
-              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-foreground font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-muted-foreground"
+              placeholder="예: Johan (비워 두면 이름 없이)"
+              className={INPUT_CLS + " mb-5"}
             />
 
             {/* 사정 한 줄 (선택) */}
-            <p className="text-sm font-bold text-gray-900 font-gothic mb-1.5">상황 한 줄 <span className="text-gray-400 font-normal">(선택)</span></p>
+            <p className={Q_CLS + " !mb-1.5"} style={{ color: PUB.txt }}>상황 한 줄 <span className="font-normal" style={{ color: PUB.mute }}>(선택)</span></p>
             <input
               value={noteInput}
               onChange={(e) => setNoteInput(e.target.value)}
               placeholder="예: 내일 수술 예정 / 비자 연장 심사 중"
-              className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 text-xs text-foreground font-gothic mb-5 outline-none focus:border-emerald-400 placeholder:text-xs placeholder:text-muted-foreground"
+              className={INPUT_CLS + " mb-5"}
             />
 
             {/* 길이 */}
-            <p className="text-sm font-bold text-gray-900 font-gothic mb-2.5">기도문 길이</p>
+            <p className={Q_CLS} style={{ color: PUB.txt }}>기도문 길이</p>
             <div className="flex flex-wrap gap-2">
               {LENGTH_LABELS.map((l) => (
                 <button key={l.id} onClick={() => setLength(l.id)} className={chip(length === l.id)}>
@@ -1057,14 +1095,19 @@ const Prayer = () => {
         </div>
 
         {/* 하단 고정 만들기 버튼 */}
-        <div className={"fixed bottom-0 left-0 right-0 " + widthClass + " mx-auto px-4 pb-6 pt-3 bg-gradient-to-t from-background via-background/95 to-transparent"}>
+        {/* 공개판 하단 탭이 있으면 그 위에 붙습니다(--kata-tabbar-float, 입력 중에는 0 — BottomTabs) */}
+        <div
+          className={"fixed left-0 right-0 " + widthClass + " mx-auto px-4 pb-4 pt-3 bg-gradient-to-t from-background via-background/95 to-transparent"}
+          style={{ bottom: "var(--kata-tabbar-float, 0px)" }}
+        >
           <button
             onClick={submitWizard}
             disabled={!canSubmit}
-            className="w-full rounded-full py-3.5 text-sm font-bold font-gothic bg-emerald-500 text-white disabled:opacity-40 flex items-center justify-center gap-2"
+            className={PUB_BTN + " disabled:!opacity-40"}
+            style={PUB_BTN_STYLE}
           >
             {generating ? (
-              <><Loader2 size={16} className="animate-spin" /> 기도문을 만들고 있어요...</>
+              <><Loader2 size={18} className="animate-spin" /> 기도문을 만드는 중...</>
             ) : (
               "기도문 만들기"
             )}
@@ -1109,11 +1152,12 @@ const Prayer = () => {
       {/* 상황을 골라 만드는 기도 */}
       <section>
         <SectionLabel>기도문 만들기</SectionLabel>
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className={LIST_BOX} style={PUB_CARD}>
           {madeList.map((c, i) => (
             <PrayerRow
               key={c.id}
               icon={MENU_ICONS[c.id]}
+              tile={tileOf(c.id)}
               title={c.label}
               sub={MENU_ID_NAMES[c.id] || ""}
               onClick={() => openWizard(c.id)}
@@ -1124,17 +1168,19 @@ const Prayer = () => {
       </section>
 
       {/* 고정 기도문 */}
-      <section className="mt-6">
+      <section className="mt-5">
         <SectionLabel>함께 외우는 기도</SectionLabel>
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className={LIST_BOX} style={PUB_CARD}>
           <PrayerRow
             icon={Cross}
+            tile={MENU_TILES.lords}
             title="주기도문"
             sub="Doa Bapa Kami"
             onClick={() => openPrayer(LORDS_PRAYER)}
           />
           <PrayerRow
             icon={ScrollText}
+            tile={MENU_TILES.creed}
             title="사도신경"
             sub="Pengakuan Iman Rasuli"
             onClick={() => openPrayer(APOSTLES_CREED)}
@@ -1144,40 +1190,44 @@ const Prayer = () => {
       </section>
 
       {/* 저장된 기도문 */}
-      <section className="mt-6">
-        <SectionLabel>저장된 기도문 · Doa Tersimpan</SectionLabel>
+      <section className="mt-5">
+        <SectionLabel>저장된 기도문</SectionLabel>
         {records.length === 0 ? (
-          <div className="rounded-2xl border border-border bg-card px-5 py-9 text-center">
-            <p className="font-gothic text-[0.84375rem] leading-relaxed text-muted-foreground">
-              아직 만든 기도문이 없어요.
-              <br />
-              위에서 상황을 골라 첫 기도문을 만들어보세요.
-            </p>
-          </div>
+          <PubNotice>
+            아직 만든 기도문이 없습니다.
+            <br />
+            위에서 상황을 골라 첫 기도문을 만들어 보세요.
+          </PubNotice>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className={LIST_BOX} style={PUB_CARD}>
             {records.map((r, i) => {
               const Icon = MENU_ICONS[r.categoryId] || Sparkles;
+              const tile = tileOf(r.categoryId);
               return (
                 <button
                   key={r.id}
                   type="button"
                   onClick={() => openPrayer(r)}
                   className={
-                    "w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-muted/60 transition-colors " +
-                    (i === records.length - 1 ? "" : "border-b border-border")
+                    "w-full flex items-center gap-3 py-3 pl-3.5 pr-3 text-left active:bg-muted/60 transition-colors " +
+                    (i === records.length - 1 ? "" : "border-b border-[#EEF1F3]")
                   }
                 >
-                  <Icon size={20} strokeWidth={1.6} className="text-muted-foreground shrink-0" />
+                  <span
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: tile.bg, color: tile.fg }}
+                  >
+                    <Icon size={20} strokeWidth={1.8} />
+                  </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[0.875rem] leading-tight text-foreground truncate">{r.title}</p>
-                    <p className="mt-0.5 font-gothic text-[0.71875rem] text-muted-foreground truncate">
+                    <p className="font-gothic text-[0.875rem] leading-tight text-foreground truncate">{r.title}</p>
+                    <p className="mt-0.5 font-gothic text-[0.6875rem] truncate" style={{ color: PUB.sub }}>
                       {r.situationLabel}
                       {r.name ? " · " + r.name : ""} · {fmtDate(r.createdAt)}
                     </p>
                   </div>
                   {r.pinned ? (
-                    <Bookmark size={14} className="shrink-0 text-accent" fill="currentColor" />
+                    <Bookmark size={14} className="shrink-0 text-[#C9862F]" fill="currentColor" />
                   ) : null}
                 </button>
               );
