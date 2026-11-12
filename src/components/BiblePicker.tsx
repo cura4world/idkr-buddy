@@ -71,7 +71,7 @@ const BiblePicker = ({ open, currentBookId, currentChapter, onClose, onSelect }:
                   key={b.id}
                   onClick={() => setStageBookId(b.id)}
                   className={`w-full flex items-baseline gap-1.5 text-left px-2 py-2 rounded-lg active:bg-black/5 ${
-                    b.id === currentBookId ? "bg-sky-500/10" : ""
+                    b.id === currentBookId ? "bg-[#E3EEEC]" : ""
                   }`}
                 >
                   <span className="text-sm font-word font-semibold text-teal-700 whitespace-nowrap">{b.idName}</span>
@@ -88,7 +88,7 @@ const BiblePicker = ({ open, currentBookId, currentChapter, onClose, onSelect }:
                   key={b.id}
                   onClick={() => setStageBookId(b.id)}
                   className={`w-full flex items-baseline gap-1.5 text-left px-2 py-2 rounded-lg active:bg-black/5 ${
-                    b.id === currentBookId ? "bg-sky-500/10" : ""
+                    b.id === currentBookId ? "bg-[#E3EEEC]" : ""
                   }`}
                 >
                   <span className="text-sm font-word font-semibold text-blue-700 whitespace-nowrap">{b.idName}</span>
@@ -126,7 +126,7 @@ const BiblePicker = ({ open, currentBookId, currentChapter, onClose, onSelect }:
                   onClick={() => onSelect(stageBook.id, ch)}
                   className={`w-full text-center px-3 py-2 rounded-lg text-sm font-gothic active:bg-black/5 ${
                     stageBook.id === currentBookId && ch === currentChapter
-                      ? "bg-sky-500/10 text-sky-700 font-semibold"
+                      ? "bg-[#E3EEEC] text-[#2C6D63] font-semibold"
                       : "text-gray-800"
                   }`}
                 >
