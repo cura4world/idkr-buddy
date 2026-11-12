@@ -927,7 +927,7 @@ const SermonRead = () => {
       await navigator.clipboard.writeText(popupWord);
       toast("복사되었습니다");
     } catch (e) {
-      toast("복사에 실패했어요");
+      toast("복사하지 못했습니다");
     }
   };
 
@@ -963,7 +963,7 @@ const SermonRead = () => {
       <span key={keyPrefix + ti} data-idw="1">
         <span
           onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
-          className="cursor-pointer rounded active:bg-blue-800/20"
+          className="cursor-pointer rounded active:bg-[#E2F1EC]"
         >
           {tok}
         </span>{" "}
@@ -1118,7 +1118,7 @@ const SermonRead = () => {
           <span key={key} data-idw="1" className={hanCls}>
             <span
               onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
-              className="cursor-pointer rounded active:bg-blue-800/20"
+              className="cursor-pointer rounded active:bg-[#E2F1EC]"
             >
               {part}
             </span>{" "}
@@ -1179,7 +1179,7 @@ const SermonRead = () => {
     if (!parts || parts.length === 0) return;
     ttsPlayer.toggleParts(stateKey, parts, {
       models: sermonTtsModels(),
-      onError: () => toast("음성을 만들지 못했어요. 잠시 뒤 다시 시도해 주세요"),
+      onError: () => toast("음성을 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요"),
     });
   };
 
@@ -1197,7 +1197,7 @@ const SermonRead = () => {
         }}
         className={
           "select-none align-middle ml-1 inline-flex items-center justify-center w-6 h-6 rounded-full shrink-0 " +
-          (mine ? "bg-blue-800 text-white" : "text-blue-800/70 active:bg-blue-800/10")
+          (mine ? "bg-[#2C6D63] text-white" : "text-[#2C6D63]/70 active:bg-[#E3EEEC]")
         }
         style={{ fontSize: "1rem" }}
         aria-label="이 문단 듣기"
@@ -2198,8 +2198,10 @@ const SermonRead = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        <span className="w-8 h-8 rounded-lg bg-blue-800 flex items-center justify-center shrink-0">
-          <BookMarked size={16} className="text-white" />
+        {/* 2026-11-12 공개판 디자인(docs/release/10-faith-stories.md S67): 화면 틀만 설교 타일 색으로.
+            본문 글자 색(파란 제목·청록 성경 인용)은 설교문 서식이라 그대로 둡니다. */}
+        <span className="w-8 h-8 rounded-lg bg-[#ECE8F6] flex items-center justify-center shrink-0">
+          <BookMarked size={16} className="text-[#5B4A8C]" />
         </span>
         <h1 className="min-w-0 flex-1 text-lg font-semibold leading-none truncate">
           {rec ? rec.title || "설교문" : "설교문"}
@@ -2458,7 +2460,7 @@ const SermonRead = () => {
       <div className="px-4 py-4 pb-24">
         {/* 날짜 + 글자 크기 (성경 읽기의 '위치 필 + 듣기' 자리와 같은 배치) */}
         <div className="flex items-center gap-2 mb-4 min-w-0">
-          <span className="inline-flex items-center min-w-0 font-gothic text-blue-800 bg-blue-800/10 rounded-full px-3 py-1 text-sm">
+          <span className="inline-flex items-center min-w-0 font-gothic font-semibold text-[#5B4A8C] bg-[#ECE8F6] rounded-full px-3 py-1 text-[0.8125rem]">
             <span className="truncate">{formatSermonDate(id)}</span>
           </span>
           <span className="ml-auto mr-14 shrink-0 flex items-center gap-2">
@@ -2498,7 +2500,7 @@ const SermonRead = () => {
                 type="button"
                 onClick={() => playParts(allKey, audioParts)}
                 disabled={audioParts.length === 0}
-                className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-blue-800 active:bg-muted disabled:opacity-30"
+                className="w-9 h-9 rounded-full bg-[#E3EEEC] flex items-center justify-center text-[#2C6D63] active:opacity-80 disabled:opacity-30"
                 aria-label="전체 듣기"
                 title="전체 듣기"
               >
@@ -2532,12 +2534,12 @@ const SermonRead = () => {
         ) : error || !rec ? (
           <div className="text-center py-16">
             <p className="text-sm font-gothic text-muted-foreground mb-3">
-              설교문을 불러오지 못했어요
+              설교문을 불러오지 못했습니다
             </p>
             <button
               type="button"
               onClick={() => setReloadTick((n) => n + 1)}
-              className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium bg-blue-800 text-white"
+              className="h-[34px] inline-flex items-center gap-1.5 rounded-full px-[13px] font-gothic text-[0.78125rem] font-semibold bg-[#E3EEEC] text-[#2C6D63]"
             >
               <RotateCcw size={13} /> 다시 시도
             </button>
