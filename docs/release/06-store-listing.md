@@ -47,12 +47,12 @@ Kata kata Plus 를 구독하면 소리 내어 읽기와 이야기 만들기를 �
 
 일부 풀이와 이야기는 AI(Google Gemini)가 만들어 틀린 부분이 있을 수 있습니다. 이상한 결과는 "풀이가 이상해요"로 알려 주세요.
 
-문의: [지원 이메일]
+문의: support@naruve.app
 ```
 
 **앱 카테고리**: 교육 · **태그 후보**: 언어 학습, 사전, 단어장, 외국어
 
-**연락처**: 이메일 [지원 이메일] · 웹사이트(선택) `https://cura4world.github.io/idkr-buddy/guide.html` 대신 공개용 소개 페이지를 따로 만드는 것을 권합니다(지금 guide.html 은 회원용 설치 안내).
+**연락처**: 이메일 support@naruve.app · 웹사이트(선택)는 HQ 가 정하는 공개 소개 주소를 씁니다(`guide.html` 은 회원용 설치 안내라 스토어 연락처로 쓰지 않음).
 
 ## English
 
