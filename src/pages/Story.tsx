@@ -808,11 +808,12 @@ const Story = () => {
             </span>
             {/* 안내 문구("난이도를 고르고…")는 2026-11-12 사용자 요청으로 뺐습니다 */}
             <span className="flex-1 min-w-0">
-              <span className="block text-[0.96875rem] font-semibold" style={{ color: C.txt }}>오늘의 이야기</span>
+              <span className="block truncate text-[0.96875rem] font-semibold" style={{ color: C.txt }}>오늘의 이야기</span>
             </span>
-          </div>
-          <div className="mt-[18px]">
-            <LevelCircles value={difficulty} onChange={pickDifficulty} variant="story" disabled={generating} />
+            {/* 하/중/상은 2026-11-12 사용자 요청으로 제목 오른쪽 빈자리로 옮겼습니다 */}
+            <span className="shrink-0">
+              <LevelCircles value={difficulty} onChange={pickDifficulty} variant="inline" disabled={generating} />
+            </span>
           </div>
           <button
             onClick={handleGenerate}
