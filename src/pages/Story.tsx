@@ -799,16 +799,20 @@ const Story = () => {
       <div className="px-4 pt-4 pb-6 flex flex-col gap-2.5">
         {/* 오늘의 이야기: 난이도 + 불러오기 */}
         <div style={{ ...CARD_STYLE, padding: "18px 16px 16px" }}>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <span
-              className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+              className="w-[52px] h-[52px] rounded-2xl flex items-center justify-center shrink-0"
               style={{ background: "#FDF3E1" }}
             >
               <BookArt />
             </span>
-            {/* 안내 문구("난이도를 고르고…")는 2026-11-12 사용자 요청으로 뺐습니다 */}
+            {/* 2026-11-12: 하/중/상을 제목 오른쪽으로 옮기면서 안내 문구를 짧게 바꿔 한 줄로 다시 넣었습니다.
+                S21(360px) 폭에서 한 줄에 들어가도록 글자 10px·자간 살짝 좁힘, 넘치면 줄바꿈 대신 말줄임 */}
             <span className="flex-1 min-w-0">
               <span className="block truncate text-[0.96875rem] font-semibold" style={{ color: C.txt }}>오늘의 이야기</span>
+              <span className="block mt-[8px] truncate font-gothic text-[0.65625rem] tracking-[-0.02em]" style={{ color: C.sub }}>
+                난이도를 고르고 불러오세요
+              </span>
             </span>
             {/* 하/중/상은 2026-11-12 사용자 요청으로 제목 오른쪽 빈자리로 옮겼습니다 */}
             <span className="shrink-0">
