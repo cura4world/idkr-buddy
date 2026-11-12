@@ -17,7 +17,7 @@ interface BibleAudioSeekBarProps {
   chapter: number;
 }
 
-const SKY = "rgb(14,165,233)"; // sky-500
+const SKY = "rgb(44,109,99)"; // 공개판 청록 #2C6D63 (2026-11-12, 예전 sky-500)
 const TRACK = "rgba(0,0,0,0.10)";
 
 const BibleAudioSeekBar = ({ bookId, chapter }: BibleAudioSeekBarProps) => {
@@ -133,10 +133,10 @@ const BibleAudioSeekBar = ({ bookId, chapter }: BibleAudioSeekBarProps) => {
           "w-full h-4 appearance-none bg-transparent cursor-pointer " +
           "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 " +
           "[&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full " +
-          "[&::-webkit-slider-thumb]:bg-sky-500 [&::-webkit-slider-thumb]:shadow " +
+          "[&::-webkit-slider-thumb]:bg-[#2C6D63] [&::-webkit-slider-thumb]:shadow " +
           "[&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 " +
           "[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 " +
-          "[&::-moz-range-thumb]:bg-sky-500 " +
+          "[&::-moz-range-thumb]:bg-[#2C6D63] " +
           (disabled ? "opacity-40" : "")
         }
       />
