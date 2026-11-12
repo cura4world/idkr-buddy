@@ -10,7 +10,8 @@
 
 ## 0. 먼저 — 출시 전 선행 조건
 
-- [ ] 저장소 밖 security-plan 의 **보안 작업 완료** (`HANDOFF.md` 1번). 이것이 끝나기 전에는 "출시 가능"으로 보지 않습니다.
+- [x] 저장소 밖 security-plan 의 **보안 작업 완료** (`HANDOFF.md` 1번) — 2026-11-12 완료.
+- [ ] 2026-09-20 자동 보안 검사 결과 재검토 (`HANDOFF.md` 1번). 이것이 끝나기 전에는 "출시 가능"으로 보지 않습니다.
 - [ ] 문서의 빈칸 채우기: `[사업자명]` `[대표자]` `[사업자등록번호]` `[주소]` `[지원 이메일]` `[개인정보 보호책임자 이름]` `[시행일]`
   → `public/privacy.html`, `public/terms.html`, `public/delete-account.html`, `06-store-listing.md`
 
