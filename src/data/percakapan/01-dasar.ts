@@ -130,6 +130,7 @@ export const DASAR: PercakapanScene[] = [
     roles: { A: "돌아가는 손님", B: "배웅하는 집주인" },
     voices: { A: "f", B: "m" },
     level: "중",
+    rev: 2,
     lines: [
       { s: "A", id: "Wah, udah malem ya. Aku pamit dulu.", ko: "어, 벌써 밤이네요. 저 먼저 가볼게요." },
       { s: "B", id: "Yah, kok cepet banget?", ko: "아이고, 왜 이렇게 빨리 가세요?" },
@@ -139,7 +140,7 @@ export const DASAR: PercakapanScene[] = [
       { s: "B", id: "Sama-sama, makasih udah datang.", ko: "저도요, 와주셔서 감사해요." },
       { s: "A", id: "Salam buat istrinya ya.", ko: "사모님께 안부 전해 주세요." },
       { s: "B", id: "Pasti. Pulangnya naik apa?", ko: "그럴게요. 뭐 타고 가세요?" },
-      { s: "A", id: "Pesan Grab aja, udah aku pesan tadi.", ko: "그랩 부르려고요, 아까 불렀어요." },
+      { s: "A", id: "Naik Grab, tadi udah aku pesan.", ko: "그랩 타고 가요, 아까 불러 놨어요." },
       { s: "B", id: "Oke, hati-hati di jalan ya.", ko: "네, 조심히 가세요." },
       { s: "A", id: "Iya, sampai ketemu lagi.", ko: "네, 또 봬요." },
       { s: "B", id: "Kabari kalau udah sampai rumah.", ko: "집에 도착하면 연락 주세요." },

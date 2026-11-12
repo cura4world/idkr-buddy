@@ -40,7 +40,7 @@ export const KESEHATAN: PercakapanScene[] = [
       { s: "B", id: "Sakit kepalanya kayak gimana?", ko: "두통이 어떤 식인가요?" },
       { s: "A", id: "Cenat-cenut di bagian belakang.", ko: "뒤쪽이 욱신욱신해요." },
       { s: "B", id: "Ada demam juga?", ko: "열도 있으세요?" },
-      { s: "A", id: "Nggak, cuma pusing aja.", ko: "아니요, 그냥 어지럽기만 해요." },
+      { s: "A", id: "Nggak, cuma pusing aja.", ko: "아니요, 그냥 머리만 아파요." },
       { s: "B", id: "Kalau gitu ini aja, diminum sesudah makan.", ko: "그럼 이거 드세요, 식후에 드시고요." },
       { s: "A", id: "Sehari berapa kali?", ko: "하루에 몇 번이요?" },
       { s: "B", id: "Tiga kali sehari, satu tablet.", ko: "하루 세 번, 한 알씩이요." },
