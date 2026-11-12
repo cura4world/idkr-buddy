@@ -18,6 +18,7 @@ import {
   formatSermonDateShort,
 } from "@/lib/sermon";
 import { deleteInk } from "@/lib/sermonInk";
+import { PUB, PUB_CARD, PUB_TILE, PUB_SOFT_BTN, PUB_SOFT_BTN_STYLE, PubNotice } from "@/components/PubKit";
 
 // 왼쪽으로 이만큼 밀고 손을 떼면 밀린 채로 고정됩니다 (단어 카드와 같은 값)
 const SWIPE_THRESHOLD = 80;
@@ -261,26 +262,29 @@ const Sermons = () => {
         ) : null}
       </header>
 
+      {/* 2026-11-12 공개판 디자인(docs/release/10-faith-stories.md S67): 회화집 목록처럼 흰 카드 + 연청록 알약 버튼 */}
       <div className="px-4 py-4">
         {/* 불러오기 — 버튼은 오른쪽에, 마지막 시각은 왼쪽에 */}
         <div className="flex items-center gap-3">
-          <p className="min-w-0 flex-1 truncate text-[0.75rem] font-gothic text-muted-foreground">
-            {lastSyncLabel(lastSync)}
+          <p className="min-w-0 flex-1 truncate mx-1 font-gothic text-[0.8125rem] font-bold tracking-[0.02em]" style={{ color: PUB.section }}>
+            설교문{items.length > 0 ? " " + items.length + "편" : ""}
+            <span className="ml-2 font-normal text-[0.71875rem]" style={{ color: PUB.mute }}>{lastSyncLabel(lastSync)}</span>
           </p>
           <button
             type="button"
             onClick={handleSync}
             disabled={syncing}
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-[0.75rem] font-gothic text-foreground/80 active:bg-muted disabled:opacity-50"
+            className={PUB_SOFT_BTN + " shrink-0"}
+            style={PUB_SOFT_BTN_STYLE}
           >
-            <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
+            <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
             불러오기
           </button>
         </div>
 
         {/* 목록 */}
         {items.length > 0 ? (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="mt-3 overflow-hidden rounded-[18px]" style={PUB_CARD}>
             {items.map((s, i) => {
               const isSwiping = swipingId === s.id;
               const isOpen = openId === s.id;
@@ -292,17 +296,17 @@ const Sermons = () => {
                   data-swipe-open={isOpen ? "1" : undefined}
                   className={
                     "relative overflow-hidden " +
-                    (i === items.length - 1 ? "" : "border-b border-border")
+                    (i === items.length - 1 ? "" : "border-b border-[#EEF1F3]")
                   }
                 >
                   {/* 삭제 배경은 미는 중이거나 밀린 상태일 때만 렌더링합니다 (평소에 비치지 않도록) */}
                   {isSwiping || isOpen ? (
-                    <div className="absolute inset-0 flex items-center justify-end bg-red-500">
+                    <div className="absolute inset-0 flex items-center justify-end bg-[#B5483A]">
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleDelete(s); }}
                         disabled={deletingId === s.id}
-                        className="flex h-full items-center justify-center text-white active:bg-red-600 disabled:opacity-60"
+                        className="flex h-full items-center justify-center text-white active:bg-[#9C3D31] disabled:opacity-60"
                         style={{ width: OPEN_W + "px" }}
                         aria-label="삭제"
                       >
@@ -329,37 +333,39 @@ const Sermons = () => {
                       if (deletingId === s.id) return;
                       navigate("/sermon/" + s.id);
                     }}
-                    className="relative w-full flex items-center gap-3 bg-card px-4 py-3.5 text-left active:bg-muted/60"
+                    className="relative w-full flex items-center gap-3 bg-white py-3 pl-3.5 pr-3 text-left active:bg-[#F7F9FA]"
                     style={{
                       transform: "translateX(" + currentSwipeX + "px)",
                       transition: isSwiping ? "none" : "transform 0.25s ease",
                     }}
                   >
-                    <span className="shrink-0 w-[62px] font-gothic text-[0.75rem] tabular-nums text-muted-foreground">
+                    {/* 날짜 타일 (설교 타일 색) */}
+                    <span
+                      className="shrink-0 w-[52px] h-10 rounded-xl flex items-center justify-center font-gothic text-[0.6875rem] font-semibold tabular-nums"
+                      style={{ background: PUB_TILE.sermon.bg, color: PUB_TILE.sermon.fg }}
+                    >
                       {formatSermonDateShort(s.date)}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-[0.875rem] text-foreground">
+                    <span className="min-w-0 flex-1 truncate font-gothic text-[0.90625rem] text-foreground">
                       {s.title || "제목 없음"}
                     </span>
-                    <ChevronRight size={16} className="shrink-0 text-muted-foreground" />
+                    <ChevronRight size={16} strokeWidth={2} className="shrink-0 text-[#B7BDC1]" />
                   </button>
                 </div>
               );
             })}
           </div>
         ) : !configured ? (
-          <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-8">
-            <p className="text-center text-[0.8125rem] leading-relaxed font-gothic text-muted-foreground">
-              설정에서 설교문 서버 주소와 비밀키를 넣어 주세요.
-            </p>
+          <div className="mt-3">
+            <PubNotice>설정에서 설교문 서버 주소와 비밀키를 넣어 주세요.</PubNotice>
           </div>
         ) : (
-          <div className="mt-4 rounded-2xl border border-border bg-card px-4 py-8">
-            <p className="text-center text-[0.8125rem] leading-relaxed font-gothic text-muted-foreground">
+          <div className="mt-3">
+            <PubNotice>
               아직 올라온 설교문이 없습니다.
               <br />
               PC에서 워드 파일을 올린 뒤 불러오기를 눌러 주세요.
-            </p>
+            </PubNotice>
           </div>
         )}
       </div>
