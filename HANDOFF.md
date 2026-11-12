@@ -88,6 +88,12 @@
      - HQ가 짚은 위험(6-4 점검 때 함께 확인·보고): ① 회화집 구독 화면 — Play에서 디지털 콘텐츠 구독은 Google Play 결제(iOS는 Apple 인앱 결제)를 써야 하므로 지금 구조를 보고. ② Apple 심사 기준으로 회원키 잠금 해제와 사용자 Gemini API 키 직접 입력은 반려 위험이 큼 — 회원키는 공개판에서 이미 숨김, Gemini 키 입력 칸이 공개판에서 어떻게 되어 있는지만 확인. → 확인됨(2026-11-11): 설정의 Gemini·Claude 키 칸은 관리자판(isAdminUI)에서만 보이고, 스토어 앱은 getEdition()이 "public"으로 고정되어 보이지 않는다. 공개판은 사용자가 키를 넣지 않고 kata-public Worker가 Google 로그인 세션으로 대리 호출한다(Arga 결정).
      - HQ 권장 순서: 6-4 → 6-1 → 6-2 → 6-3. 6-4 결과(껍데기 APK 여부)가 Play 출시 방식과 신고 기능의 오프라인 저장 방식을 함께 정한다.
     - 공통 기반(Arga 확정, 2026-11-11): Google 로그인으로 시리즈 앱(다른 언어판) 사이에서 같은 사람을 알아보고 기존 사용자에게 혜택을 줄 수 있게 한다. 구독 상품 ID는 언어 이름 없는 공통 `plus`(월간·연간) — Play 상품 ID는 바꾸거나 다시 쓸 수 없으므로 언어별 이름을 쓰지 않는다. iOS가 Play 등록 직후로 당겨져, 6-4의 Capacitor 전환 판단이 iOS 작업의 첫 단계가 된다.
+7. **[대기 — HQ 요청 2026-11-12, 진행 중 작업이 끝난 뒤 Arga 확인을 받고 착수. 그 전까지는 이 항목만 기록, 코드·문서 변경 없음]** 공개판 정책 주소를 naruve.app 으로 변경(HQ 결정 `decisions/2026-11-12-naruve-studio-site-content.md` 7항). 작업 브랜치 `release/public`.
+   - 7-1 새 주소: 개인정보처리방침 `https://naruve.app/apps/kata-kata/privacy` · 계정 삭제 `https://naruve.app/apps/kata-kata/delete` · 약관을 공개 주소로 둘 경우 `https://naruve.app/apps/kata-kata/terms`. `cura4world.github.io/idkr-buddy/…` 주소는 정책 링크로 쓰지 않는다.
+   - 7-2 바꿀 곳(2026-11-12 조사, 아직 안 바꿈): `docs/release/05-arga-checklist.md` 49행(3-1 OAuth 동의 화면)·97행·103행(7절), `docs/release/07-data-safety.md` 15행(+13행 문구), `docs/release/06-store-listing.md` 55행(웹사이트 안내), 앱 안 정책 링크 `src/lib/platform.ts` 83~86행(`POLICY_BASE`·`PRIVACY_URL`·`TERMS_URL`·`DELETE_ACCOUNT_URL`, 지금 `…/privacy.html` 꼴). 착수 때 `PRIVACY_URL`·`TERMS_URL`·`DELETE_ACCOUNT_URL` 을 쓰는 화면을 다시 찾아 확인하고, 옛 주소가 남았는지 없어야 정상인 검색을 한 번 더 한다.
+   - 7-3 안 바꾸는 곳: 웹 앱 자체 주소(`CLAUDE.md`·`HANDOFF.md`·`03-architecture.md`·워크플로의 `cura4world.github.io/idkr-buddy/`)는 정책 주소가 아니라 앱을 불러오는 주소이므로 이번 변경 대상이 아니다.
+   - 7-4 `public/privacy.html`·`terms.html`·`delete-account.html` 은 이 저장소의 정본. 실제 게시는 HQ 가 `naruve-ganada` 의 `docs/apps/kata-kata/` 에 같은 내용으로 한다. 05 체크리스트 0번의 빈칸을 채운 최종본이 나오면 HQ 에 알린다. 사업자 정보 정본은 HQ `COMPANY.md` 1절, 주소 칸은 HQ 와 상의. 정책 페이지 안의 상대 링크(`delete-account.html`·`privacy.html`)는 게시 경로(`/delete`·`/privacy`)와 달라지므로 게시 방식을 HQ 와 맞출 때 함께 정한다.
+   - 7-5 소속 묶음 이름이 Naruve Voca → **Naruve Dict** 로 바뀜(HQ `decisions/2026-11-12-naruve-dict.md`, 코드 변경 없음). 베트남어·태국어·캄보디아어 사전의 임시 이름은 이 프로젝트 기록에 **없음**(`DECISIONS.md` 13장에 언어판 후보 베트남어·태국어·캄보디아어·몽골어만 있고 이름은 없다) → HQ 에 그대로 회신.
 
 ## 출시까지 남은 것
 
