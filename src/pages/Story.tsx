@@ -806,11 +806,9 @@ const Story = () => {
             >
               <BookArt />
             </span>
+            {/* 안내 문구("난이도를 고르고…")는 2026-11-12 사용자 요청으로 뺐습니다 */}
             <span className="flex-1 min-w-0">
               <span className="block text-[0.96875rem] font-semibold" style={{ color: C.txt }}>오늘의 이야기</span>
-              <span className="block mt-[3px] font-gothic text-[0.71875rem]" style={{ color: C.sub }}>
-                난이도를 고르고 새 이야기를 불러옵니다
-              </span>
             </span>
           </div>
           <div className="mt-[18px]">
@@ -819,7 +817,7 @@ const Story = () => {
           <button
             onClick={handleGenerate}
             disabled={generating || blocked}
-            className="mt-3.5 w-full h-[44px] rounded-2xl flex items-center justify-center gap-2 font-gothic text-[0.875rem] font-semibold"
+            className="mt-3.5 w-full h-[38px] rounded-2xl flex items-center justify-center gap-2 font-gothic text-[0.875rem] font-semibold"
             style={
               blocked
                 ? { background: "#E9EDEF", color: C.mute }
