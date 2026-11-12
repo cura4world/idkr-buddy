@@ -130,7 +130,7 @@ const Insight = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const publicEdition = isStoreApp();
-  const { plus } = usePlan();
+  const { plus, staff } = usePlan();
   const locked = !plus;
 
   const go = (to: string) => navigate(locked ? PAYWALL_PATH : to);
@@ -142,13 +142,13 @@ const Insight = () => {
     { icon: Users, bg: "#FCEFE3", fg: "#9A5B1E", title: "인도네시아 종족", sub: "Suku Bangsa", to: "/insight/ethnic" },
     { icon: Landmark, bg: "#ECE8F6", fg: "#5B4A8C", title: "인도네시아 종교", sub: "Agama", to: "/insight/religion" },
   ];
-  // 공개판(스토어 앱)에는 기독교 항목을 두지 않습니다
-  if (!publicEdition) {
+  // 공개판(스토어 앱)에서는 기독교 항목을 관리자·Special Member 에게만 둡니다(2026-11-12 사용자 요청)
+  if (!publicEdition || staff) {
     people.push({ icon: Cross, bg: "#F4E8EC", fg: "#8A3E52", title: "인도네시아 기독교", sub: "Kekristenan", to: "/insight/christian" });
   }
   const life: RowItem[] = [
     { icon: Hourglass, bg: "#EAF2DF", fg: "#4E6A2A", title: "인도네시아 역사", sub: "Sejarah", to: "/insight/history" },
-    { icon: Lightbulb, bg: "#FFF3D6", fg: "#8A6A12", title: "생활 정보", sub: "Info dan Tips", to: "/insight/tips" },
+    { icon: Lightbulb, bg: "#FFF3D6", fg: "#8A6A12", title: "문화와 생활정보", sub: "Info dan Tips", to: "/insight/tips" },
   ];
 
   return (
