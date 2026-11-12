@@ -8,31 +8,53 @@ import { goBackOr } from "@/lib/nav";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { ArrowLeft, Cross, ChevronDown, ChevronUp } from "lucide-react";
 
+// 2026-11-12 공개판 디자인(docs/release/10-faith-stories.md S69): 진한 장미색 대신 홈·이해 목록의
+// "인도네시아 기독교" 타일 색(#F4E8EC / #8A3E52)으로. 접이 상자는 흰 카드 + 같은 색 머리(종교 화면과 같은 틀).
+const XC = { bg: "#F4E8EC", fg: "#8A3E52", line: "#EBD9DF", head: "#FAF3F5", title: "#5E2B39" };
+
 // ---------- 접이식 섹션 ----------
 const Fold = ({ title, badge, defaultOpen, children }: { title: string; badge?: string; defaultOpen?: boolean; children: ReactNode }) => {
   const [open, setOpen] = useState(!!defaultOpen);
   return (
-    <div className="bg-card rounded-2xl border border-rose-300/60 overflow-hidden">
+    <div
+      className="bg-white rounded-[18px] overflow-hidden"
+      style={{ boxShadow: "0 1px 3px rgba(16,40,50,0.06)", border: "1px solid " + XC.line }}
+    >
       <button
         onClick={() => setOpen(!open)}
         className="w-full px-4 py-3 flex items-center gap-2 text-left"
+        style={{ background: open ? XC.head : "#FFFFFF" }}
       >
-        <span className="flex-1 text-sm font-semibold text-gray-900">{title}</span>
+        <span className="flex-1 font-gothic text-[0.875rem] font-semibold" style={{ color: XC.title }}>{title}</span>
         {badge && (
-          <span className="text-[0.6875rem] font-gothic font-semibold text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-full shrink-0">
+          <span
+            className="h-[22px] px-[9px] rounded-full inline-flex items-center font-gothic text-[0.65625rem] font-semibold shrink-0"
+            style={{ background: XC.bg, color: XC.fg }}
+          >
             {badge}
           </span>
         )}
         {open ? (
-          <ChevronUp size={16} className="text-rose-500 shrink-0" />
+          <ChevronUp size={16} className="shrink-0" style={{ color: XC.fg }} />
         ) : (
-          <ChevronDown size={16} className="text-rose-500 shrink-0" />
+          <ChevronDown size={16} className="shrink-0" style={{ color: XC.fg }} />
         )}
       </button>
-      {open && <div className="px-4 pb-4 border-t border-gray-100 pt-3">{children}</div>}
+      {open && <div className="px-4 pb-4 pt-3" style={{ borderTop: "1px solid " + XC.line }}>{children}</div>}
     </div>
   );
 };
+
+const SubTitle = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
+  <h2 className={"mx-1 mb-2 font-gothic text-[0.8125rem] font-bold tracking-[0.02em] text-[#3B4245] " + className}>{children}</h2>
+);
+
+const Stat = ({ v, label }: { v: string; label: string }) => (
+  <div className="rounded-xl py-2.5" style={{ background: XC.head }}>
+    <p className="font-gothic text-lg font-bold" style={{ color: XC.fg }}>{v}</p>
+    <p className="text-[0.6875rem] font-gothic text-[#646C72]">{label}</p>
+  </div>
+);
 
 // ---------- 데이터 ----------
 const REGIONS = [
@@ -163,11 +185,11 @@ const D_PENTE: Denom[] = [
 const DenomList = ({ items }: { items: Denom[] }) => (
   <div className="space-y-2.5">
     {items.map((d) => (
-      <div key={d.a} className="bg-gray-50 rounded-xl px-3 py-2.5">
+      <div key={d.a} className="bg-[#F7F9FA] rounded-xl px-3 py-2.5">
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-[0.84375rem] font-bold text-gray-900">{d.a}</span>
           <span className="text-xs font-gothic text-gray-500">{d.n}</span>
-          <span className="ml-auto text-[0.6875rem] font-gothic font-semibold text-rose-600 shrink-0">{d.m}</span>
+          <span className="ml-auto text-[0.6875rem] font-gothic font-semibold shrink-0" style={{ color: XC.fg }}>{d.m}</span>
         </div>
         <p className="mt-1 text-xs font-gothic text-gray-600 leading-relaxed">{d.f}</p>
       </div>
@@ -217,18 +239,9 @@ const InsightChristian = () => {
       <div className="space-y-2">
       <Fold title="핵심 통계" defaultOpen>
         <div className="grid grid-cols-3 gap-2 text-center mb-3">
-          <div className="bg-rose-500/5 rounded-xl py-2.5">
-            <p className="text-lg font-bold text-rose-600">10.5%</p>
-            <p className="text-[0.6875rem] font-gothic text-gray-500">전체 기독교</p>
-          </div>
-          <div className="bg-rose-500/5 rounded-xl py-2.5">
-            <p className="text-lg font-bold text-rose-600">7.4%</p>
-            <p className="text-[0.6875rem] font-gothic text-gray-500">개신교</p>
-          </div>
-          <div className="bg-rose-500/5 rounded-xl py-2.5">
-            <p className="text-lg font-bold text-rose-600">3.1%</p>
-            <p className="text-[0.6875rem] font-gothic text-gray-500">가톨릭</p>
-          </div>
+          <Stat v="10.5%" label="전체 기독교" />
+          <Stat v="7.4%" label="개신교" />
+          <Stat v="3.1%" label="가톨릭" />
         </div>
         <p className="text-sm font-gothic text-gray-700 leading-relaxed">
           기독교인은 약 2,940만 명(2023)으로, 개신교 약 2,080만·가톨릭 약 860만입니다.
@@ -280,7 +293,7 @@ const InsightChristian = () => {
       </div>
 
       {/* 지역·종족별 상세 (접이식) */}
-      <h2 className="text-sm font-semibold text-foreground/80 px-1 mb-2 mt-5">지역·종족별 상세</h2>
+      <SubTitle className="mt-5">지역·종족별 상세</SubTitle>
       <div className="space-y-2 mb-5">
         {REGIONS.map((r) => (
           <Fold key={r.t} title={r.t} badge={r.b}>
@@ -313,7 +326,7 @@ const InsightChristian = () => {
       </div>
 
       {/* 교단 현황 (접이식) */}
-      <h2 className="text-sm font-semibold text-foreground/80 px-1 mb-2">주요 교단 현황</h2>
+      <SubTitle>주요 교단 현황</SubTitle>
       <div className="space-y-2 mb-5">
         <Fold title="수마트라 — 바탁·니아스 루터교 계열" badge="8개">
           <DenomList items={D_SUMATRA} />
@@ -343,7 +356,7 @@ const InsightChristian = () => {
       </div>
 
       {/* 부가 정보 (접이식) */}
-      <h2 className="text-sm font-semibold text-foreground/80 px-1 mb-2">더 알아보기</h2>
+      <SubTitle>더 알아보기</SubTitle>
       <div className="space-y-2">
         <Fold title="말레이시아와 비교하면">
           <div className="space-y-1.5 text-[0.8125rem] font-gothic">
