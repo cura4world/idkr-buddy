@@ -31,7 +31,8 @@ const LevelCircles = ({ value, onChange, variant, levels, disabled }: Props) => 
   // 2026-11-12 사용자 요청으로 한 번 더 52→44px 로 줄였습니다.
   // 같은 날 제목 줄 오른쪽으로 옮기면서 S21(360px) 한 줄에 들어가도록 34px 로 맞췄습니다.
   const size = inline ? 34 : big ? 44 : 46;
-  const wrapClass = inline ? "flex gap-1.5" : big ? "grid grid-cols-3 gap-2" : "flex justify-center gap-7";
+  // inline 동그라미 사이는 2026-11-12 사용자 요청으로 6→10px (옆 칸을 함께 누르지 않도록)
+  const wrapClass = inline ? "flex gap-2.5" : big ? "grid grid-cols-3 gap-2" : "flex justify-center gap-7";
   const textClass = inline ? "text-[0.84375rem]" : big ? "text-[0.90625rem]" : "text-[1rem]";
   const stackGap = inline ? "gap-1" : big ? "gap-2" : "gap-1.5";
   return (
