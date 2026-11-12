@@ -30,7 +30,7 @@ import { ProfileAvatar, profileName } from "@/components/BottomTabs";
 import { usePlan, PAYWALL_PATH, Tier, TIER_LABEL, isPreviewBuild } from "@/lib/plan";
 import { getSession, onSessionChange, signOut, deleteAccount, PublicSession } from "@/lib/account";
 import { billingAvailable, manageSubscription } from "@/lib/billing";
-import { isStoreApp, storeAppVersion, hasNativeFileSave, saveFileNative, PRIVACY_URL, TERMS_URL } from "@/lib/platform";
+import { isStoreApp, storeAppVersion, hasNativeFileSave, saveFileNative, PRIVACY_URL, TERMS_URL, BUSINESS_INFO_URL } from "@/lib/platform";
 import { getEdition, EDITION_LABEL } from "@/lib/access";
 import { getMemberProfile } from "@/lib/member";
 import { getFontStep, getStepCount, stepFont } from "@/lib/fontScale";
@@ -780,6 +780,8 @@ const MyInfo = () => {
         <p className="text-center font-gothic" style={{ margin: "6px 0 0", fontSize: rem(10.5), color: FAINT }}>
           Kata kata {version} · <a href={TERMS_URL} className="underline-offset-2">이용약관</a> ·{" "}
           <a href={PRIVACY_URL} className="underline-offset-2">개인정보처리방침</a> ·{" "}
+          {/* 사업자 정보(전자상거래법 제10조) — 약관 페이지 끝의 "사업자 정보" 칸으로 연결 */}
+          <a href={BUSINESS_INFO_URL} className="underline-offset-2">사업자 정보</a> ·{" "}
           {/* 사진 출처(S55) — 지도 사진의 작가·라이선스는 여기 한곳에 모읍니다. 경로는 PhotoCredits.tsx 의 PHOTO_CREDITS_PATH */}
           <button type="button" onClick={() => navigate("/about/photos")} className="underline-offset-2">
             사진 출처
