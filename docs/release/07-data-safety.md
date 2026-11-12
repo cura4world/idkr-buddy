@@ -10,9 +10,9 @@
 |---|---|---|
 | 필수 사용자 데이터 유형을 수집하거나 공유하나요? | **예** | Google 로그인 정보, 구독 정보 |
 | 모든 사용자 데이터가 전송 중 암호화되나요? | **예** | 모든 통신 HTTPS |
-| 사용자가 데이터 삭제를 요청할 수 있나요? | **예** | 앱 설정의 계정 삭제 + `delete-account.html` |
+| 사용자가 데이터 삭제를 요청할 수 있나요? | **예** | 앱 설정의 계정 삭제 + 계정 삭제 안내 페이지(`public/delete-account.html` 이 정본) |
 | 계정 생성 방법 | **OAuth(Google 로그인)** | |
-| 계정 삭제 웹 주소 | `https://cura4world.github.io/idkr-buddy/delete-account.html` | |
+| 계정 삭제 웹 주소 | `https://naruve.app/apps/kata-kata/delete/` | |
 
 ## 수집하는 데이터 (공유는 모두 "아니요")
 
