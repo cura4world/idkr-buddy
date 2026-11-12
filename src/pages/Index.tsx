@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCategories, getWordsByCategory, takePurgedFailedWords } from "@/lib/store";
+import { getCategories, getWords, getWordsByCategory, takePurgedFailedWords } from "@/lib/store";
 import { getBook } from "@/lib/bible";
 import {
   PHRASE_KINDS,
@@ -26,6 +26,8 @@ import { getEdition, takeRevokedNotice } from "@/lib/access";
 import { isStoreApp } from "@/lib/platform";
 import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { isWordbookVisible } from "@/lib/wordbookAccess";
+import { listCategories as listPercakapanCategories } from "@/lib/percakapan";
 import {
   RotateCcw,
   SlidersHorizontal,
@@ -178,9 +180,11 @@ type PubRowProps = {
   locked: boolean;
   onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
   last?: boolean;
+  /** 오른쪽 화살표(자물쇠) 앞에 작게 붙는 개수 ("3,005단어" 등, 2026-11-12) */
+  meta?: string;
 };
 
-const PubRow = ({ tileBg, icon, title, sub, locked, onClick, last }: PubRowProps) => (
+const PubRow = ({ tileBg, icon, title, sub, locked, onClick, last, meta }: PubRowProps) => (
   <button
     type="button"
     onClick={onClick}
@@ -198,6 +202,11 @@ const PubRow = ({ tileBg, icon, title, sub, locked, onClick, last }: PubRowProps
       <span className="truncate" style={{ fontSize: hrem(15) }}>{title}</span>
       <span className="font-word truncate" style={{ fontSize: hrem(11.5), color: "#646C72" }}>{sub}</span>
     </span>
+    {meta ? (
+      <span className="shrink-0 font-gothic whitespace-nowrap" style={{ fontSize: hrem(12), color: "#646C72" }}>
+        {meta}
+      </span>
+    ) : null}
     {locked ? <LockMark /> : <ChevronMark />}
   </button>
 );
@@ -498,7 +507,39 @@ const Index = () => {
   const newsOn = !storeApp; // 뉴스는 스토어 앱에서만 뺍니다(브라우저 화면은 예전 그대로)
 
   // 공개판 홈: 등급은 usePlan() 하나로만 판단합니다
-  const { plus } = usePlan();
+  //   staff(관리자·Special Member) 에게는 말씀과 기도·뉴스를, 관리자에게는 설교를 더 보여 줍니다(2026-11-12 사용자 요청)
+  const { plus, staff, tier } = usePlan();
+
+  // 공개판 홈 개수 표시 (2026-11-12): 기본 단어장의 단어 수 · 회화집의 대화 수
+  //   단어 — 이 등급에 보이는 공용 단어장(성경과 신앙 35~41권은 staff 만)의 단어를 모두 셉니다
+  //   대화 — 회화집 폴더 화면과 같은 목록(listCategories)의 장면 수를 더합니다(내가 만든 회화 포함)
+  //   단어장 전체를 한 번만 읽어 단어장별로 셉니다(검색창 입력마다 다시 세지 않도록 등급이 바뀔 때만)
+  const pubWordCount = useMemo(() => {
+    if (!storeApp) return 0;
+    const visible = new Set(
+      getCategories()
+        .filter((c) => c.isShared && !c.owner && isWordbookVisible(c))
+        .map((c) => c.id),
+    );
+    let n = 0;
+    const words = getWords();
+    for (let i = 0; i < words.length; i++) {
+      if (visible.has(words[i].categoryId)) n++;
+    }
+    return n;
+  }, [storeApp, staff]);
+  const [pubSceneCount, setPubSceneCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!storeApp) return;
+    let alive = true;
+    listPercakapanCategories()
+      .then((cats) => {
+        if (!alive) return;
+        setPubSceneCount(cats.reduce((n, c) => n + (c.count || 0), 0));
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [staff]);
   const [fog, setFog] = useState<{ text: string; x: number; y: number; n: number } | null>(null);
   const fogTimers = useRef<number[]>([]);
   const lockNavTimer = useRef<number | null>(null);
@@ -831,11 +872,25 @@ const Index = () => {
                   Kata kata<span style={{ color: "#F29B6B" }}>.</span>
                 </h1>
                 {plus ? (
+                  // 2026-11-12 사용자 요청: PLUS 글자를 타원 정중앙에.
+                  // 폰(S21) 화면을 재어 보니 글자가 타원 중심보다 약 2.5px 아래에 있었습니다(줄 높이 20px 안에서
+                  // Pretendard 대문자가 아래로 쏠림). 그래서 타원을 flex 로 만들고 글자 상자를 대문자 높이로
+                  // 잘라(text-box: trim-both cap alphabetic) 위아래 정가운데에 둡니다.
+                  // 바깥 inline-block(overflow:hidden)은 그대로 — 그 기준선이 아래 끝이 되어
+                  // 타원 아래 끝 = "Kata kata" 글자 아랫단(기준선)으로 맞습니다.
                   <span
-                    className="font-gothic"
-                    style={{ display: "inline-block", overflow: "hidden", verticalAlign: "baseline", marginLeft: 8, height: 20, lineHeight: "20px", padding: "0 8px", borderRadius: 10, background: "#F6E7C4", color: "#5A4610", fontSize: "min(" + hrem(10.5) + ", 12px)", fontWeight: 700, letterSpacing: "0.06em", textAlign: "center" }}
+                    style={{ display: "inline-block", overflow: "hidden", verticalAlign: "baseline", marginLeft: 8, height: 20 }}
                   >
-                    PLUS
+                    <span
+                      className="font-gothic"
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 20, padding: "0 8px", borderRadius: 10, background: "#F6E7C4", color: "#5A4610", fontSize: "min(" + hrem(10.5) + ", 12px)", fontWeight: 700, letterSpacing: "0.06em" }}
+                    >
+                      <span
+                        style={{ display: "block", lineHeight: 1, marginRight: "-0.06em", textBox: "trim-both cap alphabetic" } as React.CSSProperties}
+                      >
+                        PLUS
+                      </span>
+                    </span>
                   </span>
                 ) : null}
               </div>
@@ -994,8 +1049,9 @@ const Index = () => {
                     <path d="M15.5 5.2l3.9-1 3.6 14.6-3.9 1z" />
                   </>
                 ))}
-                title="기본 단어장 폴더"
+                title="인도네시아어 단어장"
                 sub="Kosakata"
+                meta={pubWordCount > 0 ? pubWordCount.toLocaleString("ko-KR") + "단어" : undefined}
                 locked={!plus}
                 onClick={(e) => (plus ? navigate("/wordbooks") : tapLocked(e, "기본 단어장은 Plus 회원 기능입니다"))}
               />
@@ -1007,8 +1063,9 @@ const Index = () => {
                     <path d="M9 16h7l5 4v-9h-3" />
                   </>
                 ))}
-                title="회화집 폴더"
+                title="인도네시아어 회화집"
                 sub="Percakapan"
+                meta={pubSceneCount ? pubSceneCount.toLocaleString("ko-KR") + "대화" : undefined}
                 locked={!plus}
                 onClick={(e) => (plus ? navigate("/percakapan") : tapLocked(e, "회화집은 Plus 회원 기능입니다"))}
                 last
@@ -1028,7 +1085,7 @@ const Index = () => {
                     <path d="M21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z" />
                   </>
                 ))}
-                title="이야기"
+                title="오늘의 이야기"
                 sub="Cerita"
                 locked={false}
                 onClick={() => navigate("/story")}
@@ -1041,14 +1098,120 @@ const Index = () => {
                     <path d="M15.5 8.5l-2 5-5 2 2-5z" />
                   </>
                 ))}
-                title="인도네시아 이해 · 지도"
+                title="인도네시아 이해"
                 sub="Wawasan"
                 locked={!plus}
                 onClick={(e) => (plus ? navigate("/insight") : tapLocked(e, "인도네시아 이해는 Plus 회원 기능입니다"))}
-                last
+                last={!staff}
               />
+              {/* 뉴스 — 관리자·Special Member 에게만 (검색 그라운딩 비용이 커서 일반 공개판에는 없음) */}
+              {staff ? (
+                <PubRow
+                  tileBg="#EAF2DF"
+                  icon={tileIcon("#4E6A2A", (
+                    <>
+                      <path d="M4 5h13v14H6a2 2 0 0 1-2-2z" />
+                      <path d="M17 9h3v8a2 2 0 0 1-2 2" />
+                      <path d="M7 9h7M7 12.5h7M7 16h4" />
+                    </>
+                  ))}
+                  title="뉴스"
+                  sub="Berita"
+                  locked={false}
+                  onClick={() => navigate("/news")}
+                  last
+                />
+              ) : null}
             </div>
           </section>
+
+          {/* 말씀과 기도 · 설교 — 공개판에서는 관리자·Special Member 에게만 보입니다(2026-11-12 사용자 요청).
+              순서·이름은 관리자판 홈과 같게, 모양은 공개판 홈 목록(PubRow)과 같게 둡니다. 설교는 관리자만. */}
+          {staff ? (
+            <section>
+              {sectionTitle("말씀과 기도")}
+              <div className={listBox} style={listStyle}>
+                <PubRow
+                  tileBg="#FFF3D6"
+                  icon={tileIcon("#8A6A12", (
+                    <>
+                      <path d="M12 3v3M4.9 7.9 7 10M19.1 7.9 17 10M2 15h2M20 15h2" />
+                      <path d="M7 15a5 5 0 0 1 10 0" />
+                      <path d="M3 19h18" />
+                    </>
+                  ))}
+                  title="오늘의 묵상"
+                  sub="Saat Teduh"
+                  locked={false}
+                  onClick={() => navigate("/devotion")}
+                />
+                <PubRow
+                  tileBg="#E4EEF6"
+                  icon={tileIcon("#2B5F86", (
+                    <>
+                      <path d="M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3z" />
+                      <path d="M21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z" />
+                    </>
+                  ))}
+                  title="성경 읽기"
+                  sub="Alkitab"
+                  meta={biblePos || undefined}
+                  locked={false}
+                  onClick={() => navigate("/bible")}
+                />
+                <PubRow
+                  tileBg="#FCEFE3"
+                  icon={tileIcon("#9A5B1E", (
+                    <>
+                      <circle cx="9" cy="8" r="3.2" />
+                      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+                      <circle cx="17" cy="9" r="2.5" />
+                      <path d="M15.5 14.2A4.5 4.5 0 0 1 21 18.5" />
+                    </>
+                  ))}
+                  title="일대일 성경공부"
+                  sub="Pemuridan"
+                  meta={oneToOnePos || undefined}
+                  locked={false}
+                  onClick={() => navigate("/one-to-one")}
+                />
+                <PubRow
+                  tileBg="#F4E8EC"
+                  icon={tileIcon("#8A3E52", (
+                    <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
+                  ))}
+                  title="기도문"
+                  sub="Doa"
+                  locked={false}
+                  onClick={() => navigate("/prayer")}
+                  last
+                />
+              </div>
+            </section>
+          ) : null}
+
+          {tier === "admin" ? (
+            <section>
+              {sectionTitle("설교")}
+              <div className={listBox} style={listStyle}>
+                <PubRow
+                  tileBg="#ECE8F6"
+                  icon={tileIcon("#5B4A8C", (
+                    <>
+                      <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z" />
+                      <path d="M5 17a3 3 0 0 1 3-3h11" />
+                      <path d="M10 4v6l2-1.5L14 10V4" />
+                    </>
+                  ))}
+                  title="설교문"
+                  sub="Khotbah"
+                  locked={false}
+                  onClick={() => navigate("/sermon")}
+                  last
+                />
+              </div>
+            </section>
+          ) : null}
 
           {/* Plus 줄 — 무료에게만 (Plus·Special Member·관리자에게는 사라집니다) */}
           {!plus ? (
