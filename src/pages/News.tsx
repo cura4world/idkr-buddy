@@ -22,6 +22,7 @@ import PointFloat from "@/components/PointFloat";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
+import { PUB, PUB_CARD, PUB_BTN, PUB_BTN_STYLE, PUB_SOFT_BTN, PUB_SOFT_BTN_STYLE, PubNotice } from "@/components/PubKit";
 
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -42,17 +43,22 @@ const speak = (text: string, lang: "id" | "ko" = "id") => {
 
 const fmtDate = (key: string) => key.replace(new RegExp("-", "g"), ".");
 
-// 카테고리 배지 색 (신문 섹션 느낌)
+// 카테고리 배지 색 (신문 섹션 느낌) — 2026-11-12 공개판 디자인: 원색 대신 홈 타일과 같은 차분한 짝
 const catStyle = (cat: string): string => {
-  if (cat.indexOf("핫") !== -1) return "text-red-600 bg-red-500/10";
-  if (cat.indexOf("정치") !== -1) return "text-indigo-600 bg-indigo-500/10";
-  if (cat.indexOf("경제") !== -1) return "text-emerald-600 bg-emerald-500/10";
-  if (cat.indexOf("사회") !== -1) return "text-sky-600 bg-sky-500/10";
-  if (cat.indexOf("문화") !== -1) return "text-amber-600 bg-amber-500/10";
-  if (cat.indexOf("스포츠") !== -1) return "text-violet-600 bg-violet-500/10";
-  if (cat.indexOf("과학") !== -1 || cat.indexOf("기술") !== -1) return "text-cyan-600 bg-cyan-500/10";
-  return "text-gray-600 bg-black/5";
+  if (cat.indexOf("핫") !== -1) return "text-[#8A3E52] bg-[#F4E8EC]";
+  if (cat.indexOf("정치") !== -1) return "text-[#2B5F86] bg-[#E4EEF6]";
+  if (cat.indexOf("경제") !== -1) return "text-[#4E6A2A] bg-[#EAF2DF]";
+  if (cat.indexOf("사회") !== -1) return "text-[#2C6D63] bg-[#E3EEEC]";
+  if (cat.indexOf("문화") !== -1) return "text-[#8C5A12] bg-[#FCEFD9]";
+  if (cat.indexOf("스포츠") !== -1) return "text-[#5B4A8C] bg-[#ECE8F6]";
+  if (cat.indexOf("과학") !== -1 || cat.indexOf("기술") !== -1) return "text-[#4D565B] bg-[#F1F4F5]";
+  return "text-[#646C72] bg-[#F1F4F5]";
 };
+
+// 꼬리표 모양 (이야기 카드와 같은 22px 알약)
+const CHIP = "h-[22px] px-[9px] rounded-full inline-flex items-center font-gothic text-[0.65625rem] font-semibold whitespace-nowrap shrink-0 ";
+// 듣기 버튼은 이야기 카드와 같은 연청록 알약 (PlayButton 은 고치지 않고 className 으로만 덮음)
+const PLAY_PILL = "!h-[34px] !px-[13px] !py-0 !text-[0.78125rem] !font-semibold !bg-[#E2F1EC] !text-[#2C6D63] font-gothic";
 
 const News = () => {
   const navigate = useNavigate();
@@ -413,7 +419,7 @@ const News = () => {
       await navigator.clipboard.writeText(popupWord);
       toast("복사되었습니다");
     } catch (e) {
-      toast("복사에 실패했어요");
+      toast("복사하지 못했습니다");
     }
   };
 
@@ -447,7 +453,7 @@ const News = () => {
       <span key={keyPrefix + ti} data-idw="1">
         <span
           onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
-          className="cursor-pointer rounded active:bg-primary/20"
+          className="cursor-pointer rounded active:bg-[#E2F1EC]"
         >
           {tok}
         </span>{" "}
@@ -462,7 +468,8 @@ const News = () => {
         <p
           key={pi}
           ref={(el) => { paraRefs.current["id-" + pi] = el; }}
-          className="mb-4 text-base leading-relaxed font-word text-gray-900"
+          className="mt-3 font-word text-[1.0625rem] leading-[1.85]"
+          style={{ color: PUB.txt }}
         >
           {sentences.map((sent, si) => (
             <span key={si}>{renderTokens(sent, pi + "-" + si + "-")}</span>
@@ -477,7 +484,8 @@ const News = () => {
       <p
         key={i}
         ref={(el) => { paraRefs.current["ko-" + i] = el; }}
-        className="mb-4 text-xs leading-relaxed text-gray-800 font-gothic"
+        className="mt-3 font-gothic text-[0.90625rem] leading-[1.8] break-words"
+        style={{ color: PUB.txt }}
       >
         {para}
       </p>
@@ -496,7 +504,7 @@ const News = () => {
           >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="flex-1 min-w-0 truncate font-word text-[1.0625rem] font-semibold tracking-[0.06em]">
+          <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">
             BERITA HARI INI
           </h1>
           {canWide ? (
@@ -512,34 +520,36 @@ const News = () => {
           ) : null}
         </header>
 
-        <div className="px-4 py-4">
-          <div {...swipeHandlers}
-            className="-mx-4 bg-card border-y border-border/60 px-4 py-5 min-h-[72vh] content-bump">
+        {/* 2026-11-12 공개판 디자인: 이야기 카드와 같은 흰 카드, 화면 전체에서 옆으로 밀면 뒤집힘 */}
+        <div {...swipeHandlers} className="px-4 pt-4 pb-6" style={{ minHeight: "calc(100dvh - 61px - var(--kata-tabbar-h, 0px))" }}>
+          <div style={{ ...PUB_CARD, borderRadius: 20, padding: "18px 18px 22px" }}>
               {!flipped ? (
                 <>
                   {/* 앞면: 인니어 기사 */}
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs font-medium rounded-full px-2 py-0.5 shrink-0 ${catStyle(article.category)}`}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className={CHIP + catStyle(article.category)}>
                       {article.category}
                     </span>
-                    <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5 shrink-0">
+                    <span className={CHIP + "text-[#646C72] bg-[#F1F4F5]"}>
                       {fmtDate(selected.date)}
                     </span>
-                    <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <span className="flex-1" />
+                    <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
                       <PlayButton
                         cacheKey={"news-" + selected.date + "-" + articleIdx}
                         text={[article.title, article.lead, article.body].filter(Boolean).join("\n\n")}
                         label="듣기"
+                        className={PLAY_PILL}
                       />
                     </span>
                   </div>
-                  <div className="mb-2 min-w-0">
-                    <h2 className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">
+                  <div className="mt-3.5 mb-2 min-w-0">
+                    <h2 className="font-word text-[1.375rem] font-semibold leading-[1.35] break-words min-w-0" style={{ color: PUB.deep }}>
                       {renderTokens(article.title, "title-")}
                     </h2>
                   </div>
                   {article.lead && (
-                    <p className="mb-4 text-sm leading-relaxed font-word text-gray-600 border-l-2 border-primary/40 pl-3">
+                    <p className="mb-2 font-word text-[0.96875rem] leading-[1.75] border-l-2 border-[#BFD8D2] pl-3" style={{ color: "#4D565B" }}>
                       {renderTokens(article.lead, "lead-")}
                     </p>
                   )}
@@ -548,12 +558,12 @@ const News = () => {
               ) : (
                 <>
                   {/* 뒷면: 한국어 번역 */}
-                  <h2 className="text-sm font-bold text-gray-900 break-words mb-3">{article.titleKo}</h2>
+                  <h2 className="text-[1.03125rem] font-semibold break-words mb-1" style={{ color: PUB.txt }}>{article.titleKo}</h2>
                   {renderKorean(article.korean)}
                 </>
               )}
           </div>
-          <p className="text-center text-muted-foreground text-xs mt-3">
+          <p className="mt-3 text-center font-gothic text-[0.75rem]" style={{ color: PUB.mute }}>
             {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 해석이 보입니다"}
           </p>
         </div>
@@ -624,17 +634,18 @@ const News = () => {
         ) : null}
       </header>
 
+      {/* 2026-11-12 공개판 디자인(docs/release/10-faith-stories.md S68): 신문 머리는 그대로, 흰 카드·청록 버튼·차분한 꼬리표 */}
       <div className="px-4 py-4">
         {/* 마스트헤드 */}
-        <div className="bg-card border border-border/60 rounded-xl px-4 pt-5 pb-4 text-center">
-          <p className="text-[0.625rem] font-gothic uppercase tracking-[0.3em] text-gray-400">
+        <div className="px-4 pt-5 pb-4 text-center" style={{ ...PUB_CARD, borderRadius: 20 }}>
+          <p className="text-[0.625rem] font-gothic uppercase tracking-[0.3em]" style={{ color: PUB.mute }}>
             Kata kata &middot; Edisi Belajar
           </p>
-          <h2 className="font-word text-2xl font-bold tracking-wide text-gray-900 mt-1">
+          <h2 className="font-word text-2xl font-bold tracking-wide mt-1" style={{ color: PUB.deep }}>
             BERITA HARI INI
           </h2>
-          <div className="mx-4 mt-2 border-t border-b border-gray-300 py-1">
-            <p className="text-xs text-gray-600 font-gothic">
+          <div className="mx-4 mt-2 border-t border-b border-[#DDE3E6] py-1">
+            <p className="text-xs font-gothic" style={{ color: PUB.sub }}>
               {selected ? selected.dateLabel : indoDateLabel()}
               {selected && !isTodayShown ? " (지난 신문)" : ""}
             </p>
@@ -646,12 +657,13 @@ const News = () => {
               <button
                 onClick={handleFetchToday}
                 disabled={generating}
-                className="w-full mt-3 flex items-center justify-center gap-2 rounded-full py-3 text-sm font-medium bg-primary text-white disabled:opacity-60"
+                className={PUB_BTN + " mt-3.5"}
+                style={{ ...PUB_BTN_STYLE, opacity: generating ? 0.75 : 1 }}
               >
                 {generating ? (
-                  <><Loader2 size={16} className="animate-spin" /> 오늘의 뉴스를 인쇄중입니다...</>
+                  <><Loader2 size={18} className="animate-spin" /> 오늘의 뉴스를 인쇄하는 중...</>
                 ) : (
-                  <><Newspaper size={16} /> 오늘의 뉴스 가져오기</>
+                  <><Newspaper size={18} strokeWidth={1.9} /> 오늘의 뉴스 가져오기</>
                 )}
               </button>
             </>
@@ -659,7 +671,8 @@ const News = () => {
           {todayEdition && !isTodayShown && (
             <button
               onClick={() => { setSelected(todayEdition); window.scrollTo({ top: 0 }); }}
-              className="mt-3 rounded-full px-4 py-1.5 text-xs font-medium bg-primary/10 text-primary"
+              className={PUB_SOFT_BTN + " mt-3"}
+              style={PUB_SOFT_BTN_STYLE}
             >
               오늘 신문 보기
             </button>
@@ -668,44 +681,44 @@ const News = () => {
 
         {/* 신문 지면 */}
         {selected && headline && (
-          <div className="mt-3 bg-card border border-border/60 rounded-xl px-4 py-4">
+          <div className="mt-2.5 px-4 py-4" style={PUB_CARD}>
             {/* 헤드라인 기사 */}
             <button
               onClick={() => openArticle(selected, 0)}
               className="w-full text-left min-w-0"
             >
-              <span className={`inline-block text-[0.6875rem] font-medium rounded-full px-2 py-0.5 ${catStyle(headline.category)}`}>
+              <span className={CHIP + catStyle(headline.category)}>
                 {headline.category}
               </span>
-              <h3 className="mt-1.5 text-xl font-bold leading-snug text-gray-900 break-words font-word">
+              <h3 className="mt-2 font-word text-[1.25rem] font-semibold leading-snug break-words" style={{ color: PUB.deep }}>
                 {headline.title}
               </h3>
               {headline.lead && (
-                <p className="mt-1.5 text-sm leading-relaxed text-gray-600 break-words font-word">
+                <p className="mt-1.5 font-word text-[0.875rem] leading-relaxed break-words" style={{ color: "#4D565B" }}>
                   {headline.lead}
                 </p>
               )}
-              <p className="mt-1 text-xs text-gray-500 break-words font-gothic">{headline.titleKo}</p>
+              <p className="mt-1.5 font-gothic text-[0.75rem] break-words" style={{ color: PUB.sub }}>{headline.titleKo}</p>
             </button>
 
             {/* 나머지 기사 목록 */}
             {rest.length > 0 && (
-              <ul className="mt-3 border-t border-gray-200">
+              <ul className="mt-3 border-t border-[#EEF1F3]">
                 {rest.map((a, i) => (
-                  <li key={i} className={i < rest.length - 1 ? "border-b border-gray-100" : ""}>
+                  <li key={i} className={i < rest.length - 1 ? "border-b border-[#EEF1F3]" : ""}>
                     <button
                       onClick={() => openArticle(selected, i + 1)}
                       className="w-full text-left py-3 min-w-0"
                     >
                       <div className="flex items-start gap-2 min-w-0">
-                        <span className={`shrink-0 mt-0.5 text-[0.6875rem] font-medium rounded-full px-2 py-0.5 ${catStyle(a.category)}`}>
+                        <span className={CHIP + "mt-0.5 " + catStyle(a.category)}>
                           {a.category}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[0.9375rem] font-semibold leading-snug text-gray-900 break-words font-word">
+                          <p className="font-word text-[0.9375rem] font-semibold leading-snug break-words" style={{ color: PUB.txt }}>
                             {a.title}
                           </p>
-                          <p className="mt-0.5 text-xs text-gray-500 break-words font-gothic">{a.titleKo}</p>
+                          <p className="mt-0.5 font-gothic text-[0.75rem] break-words" style={{ color: PUB.sub }}>{a.titleKo}</p>
                         </div>
                       </div>
                     </button>
@@ -719,21 +732,26 @@ const News = () => {
         {/* 지난 신문 */}
         {editions.length > 0 && (
           <div className="mt-5">
-            <p className="text-xs text-muted-foreground mb-2 px-1 font-gothic">지난 신문</p>
+            <p className="mx-1 mb-2 font-gothic text-[0.8125rem] font-bold tracking-[0.02em]" style={{ color: PUB.section }}>지난 신문</p>
             <ul className="space-y-2">
               {editions.map((e) => (
                 <li key={e.date}>
                   <button
                     onClick={() => { setSelected(e); window.scrollTo({ top: 0 }); }}
-                    className={`w-full text-left bg-card border rounded-xl px-4 py-3 min-w-0 ${
-                      selected && selected.date === e.date ? "border-primary/50" : "border-border/60"
-                    }`}
+                    className="w-full text-left px-4 py-3 min-w-0 active:opacity-80"
+                    style={{
+                      ...PUB_CARD,
+                      boxShadow:
+                        selected && selected.date === e.date
+                          ? "0 0 0 1.5px #BFD8D2, 0 1px 3px rgba(16,40,50,0.06)"
+                          : PUB_CARD.boxShadow,
+                    }}
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="shrink-0 text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">
+                      <span className={CHIP + "text-[#646C72] bg-[#F1F4F5]"}>
                         {fmtDate(e.date)}
                       </span>
-                      <p className="flex-1 min-w-0 text-sm text-gray-800 truncate font-gothic">
+                      <p className="flex-1 min-w-0 text-[0.84375rem] truncate font-gothic" style={{ color: PUB.txt }}>
                         {e.articles[0] ? e.articles[0].titleKo || e.articles[0].title : ""}
                       </p>
                     </div>
@@ -745,9 +763,11 @@ const News = () => {
         )}
 
         {editions.length === 0 && !generating && (
-          <div className="text-center py-10 text-muted-foreground">
-            <Newspaper size={30} className="mx-auto mb-3 opacity-60" />
-            <p className="text-sm">첫 신문을 만들어보세요</p>
+          <div className="mt-2.5">
+            <PubNotice>
+              <Newspaper size={26} className="mx-auto mb-2 opacity-60" />
+              첫 신문을 만들어 보세요
+            </PubNotice>
           </div>
         )}
       </div>
