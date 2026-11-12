@@ -105,10 +105,10 @@ const App = () => (
           <Route path="/devotion" element={<HiddenInPublic><Devotion /></HiddenInPublic>} />
           <Route path="/bible" element={<HiddenInPublic><BibleRead /></HiddenInPublic>} />
           <Route path="/one-to-one" element={<HiddenInPublic><OneToOne /></HiddenInPublic>} />
-          <Route path="/members" element={<HiddenInPublic><MemberAdmin /></HiddenInPublic>} />
+          <Route path="/members" element={<HiddenInPublic need="admin"><MemberAdmin /></HiddenInPublic>} />
           <Route path="/prayer" element={<HiddenInPublic><Prayer /></HiddenInPublic>} />
-          <Route path="/sermon" element={<HiddenInPublic><Sermons /></HiddenInPublic>} />
-          <Route path="/sermon/:id" element={<HiddenInPublic><SermonRead /></HiddenInPublic>} />
+          <Route path="/sermon" element={<HiddenInPublic need="admin"><Sermons /></HiddenInPublic>} />
+          <Route path="/sermon/:id" element={<HiddenInPublic need="admin"><SermonRead /></HiddenInPublic>} />
           <Route path="/plus" element={<Plus />} />
           <Route path="/me" element={<MyInfo />} />
           <Route path="/map" element={<InsightGate><IndoMap /></InsightGate>} />
