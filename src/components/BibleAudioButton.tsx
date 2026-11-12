@@ -51,7 +51,7 @@ const BibleAudioButton = ({ bookId, chapter, label = "듣기", className = "" }:
     return (
       <div
         className={
-          "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-sky-500/10 text-sky-600 " +
+          "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-[#E3EEEC] text-[#2C6D63] " +
           className
         }
       >
@@ -70,7 +70,7 @@ const BibleAudioButton = ({ bookId, chapter, label = "듣기", className = "" }:
         )}
         <button
           onClick={onMain}
-          className="inline-flex items-center justify-center rounded-full w-8 h-8 bg-sky-500 text-white"
+          className="inline-flex items-center justify-center rounded-full w-8 h-8 bg-[#2C6D63] text-white"
           title={playing ? "일시정지" : "이어듣기"}
         >
           {playing ? <Pause size={14} /> : <Play size={14} />}
@@ -90,7 +90,7 @@ const BibleAudioButton = ({ bookId, chapter, label = "듣기", className = "" }:
     <button
       onClick={onMain}
       className={
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-sky-500/10 text-sky-600 active:bg-sky-500/20 " +
+        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-[#E3EEEC] text-[#2C6D63] active:bg-[#D3E5E1] " +
         className
       }
     >
