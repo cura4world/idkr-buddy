@@ -12,8 +12,9 @@
 
 - [x] 저장소 밖 security-plan 의 **보안 작업 완료** (`HANDOFF.md` 1번) — 2026-11-12 완료.
 - [ ] 2026-09-20 자동 보안 검사 결과 재검토 (`HANDOFF.md` 1번). 이것이 끝나기 전에는 "출시 가능"으로 보지 않습니다.
-- [ ] 문서의 빈칸 채우기: `[사업자명]` `[대표자]` `[사업자등록번호]` `[주소]` `[지원 이메일]` `[개인정보 보호책임자 이름]` `[시행일]`
+- [x] 문서의 빈칸 채우기(2026-11-12 HQ 값으로 채움): 사업자명 Naruve Studio(나루브스튜디오) · 대표자 박창홍 · 사업자등록번호 216-09-73358 · 지원 이메일 support@naruve.app · 개인정보 보호책임자 박창홍 · 사업장 주소와 사업용 전화번호는 `terms.html` 의 "사업자 정보" 칸에만 둠(`privacy.html` 에는 주소 없음)
   → `public/privacy.html`, `public/terms.html`, `public/delete-account.html`, `06-store-listing.md`
+- [ ] **시행일**(`privacy.html`·`terms.html` 의 `[시행일]` `[effective date]`)은 HQ 가 게시하는 날짜로 정한다. 게시본은 HQ 가 `naruve-ganada` 의 `docs/apps/kata-kata/{privacy,terms,delete}/index.html` 로 올린다.
 
 ## 1. 업로드 키 만들기 (PC, 5분)
 
@@ -47,7 +48,7 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 기존 프로젝트 `Kata-kata`(Cloud Run 이 있는 곳)를 그대로 써도 됩니다.
 
 1. [ ] **OAuth 동의 화면**: 외부(External), 앱 이름 Kata kata, 지원 이메일, 개인정보처리방침 주소
-   `https://cura4world.github.io/idkr-buddy/privacy.html`, 범위는 기본(openid·email·profile)만 → **프로덕션으로 게시**
+   `https://naruve.app/apps/kata-kata/privacy/`, 범위는 기본(openid·email·profile)만 → **프로덕션으로 게시**
 2. [ ] **OAuth 클라이언트 ID — 웹 애플리케이션** 하나 → 나온 ID 를
    - GitHub 변수 `STORE_WEB_CLIENT_ID` (2번)
    - Worker 변수 `GOOGLE_WEB_CLIENT_ID` (4번)
@@ -95,13 +96,13 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 
 ## 7. Play Console — 앱 콘텐츠(정책)
 
-- [ ] 개인정보처리방침: `https://cura4world.github.io/idkr-buddy/privacy.html`
+- [ ] 개인정보처리방침: `https://naruve.app/apps/kata-kata/privacy/`
 - [ ] 앱 액세스: "로그인이 필요함" → 심사자 안내: *"아무 Google 계정으로 로그인하면 모든 기능을 쓸 수 있습니다."*
 - [ ] 광고: 없음
 - [ ] 콘텐츠 등급 설문: 교육, 폭력·성적 내용 없음, 사용자 간 소통 없음, AI 생성 콘텐츠 있음(신고 기능 있음)
 - [ ] 타겟층: **16세 이상**을 권합니다 (약관은 만 14세 이상. 13~15세를 넣으면 청소년 대상 추가 검토가 붙음)
 - [ ] 데이터 보안: `07-data-safety.md` 답안 그대로
-- [ ] 계정 삭제 주소: `https://cura4world.github.io/idkr-buddy/delete-account.html`
+- [ ] 계정 삭제 주소: `https://naruve.app/apps/kata-kata/delete/`
 - [ ] 스토어 등록정보: `06-store-listing.md` + 스크린샷 (폰 2~8장), 아이콘 512×512, 그래픽 이미지 1024×500
 
 ## 8. 웹 반영 (CC 에게)
