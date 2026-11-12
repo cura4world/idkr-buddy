@@ -142,7 +142,7 @@ export const TRANSPORTASI: PercakapanScene[] = [
       { s: "B", id: "Pertalite atau Pertamax?", ko: "뻐르딸리떼요, 뻐르따막스요?" },
       { s: "A", id: "Pertamax aja.", ko: "뻐르따막스로요." },
       { s: "B", id: "Siap. Semuanya lima puluh ribu.", ko: "알겠습니다. 전부 5만이에요." },
-      { s: "A", id: "Bang, ban belakang kayaknya kempes.", ko: "기사님, 뒷타이어가 바람 빠진 것 같아요." },
+      { s: "A", id: "Bang, ban belakang kayaknya kempes.", ko: "아저씨, 뒷타이어가 바람 빠진 것 같아요." },
       { s: "B", id: "Coba saya lihat... iya, kurang angin.", ko: "한번 볼게요... 네, 공기압이 부족하네요." },
       { s: "A", id: "Bisa diisi sekarang?", ko: "지금 넣을 수 있어요?" },
       { s: "B", id: "Bisa, gratis kok.", ko: "돼요, 무료예요." },
