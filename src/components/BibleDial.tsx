@@ -113,13 +113,13 @@ const BibleDial = ({
                     key={b.id}
                     onClick={() => onSelect(b.id, 1)}
                     className={`w-full h-9 flex items-baseline gap-1.5 text-left pl-3.5 pr-5 whitespace-nowrap active:bg-black/5 ${
-                      on ? "bg-sky-500/10" : ""
+                      on ? "bg-[#E3EEEC]" : ""
                     }`}
                   >
                     <span
                       className={`font-word font-semibold ${
                         on
-                          ? "text-sm text-sky-600"
+                          ? "text-sm text-[#2C6D63]"
                           : b.folder === "pb"
                           ? "text-sm"
                           : "text-sm text-teal-700"
@@ -129,7 +129,7 @@ const BibleDial = ({
                       {b.idName}
                     </span>
                     {/* 고른 책도 한국어 이름을 같이 보입니다 (골라 놓고 무슨 책인지 안 보이면 곤란) */}
-                    <span className={`font-gothic text-xs ${on ? "text-sky-600" : "text-gray-600"}`}>
+                    <span className={`font-gothic text-xs ${on ? "text-[#2C6D63]" : "text-gray-600"}`}>
                       {b.ko}
                     </span>
                   </button>
@@ -142,12 +142,12 @@ const BibleDial = ({
                     key={ch}
                     onClick={() => onSelect(currentBookId, ch)}
                     className={`w-full h-9 flex items-center justify-center text-center px-2 whitespace-nowrap active:bg-black/5 ${
-                      on ? "bg-sky-500/10" : ""
+                      on ? "bg-[#E3EEEC]" : ""
                     }`}
                   >
                     <span
                       className={`font-gothic ${
-                        on ? "text-sm font-semibold text-sky-600" : "text-sm text-gray-800"
+                        on ? "text-sm font-semibold text-[#2C6D63]" : "text-sm text-gray-800"
                       }`}
                     >
                       {ch}
