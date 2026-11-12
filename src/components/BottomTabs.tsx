@@ -177,6 +177,14 @@ const BottomTabs = () => {
     } catch (e) {}
   }, [shown]);
 
+  // 화면 아래에 붙는 고정 버튼(기도문 만들기 등)이 쓰는 값 — 입력 중에는 막대가 숨으므로 0 (2026-11-12)
+  // --kata-tabbar-h 는 화면 높이 계산에 쓰여 입력 중에 바꾸면 화면이 출렁이므로 따로 둡니다.
+  useEffect(() => {
+    try {
+      document.documentElement.style.setProperty("--kata-tabbar-float", shown && !typing ? TABBAR_CSS : "0px");
+    } catch (e) {}
+  }, [shown, typing]);
+
   if (!shown) return null;
 
   const path = trimSlash(location.pathname);
