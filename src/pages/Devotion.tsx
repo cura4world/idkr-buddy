@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
-import { ArrowLeft, Sunrise, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp, RotateCcw, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, Sunrise, Volume2, Loader2, Plus, Check, X, ChevronDown, ChevronUp, RotateCcw, Maximize2, Minimize2, BookOpen } from "lucide-react";
 import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
 import { getBookByKo, fetchQtTbVerses, BibleVerse } from "@/lib/bible";
@@ -25,6 +25,21 @@ import PointFloat from "@/components/PointFloat";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
+import { PUB, PUB_CARD, PUB_TILE, PUB_BTN, PUB_BTN_STYLE, PubChip, PubIntroCard, PubNote } from "@/components/PubKit";
+
+// 2026-11-12 공개판 디자인(docs/release/10-faith-stories.md S64): 이야기 화면(ST1~ST5)과 같은 틀.
+// 듣기 버튼은 이야기 카드와 같은 연청록 알약(PlayButton 은 고치지 않고 className 으로만 덮음)
+const PLAY_PILL = "!h-[34px] !px-[13px] !py-0 !text-[0.78125rem] !font-semibold !bg-[#E2F1EC] !text-[#2C6D63] font-gothic";
+
+// 해 뜨는 그림 (묵상 타일)
+const SunriseArt = () => (
+  <svg width="34" height="34" viewBox="0 0 48 48" aria-hidden="true">
+    <path d="M10 33a14 14 0 0 1 28 0z" fill="#F2C987" />
+    <path d="M15 33a9 9 0 0 1 18 0z" fill="#E9B46A" />
+    <path d="M24 9v6M11 15l4 4M37 15l-4 4M5 27h5M38 27h5" stroke="#9C6424" strokeWidth="2" strokeLinecap="round" />
+    <path d="M6 37h36" stroke="#9C6424" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
 
 
 // TTS: AndroidTTS 우선, speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -395,9 +410,9 @@ const Devotion = () => {
       } else if (code === "NO_CREDIT") {
         toast("Claude 크레딧이 부족합니다. console.anthropic.com에서 충전해주세요");
       } else if (code === "RATE_LIMIT" || code === "OVERLOADED") {
-        toast("지금 요청이 많아요. 잠시 후 다시 시도해주세요");
+        toast("지금 요청이 많습니다. 잠시 후 다시 시도하세요");
       } else {
-        toast("묵상 생성에 실패했어요. 다시 시도해주세요");
+        toast("묵상을 만들지 못했습니다. 다시 시도하세요");
       }
     } finally {
       setGenerating(false);
@@ -476,7 +491,7 @@ const Devotion = () => {
       await navigator.clipboard.writeText(popupWord);
       toast("복사되었습니다");
     } catch (e) {
-      toast("복사에 실패했어요");
+      toast("복사하지 못했습니다");
     }
   };
 
@@ -508,7 +523,7 @@ const Devotion = () => {
       <span key={keyPrefix + ti} data-idw="1">
         <span
           onClick={(e) => { e.stopPropagation(); openWordPopup(tok, text); }}
-          className="cursor-pointer rounded active:bg-rose-500/20"
+          className="cursor-pointer rounded active:bg-[#E2F1EC]"
         >
           {tok}
         </span>{" "}
@@ -523,7 +538,8 @@ const Devotion = () => {
         <p
           key={pi}
           ref={(el) => { paraRefs.current["id-" + pi] = el; }}
-          className="mb-4 text-base leading-relaxed font-word text-gray-900"
+          className={"font-word text-[1.0625rem] leading-[1.85] " + (pi === 0 ? "mt-3.5" : "mt-3")}
+          style={{ color: PUB.txt }}
         >
           {sentences.map((sent, si) => (
             <span key={si}>{renderTokens(sent, pi + "-" + si + "-")}</span>
@@ -538,22 +554,23 @@ const Devotion = () => {
       <p
         key={i}
         ref={(el) => { paraRefs.current["ko-" + i] = el; }}
-        className="mb-4 text-xs leading-relaxed text-gray-800 font-gothic"
+        className={"font-gothic text-[0.90625rem] leading-[1.8] break-words " + (i === 0 ? "mt-3" : "mt-2.5")}
+        style={{ color: PUB.txt }}
       >
         {para}
       </p>
     ));
 
   const renderTbVerse = (v: BibleVerse) => (
-    <p key={v.verse} className="mb-2 text-base leading-relaxed font-word text-gray-900">
-      <span className="text-rose-500/70 text-xs align-super mr-1 select-none">{v.verse}</span>
+    <p key={v.verse} className="mb-2 font-word text-[1rem] leading-[1.75]" style={{ color: PUB.txt }}>
+      <span className="text-xs align-super mr-1 select-none" style={{ color: PUB.mute }}>{v.verse}</span>
       {renderTokens(v.text, "tb" + v.verse + "-")}
     </p>
   );
 
   const renderWoorimalVerse = (v: QtVerse) => (
-    <p key={"w" + v.n} className="mb-2 text-xs leading-relaxed text-gray-800 font-gothic">
-      <span className="text-rose-500/70 text-xs align-super mr-1 select-none">{v.n}</span>
+    <p key={"w" + v.n} className="mb-2 font-gothic text-[0.84375rem] leading-[1.75]" style={{ color: PUB.txt }}>
+      <span className="text-xs align-super mr-1 select-none" style={{ color: PUB.mute }}>{v.n}</span>
       {v.t}
     </p>
   );
@@ -589,30 +606,32 @@ const Devotion = () => {
           ) : null}
         </header>
 
-        <div className="px-4 py-4">
-          <div {...swipeHandlers}
-            className="-mx-4 bg-card border-y border-border/60 px-4 py-5 min-h-[72vh] content-bump">
+        {/* 화면 전체에서 옆으로 밀면 뒤집힙니다 (카드 아래 빈 곳 포함) — 이야기 카드와 같은 흰 카드 */}
+        <div {...swipeHandlers} className="px-4 pt-4 pb-6" style={{ minHeight: "calc(100dvh - 61px - var(--kata-tabbar-h, 0px))" }}>
+          <div style={{ ...PUB_CARD, borderRadius: 20, padding: "18px 18px 22px" }}>
               {!flipped ? (
                 <>
                   {/* 앞면: 인니어 */}
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-medium text-gray-500 bg-black/5 rounded-full px-2 py-0.5">Saat Teduh</span>
-                    <span className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <PubChip tone="amber">Saat Teduh</PubChip>
+                    <span className="flex-1" />
+                    <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
                       <PlayButton
                         cacheKey={current.id + "-helper-v2"}
                         text={[c.title, c.helper].filter(Boolean).join("\n\n")}
                         label="묵상 듣기"
+                        className={PLAY_PILL}
                       />
                     </span>
                   </div>
-                  <div className="mb-3 min-w-0">
-                    <h2 className="text-lg font-bold text-gray-900 break-words min-w-0 font-word">
+                  <div className="mt-3.5 mb-3.5 min-w-0">
+                    <h2 className="font-word text-[1.375rem] font-semibold leading-[1.35] break-words min-w-0" style={{ color: PUB.deep }}>
                       {renderTokens(c.title, "title-")}
                     </h2>
                   </div>
 
                   {/* TB 본문 — 토글 */}
-                  <div className="rounded-lg bg-rose-500/5 border border-rose-200/60 px-3 py-2.5 mb-4">
+                  <div className="rounded-[14px] px-3.5 py-3" style={{ background: "#F1F6F5" }}>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -622,13 +641,13 @@ const Devotion = () => {
                       }}
                       className="w-full flex items-center gap-2 text-left"
                     >
-                      <span className="flex-1 min-w-0 text-xs font-semibold text-rose-600 font-gothic truncate">
+                      <span className="flex-1 min-w-0 font-gothic text-[0.78125rem] font-semibold truncate" style={{ color: PUB.teal }}>
                         {tbRangeLabel(current)}
                       </span>
                       {fullOpen ? (
-                        <ChevronUp size={15} className="shrink-0 text-rose-500" />
+                        <ChevronUp size={15} className="shrink-0" style={{ color: PUB.teal }} />
                       ) : (
-                        <ChevronDown size={15} className="shrink-0 text-rose-500" />
+                        <ChevronDown size={15} className="shrink-0" style={{ color: PUB.teal }} />
                       )}
                     </button>
 
@@ -640,11 +659,12 @@ const Devotion = () => {
                           </div>
                         )}
                         {cardError && !cardLoading && (
-                          <div className="text-xs text-gray-500 font-gothic py-1">
-                            본문을 불러오지 못했어요.{" "}
+                          <div className="text-xs font-gothic py-1" style={{ color: PUB.sub }}>
+                            본문을 불러오지 못했습니다.{" "}
                             <button
                               onClick={(e) => { e.stopPropagation(); loadTbVerses(current); }}
-                              className="text-rose-600 font-medium underline"
+                              className="font-medium underline"
+                              style={{ color: PUB.teal }}
                             >
                               다시 시도
                             </button>
@@ -661,12 +681,12 @@ const Devotion = () => {
                   {/* 기도 */}
                   {c.doa && (
                     <>
-                      <p className="mt-2 mb-2 pl-3 border-l-2 border-rose-300 text-base leading-relaxed font-word text-gray-800 italic">
-                        <span className="not-italic font-semibold text-rose-600 text-sm mr-1">Doa</span>
+                      <p className="mt-4 mb-2 pl-3 border-l-2 border-[#BFD8D2] font-word text-[1rem] leading-[1.8] italic" style={{ color: PUB.txt }}>
+                        <span className="not-italic font-semibold text-sm mr-1" style={{ color: PUB.teal }}>Doa</span>
                         {renderTokens(c.doa, "doa-")}
                       </p>
-                      <div className="mb-2 flex justify-end" onClick={(e) => e.stopPropagation()}>
-                        <PlayButton cacheKey={current.id + "-doa"} text={c.doa} label="기도 듣기" />
+                      <div className="mb-1 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                        <PlayButton cacheKey={current.id + "-doa"} text={c.doa} label="기도 듣기" className={PLAY_PILL} />
                       </div>
                     </>
                   )}
@@ -674,21 +694,21 @@ const Devotion = () => {
               ) : (
                 <>
                   {/* 뒷면: 한국어 */}
-                  <h2 className="text-sm font-bold text-gray-900 break-words mb-3">{c.titleKo}</h2>
+                  <h2 className="text-[1.03125rem] font-semibold break-words mb-3.5" style={{ color: PUB.txt }}>{c.titleKo}</h2>
 
                   {/* 우리말성경 본문 — 토글 (레코드에 저장돼 있어 즉시 표시) */}
-                  <div className="rounded-lg bg-rose-500/5 border border-rose-200/60 px-3 py-2.5 mb-4">
+                  <div className="rounded-[14px] px-3.5 py-3" style={{ background: "#F1F6F5" }}>
                     <button
                       onClick={(e) => { e.stopPropagation(); setKoOpen((f) => !f); }}
                       className="w-full flex items-center gap-2 text-left"
                     >
-                      <span className="flex-1 min-w-0 text-xs font-semibold text-rose-600 font-gothic truncate">
+                      <span className="flex-1 min-w-0 font-gothic text-[0.78125rem] font-semibold truncate" style={{ color: PUB.teal }}>
                         {current.rangeText} (우리말성경)
                       </span>
                       {koOpen ? (
-                        <ChevronUp size={15} className="shrink-0 text-rose-500" />
+                        <ChevronUp size={15} className="shrink-0" style={{ color: PUB.teal }} />
                       ) : (
-                        <ChevronDown size={15} className="shrink-0 text-rose-500" />
+                        <ChevronDown size={15} className="shrink-0" style={{ color: PUB.teal }} />
                       )}
                     </button>
 
@@ -697,8 +717,8 @@ const Devotion = () => {
                         {current.versesWoorimal.length > 0 ? (
                           current.versesWoorimal.map(renderWoorimalVerse)
                         ) : (
-                          <p className="text-xs text-gray-500 font-gothic py-1">
-                            이 날은 우리말성경 본문을 가져오지 못했어요.
+                          <p className="text-xs font-gothic py-1" style={{ color: PUB.sub }}>
+                            이 날은 우리말성경 본문을 가져오지 못했습니다.
                           </p>
                         )}
                       </div>
@@ -707,25 +727,22 @@ const Devotion = () => {
 
                   {renderKoParagraphs(c.helperKo)}
                   {c.doaKo && (
-                    <p className="mt-2 mb-4 pl-3 border-l-2 border-rose-300 text-xs leading-relaxed text-gray-800 font-body">
-                      <span className="font-semibold text-rose-600 mr-1">기도</span>
+                    <p className="mt-4 pl-3 border-l-2 border-[#BFD8D2] font-gothic text-[0.875rem] leading-[1.8]" style={{ color: PUB.txt }}>
+                      <span className="font-semibold mr-1" style={{ color: PUB.teal }}>기도</span>
                       {c.doaKo}
                     </p>
                   )}
 
-                  <div className="border-t border-gray-200 my-4" />
-
-                  {/* 본문 들여다보기 */}
-                  <div className="rounded-lg bg-black/[0.04] px-3 py-3">
-                    <p className="text-xs font-bold text-gray-900 font-gothic mb-2">
-                      📖 {c.noteTitleKo}
-                    </p>
-                    <p className="text-xs text-gray-700 font-gothic leading-relaxed">{c.noteKo}</p>
+                  {/* 본문 들여다보기 — 이야기 "이 글을 더 이해하려면" 상자와 같은 모양 */}
+                  <div className="mt-[18px]">
+                    <PubNote title={c.noteTitleKo} icon={<BookOpen size={15} strokeWidth={1.9} className="shrink-0" />}>
+                      {c.noteKo}
+                    </PubNote>
                   </div>
                 </>
               )}
           </div>
-          <p className="text-center text-muted-foreground text-xs mt-3">
+          <p className="mt-3 text-center font-gothic text-[0.75rem]" style={{ color: PUB.mute }}>
             {flipped ? "옆으로 밀면 원문이 보입니다" : "옆으로 밀면 해석이 보입니다"}
           </p>
         </div>
@@ -791,83 +808,97 @@ const Devotion = () => {
         ) : null}
       </header>
 
-      <div className="px-4 py-4">
-        {qtLoading ? (
-          <div className="bg-card border border-border/60 rounded-xl px-4 py-8 text-center">
-            <Loader2 size={22} className="mx-auto mb-2 text-rose-500 animate-spin" />
-            <p className="text-sm text-gray-500 font-gothic">오늘의 QT를 불러오는 중...</p>
-          </div>
-        ) : qtError || !todayQt ? (
-          <div className="bg-card border border-border/60 rounded-xl px-4 py-8 text-center">
-            <p className="text-sm text-gray-700 font-gothic mb-4">오늘의 QT를 불러오지 못했어요</p>
-            <button
-              onClick={loadTodayQt}
-              className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-medium bg-rose-500 text-white"
-            >
-              <RotateCcw size={14} /> 다시 시도
+      {/* 2026-11-12 공개판 디자인: 이야기 ST1 처럼 "오늘의 묵상" 카드 + 지난 묵상 카드 목록 */}
+      <div className="px-4 pt-4 pb-6 flex flex-col gap-2.5">
+        <PubIntroCard
+          art={<SunriseArt />}
+          artBg={PUB_TILE.devotion.bg}
+          title="오늘의 묵상"
+          sub={
+            qtLoading
+              ? "오늘의 QT 본문을 불러오는 중입니다"
+              : qtError || !todayQt
+              ? "오늘의 QT 본문을 불러오지 못했습니다"
+              : todayRec && !todayBroken
+              ? tbRangeLabel(todayRec)
+              : todayQt.rangeText + " · 두란노 오늘의 QT"
+          }
+        >
+          {qtLoading ? (
+            <button type="button" disabled className={PUB_BTN} style={{ ...PUB_BTN_STYLE, opacity: 0.75 }}>
+              <Loader2 size={18} className="animate-spin" /> 불러오는 중...
             </button>
-          </div>
-        ) : todayRec && !todayBroken ? (
-          <button
-            onClick={() => openCard(todayRec)}
-            className="w-full text-left rounded-xl border border-rose-300/60 bg-card bg-gradient-to-br from-transparent to-rose-300/35 px-4 py-3.5"
-          >
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-xs font-medium text-rose-600 font-gothic">오늘의 묵상</p>
-              <span className="text-[0.6875rem] font-medium text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
-                {tbRangeLabel(todayRec)}
-              </span>
-            </div>
-            <p className="mt-1 text-base font-bold text-gray-900 font-word break-words">{todayRec.content.title}</p>
-            <p className="text-xs text-gray-500 font-gothic mt-0.5 break-words">{todayRec.content.titleKo}</p>
-          </button>
-        ) : (
-          <>
-          {todayBroken && (
-            <p className="text-xs text-gray-500 font-gothic text-center mb-2.5">
-              이전 생성에 언어 오류가 있어 오늘 묵상을 다시 만들 수 있어요
-            </p>
+          ) : qtError || !todayQt ? (
+            <button type="button" onClick={loadTodayQt} className={PUB_BTN} style={PUB_BTN_STYLE}>
+              <RotateCcw size={17} strokeWidth={1.9} /> 다시 불러오기
+            </button>
+          ) : todayRec && !todayBroken ? (
+            <>
+              <button
+                type="button"
+                onClick={() => openCard(todayRec)}
+                className="w-full text-left min-w-0 rounded-[14px] px-3.5 py-3 active:opacity-80"
+                style={{ background: "#F7F9FA" }}
+              >
+                <p className="font-word text-[0.96875rem] font-semibold break-words" style={{ color: PUB.deep }}>
+                  {todayRec.content.title}
+                </p>
+                <p className="mt-[3px] font-gothic text-[0.75rem] break-words" style={{ color: PUB.sub }}>
+                  {todayRec.content.titleKo}
+                </p>
+              </button>
+              <button type="button" onClick={() => openCard(todayRec)} className={PUB_BTN + " mt-3"} style={PUB_BTN_STYLE}>
+                <BookOpen size={18} strokeWidth={1.9} /> 묵상 읽기
+              </button>
+            </>
+          ) : (
+            <>
+              {todayBroken && (
+                <p className="mb-2.5 text-center font-gothic text-[0.71875rem]" style={{ color: PUB.sub }}>
+                  이전에 만든 묵상에 언어 오류가 있어 다시 만들 수 있습니다
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={generating}
+                className={PUB_BTN}
+                style={{ ...PUB_BTN_STYLE, opacity: generating ? 0.75 : 1 }}
+              >
+                {generating ? (
+                  <><Loader2 size={18} className="animate-spin" /> 묵상 내용을 만드는 중...</>
+                ) : (
+                  <><Sunrise size={18} strokeWidth={1.9} /> 오늘의 묵상 만들기</>
+                )}
+              </button>
+            </>
           )}
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="w-full flex items-center justify-center gap-2 rounded-full py-3.5 text-sm font-medium bg-rose-500 text-white disabled:opacity-60"
-          >
-            {generating ? (
-              <><Loader2 size={16} className="animate-spin" /> 묵상 내용을 만드는 중...</>
-            ) : (
-              <><Sunrise size={16} /> 오늘의 묵상 · {todayQt.rangeText}</>
-            )}
-          </button>
-          </>
-        )}
+        </PubIntroCard>
 
         {/* 지난 묵상 */}
         {records.filter((r) => !todayRec || r.id !== todayRec.id).length > 0 && (
-          <div className="mt-5">
-            <p className="text-xs text-muted-foreground mb-2 px-1 font-gothic">지난 묵상</p>
-            <ul className="space-y-2">
-              {records
-                .filter((r) => !todayRec || r.id !== todayRec.id)
-                .map((r) => (
-                  <li key={r.id}>
-                    <button
-                      onClick={() => openCard(r)}
-                      className="w-full text-left bg-card border border-border/60 rounded-xl px-4 py-3 min-w-0"
-                    >
-                      <p className="text-sm font-semibold text-gray-900 break-words font-word">{r.content.title}</p>
-                      <p className="text-xs text-gray-500 break-words mt-0.5 font-gothic">{r.content.titleKo}</p>
-                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                        <span className="text-[0.6875rem] font-medium text-rose-600 bg-rose-500/10 rounded-full px-2 py-0.5">
-                          {r.rangeText}
-                        </span>
-                        <span className="text-[0.6875rem] text-gray-400 ml-auto">{fmtQtDate(r.date)}</span>
-                      </div>
-                    </button>
-                  </li>
-                ))}
-            </ul>
-          </div>
+          <>
+            <p className="mt-3.5 mx-1 font-gothic text-[0.8125rem] font-bold tracking-[0.02em]" style={{ color: PUB.section }}>
+              지난 묵상
+            </p>
+            {records
+              .filter((r) => !todayRec || r.id !== todayRec.id)
+              .map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => openCard(r)}
+                  className="w-full text-left min-w-0 active:opacity-80"
+                  style={{ ...PUB_CARD, padding: "14px 16px" }}
+                >
+                  <p className="font-word text-[0.96875rem] font-semibold break-words" style={{ color: PUB.deep }}>{r.content.title}</p>
+                  <p className="mt-[3px] font-gothic text-[0.75rem] break-words" style={{ color: PUB.sub }}>{r.content.titleKo}</p>
+                  <div className="mt-2.5 flex items-center gap-1.5 min-w-0">
+                    <PubChip tone="amber">{r.rangeText}</PubChip>
+                    <span className="ml-auto shrink-0 font-gothic text-[0.6875rem]" style={{ color: PUB.mute }}>{fmtQtDate(r.date)}</span>
+                  </div>
+                </button>
+              ))}
+          </>
         )}
       </div>
 
