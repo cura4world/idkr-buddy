@@ -79,8 +79,10 @@ export function saveFileNative(name: string, mime: string, base64: string): bool
   }
 }
 
-/** 웹에 공개해 둔 정책 페이지 (Play 등록에도 같은 주소를 씁니다). */
-export const POLICY_BASE = "https://cura4world.github.io/idkr-buddy/";
-export const PRIVACY_URL = POLICY_BASE + "privacy.html";
-export const TERMS_URL = POLICY_BASE + "terms.html";
-export const DELETE_ACCOUNT_URL = POLICY_BASE + "delete-account.html";
+/** 웹에 공개해 둔 정책 페이지 (Play 등록에도 같은 주소를 씁니다). 2026-11-12 HQ 결정: naruve.app 주소로 둔다. */
+export const POLICY_BASE = "https://naruve.app/apps/kata-kata/";
+export const PRIVACY_URL = POLICY_BASE + "privacy/";
+export const TERMS_URL = POLICY_BASE + "terms/";
+export const DELETE_ACCOUNT_URL = POLICY_BASE + "delete/";
+/** 사업자 정보(전자상거래법 제10조): 약관 페이지 끝의 "사업자 정보" 칸으로 바로 연결. */
+export const BUSINESS_INFO_URL = TERMS_URL + "#business-info";
