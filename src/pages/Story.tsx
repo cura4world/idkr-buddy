@@ -810,7 +810,7 @@ const Story = () => {
                 S21(360px) 폭에서 한 줄에 들어가도록 글자 10px·자간 살짝 좁힘, 넘치면 줄바꿈 대신 말줄임 */}
             <span className="flex-1 min-w-0">
               <span className="block truncate text-[0.96875rem] font-semibold" style={{ color: C.txt }}>오늘의 이야기</span>
-              <span className="block mt-[8px] truncate font-gothic text-[0.65625rem] tracking-[-0.02em]" style={{ color: C.sub }}>
+              <span className="block mt-[4px] truncate font-gothic text-[0.65625rem] tracking-[-0.02em]" style={{ color: C.sub }}>
                 난이도를 고르고 불러오세요
               </span>
             </span>
