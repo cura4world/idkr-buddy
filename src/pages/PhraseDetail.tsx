@@ -555,25 +555,28 @@ const PhraseDetail = () => {
                 <section className="flex flex-col gap-3.5">
                   <Label>이렇게 씁니다</Label>
                   {data.examples.map((ex, i) => (
-                    <div key={i} className="flex min-w-0 items-start gap-2.5">
-                      <span
-                        className="w-3.5 shrink-0 font-word text-[0.9375rem] italic leading-[1.45] text-[#B59B6A]"
-                        style={{ paddingTop: ex.situasi ? 26 : 0 }}
-                      >
-                        {i + 1}
-                      </span>
-                      <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
-                        {ex.situasi ? (
-                          <span className="mb-1 self-start rounded-[10px] bg-[#F1EEE7] px-2 py-[3px] font-gothic text-[0.6875rem] font-semibold leading-[1.3] text-[#5E5541]">
-                            {ex.situasi}
-                          </span>
-                        ) : null}
-                        <p className="m-0 break-words font-word text-[1rem] leading-[1.5]">{ex.id}</p>
-                        {ex.ko ? (
-                          <p className="m-0 break-words text-[0.8125rem] leading-[1.55] text-[#5E5D57]">{ex.ko}</p>
-                        ) : null}
+                    // 예문 하나 = 두 층. 1층: 상황 꼬리표(숫자 칸만큼 들여 예문 글자와 왼쪽 줄을 맞춤).
+                    // 2층: [숫자][인니어 예문 + 한국어 해석][스피커] 한 줄. 꼬리표가 몇 줄이든 없든 2층 모양은 같습니다.
+                    <div key={i} className="flex min-w-0 flex-col gap-1.5">
+                      {ex.situasi ? (
+                        // 들임 24px = 숫자 칸 w-3.5(14px) + 간격 gap-2.5(10px)
+                        <span className="ml-6 self-start rounded-[10px] bg-[#F1EEE7] px-2 py-[3px] font-gothic text-[0.6875rem] font-semibold leading-[1.3] text-[#5E5541]">
+                          {ex.situasi}
+                        </span>
+                      ) : null}
+                      <div className="flex min-w-0 items-start gap-2.5">
+                        {/* 숫자·스피커는 인니어 예문 첫 줄의 줄 높이(1rem × 1.5 = 1.5rem)에 맞춥니다.
+                            숫자: leading-6(=1.5rem)으로 첫 줄과 같은 줄 상자 / 스피커: 32px 단추를 -mt-1(−4px)로 올려 첫 줄 가운데에.
+                            글자 크기 단계는 루트 글자 크기를 바꾸므로 rem 값이라 85~115% 모두 같은 비율로 따라갑니다. */}
+                        <span className="w-3.5 shrink-0 font-word text-[0.9375rem] italic leading-6 text-[#B59B6A]">{i + 1}</span>
+                        <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                          <p className="m-0 break-words font-word text-[1rem] leading-6">{ex.id}</p>
+                          {ex.ko ? (
+                            <p className="m-0 break-words text-[0.8125rem] leading-[1.55] text-[#5E5D57]">{ex.ko}</p>
+                          ) : null}
+                        </div>
+                        <RowSpeaker onClick={() => speak(ex.id, "id")} className="-mt-1" />
                       </div>
-                      <RowSpeaker onClick={() => speak(ex.id, "id")} className={ex.situasi ? "mt-[22px]" : "-mt-1"} />
                     </div>
                   ))}
                 </section>
