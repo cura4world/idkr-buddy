@@ -77,6 +77,8 @@ export default function CSVImportDialog({ open, onOpenChange, onImported, catego
           형식: 단어, 뜻, 예문, 예문 뜻, 카테고리(선택)
         </span>
       </button>
+      {/* 2026-11-13 사용자 요청: 단어 추가·단어장 만들기 시트와 시트 윗끝이 비슷한 높이에 오도록, 붙여 넣는 칸을 9줄로 키움
+          (5줄일 때는 시트가 125px 낮아 + 메뉴에서 멀리 아래에 갑자기 생겼음). 칸이 줄 수로 커지므로 글자 크기가 바뀌어도 함께 따라갑니다. */}
       <div>
         <FormLabel hint="직접 붙여 넣어도 됩니다">내용</FormLabel>
         <div className={FORM_FIELD_CLASS} style={{ minHeight: 66 }}>
@@ -84,7 +86,7 @@ export default function CSVImportDialog({ open, onOpenChange, onImported, catego
             value={csv}
             onChange={(e) => setCsv(e.target.value)}
             placeholder={"Selamat pagi, 좋은 아침, Selamat pagi apa kabar?, 좋은 아침 어떻게 지내세요?, 인사"}
-            rows={5}
+            rows={9}
             className="flex-1 min-w-0 resize-none bg-transparent outline-none font-body text-[0.875rem] leading-[1.5] py-[9px]"
             style={{ color: FORM_C.txt }}
           />
