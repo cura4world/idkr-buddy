@@ -5,6 +5,8 @@ import { useState, useEffect, useRef, ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import { ReadingTracker } from "@/lib/readingTimer";
+import { isStoreApp } from "@/lib/platform";
+import { usePlan } from "@/lib/plan";
 import { ArrowLeft, Landmark, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Religion {
@@ -13,6 +15,8 @@ interface Religion {
   bar: number; // 0~100 막대 길이
   color: string;
   desc: string[];
+  /** '인도네시아 기독교' 화면이 보이는 사람(관리자판·회원판, 공개판의 Special·관리자)에게만 덧붙이는 줄 */
+  staffNote?: string;
 }
 
 // 접이식 섹션
@@ -64,12 +68,14 @@ const REGIONS: RegionShape[] = [
   { name: "자바", rel: "islam", d: "M70,150 L150,148 L158,162 L74,166 Z", labelX: 110, labelY: 159 },
   // 발리 (자바 오른쪽 작은 점) — 힌두
   { name: "발리", rel: "hindu", d: "M162,152 L172,150 L174,160 L163,162 Z", labelX: 168, labelY: 172 },
-  // 누사틍가라(NTT 등, 발리 오른쪽 섬들) — 기독교/혼재
-  { name: "누사틍가라", rel: "christian", d: "M178,155 L230,152 L232,164 L180,167 Z", labelX: 205, labelY: 178 },
+  // 누사틍가라(발리 오른쪽 섬들) — 혼재: 서누사틍가라(롬복·숨바와)는 이슬람 약 96%, 동누사틍가라는 기독교 약 90%.
+  // 두 주를 한 덩어리로 그린 개념도라 "기독교 우세"로 칠하면 틀립니다(2026-11-14 출시 전 점검 K-04).
+  { name: "누사틍가라", rel: "mixed", d: "M178,155 L230,152 L232,164 L180,167 Z", labelX: 205, labelY: 178 },
   // 술라웨시 (K자 모양) — 이슬람, 북부 미나하사 기독교
   { name: "술라웨시", rel: "mixed", d: "M205,55 L222,50 L228,78 L245,70 L250,82 L228,95 L232,120 L216,122 L214,95 L200,80 Z", labelX: 240, labelY: 100 },
-  // 말루쿠 (술라웨시 오른쪽 점들) — 기독교/혼재
-  { name: "말루쿠", rel: "christian", d: "M262,80 L276,76 L280,92 L264,96 Z", labelX: 271, labelY: 108 },
+  // 말루쿠 (술라웨시 오른쪽 점들) — 혼재: 말루쿠주는 이슬람 약 53%·개신교 약 40%·가톨릭 약 7%, 북말루쿠주는 이슬람 약 74%.
+  // 기독교 다수가 아닙니다. 1999~2002년 종교 분쟁을 겪은 지역이라 단정하지 않습니다(K-04).
+  { name: "말루쿠", rel: "mixed", d: "M262,80 L276,76 L280,92 L264,96 Z", labelX: 271, labelY: 108 },
   // 파푸아 (동쪽 끝, 크게) — 기독교
   { name: "파푸아", rel: "christian", d: "M295,60 L360,55 L378,100 L345,130 L305,120 L292,88 Z", labelX: 335, labelY: 92 },
 ];
@@ -145,8 +151,9 @@ const RELIGIONS: Religion[] = [
     color: "bg-sky-500",
     desc: [
       "약 2,080만 명. 네덜란드 식민 시기와 19세기 유럽 선교의 유산으로, 파푸아·북술라웨시·북수마트라(바탁)·말루쿠 등 동부와 내륙에 집중되어 있습니다.",
-      "자세한 내용은 '인도네시아 기독교' 페이지에서 다룹니다.",
     ],
+    // 공개판의 무료·체험·Plus 에게는 그 화면이 없으므로 이 줄을 보이지 않습니다(E-04).
+    staffNote: "자세한 내용은 '인도네시아 기독교' 페이지에서 다룹니다.",
   },
   {
     name: "가톨릭",
@@ -155,7 +162,7 @@ const RELIGIONS: Religion[] = [
     color: "bg-indigo-500",
     desc: [
       "약 860만 명. 16세기 포르투갈 선교로 시작된 인도네시아에서 가장 오래된 기독교 전통입니다.",
-      "동누사틍가라(NTT·플로레스)는 주민의 90% 이상이 가톨릭인 '가톨릭의 땅'입니다.",
+      "동누사틍가라(NTT)는 주민의 약 90%가 기독교(가톨릭 약 54%, 개신교 약 36%)이고, 플로레스섬은 대부분 가톨릭입니다.",
     ],
   },
   {
@@ -183,13 +190,16 @@ const RELIGIONS: Religion[] = [
     bar: 1,
     color: "bg-rose-400",
     desc: [
-      "화교 소수가 신봉합니다. 수하르토 시대에 공인 지위를 잃었다가 2000년 압두라만 와힛 대통령 때 회복되었습니다. 설날(Imlek)도 이때 국경일이 되었습니다.",
+      "화교 소수가 신봉합니다. 수하르토 시대에 공인 지위를 잃었다가 2000년 압두라만 와힛 대통령 때 회복되었습니다. 설날(Imlek)은 2001년 선택 휴일이 되었고, 2003년부터 국경일입니다(2002년 메가와티 대통령 결정).",
     ],
   },
 ];
 
 const InsightReligion = () => {
   const navigate = useNavigate();
+  // '인도네시아 기독교' 화면은 관리자판·회원판과 공개판의 Special·관리자에게만 있습니다(Insight.tsx 와 같은 기준).
+  const { staff } = usePlan();
+  const showChristianLink = !isStoreApp() || staff;
   const location = useLocation();
 
   // ---------- 탐험 점수 (보이지 않음) ----------
@@ -252,6 +262,9 @@ const InsightReligion = () => {
                   {d}
                 </p>
               ))}
+              {r.staffNote && showChristianLink ? (
+                <p className="text-[0.8125rem] font-gothic text-gray-600 leading-relaxed mt-1">{r.staffNote}</p>
+              ) : null}
             </div>
           ))}
         </div>
@@ -261,8 +274,9 @@ const InsightReligion = () => {
         <ReligionMap />
         <p className="text-[0.8125rem] font-gothic text-gray-600 leading-relaxed mt-3">
           지역별로 우세한 종교를 한눈에 볼 수 있습니다. 서부(수마트라·자바)는 이슬람이
-          압도적이고, 발리는 힌두교, 동쪽 끝 파푸아와 누사틍가라·말루쿠는 기독교가 다수입니다.
-          술라웨시·칼리만탄은 이슬람과 기독교가 섞여 있습니다.
+          압도적이고, 발리는 힌두교, 동쪽 끝 파푸아는 기독교가 다수입니다.
+          누사틍가라는 서쪽(롬복·숨바와)이 이슬람, 동쪽(동누사틍가라)이 기독교이고,
+          말루쿠·술라웨시·칼리만탄은 이슬람과 기독교가 섞여 있습니다.
         </p>
         <p className="text-[0.6875rem] font-gothic text-gray-400 leading-relaxed mt-2">
           ※ 개념도입니다. 실제 지리와 정확히 일치하지 않으며, 한 지역 안에도 여러 종교가 함께 삽니다.
@@ -273,7 +287,8 @@ const InsightReligion = () => {
         <p className="text-sm font-gothic text-gray-700 leading-relaxed">
           이슬람은 무역로를 따라 서쪽 해안에서 동쪽으로 퍼졌습니다. 그래서 서부(수마트라·자바)는
           이슬람이 압도적이고, 동쪽으로 갈수록 기독교 비율이 높아집니다. 발리(힌두)를 지나
-          동누사틍가라·말루쿠·파푸아에 이르면 기독교가 다수가 됩니다. 아체는 유일하게
+          동누사틍가라·파푸아에 이르면 기독교가 다수가 됩니다. 말루쿠는 이슬람과 기독교가
+          비슷하게 섞여 사는 지역입니다. 아체는 유일하게
           샤리아(이슬람법)가 시행되는 특별 자치주입니다.
         </p>
       </Fold>
