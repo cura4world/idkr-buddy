@@ -123,6 +123,23 @@ Play `subscriptionsv2` 의 `lineItems[].offerPhase.freeTrial` 이 있으면 체�
 제안 ID·태그에 `trial` 이 들어 있고 `startTime` 에서 8일이 안 됐을 때만 체험으로 봅니다(체험 뒤에도 offerId 는 남으므로).
 Play 콘솔에서 체험 제안 ID 에 `trial` 을 넣어 두면(예: `trial-7d`) 대비책도 맞습니다.
 
+### 구독 상태를 Play 에 다시 묻는 때 (2026-11-14, 출시 전 점검 B-01·B-02·B-04)
+
+실시간 개발자 알림(RTDN)을 쓰지 않으므로, 서버가 요청을 처리할 때(`getPlan`) 필요하면 Play 에 다시 묻습니다.
+
+| 지금 상태 | 다시 묻는 때 | Play 의 답에 따라 |
+|---|---|---|
+| 이용 중(만료 전) | 마지막 답에서 **24시간**이 지난 뒤 첫 요청 | 환불·권한 회수·보류면 **바로 무료**. 갱신됐으면 새 만료 시각 |
+| 이용 중인데 확인(acknowledge)이 안 됨 | **10분**에 한 번까지 | 확인되면 표시(`ackPending`)와 `ackfail:` 기록을 지움 |
+| 만료 시각이 지남 | 만료 뒤 첫 요청에서 바로 | 갱신됐으면 이용 중, 아니면 무료로 적음(구매 토큰은 남김) |
+| 무료로 내려감(구매 토큰 있음) | 내려간 뒤 **30일** 동안 **한 시간**에 한 번까지 | 구독이 살아나 있으면(갱신 반영 지연·결제 수단 고침) 다시 이용 중 |
+
+- **Play 가 잠깐 안 될 때**(5xx·통신 오류·인증 오류): 지금 등급을 그대로 두고 한 시간 뒤 다시 묻습니다. 만료 시각이 지난 채로 답을 못 받으면 하루까지만 유지합니다.
+- **Play 가 "그런 구매 없음"**(4xx)이라고 답하면 무료로 적습니다.
+- 유효한 구매는 **권한(`ent`)을 먼저 저장**하고 확인(acknowledge)은 그 뒤에 합니다. 확인이 실패해도 Plus 는 열리고, 사흘 안에 다시 확인합니다(못 하면 Google 이 환불).
+- 끝난 옛 구매(만료·환불된 토큰)를 검증해도, 지금 이용 중인 다른 구매를 무료로 덮어쓰지 않습니다.
+- 앱은 화면이 다시 보일 때(최소 10분 간격) `/me` 로 등급을 새로 받고, 결제가 끝났는데 검증이 실패한 구매는 "확인 중"으로 두고 성공할 때까지 다시 검증합니다(`src/lib/billing.ts`).
+
 ### Special Member 정하기 (회원키 없이, 임시)
 
 ```
@@ -152,7 +169,8 @@ curl -X POST https://kata-public.cura4world.workers.dev/admin/special \
 | `use:<uid>:<YYYY-MM-DD>` | 하루 사용량 `{<kind>: n, report, units:{longread:{<unit>: 조각 수}}}` | 3일 |
 | `usem:<uid>:<YYYY-MM>` | 한 달 사용량 `{<kind>: n}` | 40일 |
 | `uset:<uid>` | 체험 기간 합계 `{longread: n}` | 400일 |
-| `ent:<uid>` | `{tier(free·trial·plus·special·admin), productId, purchaseToken, tokenHash, until, trial, state, checkedAt, staff?}` — `staff = {tier, until, note, at}` 는 관리자가 준 등급 | 계정 삭제까지 |
+| `ent:<uid>` | `{tier(free·trial·plus·special·admin), productId, purchaseToken, tokenHash, until, trial, state, checkedAt, triedAt?, freeSince?, ackPending?, staff?}` — `staff = {tier, until, note, at}` 는 관리자가 준 등급. `checkedAt` Play 가 마지막으로 답한 시각 · `triedAt` 물었지만 답을 못 받은 시각 · `freeSince` 무료로 내려간 시각 · `ackPending` 확인(acknowledge)이 아직 안 됨 | 계정 삭제까지 |
+| `ackfail:<sha256(purchaseToken)>` | 구매 확인(acknowledge) 실패 기록 `{uid, status, first, last, count}` — 확인되면 지움. 403 이 이어지면 서비스 계정의 "주문 및 구독 관리" 권한 누락 | 7일 |
 | `email:<sha256(소문자 이메일)>` | `uid` (관리자가 이메일로 등급을 줄 때 찾기표, 로그인 때 씀) | 계정 삭제까지 |
 | `spec:<sha256(소문자 이메일)>` | 로그인 전에 미리 준 등급 `{tier, until, note, at}` — 첫 로그인 때 `ent.staff` 로 옮김 | 붙거나 거둘 때까지 |
 | `ptok:<sha256(purchaseToken)>` | `uid` (한 구매를 여러 계정이 나눠 쓰지 못하게) | 400일 |
