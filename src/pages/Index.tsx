@@ -26,6 +26,8 @@ import { getEdition, takeRevokedNotice } from "@/lib/access";
 import { isStoreApp } from "@/lib/platform";
 import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { usePlusPricing } from "@/lib/playOffers";
+import { lockButtonSub } from "@/lib/plusCopy";
 import { isWordbookVisible } from "@/lib/wordbookAccess";
 import { listCategories as listPercakapanCategories } from "@/lib/percakapan";
 import {
@@ -519,6 +521,8 @@ const Index = () => {
   // 공개판 홈: 등급은 usePlan() 하나로만 판단합니다
   //   staff(관리자·Special Member) 에게는 말씀과 기도·뉴스를, 관리자에게는 설교를 더 보여 줍니다(2026-11-12 사용자 요청)
   const { plus, staff, tier } = usePlan();
+  // Plus 줄의 "7일 무료 체험"은 Play 체험 제안이 있을 때만 보입니다(무료 등급의 공개판 홈에서만 Play 에 묻습니다).
+  const pricing = usePlusPricing(storeApp && !plus);
 
   // 공개판 홈 개수 표시 (2026-11-12): 기본 단어장의 단어 수 · 회화집의 대화 수
   //   단어 — 이 등급에 보이는 공용 단어장(성경과 신앙 35~41권은 staff 만)의 단어를 모두 셉니다
@@ -1351,7 +1355,7 @@ const Index = () => {
                 className="shrink-0 flex items-center text-center text-white font-gothic"
                 style={{ height: 42, padding: "0 13px", borderRadius: 21, background: "#8A6A12", fontSize: hrem(12), fontWeight: 700, lineHeight: 1.3 }}
               >
-                Plus<br />7일 무료 체험
+                Plus<br />{lockButtonSub(pricing.trialAny)}
               </span>
             </button>
           ) : null}
