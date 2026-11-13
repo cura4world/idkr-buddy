@@ -415,7 +415,7 @@ export function autoRestoreOnce(again = false): void {
   const now = Date.now();
   if (quietDoneFor === uid) {
     // 이미 끝냄 — 화면이 다시 보였고 지금 무료로 보이는 계정일 때만, 10분에 한 번까지 다시
-    const open = isPaidPlan(s.plan) || s.plan.tier === "special" || s.plan.tier === "admin";
+    const open = isPaidPlan(s.plan) || s.plan.tier === "special" || s.plan.tier === "admin" || s.plan.tier === "review";
     if (!again || open || now - quietAt < QUIET_AGAIN_GAP_MS) return;
   } else if (again && quietAt > 0 && now - quietAt < QUIET_GAP_MS) {
     return; // 방금 해 봤는데 Play 가 답하지 않음 — 1분 안에는 다시 하지 않음
