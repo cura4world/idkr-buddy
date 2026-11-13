@@ -109,7 +109,9 @@ export default function BackupRestoreDialog({ open, onOpenChange }: BackupRestor
           <input
             ref={fileRef}
             type="file"
-            accept=".json,.csv,.txt,application/json,text/csv,text/plain"
+            // 종류(MIME)를 앞에 둡니다 — 확장자가 맨 앞이면 안드로이드 웹뷰가 선택 창의 종류를 잘못 잡아
+            // 파일이 회색(선택 불가)으로 나올 수 있습니다(출시 전 점검 D-02). 옮겨 온 파일은 종류가 octet-stream 일 수도 있습니다.
+            accept="application/json,text/plain,text/csv,application/octet-stream,.json,.csv,.txt"
             onChange={handleFile}
             className="hidden"
           />
