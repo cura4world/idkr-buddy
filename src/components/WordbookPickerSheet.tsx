@@ -9,6 +9,7 @@ import { Check, Plus } from "lucide-react";
 import { Category, getWordsByCategory } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId } from "@/lib/saveTarget";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
+import { CategoryGlyph } from "@/components/CategoryIcon";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 
@@ -69,7 +70,7 @@ export default function WordbookPickerSheet({ open, onOpenChange, targetId, onPi
                     onClick={() => { onPick(c.id); onOpenChange(false); }}
                     className="flex w-full items-center gap-2.5 border-b border-border px-4 py-2.5 text-left active:bg-muted/60"
                   >
-                    <span className="shrink-0 text-[0.9375rem]">{c.emoji}</span>
+                    <span className="shrink-0 flex items-center text-[0.9375rem]"><CategoryGlyph value={c.emoji} size={17} /></span>
                     <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-foreground">{c.name}</span>
                     <span className="shrink-0 text-[0.6875rem] text-muted-foreground">{counts[c.id] ?? 0}</span>
                     <span className="w-4 shrink-0 text-primary">
