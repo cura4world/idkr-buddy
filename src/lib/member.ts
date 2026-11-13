@@ -51,6 +51,11 @@ export function normalizeMemberKey(raw: string): string {
   return (raw || "").trim().toUpperCase().replace(new RegExp("\\s+", "g"), "");
 }
 
+/** 회원키 모양(KK-XXXX-XXXX-XXXX)인가. 공백·대소문자는 무시합니다. 키가 실제로 있는지는 서버만 압니다. */
+export function isMemberKeyShape(raw: string): boolean {
+  return new RegExp("^KK-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$").test(normalizeMemberKey(raw));
+}
+
 export function getMemberProfile(): MemberProfile | null {
   try {
     const key = localStorage.getItem(MEMBER_KEY_KEY) || "";
@@ -155,7 +160,7 @@ async function memberFetch(path: string, method: string, key: string): Promise<R
  */
 export async function activateMember(rawKey: string): Promise<MemberProfile> {
   const key = normalizeMemberKey(rawKey);
-  if (!new RegExp("^KK-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$").test(key)) throw new Error("BAD_FORMAT");
+  if (!isMemberKeyShape(key)) throw new Error("BAD_FORMAT");
   const res = await memberFetch("/member/activate", "POST", key);
   if (res.status === 401) throw new Error("UNKNOWN");
   if (res.status === 409) throw new Error("DEVICE_TAKEN");
