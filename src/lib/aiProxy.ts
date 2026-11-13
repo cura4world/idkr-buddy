@@ -54,12 +54,30 @@ export interface AiTarget {
 
 // 긴 읽기 한 편을 가리키는 값으로 보낼 수 있는 글자(서버 검사와 같음)
 const UNIT_UNSAFE = new RegExp("[^A-Za-z0-9._:\\-]", "g");
+// 요청 번호의 모양(서버 검사와 같음)
+const REQ_OK = new RegExp("^[A-Za-z0-9]{8,40}$");
+
+/** 한 번의 누름을 가리키는 번호를 새로 만듭니다(영문·숫자 20자). */
+export function newRequestId(): string {
+  const abc = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let out = "";
+  try {
+    const bytes = new Uint8Array(20);
+    crypto.getRandomValues(bytes);
+    for (let i = 0; i < bytes.length; i++) out += abc.charAt(bytes[i] % abc.length);
+  } catch (e) {
+    for (let i = 0; i < 20; i++) out += abc.charAt(Math.floor(Math.random() * abc.length));
+  }
+  return out;
+}
 
 /**
  * Gemini 호출 대상. 키가 없고 회원키·공개판 세션도 없으면 null.
  * unit: 긴 읽기 한 편을 여러 조각으로 나눠 부를 때 그 편의 이름(캐시 키). 공개판 서버가 한 편을 한 번으로 셉니다.
+ * req:  한 번의 누름을 가리키는 번호(newRequestId). 재시도·모델 바꿈이 같은 번호로 가면 공개판 서버가 한 번으로 셉니다
+ *       (2026-11-14 출시 전 점검 C-02 — 실패한 호출이 한도를 여러 칸 깎던 문제).
  */
-export function geminiTarget(model: string, apiKey: string, kind: AiKind, unit?: string): AiTarget | null {
+export function geminiTarget(model: string, apiKey: string, kind: AiKind, unit?: string, req?: string): AiTarget | null {
   const key = (apiKey || "").trim();
   if (key) {
     return {
@@ -83,6 +101,7 @@ export function geminiTarget(model: string, apiKey: string, kind: AiKind, unit?:
   const headers: Record<string, string> = Object.assign({ "content-type": "application/json", "x-kata-kind": kind }, ph);
   const u = String(unit || "").replace(UNIT_UNSAFE, "_").slice(0, 160);
   if (u) headers["x-kata-unit"] = u;
+  if (req && REQ_OK.test(req)) headers["x-kata-req"] = req;
   return {
     url: PUBLIC_BASE + "/ai/gemini/" + model + ":generateContent",
     headers,
