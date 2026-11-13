@@ -1,5 +1,10 @@
 name: Build Android APK
 
+# 관리자판·회원판 APK (io.github.cura4world.twa).
+# 2026-11-14: 빌드한 APK 를 공개 릴리스("latest", 받는 주소가 고정)에 올리지 않습니다.
+# Actions 실행 결과의 산출물(Artifacts, 14일 보관)로만 올립니다 — 저장소 → Actions → 이 실행 → 맨 아래 Artifacts.
+# 받으려면 GitHub 에 로그인해야 하고, 받은 zip 을 풀면 APK 가 나옵니다. 새 폰에는 그 파일을 직접 옮겨 설치합니다.
+
 on:
   workflow_dispatch:
   push:
@@ -8,7 +13,7 @@ on:
       - 'public/manifest.json'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -592,28 +597,14 @@ jobs:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Upload APK
+      - name: Prepare APK
+        run: cp app/build/outputs/apk/release/*.apk kata-kata.apk
+
+      # 공개 릴리스에는 올리지 않습니다(2026-11-14). 이 실행의 산출물로만, 14일 동안 보관합니다.
+      - name: Upload APK (산출물, 14일 보관)
         uses: actions/upload-artifact@v4
         with:
           name: kata-kata-apk
-          path: app/build/outputs/apk/release/*.apk
+          path: kata-kata.apk
+          retention-days: 14
           if-no-files-found: error
-
-      - name: Prepare release asset
-        run: cp app/build/outputs/apk/release/*.apk kata-kata.apk
-
-      - name: Update latest tag
-        run: |
-          git tag -f latest
-          git push origin latest --force
-
-      - name: Publish APK to GitHub Releases
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: Kata kata APK
-          body: |
-            Kata kata 인도네시아어-한국어 단어장 앱 (최신 빌드)
-            설치: APK를 열고 '출처를 알 수 없는 앱' 설치를 허용하세요.
-          files: kata-kata.apk
-          make_latest: true
