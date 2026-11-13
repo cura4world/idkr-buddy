@@ -3,7 +3,28 @@
 세션을 시작하면 `CLAUDE.md` → `DECISIONS.md` → 이 파일 순서로 읽는다. 이 파일은 **세션을 끝낼 때마다** 고친다.
 상세한 기술 기록은 저장소 밖 개발 요약 `../kata-kata-dev-summary.md`(로컬 파일, 이 저장소에는 없음)가 정본이다. 여기에는 복제하지 않는다.
 
-마지막 갱신: 2026-11-13 (두 세션 갈라짐 정리: 정책 주소 변경 10커밋을 원격 최신 위로 옮겨 push, 게시용 정책 HTML 3개 추가)
+마지막 갱신: 2026-11-13 (Bahasa Hari Ini 상세 화면: 미리보기 키 오류 원인 확정 + 오류 예방 A~D, 14커밋. 앞서 두 세션 갈라짐 정리와 게시용 정책 HTML 3개)
+
+## Bahasa Hari Ini 상세 화면 — 오류 예방과 배치 수정 (2026-11-13, `release/public`)
+
+- **원인 확정(폴드6 미리보기 0.9.47 실기기 진단)**: 미리보기 패널의 Gemini 키 칸에 **회원키(KK-XXXX-XXXX-XXXX, 17자)** 가 저장돼 있었다. 구글 직접 호출이 400 INVALID_ARGUMENT / `API_KEY_INVALID`.
+  실제 Gemini 키(`AQ.` 형식, 53자)로 바꾸니 "키 확인"·화면 모두 정상. → 아래 11-11 항목의 "키가 동작하지 않음 — 원인 미확정"은 이것으로 닫는다.
+  구글 AI Studio 는 이제 `AQ.` 형식만 발급한다. **코드 어디에서도 키가 `AIza` 로 시작한다고 가정하지 않는다**(예전 AIza 키도 계속 동작).
+  화면에서 코드가 사라진 이유: `geminiText.ts` 가 400 을 BAD_REQUEST 로 던지고, `PhraseDetail.tsx load()` 의 catch 가 일반 문구로 바꿨다.
+- **A. 내장 문장 해설을 앱에 담음** — 첫 실행에는 미리 만든 문장이 없어 내장 목록(`STATIC_PHRASES` 36개 = 속담 22 + 관용구 14)에서 꺼내는데, 해설 캐시가 없어 화면을 여는 순간 AI 를 불렀다(서버·네트워크가 흔들리면 첫 화면이 오류).
+  - `scripts/gen-phrase-seed.mjs` → `src/data/phrase-seed.json`(키는 환경변수 `GEMINI_API_KEY` 로만, 파일·커밋에 없음). 프롬프트는 앱과 같은 `src/lib/phrasePrompt.ts`(새 파일, `phrase.ts` 에서 뺌)를 노드가 직접 불러 쓴다. 모델 `gemini-3.8-flash` 로 1회 생성.
+  - Claude 교차 검수: 36개 전부 읽고 15건 수정(예: "고통 로용" → "gotong royong(고똥 로용)" — 한국어 '고통'은 괴로움이라 오해됨, 어색한 예문 문법 3건, 근거 불확실한 변형 표기 2건, 오타 3건, note 가 meaning 과 겹친 것 1건 등). **수정 목록은 `phrase-seed.json` 의 `_meta.edits`** 에 항목·이유로 적혀 있다.
+    **예문은 나중에 인도네시아 원어민 확인 대상**이다(파일 머리 `_meta.notice` 에도 적음).
+  - 다시 만들기: `$env:GEMINI_API_KEY = "<키>"` 후 `node scripts/gen-phrase-seed.mjs`(없는 것만) / `--force`(전부) / `--check`(모양만 검사, 키 불필요). 다시 만들면 검수 수정이 사라지므로 `_meta.edits` 를 보고 다시 검수한다.
+  - `phrase.ts getPhraseDetail()`: force 가 아니면 **IndexedDB 캐시 → seed → AI**. seed 에서 찾으면 IndexedDB 에도 저장. 성경(alkitab)은 seed 대상 아님, "다시 받기"(force)는 AI 를 부른다.
+  - seed 는 지연 import — 메인 번들 `index-*.js` 2,277.94 kB → 2,279.43 kB(+1.49 kB, gzip 708.17 → 708.73; 이 증가는 A~D 코드 전부). seed 는 별도 조각 `phrase-seed-*.js` 54,399바이트(gzip 19.34 kB, 처음 필요할 때만 받음). 서비스워커 미리 받기 목록은 17 → 18개 4667.56 → 4722.29 KiB.
+- **B. 오류 분류·표시**: `geminiText.ts callOnce` — 직접 호출(viaProxy=false)의 400 중 본문 `details[].reason == "API_KEY_INVALID"` 와 401 은 `INVALID_API_KEY`(그 밖의 400 은 BAD_REQUEST 그대로 — DECISIONS 5장). `PhraseDetail.tsx` 마지막 else 는 미리보기 빌드에서만 " (코드)" 를 붙임(공개판 정식 앱 문구는 그대로).
+  - **보고만 하고 고치지 않은 것**: 같은 모양의 일반 실패 문구("불러오지 못했습니다|만들지 못했습니다")가 18개 파일에 있다 — SettingsDialog(백업 2) · MyInfo(백업) · plusCopy · store(LOOKUP_FAIL_TEXT, 저장 가드가 문자열을 씀 → 바꾸지 말 것) · BibleRead · Devotion(3) · GameDengar · IndoMap · InsightTips · OneToOne · Percakapan(2) · PercakapanRead · Prayer · SermonRead(2) · Sermons · Story · mapPhotos(주석뿐) · PhraseDetail(이번에 고침). AI 호출이 실패하는 곳(Story·Percakapan·Prayer·Devotion·InsightTips·IndoMap·OneToOne·Sermons)은 같은 방식으로 `isPreviewBuild()` 일 때 코드를 붙일 후보.
+- **C. 키 입력칸**: 안내 `AIza…` → `AQ.…`(PreviewPanel·SettingsDialog), `grep AIza src` 에는 설명 주석 2줄만 남음. 접두어로는 저장을 막지 않는다. PreviewPanel 저장은 공백 제거 후 회원키 모양이면 거절(회원키 안내), 30자 미만이면 거절(길이 안내), 성공하면 "키 확인" 자동 실행, "저장됨 · 끝자리 xxxx · N자" 표시. SettingsDialog 는 회원키 모양만 거절(저장 막기 + 칸 아래 빨간 안내). 모양 검사는 `member.ts isMemberKeyShape` 한 곳(`activateMember` 도 같은 함수 사용), 입력칸 검사는 `gemini.ts`.
+- **D. "이렇게 씁니다" 예문**: 한 예문을 두 층으로 — 1층 상황 꼬리표(숫자 칸 24px 들여 예문 글자와 왼쪽 줄 맞춤), 2층 [숫자][예문+해석][스피커]. 숫자는 `leading-6`(=1.5rem, 예문 첫 줄 상자와 같음), 스피커는 `-mt-1`. 고정 px(`paddingTop 26`·`mt-[22px]`) 제거. 같은 패턴을 쓰는 다른 화면은 없음(`mt-[22px]` 는 GameDengar·GameEja 에 있으나 숫자·스피커 정렬과 무관한 일반 여백).
+- **확인한 것**: `npm run build`·`npx tsc`·vitest 67개 통과(새 테스트 3파일: phraseSeed·geminiKeyError·geminiKeyInput). 미리보기 모드 개발 서버에서 — A: IndexedDB 를 비우고 `Diam itu emas.` 상세를 열면 `googleapis`·`workers.dev` 요청 0건, seed 조각만 받고 IndexedDB 에 저장됨 / B: 회원키 모양 값을 키로 넣고 비내장 문장을 열면 "지금은 사용할 수 없습니다… (INVALID_API_KEY)" / C: 회원키 모양·짧은 값 저장 거절 문구, 긴 값 저장 후 길이 표시와 자동 키 확인(구글 401 `ACCESS_TOKEN_TYPE_UNSUPPORTED` 표시) / D: 폭 412·344px, 글자 85·100·115% 에서 꼬리표 1줄·2줄·없음 모두 숫자·스피커의 세로 중심이 예문 첫 줄 중심과 0~0.01px 차이.
+- **남은 것(폰에서 눈으로)**: 폴드6 미리보기 APK 를 다시 받아 ① 키 칸에 회원키를 넣어 보기(거절 문구) ② 첫 실행에서 오늘의 문장 상세가 네트워크 없이도 열리는지(비행기 모드) ③ "이렇게 씁니다" 숫자·스피커 위치.
+- **눈에 띈 것(이번에는 안 고침)**: `PhraseDetail.tsx` useEffect 가 `hasGeminiApiKey()` 가 거짓이면 캐시·seed 를 보기 전에 오류 카드를 먼저 띄운다. 키도 회원키도 로그인도 없는 상태에서는 seed 가 있어도 해설이 안 보인다. 공개판은 로그인 뒤라 영향이 적지만, 오프라인 첫 화면까지 보장하려면 이 선차단을 `load()` 안의 NO_API_KEY 처리로 옮기는 것을 검토.
 
 ## 두 세션 갈라짐 정리 (2026-11-13)
 
@@ -49,7 +70,7 @@
   - 단어장·회화집·이야기·이해·게임 7종·내 정보 글자 한 단계 작게, 이야기 하/중/상은 두 단계. 홈 "관용구" 같은 문장 종류 꼬리표 뺌.
   - 하단 탭을 카드·퀴즈·게임 진행·지도를 뺀 모든 공개판 화면에 표시(하위 화면은 속한 탭에 불, 누르면 그 탭 첫 화면).
   - 미리보기: 등급 기본값 관리자, 패널에 "키 확인" 버튼(구글 오류 이유 표시), AI 오류 안내에 코드 표시.
-    사용자 Gemini 키가 미리보기에서 동작하지 않는다는 보고 — 원인 미확정(후보: 키의 웹사이트 제한, 붙여 넣기 오류). "키 확인" 결과를 받아 정한다.
+    사용자 Gemini 키가 미리보기에서 동작하지 않는다는 보고 → **2026-11-13 원인 확정: 키 칸에 회원키(KK-…)가 들어 있었음**(맨 위 "Bahasa Hari Ini 상세 화면" 절).
 - **2026-11-11 밤~11-12 새벽: 사용자 폰 검사 2차(26항목+추가 2) 반영, 미리보기 0.9.40 폰 설치.**
   - 단어 발음(인니어 낱말)은 **폰 내장 음성**: 네이티브 다리 `KataNativeTTS`(build-preview.yml·build-store.yml, `src/lib/nativeTts.ts`),
     `storeTtsShim` 이 낱말만 그쪽으로. 카드는 한국어 = Gemini 남성(Charon), 그 밖의 인니어 = Gemini 여성.
