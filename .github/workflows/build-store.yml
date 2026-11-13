@@ -932,7 +932,13 @@ jobs:
                           if (fileCallback != null) fileCallback.onReceiveValue(null);
                           fileCallback = filePathCallback;
                           try {
-                              startActivityForResult(fileChooserParams.createIntent(), FILE_CHOOSER_REQUEST);
+                              // 웹이 준 accept 값으로 만든 기본 인텐트(createIntent)는 첫 값이 확장자(.json)면 종류가 잘못 잡혀
+                              // 파일 선택 창에서 모든 파일이 회색으로 나올 수 있습니다. 종류를 가리지 않는 선택 창을 직접 엽니다
+                              // (메신저·드라이브로 옮긴 백업 파일은 종류가 제각각이라 "모든 파일"이 안전 — 출시 전 점검 D-02).
+                              Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
+                              pick.addCategory(Intent.CATEGORY_OPENABLE);
+                              pick.setType("*/*");
+                              startActivityForResult(pick, FILE_CHOOSER_REQUEST);
                           } catch (Exception e) {
                               fileCallback = null;
                               return false;
