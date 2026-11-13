@@ -59,6 +59,8 @@ export interface BundleSummary {
   ink: number;          // 필기가 있는 설교문
   medali: number;       // 훈장 확정 단어·게임 기록
   phrases: number;      // 저장한 표현
+  stories?: number;     // 불러온 이야기 (백업 파일에만 담김)
+  scenes?: number;      // 만든 회화 장면 (백업 파일에만 담김)
 }
 
 // 보낸 쪽 값으로 바꾸는 화면 설정
@@ -106,6 +108,23 @@ const DB_SPECS: DbSpec[] = [
       { name: "rounds", keyPath: "id" },
     ],
     take: ["words", "rounds"], // daily 는 서버 칸으로 합산되므로 담지 않습니다
+  },
+];
+
+// 직접 만든 것 — 불러온 이야기와 만든 회화집 (2026-11-14 출시 전 점검 D-03).
+// 공개판은 데이터가 이 폰에만 있어, 백업 파일에 이것이 빠지면 폰을 바꿀 때 사라집니다.
+// "백업 파일"에만 담습니다(buildBackupFile). 회원키의 서버 백업·새 폰으로 보내기에는 담지 않습니다 —
+// 그쪽은 서버에 크기 상한이 있고, 회화집은 회원 서버에 따로 백업됩니다(percakapan.ts restoreBackup).
+// 되돌릴 때는 묶음에 들어 있으면 어느 길로 온 것이든 합칩니다(없는 것만 넣음).
+const CREATION_SPECS: DbSpec[] = [
+  { db: "kata-stories", stores: [{ name: "stories", keyPath: "id", indexes: ["createdAt"] }], take: ["stories"] },
+  {
+    db: "kata-percakapan",
+    stores: [
+      { name: "scenes", keyPath: "id", indexes: ["cat"] },
+      { name: "cats", keyPath: "id" },
+    ],
+    take: ["scenes", "cats"],
   },
 ];
 
@@ -200,7 +219,8 @@ function parseArray(raw: string | null): unknown[] {
   }
 }
 
-export async function collectBundle(): Promise<{ bundle: PersonalBundle; summary: BundleSummary }> {
+/** withCreations: 불러온 이야기·만든 회화집도 담습니다(백업 파일용). 기본은 담지 않음(서버 백업·보내기). */
+export async function collectBundle(withCreations = false): Promise<{ bundle: PersonalBundle; summary: BundleSummary }> {
   const categories = getCategories();
   const words = getWords().filter((w) => !isBuiltInWord(w));
   const saved = getSavedWordIds();
@@ -212,7 +232,7 @@ export async function collectBundle(): Promise<{ bundle: PersonalBundle; summary
   }
 
   const idb: Record<string, Record<string, unknown[]>> = {};
-  for (const spec of DB_SPECS) {
+  for (const spec of withCreations ? DB_SPECS.concat(CREATION_SPECS) : DB_SPECS) {
     let db: IDBDatabase | null = null;
     try {
       db = await openSpec(spec);
@@ -259,6 +279,8 @@ export function summarize(b: PersonalBundle): BundleSummary {
     ink: countOf(b, "kata-sermon-ink", "ink"),
     medali: countOf(b, "kata-medali", "words") + countOf(b, "kata-medali", "rounds"),
     phrases: parseArray(b.ls[PHRASE_SAVED_KEY] || null).length,
+    stories: countOf(b, "kata-stories", "stories"),
+    scenes: countOf(b, "kata-percakapan", "scenes"),
   };
 }
 
@@ -273,6 +295,8 @@ export function describeSummary(s: BundleSummary): string {
   if (s.phrases > 0) parts.push("저장한 표현 " + s.phrases + "개");
   if (s.ink > 0) parts.push("설교문 필기 " + s.ink + "편");
   if (s.medali > 0) parts.push("훈장 기록 " + s.medali + "건");
+  if ((s.stories || 0) > 0) parts.push("이야기 " + s.stories + "편");
+  if ((s.scenes || 0) > 0) parts.push("만든 회화 " + s.scenes + "개");
   return parts.join(" · ");
 }
 
@@ -552,7 +576,7 @@ function mergeLocalStorage(b: PersonalBundle): void {
 }
 
 async function mergeIndexedDb(b: PersonalBundle): Promise<void> {
-  for (const spec of DB_SPECS) {
+  for (const spec of DB_SPECS.concat(CREATION_SPECS)) {
     const part = b.idb[spec.db];
     if (!part) continue;
     let db: IDBDatabase | null = null;
@@ -897,12 +921,28 @@ export async function autoBackupOnStart(): Promise<"skipped" | "same" | "saved" 
 
 function pad2(n: number): string { return n < 10 ? "0" + n : String(n); }
 
+// 마지막으로 백업 파일을 저장한 시각 — 내 정보에 "마지막 백업: 날짜"로 보여 줍니다(D-01).
+// 공개판은 데이터가 이 폰에만 있어, 백업을 한 적이 있는지 사용자가 알 수 있어야 합니다.
+const BACKUP_FILE_LAST_KEY = "kata-backup-file-last";
+
+/** 백업 파일 저장에 성공했을 때 부릅니다. */
+export function markBackupFileSaved(): void {
+  lsSet(BACKUP_FILE_LAST_KEY, String(Date.now()));
+}
+
+/** 마지막으로 백업 파일을 저장한 시각(ms). 한 적이 없으면 0. */
+export function getBackupFileSavedAt(): number {
+  const n = Number(lsGet(BACKUP_FILE_LAST_KEY) || "0");
+  return isFinite(n) && n > 0 ? n : 0;
+}
+
 /**
  * 백업 파일을 data: 주소로 만듭니다. 앱(APK)은 blob: 주소를 저장하지 못하고
  * data: 주소만 다운로드 폴더에 씁니다 — 그래서 base64 로 직접 만듭니다.
  */
 export async function buildBackupFile(): Promise<{ href: string; fileName: string; summary: BundleSummary; bytes: number }> {
-  const { bundle, summary } = await collectBundle();
+  // 백업 파일에는 불러온 이야기·만든 회화집도 담습니다(D-03).
+  const { bundle, summary } = await collectBundle(true);
   const utf8 = new TextEncoder().encode(JSON.stringify(bundle));
   let bin = "";
   const CHUNK = 0x8000;
