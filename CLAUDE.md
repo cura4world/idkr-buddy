@@ -205,7 +205,10 @@ src/
   lib/wordbookGroups.ts·wordbookAccess.ts 단어장 묶음·성경과 신앙 숨김 · lib/sharedIdMigration.ts 단어장 ID 이전 ·
   lib/illust.ts·illustFit.ts + data/illust/ 색연필 그림(README 가 정본) · lib/kataHariIni.ts + data/kataHariIniWords.ts
   퍼즐 정답 동결본(맨 끝에만 붙임) · lib/mapPhotos.ts 지도 사진 고정 목록(scripts/build-map-photos.mjs, Actions 에서 생성) ·
-  hooks/useBackClose.ts 창·시트 뒤로가기 닫기 · components/BottomTabs·PlusLockBox·PreviewPanel·WordIllust·LevelCircles·WordMiniSheet
+  hooks/useBackClose.ts 창·시트 뒤로가기 닫기 · components/BottomTabs·PlusLockBox·PreviewPanel·WordIllust·LevelCircles·WordMiniSheet ·
+  components/FormSheet.tsx 입력 시트 공용 디자인(회화집 만들기·단어 추가·단어장 만들기·CSV·이름 변경·추가하기는 이것을 씀) ·
+  components/CategoryIcon.tsx 단어장 아이콘을 그리는 한 곳 + lib/categoryIcon.ts 저장 형태 `Category.emoji` = 옛 이모지 또는 `icon:<lucide 이름>:<색키>`
+  (단어장 아이콘을 그릴 때 `{cat.emoji}` 를 직접 쓰지 말 것 — CategoryTile/CategoryGlyph 로)
 data/categories/*.csv       공용 기본 단어장
 data/private/{폴더명}/*.csv  개인 단어장
 data/WORDLIST-PLAN.md       단어장 목표 개수·형식·분류 원칙
