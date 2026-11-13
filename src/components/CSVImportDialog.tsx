@@ -60,7 +60,7 @@ export default function CSVImportDialog({ open, onOpenChange, onImported, catego
         </FormPrimaryButton>
       }
     >
-      <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFile} className="hidden" />
+      <input ref={fileRef} type="file" accept="text/csv,text/comma-separated-values,text/plain,.csv,.txt" onChange={handleFile} className="hidden" />
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
