@@ -24,7 +24,8 @@ export interface PlusPerk {
 export const PLUS_PERKS: PlusPerk[] = [
   { icon: "book", title: "기본 단어장 34권", note: "(3,000단어)", sub: "주제별 단어를 카드와 퀴즈로 외우기" },
   { icon: "game", title: "단어 게임 6가지", sub: "게임으로 단어 실력 쌓기" },
-  { icon: "speaker", title: "인도네시아 음성으로 이야기 듣기", sub: "하루 5편까지 새 이야기 불러오기" },
+  // 한 달 상한(60편)도 함께 적습니다 — "하루 5편"만 보고 매일 5편을 받으면 12일째에 막힙니다(B-10).
+  { icon: "speaker", title: "인도네시아 음성으로 이야기 듣기", sub: "새 이야기 하루 5편 · 한 달 60편까지" },
   { icon: "chat", title: "회화 공부와 만들기", sub: "86개 상황과 새로운 상황 만들기" },
   { icon: "map", title: "인도네시아 이해 · 지도", sub: "섬과 도시마다 읽을거리와 단어공부" },
 ];
@@ -133,9 +134,17 @@ export const STATE_SPECIAL = "Special Member";
 export const STATE_ADMIN = "관리자";
 export const STATE_STAFF_SUB = "모든 기능이 열려 있습니다";
 
-export function stateUntilText(dateText: string, trial: boolean): string {
+/** 심사용 계정(서버 등급 review) — Plus 와 같은 화면에 이 한 줄만 다릅니다. */
+export const STATE_REVIEW_SUB = "심사용 계정";
+
+/** autoRenew 가 false 면 Play 에서 해지한 구독입니다 — 다음 결제가 없으므로 "자동 갱신"이라고 하지 않습니다(B-09). */
+export function stateUntilText(dateText: string, trial: boolean, autoRenew = true): string {
+  if (!autoRenew) return dateText + "까지 이용 · 자동 갱신 꺼짐";
   return trial ? dateText + "까지 체험 · 끝나면 자동으로 구독됩니다" : dateText + "까지 · 자동 갱신";
 }
+
+/** 체험 가능할 때 구독 화면에 덧붙이는 한 줄 — 체험 한도는 Plus 의 절반입니다(서버 TRIAL_HALF_KINDS, B-10). */
+export const NOTE_TRIAL_HALF = "체험 중에는 이야기·회화 만들기·듣기 횟수가 절반입니다.";
 
 // ── 알림 ─────────────────────────────────────────────────────
 
