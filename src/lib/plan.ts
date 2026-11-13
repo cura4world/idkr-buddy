@@ -67,7 +67,8 @@ export function getTier(): Tier {
   if (!isStoreApp()) return "admin";
   const s = getSession();
   if (!s) return "free";
-  const p = s.plan as { tier?: string; until?: number; trial?: boolean };
+  // 저장된 세션에 plan 이 없거나 깨져 있어도 화면이 죽지 않게 빈 값으로 받습니다(무료로 봄 — 출시 전 점검 C-03).
+  const p = (s.plan && typeof s.plan === "object" ? s.plan : {}) as { tier?: string; until?: number; trial?: boolean };
   // special·admin 은 until 0 이 무기한. 기한이 있으면 지난 뒤에는 무료로 봅니다(서버도 같은 판단).
   const live = typeof p.until === "number" && p.until > Date.now();
   if (p.tier === "admin" && (!p.until || live)) return "admin";
