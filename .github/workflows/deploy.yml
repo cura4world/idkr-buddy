@@ -17,17 +17,15 @@ jobs:
         with:
           node-version: 18
 
-      - run: npm install
+      # 잠금 파일(package-lock.json) 그대로 설치합니다. npm install 은 잠금 파일과 다른 판을 받아 올 수 있어,
+      # 스토어 앱이 불러오는 페이지가 검사하지 않은 의존성으로 빌드될 수 있었습니다(2026-11-14 출시 전 점검 S-07).
+      # 미리보기 빌드(build-preview.yml)는 처음부터 npm ci 를 씁니다.
+      - run: npm ci
 
       - run: npm run build
 
-      - name: Copy .well-known to dist
-        run: |
-          mkdir -p dist/.well-known
-          cp -r public/.well-known/. dist/.well-known/
-          echo "=== dist/.well-known contents ==="
-          ls -la dist/.well-known/
-          cat dist/.well-known/assetlinks.json
+      # .well-known/assetlinks.json 복사 단계는 없앴습니다(2026-11-14 S-02). 이 앱은 TWA 를 쓰지 않아 필요 없고,
+      # 그 파일이 가리키던 서명 키는 다시 쓰지 않습니다.
 
       - run: cp dist/index.html dist/404.html
 
