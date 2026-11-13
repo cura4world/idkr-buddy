@@ -8,6 +8,8 @@
 //   admin   관리자
 //
 // 스토어 앱이 아니면(관리자판·회원판) 지금처럼 모두 열려 있어야 하므로 "admin" 을 돌려줍니다.
+// 회원키도 예전 설정도 없는 브라우저 방문자는 이 판단까지 오지 않습니다 — 앱 대신 안내 화면을 봅니다
+// (2026-11-14, src/components/WebGate.tsx).
 // 미리보기 APK 에서는 미리보기 패널의 전환값을 따릅니다(src/lib/preview.ts).
 
 import { useEffect, useState } from "react";
