@@ -32,15 +32,30 @@ export const PLUS_PERKS: PlusPerk[] = [
 // ── 요금제 카드 ──────────────────────────────────────────────
 
 export const PLAN_YEARLY_LABEL = "연간";
+export const PLAN_YEARLY_SUB = "매년 결제";
 export const PLAN_MONTHLY_LABEL = "월간";
 export const PLAN_MONTHLY_SUB = "매달 결제";
 
-/** Play 에서 가격을 못 받았을 때(미리보기 APK·조회 실패) 보이는 고정 가격 — 결정 문서 요금. */
+/**
+ * 미리보기 빌드에서만 쓰는 대체 가격 — 2026-11-14 결정: 연 34,800원(월 2,900원) · 월 3,900원.
+ * 정식 스토어 앱은 이 값을 쓰지 않습니다. Play 에서 받은 가격만 보여 주고, 못 받았으면 가격 자리를 비워 둡니다
+ * (src/lib/playOffers.ts). 월 환산은 여기 적지 않고 연 가격 ÷ 12 로 계산합니다.
+ */
 export const FALLBACK_YEARLY_WON = 34800;
 export const FALLBACK_MONTHLY_WON = 3900;
+/** 미리보기 빌드의 대체 체험 기간. 정식 스토어 앱은 Play 제안의 freeTrialPeriod 만 씁니다. */
+export const FALLBACK_TRIAL_TEXT = "7일";
 
 export function wonText(n: number): string {
   return n.toLocaleString("ko-KR") + "원";
+}
+
+/** 요금제 카드의 가격 자리 — Play 에서 아직 못 받았을 때 */
+export const PRICE_LOADING = "가격을 불러오는 중";
+export const PRICE_FAILED = "가격을 불러오지 못했습니다";
+/** 연간 카드의 작은 덧말: "(월 2,900원)" */
+export function perMonthNote(perMonthPrice: string): string {
+  return "(월 " + perMonthPrice + ")";
 }
 
 export function discountBadge(percent: number): string {
@@ -58,20 +73,49 @@ export const CTA_MANAGE = "구독 관리 (Google Play)";
 export const CTA_CLOSE = "닫기";
 
 // ── 버튼 아래 안내 ───────────────────────────────────────────
+// 첫 줄은 언제나 자동 결제 고지입니다(Play 구독 정책 — 2026-11-14 출시 전 점검 B-07).
 
-/** 체험 가능(PW1). priceText 예: "연 34,800원" · "월 3,900원" */
-export function noteTrialLines(trialText: string, priceText: string): string[] {
+/** "해지 전까지 매년 자동으로 결제됩니다." · 월간은 "매달" */
+export function noteAutoRenew(yearly: boolean): string {
+  return "해지 전까지 " + (yearly ? "매년" : "매달") + " 자동으로 결제됩니다.";
+}
+
+/** 체험 가능(PW1). priceText 예: "연 34,800원" · "월 3,900원" (다른 통화는 Play 표기 그대로) */
+export function noteTrialLines(trialText: string, priceText: string, yearly: boolean): string[] {
+  const won = priceText.slice(-1) === "원";
   return [
-    trialText + " 체험이 끝나면 " + priceText + "이 결제됩니다.",
+    noteAutoRenew(yearly),
+    trialText + " 체험이 끝나면 " + priceText + (won ? "이 결제되며," : " 결제가 시작되며,"),
     "체험 중 언제든 Google Play에서 해지할 수 있습니다.",
   ];
 }
 
 /** 체험을 이미 쓴 계정(PW2). */
-export const NOTE_NO_TRIAL_LINES: string[] = [
-  "Google Play에서 결제되며, 언제든 해지할 수 있습니다.",
-  "무료 체험은 계정마다 한 번만 제공됩니다.",
+export function noteNoTrialLines(yearly: boolean): string[] {
+  return [
+    noteAutoRenew(yearly),
+    "Google Play에서 결제되며, 언제든 해지할 수 있습니다.",
+    "무료 체험은 계정마다 한 번만 제공됩니다.",
+  ];
+}
+
+/** Play 에서 가격을 받는 중·못 받았을 때 */
+export const NOTE_PRICE_LOADING = "Google Play에서 가격을 불러오는 중입니다.";
+export const NOTE_PRICE_FAILED = "가격을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.";
+export const LINK_PRICE_RETRY = "다시 불러오기";
+
+/** 결제는 끝났는데 서버 확인이 아직인 동안 (다시 결제하라고 하지 않습니다) */
+export const NOTE_VERIFYING_LINES: string[] = [
+  "결제는 완료되었습니다. 확인 중입니다.",
+  "확인되면 Plus 가 바로 열립니다. 다시 결제하지 않으셔도 됩니다.",
 ];
+export const CTA_VERIFYING = "결제 확인 중";
+
+// ── 잠금 상자·홈의 Plus 버튼 둘째 줄 ─────────────────────────
+/** Play 체험 제안이 있을 때만 "7일 무료 체험", 없으면 "자세히 보기" */
+export function lockButtonSub(trialText: string): string {
+  return trialText ? trialText + " 무료 체험" : "자세히 보기";
+}
 
 export const NOTE_AI_VOICE = "읽기 음성은 AI가 만든 인도네시아어 음성입니다.";
 
@@ -98,7 +142,22 @@ export function stateUntilText(dateText: string, trial: boolean): string {
 export const TOAST_STARTED = "Plus 가 시작되었습니다. 고맙습니다";
 export const TOAST_TRIAL_STARTED = "무료 체험이 시작되었습니다. 모든 기능이 열렸습니다";
 export const TOAST_PENDING = "결제가 확인되면 Plus 가 켜집니다";
+/** 결제는 끝났는데 서버 확인이 실패 — 자동으로 다시 확인합니다(billing.ts). */
+export const TOAST_VERIFYING = "결제는 완료되었습니다. 확인 중입니다.";
+export const TOAST_VERIFIED = "결제가 확인되었습니다. Plus 가 시작되었습니다";
+export const TOAST_VERIFIED_TRIAL = "결제가 확인되었습니다. 무료 체험이 시작되었습니다";
+/** 이 기기의 구독이 다른 앱 계정에 묶여 있을 때 (서버 403 ACCOUNT_MISMATCH · 409 PURCHASE_OWNED_BY_OTHER) */
+export const TOAST_OTHER_ACCOUNT = "이 구독은 다른 Google 계정으로 로그인했을 때 산 것입니다. 그 계정으로 로그인해 주세요";
+export const TOAST_RESTORE_RETRY = "구독을 확인하지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요";
+
+/** 결제·복원 결과 코드 가운데 "다른 계정의 구독"인 것 */
+export function isOtherAccountCode(code: string): boolean {
+  return code === "ACCOUNT_MISMATCH" || code === "PURCHASE_OWNED_BY_OTHER";
+}
+
+/** 결제 창에서 구매가 끝나지 않았을 때(Play 오류). 결제가 끝난 뒤의 확인 실패에는 쓰지 않습니다. */
 export function toastFailed(code: string): string {
+  if (isOtherAccountCode(code)) return TOAST_OTHER_ACCOUNT;
   return "구독을 마치지 못했습니다. 잠시 뒤 다시 시도해 주세요 (" + code + ")";
 }
 export const TOAST_RESTORED = "구독을 다시 연결했습니다";
