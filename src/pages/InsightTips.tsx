@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { generateTip, saveTip, listTips, deleteTip, TipRecord } from "@/lib/tips";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { aiErrorToast } from "@/lib/aiErrors";
+import AiReportButton from "@/components/AiReportButton";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 
 const InsightTips = () => {
@@ -213,6 +214,8 @@ const InsightTips = () => {
             {isOpen && (
               <div className="px-4 pb-4 -mt-0.5">
                 <p className="text-sm font-gothic text-gray-700 leading-relaxed">{t.body}</p>
+                {/* AI 가 만든 글 신고 — 스토어 앱(공개판)에서만 보입니다(2026-11-14 P-05) */}
+                <AiReportButton feature="tips" input={t.title} output={t.body} className="mt-1" />
 
                 {t.indo && (
                   <div className="mt-2.5 flex items-center gap-2 bg-[#E2F1EC] rounded-xl px-3 py-2">
