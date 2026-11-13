@@ -7,6 +7,7 @@ import { useBackClose } from "@/hooks/useBackClose";
 import { aiErrorToast } from "@/lib/aiErrors";
 import FormSheet, { FORM_C, FORM_FIELD_CLASS, FORM_INPUT_CLASS, FormLabel, FormPrimaryButton } from "@/components/FormSheet";
 import { CategoryGlyph } from "@/components/CategoryIcon";
+import AiReportButton from "@/components/AiReportButton";
 import { isStoreApp } from "@/lib/platform";
 import { isStaffTier } from "@/lib/plan";
 
@@ -26,6 +27,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
   const [exampleMeaning, setExampleMeaning] = useState("");
   const [categoryId, setCategoryId] = useState(categoryIdProp || defaultCategoryId || "");
   const [filling, setFilling] = useState(false);
+  const [filled, setFilled] = useState<{ word: string; text: string } | null>(null);
   // 공개판(스토어 앱)의 무료·체험·Plus 에게는 직접 만든 단어장만 보입니다(내 단어장 포함).
   // 공용 단어장에 넣은 단어는 그 등급에서 다시 볼 길이 없고, "성경과 신앙"(35~41)은 이름도 보이면 안 됩니다
   // (2026-11-14 출시 전 점검 E-03 — 담을 단어장 목록 saveTarget.ts 의 loadSaveTargets 와 같은 기준).
@@ -38,7 +40,10 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
   const pickedId = categories.some((c) => c.id === categoryId) ? categoryId : firstId;
 
   useEffect(() => {
-    if (open) setCategoryId(categoryIdProp || defaultCategoryId || "");
+    if (open) {
+      setCategoryId(categoryIdProp || defaultCategoryId || "");
+      setFilled(null);
+    }
   }, [open, categoryIdProp, defaultCategoryId]);
 
   // 폰의 뒤로가기는 이 창만 닫습니다(화면을 떠나지 않음)
@@ -55,6 +60,11 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
       if (result.meaning) setMeaning(result.meaning);
       if (result.example) setExample(result.example);
       if (result.exampleMeaning) setExampleMeaning(result.exampleMeaning);
+      // AI 가 채운 내용(신고 단추에 실어 보낼 것) — 어느 단어의 결과인지와 함께 기억합니다.
+      setFilled({
+        word: word.trim(),
+        text: [result.meaning, result.example, result.exampleMeaning].filter((x) => !!x).join(" / "),
+      });
       toast("자동 채우기 완료 (내용을 확인하세요)");
     } catch (err) {
       const msg = (err as Error)?.message || "";
@@ -138,6 +148,10 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
             </button>
           ) : null}
         </div>
+        {/* 자동 채우기는 AI 가 만든 내용입니다 — 스토어 앱(공개판)에서만 신고 단추가 보입니다(2026-11-14 P-05) */}
+        {filled && filled.text ? (
+          <AiReportButton key={filled.word + filled.text} feature="fill" input={filled.word} output={filled.text} className="mt-1" />
+        ) : null}
       </div>
 
       <div>
