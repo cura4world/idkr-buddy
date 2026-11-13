@@ -67,6 +67,18 @@ async function sha256hex(t) {
 const calls = [];
 let playSub = null; // 테스트마다 바꿈
 let proxyStatus = 200;
+let playStatus = 200; // Play 구독 조회 응답 상태 (503 = 일시 오류 흉내)
+let ackStatus = 200;  // Play 확인(acknowledge) 응답 상태 (403 = 서비스 계정 권한 빠짐 흉내)
+
+// 시계 옮기기 — 서버 코드는 Date.now() 만 쓰므로 이것만 밀면 "하루 뒤"를 만들 수 있습니다.
+const realNow = Date.now.bind(Date);
+let clockOffset = 0;
+Date.now = () => realNow() + clockOffset;
+const MIN = 60 * 1000;
+const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
+const playAsks = () => calls.filter((c) => c.url.indexOf("/purchases/subscriptionsv2/tokens/") > 0).length;
+const ackAsks = () => calls.filter((c) => c.url.endsWith(":acknowledge")).length;
 globalThis.fetch = async (url, init = {}) => {
   url = String(url);
   calls.push({ url, init });
@@ -83,10 +95,15 @@ globalThis.fetch = async (url, init = {}) => {
     return new Response(JSON.stringify({ access_token: "play-access", expires_in: 3600 }), { status: 200 });
   }
   if (url.indexOf("/purchases/subscriptionsv2/tokens/") > 0) {
+    if (playStatus !== 200) return new Response("{}", { status: playStatus });
     if (!playSub) return new Response("{}", { status: 404 });
     return new Response(JSON.stringify(playSub), { status: 200 });
   }
-  if (url.endsWith(":acknowledge")) return new Response("{}", { status: 200 });
+  if (url.endsWith(":acknowledge")) {
+    // 확인이 되면 Play 는 그 뒤로 "확인됨"이라고 답합니다.
+    if (ackStatus === 200 && playSub) playSub.acknowledgementState = "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED";
+    return new Response("{}", { status: ackStatus });
+  }
   return new Response("not mocked: " + url, { status: 599 });
 };
 
@@ -661,4 +678,281 @@ test("LIMITS_JSON: 새 모양(칸별 day/month/locked)과 예전 모양(숫자) 
   assert.equal(me2.data.features.longread.limit.total, 3);
   // 체험 이야기: plus month 를 없앴으므로 체험도 month 없음, day 는 max(절반 2, 무료 2) = 2
   assert.deepEqual(me2.data.features.story.limit, { day: 2, month: null });
+});
+
+// ── 출시 전 점검(2026-11-13) 3-6 의 결제 시나리오 ───────────────
+// S1 환불 · S2 만료 뒤 재확인 · S3 확인(acknowledge) 실패 · S10 Play 일시 오류
+
+function resetWorld() {
+  __resetCachesForTest();
+  calls.length = 0;
+  clockOffset = 0;
+  playStatus = 200;
+  ackStatus = 200;
+  proxyStatus = 200;
+  playSub = null;
+}
+
+/** 구독을 사서 검증까지 마친 계정. Play 응답(playSub)은 그대로 살려 둡니다(뒤에서 상태를 바꿔 보려고). */
+async function buy(env, t, { days = 30, ack = "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED", token = "tok-buy" } = {}) {
+  const me = await call(env, "GET", "/me", { token: t });
+  playSub = {
+    subscriptionState: "SUBSCRIPTION_STATE_ACTIVE",
+    acknowledgementState: ack,
+    startTime: new Date(Date.now()).toISOString(),
+    lineItems: [{ productId: "plus", expiryTime: new Date(Date.now() + days * DAY).toISOString() }],
+    externalAccountIdentifiers: { obfuscatedExternalAccountId: me.data.accountId },
+  };
+  const v = await call(env, "POST", "/billing/verify", { token: t, body: { productId: "plus", purchaseToken: token } });
+  return { v, uid: me.data.user.id };
+}
+
+const entOf = (env, uid) => JSON.parse(env.PUBLIC_KV.m.get("ent:" + uid) || "null");
+const tierOf = async (env, t) => (await call(env, "GET", "/me", { token: t })).data.plan.tier;
+
+test("S1 환불: 만료 전이라도 마지막 확인에서 24시간이 지나면 Play 에 다시 묻고, 환불·취소면 바로 무료", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9101", email: "s1@example.com" });
+  const { v, uid } = await buy(env, t, { days: 365 });
+  assert.equal(v.data.plan.tier, "plus");
+  assert.equal(playAsks(), 1);
+
+  // 환불(권한 회수) — Play 는 만료 시각이 남아 있어도 EXPIRED 라고 답합니다.
+  playSub.subscriptionState = "SUBSCRIPTION_STATE_EXPIRED";
+
+  // 24시간 안: 아직 다시 묻지 않음 (이 틈이 최대 하루)
+  clockOffset = 23 * HOUR;
+  assert.equal(await tierOf(env, t), "plus");
+  assert.equal(playAsks(), 1);
+
+  // 24시간 뒤: 다시 묻고 바로 무료
+  clockOffset = 24 * HOUR + MIN;
+  assert.equal(await tierOf(env, t), "free");
+  assert.equal(playAsks(), 2);
+  const ent = entOf(env, uid);
+  assert.equal(ent.tier, "free");
+  assert.equal(ent.state, "SUBSCRIPTION_STATE_EXPIRED");
+  assert.ok(ent.freeSince > 0);
+  // 서버 한도도 무료로 (Plus 전용 긴 읽기는 잠김)
+  const lr = await ai(env, t, "longread", null, { "x-kata-unit": "s1" });
+  assert.equal(lr.status, 403);
+  assert.equal(lr.data.error, "PLUS_REQUIRED");
+  // 요청마다 Play 를 부르지는 않음 (한 시간에 한 번까지)
+  assert.equal(playAsks(), 2);
+  resetWorld();
+});
+
+test("S1-b 취소(자동 갱신 끔)·유예는 만료 시각까지 그대로 Plus, 보류는 무료", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9102", email: "s1b@example.com" });
+  await buy(env, t, { days: 30 });
+  playSub.subscriptionState = "SUBSCRIPTION_STATE_CANCELED";
+  clockOffset = 25 * HOUR;
+  assert.equal(await tierOf(env, t), "plus");
+  playSub.subscriptionState = "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+  clockOffset = 50 * HOUR;
+  assert.equal(await tierOf(env, t), "plus");
+  playSub.subscriptionState = "SUBSCRIPTION_STATE_ON_HOLD";
+  clockOffset = 75 * HOUR;
+  assert.equal(await tierOf(env, t), "free");
+  // 결제 수단을 고쳐 구독이 살아나면 한 시간 뒤 돌아옴
+  playSub.subscriptionState = "SUBSCRIPTION_STATE_ACTIVE";
+  clockOffset = 75 * HOUR + 30 * MIN;
+  assert.equal(await tierOf(env, t), "free");
+  clockOffset = 76 * HOUR + MIN;
+  assert.equal(await tierOf(env, t), "plus");
+  resetWorld();
+});
+
+test("S2 만료 뒤 재확인: 한 번 무료로 적혀도 30일 동안은 한 시간에 한 번까지 다시 묻는다", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9201", email: "s2@example.com" });
+  const { uid } = await buy(env, t, { days: 3 });
+  assert.equal(playAsks(), 1);
+
+  // 만료 직후, Play 는 아직 옛 만료 시각을 답함(갱신 반영 전) → 무료로 적힘. 구매 토큰은 남음.
+  clockOffset = 3 * DAY + MIN;
+  assert.equal(await tierOf(env, t), "free");
+  assert.equal(playAsks(), 2);
+  let ent = entOf(env, uid);
+  assert.equal(ent.tier, "free");
+  assert.equal(ent.purchaseToken, "tok-buy");
+  const freeSince = ent.freeSince;
+  assert.ok(freeSince > 0);
+
+  // Play 가 갱신을 반영함 — 한 시간 안에는 다시 묻지 않음
+  playSub.lineItems[0].expiryTime = new Date(Date.now() + 30 * DAY).toISOString();
+  clockOffset = 3 * DAY + 30 * MIN;
+  assert.equal(await tierOf(env, t), "free");
+  assert.equal(playAsks(), 2);
+
+  // 한 시간 뒤: /me 만으로 Plus 로 돌아옴 (앱을 다시 켜거나 /billing/verify 를 부르지 않아도)
+  clockOffset = 3 * DAY + HOUR + 2 * MIN;
+  assert.equal(await tierOf(env, t), "plus");
+  assert.equal(playAsks(), 3);
+  ent = entOf(env, uid);
+  assert.equal(ent.tier, "plus");
+  assert.equal(ent.freeSince, undefined);
+  resetWorld();
+});
+
+test("S2-b 무료로 내려간 뒤 30일이 지나면 더 묻지 않고, 그 안에서는 처음 내려간 시각을 기준으로 센다", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9202", email: "s2b@example.com" });
+  const { uid } = await buy(env, t, { days: 1 });
+  clockOffset = DAY + MIN;
+  assert.equal(await tierOf(env, t), "free");
+  const first = entOf(env, uid).freeSince;
+  assert.equal(playAsks(), 2);
+
+  // 29일째: 여전히 묻는다(한 시간에 한 번). 처음 내려간 시각은 그대로.
+  clockOffset = 29 * DAY;
+  assert.equal(await tierOf(env, t), "free");
+  assert.equal(playAsks(), 3);
+  assert.equal(entOf(env, uid).freeSince, first);
+
+  // 31일 뒤: 더 묻지 않음
+  clockOffset = DAY + MIN + 31 * DAY;
+  assert.equal(await tierOf(env, t), "free");
+  assert.equal(playAsks(), 3);
+  resetWorld();
+});
+
+test("S3 확인(acknowledge) 실패: 권한을 먼저 저장하고, 다음 /me·/billing/verify 때 다시 확인한다", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9301", email: "s3@example.com" });
+  ackStatus = 403; // 서비스 계정에 "주문 및 구독 관리" 권한이 빠진 경우
+  const { v, uid } = await buy(env, t, { days: 30, ack: "ACKNOWLEDGEMENT_STATE_PENDING" });
+  assert.equal(v.status, 200, JSON.stringify(v.data));
+  assert.equal(v.data.valid, true);
+  assert.equal(v.data.plan.tier, "plus");
+  assert.equal(v.data.ackPending, true);
+  assert.equal(ackAsks(), 1);
+  let ent = entOf(env, uid);
+  assert.equal(ent.tier, "plus");
+  assert.equal(ent.ackPending, true);
+  // 실패 기록(관리자용) — 구매 토큰 원문은 없음
+  const failKey = "ackfail:" + (await sha256hex("tok-buy"));
+  const fail = JSON.parse(env.PUBLIC_KV.m.get(failKey));
+  assert.equal(fail.status, 403);
+  assert.equal(fail.count, 1);
+  assert.ok(![...env.PUBLIC_KV.m.values()].some((val) => val.indexOf("tok-buy") >= 0 && val.indexOf("\"purchaseToken\"") < 0));
+
+  // /me 는 Plus. 10분 안에는 Play 를 다시 부르지 않음
+  assert.equal(await tierOf(env, t), "plus");
+  assert.equal(ackAsks(), 1);
+
+  // /billing/verify 는 부를 때마다 다시 확인을 시도
+  const again = await call(env, "POST", "/billing/verify", { token: t, body: { productId: "plus", purchaseToken: "tok-buy" } });
+  assert.equal(again.data.plan.tier, "plus");
+  assert.equal(again.data.ackPending, true);
+  assert.equal(ackAsks(), 2);
+  assert.equal(JSON.parse(env.PUBLIC_KV.m.get(failKey)).count, 2);
+
+  // 10분 뒤 /me — 권한을 고친 뒤라 확인 성공, 표시와 실패 기록이 지워짐
+  ackStatus = 200;
+  clockOffset = 11 * MIN;
+  assert.equal(await tierOf(env, t), "plus");
+  assert.equal(ackAsks(), 3);
+  ent = entOf(env, uid);
+  assert.equal(ent.ackPending, undefined);
+  assert.equal(env.PUBLIC_KV.m.has(failKey), false);
+
+  // 확인이 끝난 뒤에는 /me 가 더 확인하지 않음
+  clockOffset = 30 * MIN;
+  assert.equal(await tierOf(env, t), "plus");
+  assert.equal(ackAsks(), 3);
+  resetWorld();
+});
+
+test("S3-b 확인 요청이 통신 오류로 끊겨도 권한은 저장된다", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9302", email: "s3b@example.com" });
+  const savedFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    if (String(url).endsWith(":acknowledge")) throw new Error("network");
+    return savedFetch(url, init);
+  };
+  const { v, uid } = await buy(env, t, { days: 30, ack: "ACKNOWLEDGEMENT_STATE_PENDING" });
+  globalThis.fetch = savedFetch;
+  assert.equal(v.status, 200, JSON.stringify(v.data));
+  assert.equal(v.data.plan.tier, "plus");
+  assert.equal(entOf(env, uid).ackPending, true);
+  resetWorld();
+});
+
+test("S10 Play 일시 오류: 지금 등급을 유지하고 한 시간 뒤 다시 묻는다", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9401", email: "s10@example.com" });
+  const { uid } = await buy(env, t, { days: 2 });
+  assert.equal(playAsks(), 1);
+
+  // (가) 이용 중 하루 한 번 재확인이 Play 오류를 만남 → Plus 유지, 한 시간 뒤 다시
+  playStatus = 503;
+  clockOffset = 25 * HOUR;
+  assert.equal(await tierOf(env, t), "plus");
+  assert.equal(playAsks(), 2);
+  assert.equal(entOf(env, uid).tier, "plus");
+  clockOffset = 25 * HOUR + 30 * MIN;
+  assert.equal(await tierOf(env, t), "plus");
+  assert.equal(playAsks(), 2);
+
+  // (나) 만료 순간에도 Play 오류 → 무료로 적지 않고 Plus 유지(하루까지)
+  clockOffset = 2 * DAY + MIN;
+  assert.equal(await tierOf(env, t), "plus");
+  assert.equal(playAsks(), 3);
+  assert.equal(entOf(env, uid).tier, "plus");
+  // 그동안 서버 한도도 Plus 로
+  assert.equal((await ai(env, t, "longread", null, { "x-kata-unit": "s10" })).status, 200);
+  assert.equal(playAsks(), 3);
+
+  // (다) Play 복구(그사이 갱신됨) → 한 시간 뒤 새 만료 시각으로
+  playStatus = 200;
+  playSub.lineItems[0].expiryTime = new Date(Date.now() + 30 * DAY).toISOString();
+  clockOffset = 2 * DAY + HOUR + 2 * MIN;
+  const me = await call(env, "GET", "/me", { token: t });
+  assert.equal(me.data.plan.tier, "plus");
+  assert.equal(playAsks(), 4);
+  assert.ok(me.data.plan.until > Date.now() + 29 * DAY);
+  assert.equal(entOf(env, uid).triedAt, undefined);
+  resetWorld();
+});
+
+test("S10-b Play 오류가 하루 넘게 이어지면 무료로 보이지만, 복구되면 돌아온다 / 인증 오류(401·403)도 일시 오류로 본다", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9402", email: "s10b@example.com" });
+  const { uid } = await buy(env, t, { days: 1 });
+  playStatus = 403; // 서비스 계정 권한이 잠깐 빠짐 — 사용자를 무료로 굳히면 안 됨
+  clockOffset = DAY + MIN;
+  assert.equal(await tierOf(env, t), "plus");
+  clockOffset = 2 * DAY + 2 * MIN; // 만료에서 하루가 넘음
+  assert.equal(await tierOf(env, t), "free");
+  assert.equal(entOf(env, uid).tier, "plus"); // 무료로 "적지는" 않음
+  playStatus = 200;
+  playSub.lineItems[0].expiryTime = new Date(Date.now() + 30 * DAY).toISOString();
+  clockOffset = 2 * DAY + HOUR + 5 * MIN;
+  assert.equal(await tierOf(env, t), "plus");
+  resetWorld();
+});
+
+test("끝난 옛 구매를 검증해도 지금 이용 중인 구독이 무료로 덮이지 않는다", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9501", email: "old@example.com" });
+  const { uid } = await buy(env, t, { days: 30, token: "tok-live" });
+  playSub.subscriptionState = "SUBSCRIPTION_STATE_EXPIRED";
+  playSub.lineItems[0].expiryTime = "2020-01-01T00:00:00Z";
+  const old = await call(env, "POST", "/billing/verify", { token: t, body: { productId: "plus", purchaseToken: "tok-old" } });
+  assert.equal(old.data.valid, false);
+  assert.equal(old.data.plan.tier, "plus");
+  assert.equal(entOf(env, uid).purchaseToken, "tok-live");
+  resetWorld();
 });
