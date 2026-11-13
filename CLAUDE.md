@@ -66,6 +66,9 @@
 - **네이티브(MainActivity)에서 상단바·하단바 색(`WindowCompat.getInsetsController`)을 `setContentView` 앞에서 정하지 말 것**
   — 반드시 `setContentView` 뒤에, `getWindow().getDecorView()` 를 넘겨 부른다. 앞에서 부르면 화면 틀(DecorView)이
   아직 없어 Android 16 에서 시작 즉시 꺼진다(2026-11-11 갤럭시 Z 폴드6, 미리보기 APK. 스토어 앱도 같은 코드라 함께 고침)
+- **Gemini 키가 `AIza` 로 시작한다고 가정하지 말 것** — 구글 AI Studio 는 이제 `AQ.` 형식(53자)만 발급하고 예전 `AIza` 키도 계속 동작한다.
+  입력칸 안내·저장 검사를 접두어로 하면 멀쩡한 키를 막거나 틀린 안내를 한다. 키 입력 검사는 `lib/gemini.ts` 의 `geminiKeyInputProblem`/`memberKeyInGeminiProblem`
+  (회원키 모양·길이만 본다). 회원키(KK-…)를 Gemini 칸에 넣으면 구글이 400 `API_KEY_INVALID` 를 주고, `geminiText.ts` 가 이를 `INVALID_API_KEY` 로 분류한다(2026-11-13)
 - **필터된 목록에서 인덱스 기반 순서 이동 금지** — ID 기반 함수를 쓸 것
 - **`src/data/seed.json` 커밋 금지** — CSV에서 매 빌드 재생성되는 산출물이며 `.gitignore` 대상이다.
   강제로 되살리지 말 것(`git add -f` 금지). 추적 중이던 때는 빌드할 때마다 3만 줄이 변경으로
@@ -172,7 +175,8 @@ src/
     percakapan.ts   회화집 저장·백업·생성
     percakapanAudio.ts  회화 전용 다화자 TTS 재생기 (남/여 두 목소리)
     peribahasa.ts   오늘의 인도네시아어 문장 풀
-    phrase.ts       문장 상세 해설 생성 + IndexedDB 보관
+    phrase.ts       문장 상세 해설 — IndexedDB 캐시 → 앱에 담긴 seed → AI 순서로 찾고 보관
+    phrasePrompt.ts 문장 해설 프롬프트(앱과 scripts/gen-phrase-seed.mjs 가 같이 씀. import 없는 순수 TS 로 둘 것)
     tips.ts         인도네시아 정보(팁) 생성 + IndexedDB
     medali.ts       Medali 엔진 — 불꽃(주간 점수)·별(확정 단어) 판정, IndexedDB
     gamePool.ts     게임 출제 풀 (단어장·찾아본 단어·시드 3층, API 호출 없음)
@@ -193,6 +197,7 @@ src/
   data/
     seed.json       생성 파일 — `.gitignore` 대상, 커밋 금지 (세션 시작 시 생성)
     percakapan/     기본 회화집 (코드로 들어 있음, 손대지 않음)
+    phrase-seed.json 내장 문장 36개 해설(커밋함. scripts/gen-phrase-seed.mjs 로 만들고 Claude 가 교차 검수, 예문은 원어민 확인 대상)
   test/             vitest 설정 + 예제
   qtToday.ts        lib/qtToday.ts와 내용이 같은 미사용 사본 — 고칠 때 lib 쪽을 볼 것
   (2026-11 공개판에서 더한 것) lib/plan.ts 등급 판단(모든 잠금은 여기로만) · lib/preview.ts 미리보기 빌드 ·
