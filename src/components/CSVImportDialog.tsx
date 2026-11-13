@@ -26,9 +26,32 @@ export default function CSVImportDialog({ open, onOpenChange, onImported, catego
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
+    // UTF-8 로 먼저 읽고, 깨진 글자(U+FFFD)가 있으면 엑셀의 기본 저장 형식(한국어 윈도우 = EUC-KR)으로 다시 읽습니다.
+    // 엑셀에서 "CSV(쉼표로 분리)"로 저장한 파일은 UTF-8 이 아니라서 한글이 모두 깨져 들어갔습니다(출시 전 점검 D-06).
+    const BROKEN = String.fromCharCode(0xFFFD);
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setCsv((ev.target?.result as string) || "");
+      const text = (ev.target?.result as string) || "";
+      if (text.indexOf(BROKEN) < 0) {
+        setCsv(text);
+        return;
+      }
+      const again = new FileReader();
+      again.onload = (ev2) => {
+        const t2 = (ev2.target?.result as string) || "";
+        if (t2.indexOf(BROKEN) < 0) setCsv(t2);
+        else {
+          setCsv("");
+          setFileName("");
+          toast("파일의 글자를 읽지 못했습니다. UTF-8 로 저장한 CSV 파일을 골라 주세요");
+        }
+      };
+      again.onerror = () => setCsv(text);
+      try {
+        again.readAsText(file, "euc-kr");
+      } catch (e) {
+        setCsv(text);
+      }
     };
     reader.readAsText(file, "utf-8");
   };
@@ -36,8 +59,15 @@ export default function CSVImportDialog({ open, onOpenChange, onImported, catego
   const handleImport = () => {
     if (!csv.trim()) return;
     const result = importWordsFromCSV(csv, categoryId);
+    if (!result.saved) {
+      toast("저장하지 못했습니다. 폰의 저장 공간을 확인해 주세요");
+      return;
+    }
+    const notes: string[] = [];
+    if (result.skipped > 0) notes.push(`이미 있는 단어 ${result.skipped}개는 넣지 않았습니다.`);
+    if (result.errors > 0) notes.push(`${result.errors}개 행을 건너뛰었습니다.`);
     toast.success(`${result.imported}개 단어를 가져왔습니다.`, {
-      description: result.errors > 0 ? `${result.errors}개 행을 건너뛰었습니다.` : undefined,
+      description: notes.length > 0 ? notes.join(" ") : undefined,
     });
     setCsv("");
     setFileName("");
