@@ -3,6 +3,11 @@
 // 시안 G2·ST2·IN2·ME2 공통: 바탕 #FFF6DC · 테두리 #F1E0AE · 설명 #6E5612 · 버튼 #8A6A12 "Plus / 7일 무료 체험".
 // 다듬기 스토리 S56(같은 기능 같은 모양)에서 네 곳의 복사본을 이 하나로 모았습니다.
 // 홈의 "Kata kata Plus" 줄(시안 H5)은 꽃 아이콘이 붙은 다른 시안이라 여기 들지 않습니다.
+// 버튼 둘째 줄 "7일 무료 체험"은 Play 체험 제안이 있을 때만 보입니다(기간도 Play 값). 체험을 이미 쓴 계정이나
+// 아직 Play 값을 못 받았을 때는 "자세히 보기" (2026-11-14 출시 전 점검 B-05, src/lib/playOffers.ts).
+
+import { usePlusPricing } from "@/lib/playOffers";
+import { lockButtonSub } from "@/lib/plusCopy";
 
 interface Props {
   /** 첫 줄 (15px 굵게, 한 줄) */
@@ -15,7 +20,9 @@ interface Props {
   wholeBox?: boolean;
 }
 
-const PlusLockBox = ({ title, lines, onClick, wholeBox = false }: Props) => (
+const PlusLockBox = ({ title, lines, onClick, wholeBox = false }: Props) => {
+  const pricing = usePlusPricing();
+  return (
   <div
     role={wholeBox ? "button" : undefined}
     tabIndex={wholeBox ? 0 : undefined}
@@ -42,10 +49,11 @@ const PlusLockBox = ({ title, lines, onClick, wholeBox = false }: Props) => (
       >
         Plus
         <br />
-        7일 무료 체험
+        {lockButtonSub(pricing.trialAny)}
       </button>
     </div>
   </div>
-);
+  );
+};
 
 export default PlusLockBox;
