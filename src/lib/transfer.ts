@@ -61,6 +61,7 @@ export interface BundleSummary {
   phrases: number;      // 저장한 표현
   stories?: number;     // 불러온 이야기 (백업 파일에만 담김)
   scenes?: number;      // 만든 회화 장면 (백업 파일에만 담김)
+  skipped?: number;     // 합칠 때: 이미 있어서 넣지 않은 단어 수 (applyBundle 결과에만)
 }
 
 // 보낸 쪽 값으로 바꾸는 화면 설정
@@ -221,8 +222,12 @@ function parseArray(raw: string | null): unknown[] {
 
 /** withCreations: 불러온 이야기·만든 회화집도 담습니다(백업 파일용). 기본은 담지 않음(서버 백업·보내기). */
 export async function collectBundle(withCreations = false): Promise<{ bundle: PersonalBundle; summary: BundleSummary }> {
-  const categories = getCategories();
   const words = getWords().filter((w) => !isBuiltInWord(w));
+  // 단어장은 직접 만든 것과, 직접 넣은 단어가 들어 있는 것만 담습니다. 어느 기기에나 있는 기본 단어장(41권·예시)은
+  // 받는 쪽에 이미 있으므로 담지 않습니다 — 예전에는 전부 담겨, 무료·Plus 의 백업 파일에 "성경과 신앙" 단어장 이름이
+  // 적혔고(E-05), 관리자판 묶음을 공개판에 합치면 빈 예시 단어장이 생겼습니다(D-17).
+  const usedCats = new Set(words.map((w) => w.categoryId));
+  const categories = getCategories().filter((c) => !isBuiltInCategory(c) || usedCats.has(c.id));
   const saved = getSavedWordIds();
 
   const ls: Record<string, string> = {};
@@ -358,6 +363,12 @@ function parseCsvRows(text: string): string[][] {
 /** 단어 CSV(복사 백업)를 묶음으로 바꿉니다. 단어장은 이름으로 맞춥니다. */
 function csvToBundle(csv: string): PersonalBundle | null {
   const rows = parseCsvRows(csv);
+  // 단어 CSV 처럼 생겼는지 먼저 봅니다. 예전에는 "{" 로 시작하지 않는 글이면 무엇이든 CSV 로 읽어,
+  // 쉼표가 든 아무 글(메모·다른 앱의 파일)이 단어로 들어갈 수 있었습니다(출시 전 점검 D-17).
+  //   줄의 60% 이상이 2~8칸이고, 첫 칸(단어)이 80자를 넘지 않아야 합니다.
+  if (rows.length === 0) return null;
+  const wordLike = rows.filter((r) => r.length >= 2 && r.length <= 8 && r[0] !== "" && r[0].length <= 80).length;
+  if (wordLike / rows.length < 0.6) return null;
   const cats: Category[] = [];
   const catByName: Record<string, Category> = {};
   const words: Word[] = [];
@@ -432,8 +443,10 @@ async function gzipText(text: string): Promise<Uint8Array> {
 
 // ---------- 합치기 ----------
 
-function wordKey(categoryId: string, word: string): string {
-  return categoryId + "|" + (word || "").trim().toLowerCase();
+// 같은 단어인가 — 단어장 + 낱말(대소문자 무시) + 뜻. 낱말만으로 판단하면 한 단어장에 같은 낱말을 다른 뜻으로
+// 넣어 둔 것(동음이의어: bisa 할 수 있다 / bisa 독)이 합칠 때 하나만 남았습니다(출시 전 점검 D-05).
+function wordKey(categoryId: string, word: string, meaning?: string): string {
+  return categoryId + "|" + (word || "").trim().toLowerCase() + "|" + (meaning || "").trim();
 }
 
 function newId(): string {
@@ -460,13 +473,17 @@ function upgradeLegacyBundleIds(b: PersonalBundle): PersonalBundle {
 }
 
 /** 단어장·단어·'다시 외울' 표시를 합칩니다. 돌려주는 값: 새로 들어간 단어장 수, 단어 수 */
-function mergeWords(bundle: PersonalBundle): { categories: number; words: number } {
+function mergeWords(bundle: PersonalBundle): { categories: number; words: number; skipped: number } {
   const b = upgradeLegacyBundleIds(bundle);
   const localCats = getCategories();
   const localWords = getWords();
   const localIds = new Set(localWords.map((w) => w.id));
   const catIdMap: Record<string, string> = {};
   let addedCats = 0;
+  // 이름으로 맞출 때는 "합치기 전부터 이 기기에 있던" 단어장만 봅니다. 묶음 안에 이름이 같은 단어장이 둘 있으면
+  // 예전에는 뒤의 것이 앞의 것에 합쳐져 아이콘·구분이 사라졌습니다(D-05). 이 기기의 단어장 하나에는 묶음의 단어장 하나만 맞춥니다.
+  const originalLocal = localCats.slice();
+  const nameMatched = new Set<string>();
 
   const usedCatIds = new Set(b.words.words.map((w) => w.categoryId));
   for (const bc of b.words.categories) {
@@ -481,9 +498,9 @@ function mergeWords(bundle: PersonalBundle): { categories: number; words: number
       catIdMap[bc.id] = bc.id;
       continue;
     }
-    const byName = localCats.find((c) => !c.isShared && c.name === bc.name);
-    if (byName) { catIdMap[bc.id] = byName.id; continue; }
-    const id = bc.id.indexOf("csv:") === 0 ? newId() : bc.id;
+    const byName = originalLocal.find((c) => !c.isShared && c.name === bc.name && !nameMatched.has(c.id));
+    if (byName) { catIdMap[bc.id] = byName.id; nameMatched.add(byName.id); continue; }
+    const id = bc.id.indexOf("csv:") === 0 || localCats.some((c) => c.id === bc.id) ? newId() : bc.id;
     localCats.push({ id, name: bc.name, emoji: bc.emoji || "📁" });
     catIdMap[bc.id] = id;
     addedCats++;
@@ -504,21 +521,25 @@ function mergeWords(bundle: PersonalBundle): { categories: number; words: number
   const myIdx = ordered.findIndex((c) => c.id === MY_WORDBOOK_ID);
   if (myIdx > 0) ordered.unshift(ordered.splice(myIdx, 1)[0]);
 
-  const have = new Set(localWords.map((w) => wordKey(w.categoryId, w.word)));
+  // 이미 있는 단어: 키 → id (묶음 안에서 방금 넣은 것도 포함해, 완전히 같은 줄이 두 번 오면 한 번만 넣음)
+  const have = new Map<string, string>();
+  for (const w of localWords) have.set(wordKey(w.categoryId, w.word, w.meaning), w.id);
   const wordIdMap: Record<string, string> = {};
   const added: Word[] = [];
+  let skipped = 0;
   for (const bw of b.words.words) {
     const catId = catIdMap[bw.categoryId];
-    if (!catId) continue;
-    const k = wordKey(catId, bw.word);
-    if (have.has(k)) {
-      const existing = localWords.find((w) => wordKey(w.categoryId, w.word) === k);
-      if (existing) wordIdMap[bw.id] = existing.id;
+    if (!catId) { skipped++; continue; }
+    const k = wordKey(catId, bw.word, bw.meaning);
+    const existingId = have.get(k);
+    if (existingId) {
+      wordIdMap[bw.id] = existingId;
+      skipped++;
       continue;
     }
-    have.add(k);
     const id = bw.id && bw.id.indexOf("csv:") !== 0 && !localIds.has(bw.id) ? bw.id : newId();
     localIds.add(id);
+    have.set(k, id);
     wordIdMap[bw.id] = id;
     added.push({
       id,
@@ -531,15 +552,18 @@ function mergeWords(bundle: PersonalBundle): { categories: number; words: number
     });
   }
 
-  saveCategories(ordered);
-  saveWords(localWords.concat(added));
+  // 저장이 실패하면(저장 공간 가득) 성공한 것처럼 넘어가지 않습니다 — 부른 쪽이 "되돌리지 못했습니다"를 띄우고,
+  // 서버에 보관된 묶음(새 폰으로 보내기)도 지우지 않습니다(D-04).
+  const okCats = saveCategories(ordered);
+  const okWords = saveWords(localWords.concat(added));
+  if (!okCats || !okWords) throw new Error("SAVE_FAILED");
 
   // '다시 외울' 표시: 직접 넣은 단어는 바뀐 id 로, 기본 단어는 id 그대로(기기마다 같은 id)
   const savedNow = getSavedWordIds();
   for (const sid of b.words.saved) savedNow.push(wordIdMap[sid] || sid);
   setSavedWordIds(savedNow);
 
-  return { categories: addedCats, words: added.length };
+  return { categories: addedCats, words: added.length, skipped };
 }
 
 function mergeLocalStorage(b: PersonalBundle): void {
@@ -624,7 +648,7 @@ export async function applyBundle(b: PersonalBundle): Promise<BundleSummary> {
   mergeLocalStorage(b);
   await mergeIndexedDb(b);
   try { localStorage.removeItem(SEED_SYNC_KEY); } catch (e) {}
-  return { ...s, categories: w.categories, words: w.words };
+  return { ...s, categories: w.categories, words: w.words, skipped: w.skipped };
 }
 
 // ---------- 서버 (회원키) ----------
