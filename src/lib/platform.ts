@@ -79,6 +79,13 @@ export function saveFileNative(name: string, mime: string, base64: string): bool
   }
 }
 
+/**
+ * Google Play 의 앱 주소. 출시 전에는 비워 둡니다(없는 주소로 보내지 않게).
+ * 출시되면 "https://play.google.com/store/apps/details?id=app.naruve.katakata" 를 넣습니다 —
+ * 브라우저 안내 화면(WebGate.tsx)에 "Google Play 에서 받기" 버튼이 나타납니다.
+ */
+export const PLAY_STORE_URL = "";
+
 /** 웹에 공개해 둔 정책 페이지 (Play 등록에도 같은 주소를 씁니다). 2026-11-12 HQ 결정: naruve.app 주소로 둔다. */
 export const POLICY_BASE = "https://naruve.app/apps/kata-kata/";
 export const PRIVACY_URL = POLICY_BASE + "privacy/";
