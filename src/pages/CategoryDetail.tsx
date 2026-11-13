@@ -14,13 +14,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Copy, Trash2, X, ChevronDown, ChevronRight, ChevronUp, FileSpreadsheet, FolderPlus, Plus } from "lucide-react";
+import { ArrowLeft, Copy, Trash2, X, ChevronDown, ChevronUp, FileSpreadsheet, FolderPlus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { isStoreApp } from "@/lib/platform";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { GROUP_STYLES, GroupKey, groupOf, bookTitle, bookNumberText, displayMeaning } from "@/lib/wordbookGroups";
 import { loadIllustBook, hasIllustBook, IllustScene } from "@/lib/illust";
-import FormSheet from "@/components/FormSheet";
 import { CategoryTile } from "@/components/CategoryIcon";
 import { useBackClose } from "@/hooks/useBackClose";
 
@@ -211,7 +210,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   const [editWord, setEditWord] = useState<Word | null>(null);
   // 머리줄 ⋮ 메뉴와 보관한 단어장 이름 변경·삭제
   const [menuOpen, setMenuOpen] = useState(false);
-  // 머리줄 + 버튼이 여는 "추가하기" 시트 (2026-11-13: 단어 추가·단어장 만들기·CSV 가져오기를 한 곳으로)
+  // 머리줄 + 버튼이 여는 "추가하기" 메뉴 (2026-11-13: 단어 추가·단어장 만들기·CSV 가져오기를 한 곳으로, + 버튼 바로 아래에 뜸)
   const [plusOpen, setPlusOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteCatOpen, setDeleteCatOpen] = useState(false);
@@ -937,7 +936,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   };
 
   // ⋮ 메뉴는 관리 기능만 남습니다(2026-11-13 사용자 요청). 내 단어장은 관리할 것이 없어 ⋮ 가 없고,
-  // 추가하는 일(단어 추가·단어장 만들기·CSV 가져오기)은 머리의 + 버튼이 여는 "추가하기" 시트에 모았습니다.
+  // 추가하는 일(단어 추가·단어장 만들기·CSV 가져오기)은 머리의 + 버튼이 여는 "추가하기" 메뉴에 모았습니다.
   const menuItems: { label: string; onClick: () => void; danger?: boolean }[] = isArchived
     ? [
         { label: "이름 변경", onClick: () => setRenameOpen(true) },
@@ -994,16 +993,53 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
           </span>
         )}
         {editable ? (
-          // 2026-11-13 사용자 요청: "+ 단어 추가" 알약 대신 + 동그라미 하나(36px). 누르면 "추가하기" 시트가 올라옵니다.
-          <button
-            type="button"
-            onClick={() => setPlusOpen(true)}
-            aria-label="추가하기"
-            className="rounded-full bg-[#E3EEEC] text-[#2C6D63] flex items-center justify-center shrink-0 active:opacity-80"
-            style={{ width: 36, height: 36 }}
-          >
-            <Plus size={18} strokeWidth={2.4} />
-          </button>
+          // 2026-11-13 사용자 요청: "+ 단어 추가" 알약 대신 + 동그라미 하나(36px).
+          // 누르면 "추가하기" 메뉴가 + 버튼 바로 아래(오른쪽 끝을 맞춰) 뜹니다 — 같은 머리줄의 ⋮ 메뉴와 같은 자리·같은 방식입니다
+          // (앱에서 버튼 옆에 붙어 뜨는 메뉴는 이 두 개뿐이고, 나머지 고르기·입력 창은 아래에서 올라오는 시트).
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setPlusOpen((o) => !o)}
+              aria-label="추가하기"
+              aria-expanded={plusOpen}
+              className="rounded-full bg-[#E3EEEC] text-[#2C6D63] flex items-center justify-center shrink-0 active:opacity-80"
+              style={{ width: 36, height: 36 }}
+            >
+              <Plus size={18} strokeWidth={2.4} />
+            </button>
+            {plusOpen ? (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setPlusOpen(false)} />
+                {/* 폭: 19rem. 보관한 단어장은 오른쪽에 ⋮ 가 있어 + 의 오른쪽 끝이 화면 오른쪽에서 3.75rem(오른쪽 여백 0.5rem + ⋮ 2.5rem + 간격 0.75rem)
+                    안쪽에 있습니다. 메뉴 오른쪽 끝을 + 에 맞추므로 폭은 화면 폭 - 3.75rem - 8px 까지만(글자 크기에 따라 같이 변함). */}
+                <div
+                  role="menu"
+                  aria-label="추가하기"
+                  className="absolute right-0 top-11 z-50 overflow-hidden rounded-xl border border-border bg-popover shadow-lg"
+                  style={{ width: "min(19rem, calc(100vw - 3.75rem - 8px))" }}
+                >
+                  {plusItems.map((m, i) => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => closeThen(() => setPlusOpen(false), m.onClick)}
+                      className="w-full flex items-center text-left active:bg-black/[0.03] transition-colors"
+                      style={{ gap: 12, padding: "11px 14px", borderBottom: i < plusItems.length - 1 ? "1px solid #E3E8EB" : "0" }}
+                    >
+                      <span className="shrink-0 flex items-center justify-center" style={{ width: 32, height: 32, borderRadius: 9, background: m.tileBg, color: m.ink }}>
+                        {m.icon}
+                      </span>
+                      <span className="flex-1 min-w-0 flex flex-col" style={{ gap: 2 }}>
+                        <span className="truncate font-body text-[0.9375rem]" style={{ color: "#1D1F1E" }}>{m.title}</span>
+                        <span className="font-gothic text-[0.75rem]" style={{ color: "#646C72" }}>{m.sub}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </div>
         ) : null}
         {menuItems.length > 0 ? (
           <div className="relative shrink-0">
@@ -1312,38 +1348,6 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
           ) : null}
         </div>
       )}
-      {/* 추가하기 시트 — 줄 모양은 홈 목록 줄(PubRow)과 같게(32px 색 타일 + 선 아이콘, 제목 0.9375rem, 설명 0.75rem 회색, 줄 사이 얇은 선).
-          줄을 누르면 시트를 닫은 뒤(히스토리 칸이 빠진 다음) 해당 시트를 엽니다(closeThen). */}
-      <FormSheet
-        open={plusOpen}
-        onClose={() => setPlusOpen(false)}
-        title="추가하기"
-        desc="하나를 고르세요"
-        icon={<Plus size={20} strokeWidth={1.8} />}
-        tileBg="#DDF0EA"
-        tileInk="#2C6D63"
-      >
-        <div className="overflow-hidden bg-white" style={{ border: "1px solid #E3E8EB", borderRadius: 16 }}>
-          {plusItems.map((m, i) => (
-            <button
-              key={m.key}
-              type="button"
-              onClick={() => closeThen(() => setPlusOpen(false), m.onClick)}
-              className="w-full flex items-center text-left active:bg-black/[0.03] transition-colors"
-              style={{ gap: 12, padding: "12px 16px", borderBottom: i < plusItems.length - 1 ? "1px solid #E3E8EB" : "0" }}
-            >
-              <span className="shrink-0 flex items-center justify-center" style={{ width: 32, height: 32, borderRadius: 9, background: m.tileBg, color: m.ink }}>
-                {m.icon}
-              </span>
-              <span className="flex-1 min-w-0 flex flex-col" style={{ gap: 2 }}>
-                <span className="truncate font-body text-[0.9375rem]" style={{ color: "#1D1F1E" }}>{m.title}</span>
-                <span className="font-gothic text-[0.75rem]" style={{ color: "#646C72" }}>{m.sub}</span>
-              </span>
-              <ChevronRight size={17} className="shrink-0" style={{ color: "#B5BCC1" }} />
-            </button>
-          ))}
-        </div>
-      </FormSheet>
       <AddWordDialog
         open={addOpen}
         onOpenChange={(o) => { setAddOpen(o); if (!o) { setSelectedIds([]); lastSelectedId.current = null; } }}
