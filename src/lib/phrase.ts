@@ -4,6 +4,7 @@
 
 import { callGeminiJSON } from "@/lib/geminiText";
 import type { AiKind } from "@/lib/aiProxy";
+import { NOTE_RULE, NOTE_FIELD, buildPrompt } from "@/lib/phrasePrompt";
 
 const DB_NAME = "kata-phrases";
 const DB_VERSION = 1;
@@ -116,18 +117,8 @@ async function trimOldest(): Promise<void> {
 
 /* ── Gemini ── */
 
-// "알아두기"(note)는 "어떤 뜻인가요"(meaning)와 겹치지 않는 내용만 씁니다 (2026-11-10 결정).
-// 쓸 것이 없으면 빈 문자열로 받아 화면에서 구역째 숨깁니다.
-const NOTE_RULE = [
-  "- note(알아두기)에는 meaning 에 이미 쓴 뜻풀이·쓰는 때를 다시 쓰지 않습니다.",
-  "  아래 셋 가운데 이 문장에 실제로 있는 것만 1~2문장으로 씁니다.",
-  "  (1) 단어 구조: 어근과 접사가 어떻게 붙어 뜻이 되는지",
-  "  (2) 비슷하거나 반대인 인도네시아어 표현",
-  "  (3) 쓸 때 주의할 점: 말투·상대·상황 제한, 한국인이 자주 틀리는 점",
-  '  덧붙일 내용이 없으면 note 는 빈 문자열("")로 둡니다. 억지로 채우지 않습니다.',
-].join("\n");
-
-const NOTE_FIELD = '  "note": "단어 구조·비슷하거나 반대인 표현·쓸 때 주의할 점 가운데 meaning 에 없는 것 1~2문장 (한국어). 없으면 빈 문자열"';
+// 문장 해설 프롬프트(buildPrompt)와 note 규칙(NOTE_RULE·NOTE_FIELD)은 src/lib/phrasePrompt.ts 에 있습니다.
+// 미리 만들기 스크립트(scripts/gen-phrase-seed.mjs)가 같은 프롬프트를 쓰도록 한 곳에 모았습니다.
 
 function buildPromptAyat(sentence: string, ko: string): string {
   return [
@@ -149,29 +140,6 @@ function buildPromptAyat(sentence: string, ko: string): string {
     '  "words": [{"word": "단어", "arti": "쉬운 인니어 뜻풀이", "ko": "한국어 뜻"}],',
     '  "analysis": [{"part": "인니어 구절", "ko": "한국어 번역", "note": "문법적 역할과 의미 설명 (한국어)"}],',
     '  "note": "이 구절에 대해 알아두면 좋은 점 1~2문장 (한국어)"',
-    '}',
-  ].join("\n");
-}
-
-function buildPrompt(sentence: string, ko: string): string {
-  return [
-    "당신은 한국인에게 인도네시아어를 가르치는 선생님입니다.",
-    "아래 인도네시아어 문장을 한국인 학습자가 이해할 수 있도록 풀어서 설명하세요.",
-    "",
-    "문장: " + sentence,
-    "참고 뜻: " + ko,
-    "",
-    "규칙:",
-    "- 설명은 모두 한국어로, 존댓말로 씁니다.",
-    "- 예문은 실제 인도네시아 사람이 일상에서 쓰는 자연스러운 문장으로 3개 만듭니다.",
-    "- 예문은 쉬운 단어를 쓰고, 각 예문이 어떤 상황인지 한국어로 짧게 덧붙입니다.",
-    NOTE_RULE,
-    "",
-    "아래 JSON 형식으로만 답하세요.",
-    '{',
-    '  "meaning": "이 표현이 실제로 뜻하는 바와 언제 쓰는지 2~3문장 (한국어)",',
-    '  "examples": [{"id": "인니어 예문", "ko": "한국어 해석", "situasi": "어떤 상황인지 한국어로 짧게"}],',
-    NOTE_FIELD,
     '}',
   ].join("\n");
 }
@@ -253,9 +221,53 @@ export async function generateNewPhrase(
   return { id, ko };
 }
 
+/* ── 앱에 담아 둔 내장 문장 해설 (AI 호출 없이 첫 화면이 열리게) ── */
+
+interface SeedEntry {
+  ko: string;
+  meaning: string;
+  examples: unknown;
+  note: string;
+}
+
+// 번들 크기를 아끼려고 처음 필요할 때 한 번만 불러옵니다(지연 import → 따로 내려받는 조각).
+let seedPromise: Promise<Record<string, SeedEntry>> | null = null;
+
+function loadSeed(): Promise<Record<string, SeedEntry>> {
+  if (!seedPromise) {
+    seedPromise = import("@/data/phrase-seed.json")
+      .then((m: any) => ((m.default || m).phrases || {}) as Record<string, SeedEntry>)
+      .catch(() => {
+        seedPromise = null; // 다음에 다시 시도
+        return {} as Record<string, SeedEntry>;
+      });
+  }
+  return seedPromise;
+}
+
+/** 내장 문장이면 미리 만들어 둔 해설을 돌려줍니다. 없으면 null. */
+async function getSeededPhrase(sentence: string, ko: string): Promise<PhraseDetail | null> {
+  const seed = await loadSeed();
+  if (!Object.prototype.hasOwnProperty.call(seed, sentence)) return null;
+  const e = seed[sentence];
+  const examples = parseExamples(e.examples);
+  if (!e.meaning || examples.length === 0) return null;
+  return {
+    sentence,
+    ko: ko || e.ko || "",
+    meaning: e.meaning,
+    words: [],
+    examples,
+    note: e.note || "",
+    createdAt: Date.now(),
+  };
+}
+
 /**
- * 캐시에 있으면 즉시 돌려주고, 없으면 생성한 뒤 저장합니다.
- * force가 true면 캐시를 무시하고 새로 만듭니다.
+ * 폰 저장소(캐시)에 있으면 즉시 돌려주고, 없으면 앱에 담긴 내장 문장 해설(seed)을 찾고,
+ * 그것도 없으면 AI 로 생성한 뒤 저장합니다. 순서: IndexedDB 캐시 → seed → AI.
+ * force가 true면 캐시와 seed 를 무시하고 AI 로 새로 만듭니다("다시 받기").
+ * 성경 구절(kind "alkitab")은 seed 대상이 아닙니다.
  * kind가 "alkitab"이면 문장분석 프롬프트를 사용합니다.
  * aiKind: 공개판 서버가 셀 기능 이름. 새 문장을 미리 만드는 길(peribahasa.ts)은 "phrase",
  *         상세 화면에서 처음 여는 해설은 기본값 "text".
@@ -272,6 +284,13 @@ export async function getPhraseDetail(
     const cached = await getCachedPhrase(sentence);
     // alkitab 구절인데 analysis 필드가 없는 구캐시는 다시 생성합니다.
     if (cached && !(isAyat && cached.analysis === undefined)) return cached;
+    if (!isAyat) {
+      const seeded = await getSeededPhrase(sentence, ko);
+      if (seeded) {
+        await savePhrase(seeded); // 다음부터는 IndexedDB 에서 바로
+        return seeded;
+      }
+    }
   }
 
   const raw = await callGeminiJSON(isAyat ? buildPromptAyat(sentence, ko) : buildPrompt(sentence, ko), { kind: aiKind });
