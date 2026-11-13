@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { addWord, getCategories } from "@/lib/store";
 import { fillWordWithGemini, hasGeminiApiKey } from "@/lib/gemini";
-import { ChevronDown, Loader2, Plus, Sparkles } from "lucide-react";
+import { ChevronDown, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useBackClose } from "@/hooks/useBackClose";
 import { aiErrorToast } from "@/lib/aiErrors";
@@ -122,7 +122,8 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
               className="shrink-0 h-7 px-2.5 rounded-full flex items-center gap-1 font-gothic text-[0.75rem] font-semibold disabled:opacity-60"
               style={{ background: FORM_C.tealBg, color: FORM_C.teal }}
             >
-              {filling ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} strokeWidth={2} />}
+              {/* 2026-11-13 사용자 요청: 자동 채우기 앞 반짝이 아이콘은 없앰(채우는 중에만 돌아가는 표시) */}
+              {filling ? <Loader2 size={13} className="animate-spin" /> : null}
               자동 채우기
             </button>
           ) : null}
