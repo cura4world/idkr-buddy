@@ -45,7 +45,9 @@ const DEFAULT_LIMITS = {
     text: { day: 200, hidden: true },
     "word-audio": { day: 100, month: 1500, hidden: true },
     "shared-audio": { locked: true },
-    tts: { day: 30, hidden: true },
+    // 예전 이름표 — 공개판 화면 가운데 이 이름을 쓰는 곳은 관리자·Special Member 화면(묵상·기도·설교)뿐이라
+    // 무료에서는 잠급니다. 열어 두면 잠긴 음성 기능과 같은 요청을 이 이름표로 보낼 수 있었습니다(출시 전 점검 S-20).
+    tts: { locked: true },
     report: { day: 20, hidden: true },
   },
   plus: {
@@ -87,6 +89,14 @@ const KINDS = {
 // 긴 읽기 한 편을 문단 여러 개로 나눠 부르면(x-kata-unit 같은 값) 첫 조각만 한 번으로 셉니다.
 // 같은 편으로 하루에 부를 수 있는 조각 수 상한 — 같은 값을 돌려 쓰는 남용 방지.
 const MAX_UNIT_CALLS = 24;
+
+// 한 번의 누름(x-kata-req 같은 값)이 재시도·모델 바꿈으로 여러 번 와도 한 번으로 셉니다(출시 전 점검 C-02).
+//   같은 번호 + 같은 요청 내용(본문 해시) + 처음 온 지 5분 안 + 9번까지(모델 3개 × 3회)만 같은 누름으로 봅니다.
+//   번호만 돌려 써서 한도를 늘리지 못하게 내용까지 봅니다. 하루 칸에는 최근 40개만 남깁니다.
+const MAX_REQ_CALLS = 9;
+const REQ_WINDOW_MS = 5 * 60 * 1000;
+const MAX_REQS_KEPT = 40;
+const REQ_RE = new RegExp("^[A-Za-z0-9]{8,40}$");
 const UNIT_RE = new RegExp("^[A-Za-z0-9._:\\-]{1,160}$");
 
 const TEXT_MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-2.5-flash-lite"];
@@ -136,7 +146,7 @@ function corsHeaders(request) {
   const origin = request.headers.get("origin") || "";
   const h = {
     "access-control-allow-methods": "GET, POST, OPTIONS",
-    "access-control-allow-headers": "authorization, content-type, x-kata-kind, x-kata-unit, x-admin-key",
+    "access-control-allow-headers": "authorization, content-type, x-kata-kind, x-kata-unit, x-kata-req, x-admin-key",
     "access-control-max-age": "86400",
     vary: "origin",
   };
@@ -575,12 +585,24 @@ function quotaError(kind, period, limit, tier) {
  * 막지는 못합니다 — 사용자가 늘면 Durable Object 카운터로 바꿉니다(docs/release/05 참고).
  * 잠긴 기능이면 403 PLUS_REQUIRED, 한도를 넘었으면 429 QUOTA_<KIND> {kind, period, limit}.
  */
-async function reserveUse(env, uid, tier, kind, unit) {
+async function reserveUse(env, uid, tier, kind, unit, req) {
   const lim = limitsFor(env, tier)[kind] || {};
   if (lim.locked) throw new HttpError(403, "PLUS_REQUIRED", { kind, plan: tier });
   const now = Date.now();
   const dKey = dayKey(uid, now);
   const d = (await kvGetJson(env, dKey)) || {};
+
+  // 같은 누름의 재시도 — 이미 셌으므로 한도를 다시 보지 않습니다.
+  if (req && !unit) {
+    const reqs = Array.isArray(d.reqs) ? d.reqs : [];
+    const hit = reqs.find((r) => r && r.id === req.id && r.kind === kind && r.hash === req.hash);
+    if (hit && now - (hit.at || 0) < REQ_WINDOW_MS && (hit.n || 0) < MAX_REQ_CALLS) {
+      hit.n = (hit.n || 0) + 1;
+      d.reqs = reqs;
+      await safePut(env, dKey, d, DAY_TTL_SEC);
+      return { uid, kind, unit: "", counted: false, dKey, req };
+    }
+  }
 
   // 같은 편의 다음 조각 — 이미 셌으므로 한도를 다시 보지 않고 조각 수만 늘립니다.
   if (unit) {
@@ -615,13 +637,18 @@ async function reserveUse(env, uid, tier, kind, unit) {
     d.units = units;
   }
   m[kind] = (m[kind] || 0) + 1;
+  if (req && !unit) {
+    const reqs = (Array.isArray(d.reqs) ? d.reqs : []).filter((r) => !(r && r.id === req.id && r.kind === kind));
+    reqs.push({ id: req.id, kind, hash: req.hash, at: now, n: 1 });
+    d.reqs = reqs.slice(-MAX_REQS_KEPT);
+  }
   await safePut(env, dKey, d, DAY_TTL_SEC);
   await safePut(env, mKey, m, MONTH_TTL_SEC);
   if (t) {
     t[kind] = (t[kind] || 0) + 1;
     await safePut(env, tKey, t, TRIAL_TOTAL_TTL_SEC);
   }
-  return { uid, kind, unit, counted: true, dKey, mKey, tKey: t ? tKey : null };
+  return { uid, kind, unit, counted: true, dKey, mKey, tKey: t ? tKey : null, req: req && !unit ? req : null };
 }
 
 /** 부른 결과가 실패면 잡아 둔 칸을 돌려줍니다. */
@@ -637,6 +664,8 @@ async function refundUse(env, r) {
       return;
     }
     d[r.kind] = Math.max(0, (d[r.kind] || 0) - 1);
+    // 이 누름은 아직 성공한 적이 없으므로 기록을 지웁니다 — 다음 재시도가 새로 한 칸을 잡습니다.
+    if (r.req && Array.isArray(d.reqs)) d.reqs = d.reqs.filter((x) => !(x && x.id === r.req.id && x.kind === r.kind));
     if (r.unit && mine) delete mine[r.unit];
     await safePut(env, r.dKey, d, DAY_TTL_SEC);
     const m = (await kvGetJson(env, r.mKey)) || {};
@@ -1047,8 +1076,14 @@ async function handleAi(request, env, model) {
   const body = sanitizeAiBody(spec.mode, await readJsonBody(request, MAX_BODY_BYTES), spec.maxChars);
   if (!env.AI_PROXY_URL || !env.PROXY_SECRET) throw new HttpError(500, "NOT_CONFIGURED");
 
+  // 한 번의 누름을 가리키는 번호(앱이 붙임). 모양이 이상하면 없는 것으로 봅니다(호출마다 셈).
+  const rawReq = String(request.headers.get("x-kata-req") || "");
+  const req = !unit && REQ_RE.test(rawReq)
+    ? { id: rawReq, hash: (await sha256hex(JSON.stringify(body.contents))).slice(0, 16) }
+    : null;
+
   const plan = await getPlan(env, a.uid);
-  const reservation = await reserveUse(env, a.uid, plan.tier, kind, unit);
+  const reservation = await reserveUse(env, a.uid, plan.tier, kind, unit, req);
   let res;
   try {
     res = await tfetch(env.AI_PROXY_URL, {
@@ -1064,12 +1099,46 @@ async function handleAi(request, env, model) {
     await refundUse(env, reservation);
     throw e;
   }
-  // 실패 응답은 상태 그대로 돌려줘야 앱의 폴백(3.8 → 3.1)이 동작합니다. 잡아 둔 칸은 돌려줍니다.
-  if (!res.ok) await refundUse(env, reservation);
   const headers = corsHeaders(request);
   headers["content-type"] = res.headers.get("content-type") || "application/json";
   headers["cache-control"] = "no-store";
-  return new Response(res.body, { status: res.status, headers });
+  // 실패 응답은 상태 그대로 돌려줘야 앱의 폴백(3.8 → 3.1)이 동작합니다. 잡아 둔 칸은 돌려줍니다.
+  if (!res.ok) {
+    await refundUse(env, reservation);
+    return new Response(res.body, { status: res.status, headers });
+  }
+  // 200 이어도 내용이 비어 있으면(글·소리 없음) 쓴 것으로 치지 않습니다 — 앱은 이것을 실패로 보고 다시 부릅니다(C-02).
+  let raw;
+  try {
+    raw = await res.text();
+  } catch (e) {
+    await refundUse(env, reservation);
+    throw new HttpError(502, "UPSTREAM_UNREACHABLE");
+  }
+  if (!hasAiContent(spec.mode, raw)) await refundUse(env, reservation);
+  return new Response(raw, { status: res.status, headers });
+}
+
+/** AI 응답 본문에 쓸 내용이 들어 있는가. 글: 첫 후보의 첫 조각에 글자 / 소리: 소리 자료(inlineData.data). */
+function hasAiContent(mode, raw) {
+  if (!raw) return false;
+  if (mode === "tts") {
+    // 소리는 수 MB 라 통째로 풀지 않고 자리만 찾습니다.
+    const at = raw.indexOf('"inlineData"');
+    if (at < 0) return false;
+    const dataAt = raw.indexOf('"data"', at);
+    if (dataAt < 0) return false;
+    const q1 = raw.indexOf('"', raw.indexOf(":", dataAt) + 1);
+    return q1 >= 0 && q1 + 1 < raw.length && raw.charAt(q1 + 1) !== '"';
+  }
+  try {
+    const d = JSON.parse(raw);
+    const parts = d && d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
+    const text = Array.isArray(parts) && parts[0] && typeof parts[0].text === "string" ? parts[0].text : "";
+    return text.trim() !== "";
+  } catch (e) {
+    return false;
+  }
 }
 
 async function handleBillingVerify(request, env) {
