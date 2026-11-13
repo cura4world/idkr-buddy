@@ -11,8 +11,9 @@
 //   POST /billing/verify                    Play 구독 검증·확인(acknowledge)
 //   POST /report                            AI 결과 신고
 //   GET  /admin/reports                     신고 목록 (x-admin-key)
-//   POST /admin/special                     Special Member·관리자 등급 주기/거두기 (x-admin-key)
+//   POST /admin/special                     Special Member·관리자·심사용(review) 등급 주기/거두기 (x-admin-key)
 //   GET  /admin/special?email=|uid=         그 계정의 등급 확인 (x-admin-key)
+//   POST /admin/delete                      이메일로 삭제를 요청한 계정 지우기 (x-admin-key)
 //
 // 설정(비밀값·변수)은 docs/release/03-architecture.md 의 표를 봅니다.
 // 이 파일에는 정규식 리터럴을 쓰지 않습니다(저장소 규칙). new RegExp 만 씁니다.
@@ -71,7 +72,11 @@ const DEFAULT_LIMITS = {
 const TRIAL_HALF_KINDS = ["story", "percakapan-make", "longread", "dict-new"];
 const TRIAL_TOTALS = { longread: 15 }; // 체험 기간 전체 합계
 
-const TIERS = ["free", "trial", "plus", "special", "admin"];
+// review = 심사용 계정(Google Play 심사자에게 주는 계정). 기능·한도는 plus 와 똑같고,
+// 기독교·뉴스 같은 staff(special·admin) 전용 화면은 열지 않습니다. 관리자가 /admin/special 로 줍니다(2026-11-14).
+const TIERS = ["free", "trial", "plus", "review", "special", "admin"];
+// 관리자가 계정에 줄 수 있는 등급 (Play 구독과 무관)
+const GRANT_TIERS = ["special", "admin", "review"];
 
 // kind → 텍스트/음성, 한 번에 보낼 수 있는 글자 수
 const KINDS = {
@@ -120,6 +125,9 @@ const ENT_ACK_RETRY_MS = 10 * 60 * 1000; // 확인(acknowledge)이 안 된 구�
 const ENT_FREE_RECHECK_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // 무료로 내려간 뒤에도 30일 동안은 다시 묻는다
 const ENT_OUTAGE_GRACE_MS = 24 * 60 * 60 * 1000; // 만료 시각이 지났는데 Play 가 안 될 때: 하루까지는 지금 등급 유지
 const ACK_FAIL_TTL_SEC = 7 * 24 * 3600;
+const SPEC_TTL_SEC = 400 * 24 * 3600; // 로그인 전에 미리 준 등급의 수명
+const REPORT_TTL_SEC = 180 * 24 * 3600; // 신고 보관 기간
+const MAX_REPORTS_TRACKED = 5000; // 계정 삭제 때 연결을 끊으려고 기억하는 내 신고 키 수 (하루 상한 50 × 100일분)
 const DEFAULT_PRODUCT_IDS = ["plus"];
 const VALID_SUB_STATES = [
   "SUBSCRIPTION_STATE_ACTIVE",
@@ -312,6 +320,7 @@ function getLimits(env) {
     free,
     plus,
     trial: apply("trial", deriveTrialLimits(free, plus)),
+    review: apply("review", plus), // 심사용 계정은 plus 와 같은 한도 (LIMITS_JSON 의 plus 변경도 따라감)
     special: apply("special", DEFAULT_LIMITS.special),
     admin: apply("admin", DEFAULT_LIMITS.admin),
   };
@@ -454,7 +463,7 @@ function publicUser(user) {
 
 function staffPlan(ent, now) {
   const s = ent && ent.staff;
-  if (s && (s.tier === "special" || s.tier === "admin") && (!s.until || s.until > now)) {
+  if (s && GRANT_TIERS.indexOf(s.tier) >= 0 && (!s.until || s.until > now)) {
     return { tier: s.tier, until: s.until || 0 };
   }
   if (ent && (ent.tier === "special" || ent.tier === "admin") && (!ent.until || ent.until > now)) {
@@ -463,11 +472,14 @@ function staffPlan(ent, now) {
   return null;
 }
 
+// autoRenew: 자동 갱신이 켜져 있는가. Play 에서 해지한(자동 갱신만 끈) 구독은 만료 시각까지 쓰지만 다음 결제는 없습니다 —
+// 앱이 "다음 결제 ○월 ○일" 대신 "○월 ○일까지 이용"으로 보여 주도록 싣습니다(출시 전 점검 B-09).
 function paidPlan(ent, until) {
+  const autoRenew = ent.state !== "SUBSCRIPTION_STATE_CANCELED";
   if (ent.tier === "trial" || ent.trial === true) {
-    return { tier: "trial", until, trial: true, productId: ent.productId };
+    return { tier: "trial", until, trial: true, productId: ent.productId, autoRenew };
   }
-  return { tier: "plus", until, productId: ent.productId };
+  return { tier: "plus", until, productId: ent.productId, autoRenew };
 }
 
 function isPaidTier(ent) {
@@ -818,6 +830,23 @@ async function verifyWithPlay(env, uid, productId, purchaseToken) {
   };
   // 무료로 내려간 시각 — 같은 구매로 이미 내려가 있었으면 처음 시각을 지킵니다(30일 재확인 기간의 기준).
   if (!valid) nextEnt.freeSince = (sameToken && prevEnt.tier === "free" && prevEnt.freeSince) || now;
+  // 계정 표식이 없는 구매(앱 밖에서 만들어진 것 — 프로모션 코드, Play 구독 화면의 "다시 구독")는 먼저 검증을 요청한
+  // 계정에 붙습니다. 나중에 운영자가 알아볼 수 있게 표시해 둡니다(B-13).
+  if (!got) nextEnt.unbound = true;
+  // 이 계정의 무료 체험 기록(B-08). 체험 자격은 Play 계정 기준이라, 같은 앱 계정으로 Play 계정만 바꿔 체험을
+  // 되풀이할 수 있습니다. 첫 체험과 그 뒤 체험 횟수를 남겨 운영자가 볼 수 있게 합니다(체험 합계 한도 uset: 은 계정에 묶여 이미 공유됨).
+  if (trial) {
+    try {
+      const rec = (await kvGetJson(env, "trial:" + uid)) || { first: now, firstToken: tokenHash, tokens: [] };
+      if (rec.tokens.indexOf(tokenHash) < 0) {
+        rec.tokens.push(tokenHash);
+        rec.tokens = rec.tokens.slice(-20);
+        rec.last = now;
+        await kvPutJson(env, "trial:" + uid, rec, TRIAL_TOTAL_TTL_SEC);
+      }
+      if (rec.tokens.length > 1) nextEnt.trialRepeat = rec.tokens.length;
+    } catch (e) {}
+  }
   // 관리자가 준 Special Member·관리자 등급은 Play 검증으로 지워지지 않게 그대로 둡니다.
   if (prevEnt && prevEnt.staff) nextEnt.staff = prevEnt.staff;
 
@@ -930,7 +959,7 @@ async function linkEmailAndPendingGrant(env, uid, email) {
     const h = await emailHash(email);
     await env.PUBLIC_KV.put("email:" + h, uid);
     const pending = await kvGetJson(env, "spec:" + h);
-    if (pending && (pending.tier === "special" || pending.tier === "admin")) {
+    if (pending && GRANT_TIERS.indexOf(pending.tier) >= 0) {
       const ent = (await kvGetJson(env, "ent:" + uid)) || { tier: "free", until: 0 };
       ent.staff = { tier: pending.tier, until: pending.until || 0, note: pending.note || "", at: pending.at || Date.now() };
       await kvPutJson(env, "ent:" + uid, ent);
@@ -963,10 +992,34 @@ async function handleSignout(request, env) {
 
 async function handleDelete(request, env) {
   const a = await requireAuth(request, env);
-  const uid = a.uid;
+  const r = await deleteAccountData(env, a.uid, a.user, a.sessHash);
+  return json(request, { deleted: true, hadSubscription: r.hadSubscription });
+}
+
+/**
+ * POST /admin/delete  (x-admin-key)  {email | uid} → {deleted, uid, hadSubscription}
+ * 앱을 지웠거나 열 수 없는 사용자가 이메일로 삭제를 요청했을 때 운영자가 쓰는 길입니다
+ * (계정 삭제 안내 페이지의 "7일 안에 삭제" 약속 — 출시 전 점검 P-15). 앱 안 삭제와 똑같이 지웁니다.
+ */
+async function handleAdminDelete(request, env) {
+  requireAdmin(request, env);
+  const body = await readJsonBody(request, 4 * 1024);
+  const acc = await resolveAccount(env, body);
+  if (!acc.uid) {
+    // 가입한 적 없는 이메일이라도, 미리 준 등급이 남아 있으면 그것은 지웁니다.
+    if (acc.eh) await env.PUBLIC_KV.delete("spec:" + acc.eh);
+    throw new HttpError(404, "USER_NOT_FOUND");
+  }
+  const user = await kvGetJson(env, "user:" + acc.uid);
+  const r = await deleteAccountData(env, acc.uid, user || { email: acc.email }, "");
+  return json(request, { deleted: true, uid: acc.uid, hadSubscription: r.hadSubscription });
+}
+
+/** 계정과 서버 데이터를 지웁니다(앱 안 삭제·관리자 삭제 공용). */
+async function deleteAccountData(env, uid, user, sessHash) {
   const list = (await kvGetJson(env, "usess:" + uid)) || [];
   for (const h of list) await env.PUBLIC_KV.delete("sess:" + h);
-  await env.PUBLIC_KV.delete("sess:" + a.sessHash);
+  if (sessHash) await env.PUBLIC_KV.delete("sess:" + sessHash);
   await env.PUBLIC_KV.delete("usess:" + uid);
 
   const ent = await kvGetJson(env, "ent:" + uid);
@@ -992,25 +1045,30 @@ async function handleDelete(request, env) {
     } while (cursor);
   }
   await env.PUBLIC_KV.delete("uset:" + uid);
+  await env.PUBLIC_KV.delete("trial:" + uid);
   // 이메일 찾기표와(이 계정을 가리킬 때만) 관리자가 미리 준 등급(이메일로 묶인 것)도 지웁니다.
-  if (normEmail(a.user.email)) {
-    const eh = await emailHash(a.user.email);
+  if (user && normEmail(user.email)) {
+    const eh = await emailHash(user.email);
     if ((await env.PUBLIC_KV.get("email:" + eh)) === uid) await env.PUBLIC_KV.delete("email:" + eh);
     await env.PUBLIC_KV.delete("spec:" + eh);
   }
 
   // 신고 내용은 남기되(서비스 품질 개선용) 누가 보냈는지는 지웁니다.
+  // 보관 기간은 새로 시작하지 않습니다 — 처음 보낸 때부터 180일까지만 남깁니다(개인정보처리방침의 "180일", P-08).
   const reports = (await kvGetJson(env, "ureports:" + uid)) || [];
+  const now = Date.now();
   for (const key of reports) {
     const r = await kvGetJson(env, key);
     if (r) {
       r.uid = null;
-      await kvPutJson(env, key, r, 180 * 24 * 3600);
+      const leftSec = Math.floor(((r.at || now) + REPORT_TTL_SEC * 1000 - now) / 1000);
+      if (leftSec < 60) await env.PUBLIC_KV.delete(key); // KV 의 최소 수명(60초)보다 짧게 남았으면 바로 지움
+      else await kvPutJson(env, key, r, leftSec);
     }
   }
   await env.PUBLIC_KV.delete("ureports:" + uid);
   await env.PUBLIC_KV.delete("user:" + uid);
-  return json(request, { deleted: true, hadSubscription });
+  return { hadSubscription };
 }
 
 // 앱이 실제로 보내는 모양만 새로 만들어 넘깁니다(허용 목록). 그 밖의 칸(safetySettings·candidateCount·
@@ -1083,6 +1141,11 @@ async function handleAi(request, env, model) {
     : null;
 
   const plan = await getPlan(env, a.uid);
+  // 긴급 차단 스위치(Worker 변수 AI_PAUSED): 비용이 갑자기 치솟을 때 배포 없이 변수 하나로 AI 호출을 멈춥니다(S-21).
+  //   "all"  모든 등급의 AI 호출을 멈춤 · "free" 무료 등급만 멈춤 · 비우면 평소대로
+  // 계정별 한도만으로는 가입이 몰릴 때 전체 비용을 막을 수 없어 둔 손잡이입니다(전체 하루 상한은 Durable Object 로 옮길 때 함께).
+  const paused = String(env.AI_PAUSED || "").trim().toLowerCase();
+  if (paused === "all" || (paused === "free" && plan.tier === "free")) throw new HttpError(503, "SERVICE_PAUSED");
   const reservation = await reserveUse(env, a.uid, plan.tier, kind, unit, req);
   let res;
   try {
@@ -1175,10 +1238,12 @@ async function handleReport(request, env) {
     input: clip(body.input, 500),
     output: clip(body.output, 2000),
     reason: clip(body.reason, 200),
-  }, 180 * 24 * 3600);
+  }, REPORT_TTL_SEC);
+  // 내 신고 키 목록 — 계정을 지울 때 연결을 끊는 데 씁니다. 예전에는 마지막 200개만 기억해, 그보다 오래된
+  // 신고는 삭제 뒤에도 계정 연결이 남았습니다(P-08). 180일 동안 보낼 수 있는 수보다 넉넉히 둡니다.
   const mine = (await kvGetJson(env, "ureports:" + a.uid)) || [];
   mine.push(key);
-  await kvPutJson(env, "ureports:" + a.uid, mine.slice(-200), 180 * 24 * 3600);
+  await kvPutJson(env, "ureports:" + a.uid, mine.slice(-MAX_REPORTS_TRACKED), REPORT_TTL_SEC);
   await addUsage(env, a.uid, "report");
   return json(request, { ok: true });
 }
@@ -1206,17 +1271,19 @@ async function resolveAccount(env, q) {
 
 /**
  * POST /admin/special  (x-admin-key)
- *   {email | uid, action: "grant" | "revoke", tier?: "special" | "admin", until?: 밀리초(0·생략 = 무기한), note?}
+ *   {email | uid, action: "grant" | "revoke", tier?: "special" | "admin" | "review", until?: 밀리초(0·생략 = 무기한), note?}
  *   → {ok, uid, pending, plan}
  * 회원키 없이 Special Member 를 정하는 임시 통로입니다. 아직 로그인한 적 없는 이메일이면 "미리 준 등급"으로
  * 남겨 두었다가 그 사람이 처음 로그인할 때 붙입니다(pending: true).
+ * tier "review" = 심사용 계정: plus 와 같은 기능·한도만 열립니다(Special 의 신앙 메뉴는 열리지 않음).
+ * 미리 준 등급(spec:)은 400일 뒤 저절로 지워집니다 — 끝내 로그인하지 않은 이메일의 흔적이 남지 않게(P-25).
  */
 async function handleAdminSpecial(request, env) {
   requireAdmin(request, env);
   const body = await readJsonBody(request, 4 * 1024);
   const action = String(body.action || "grant");
   if (action !== "grant" && action !== "revoke") throw new HttpError(400, "BAD_REQUEST");
-  const tier = body.tier === "admin" ? "admin" : "special";
+  const tier = GRANT_TIERS.indexOf(body.tier) >= 0 ? body.tier : "special";
   const untilN = Number(body.until || 0);
   const until = isFinite(untilN) && untilN > 0 ? Math.floor(untilN) : 0;
   const note = clip(body.note, 100);
@@ -1231,7 +1298,7 @@ async function handleAdminSpecial(request, env) {
       await kvPutJson(env, "ent:" + acc.uid, ent);
       return json(request, { ok: true, uid: acc.uid, pending: false, plan: await getPlan(env, acc.uid) });
     }
-    await kvPutJson(env, "spec:" + acc.eh, grant);
+    await kvPutJson(env, "spec:" + acc.eh, grant, SPEC_TTL_SEC);
     return json(request, { ok: true, uid: null, pending: true, plan: { tier, until } });
   }
 
@@ -1264,13 +1331,15 @@ async function handleAdminSpecialGet(request, env, url) {
 async function handleAdminReports(request, env, url) {
   requireAdmin(request, env);
   const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 50, 1), 200);
-  const page = await env.PUBLIC_KV.list({ prefix: "report:", limit });
+  // cursor: 앞 응답의 nextCursor 를 넣으면 그다음 쪽을 줍니다(200건 넘는 신고도 끝까지 볼 수 있게 — P-19).
+  const cursor = url.searchParams.get("cursor") || undefined;
+  const page = await env.PUBLIC_KV.list({ prefix: "report:", limit, cursor });
   const items = [];
   for (const k of page.keys) {
     const r = await kvGetJson(env, k.name);
     if (r) items.push(Object.assign({ key: k.name }, r, { uid: r.uid ? "(있음)" : null }));
   }
-  return json(request, { items });
+  return json(request, { items, nextCursor: page.list_complete ? null : page.cursor || null });
 }
 
 async function route(request, env) {
@@ -1290,6 +1359,7 @@ async function route(request, env) {
   if (method === "GET" && path === "/admin/reports") return handleAdminReports(request, env, url);
   if (method === "POST" && path === "/admin/special") return handleAdminSpecial(request, env);
   if (method === "GET" && path === "/admin/special") return handleAdminSpecialGet(request, env, url);
+  if (method === "POST" && path === "/admin/delete") return handleAdminDelete(request, env);
 
   const m = method === "POST" ? path.match(AI_PATH_RE) : null;
   if (m) return handleAi(request, env, m[1]);
