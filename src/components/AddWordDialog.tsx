@@ -7,6 +7,8 @@ import { useBackClose } from "@/hooks/useBackClose";
 import { aiErrorToast } from "@/lib/aiErrors";
 import FormSheet, { FORM_C, FORM_FIELD_CLASS, FORM_INPUT_CLASS, FormLabel, FormPrimaryButton } from "@/components/FormSheet";
 import { CategoryGlyph } from "@/components/CategoryIcon";
+import { isStoreApp } from "@/lib/platform";
+import { isStaffTier } from "@/lib/plan";
 
 interface AddWordDialogProps {
   open: boolean;
@@ -24,8 +26,16 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
   const [exampleMeaning, setExampleMeaning] = useState("");
   const [categoryId, setCategoryId] = useState(categoryIdProp || defaultCategoryId || "");
   const [filling, setFilling] = useState(false);
-  const categories = getCategories();
+  // 공개판(스토어 앱)의 무료·체험·Plus 에게는 직접 만든 단어장만 보입니다(내 단어장 포함).
+  // 공용 단어장에 넣은 단어는 그 등급에서 다시 볼 길이 없고, "성경과 신앙"(35~41)은 이름도 보이면 안 됩니다
+  // (2026-11-14 출시 전 점검 E-03 — 담을 단어장 목록 saveTarget.ts 의 loadSaveTargets 와 같은 기준).
+  // 관리자판·회원판과 공개판의 Special Member·관리자는 지금처럼 전체 목록입니다.
+  const ownOnly = isStoreApp() && !isStaffTier();
+  const categories = ownOnly ? getCategories().filter((c) => !c.isShared) : getCategories();
   const canAutoFill = hasGeminiApiKey();
+  // 목록에 없는 단어장이 골라져 있으면(걸러진 공용 단어장 등) 첫 단어장으로 바꿉니다.
+  const firstId = categories.length > 0 ? categories[0].id : "";
+  const pickedId = categories.some((c) => c.id === categoryId) ? categoryId : firstId;
 
   useEffect(() => {
     if (open) setCategoryId(categoryIdProp || defaultCategoryId || "");
@@ -73,7 +83,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
       meaning: meaning.trim(),
       example: example.trim(),
       exampleMeaning: exampleMeaning.trim(),
-      categoryId: categoryId || categories[0]?.id || "",
+      categoryId: pickedId,
     });
     setWord("");
     setMeaning("");
@@ -83,7 +93,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
     onOpenChange(false);
   };
 
-  const selectedCat = categories.find((c) => c.id === categoryId) || null;
+  const selectedCat = categories.find((c) => c.id === pickedId) || null;
   const canSubmit = !!word.trim() && !!meaning.trim();
 
   return (
@@ -177,7 +187,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
             </span>
           ) : null}
           <select
-            value={categoryId}
+            value={pickedId}
             onChange={(e) => setCategoryId(e.target.value)}
             className={FORM_INPUT_CLASS + " appearance-none pr-6 font-body"}
             style={{ color: FORM_C.txt }}
