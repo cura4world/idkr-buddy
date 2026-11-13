@@ -55,6 +55,7 @@ import BottomTabs from "@/components/BottomTabs";
 import ScrollManager from "@/components/ScrollManager";
 import LoginGate from "@/components/LoginGate";
 import WebGate from "@/components/WebGate";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import HiddenInPublic from "@/components/HiddenInPublic";
 import { installStoreTtsShim } from "@/lib/storeTtsShim";
 import PreviewPanel from "@/components/PreviewPanel";
@@ -89,6 +90,8 @@ memberChecked
   .catch(() => {});
 
 const App = () => (
+  // 화면 오류가 앱 전체를 흰 화면으로 만들지 않게 맨 바깥에서 받습니다(2026-11-14, C-03).
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner duration={2000} />
@@ -151,6 +154,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
