@@ -106,6 +106,7 @@ export const PAYWALL_PATH = "/plus";        // 잠긴 메뉴를 누르면 여기
 - **S42** (2026-11-11) `800e13a` `src/pages/Plus.tsx` + `src/lib/plusCopy.ts`(내보내는 이름이 바뀌어 한 커밋).
   시안 PW1·PW2 와 390×844 렌더 비교(미리보기 빌드 + Playwright): 두 장 모두 픽셀 차 40 넘는 점 0개. "이용 중" 상자도 확인.
   가격: Play `formattedPrice`(원화 "₩34,800" → "34,800원", 월 환산·할인율은 원화만 계산), 없으면 고정 34,800/3,900원. 체험: Play `freeTrialPeriod`, Play 가 없으면 미리보기 `kata-preview-trial-used` 키(없으면 체험 가능).
+  **2026-11-14 바뀜**: 정식 스토어 앱은 Play 값만 보여 줍니다(못 받으면 "가격을 불러오는 중" + 버튼 잠금). 고정 34,800/3,900원과 "7일"은 미리보기 빌드의 대체값으로만 씁니다. 연간 카드는 "연 34,800원"을 크게, "(월 2,900원)"을 작게(`src/lib/playOffers.ts`).
   폰에서 볼 것: 글꼴(Pretendard/Gowun Dodum) 실제 모양, 아래 안전 영역 여백, 연간↔월간 눌렀을 때 버튼·안내 문구 바뀜, 미리보기 패널 "체험 이미 사용" 켜면 PW2 문구.
 - S47 (11/11) f6526a9 phrase.ts(알아두기 지시문) · 654e1d2 AiReportButton.tsx(문구) · cec6679 Dictionary.tsx · 496d895 PhraseDetail.tsx · 297be27 SavedPhrases.tsx — esbuild·tsc·build 통과, Playwright 390px 캡처로 D4·P1 대조(단어·문장·한국어 단어/문장·한도 초과·빈 알아두기·공개판 신고). 폰에서 볼 것: 사전 makan 결과 카드 순서·색, 담기 알약, 문장 점선 밑줄 탭, 알아두기 없는 문장에서 구역 숨김, 글자 크기 단계별 줄바꿈
 - S44 (2026-11-11) · 커밋: 이 줄을 담은 커밋 바로 앞의 "회화집:" 커밋 20개 · 파일: `src/data/percakapan/` (새 9개 + types·index·01·03·05·08 + REVIEW-2026-11.md), `src/lib/percakapan.ts`·`percakapanAudio.ts`·`peribahasa.ts`, `src/pages/Percakapan.tsx` · 검증: esbuild 21파일·tsc·`npm run build` 통과, 데이터 점검 스크립트(폴더별 장면 수 = 목표, 새 장면 6~10줄, 모든 줄 id·ko 있음, 공개 86/전체 94) 통과 · 폰에서 볼 것: 미리보기에서 무료·Plus 는 폴더 14개(교회와 신앙 없음), Special·관리자는 15개 / 새 장면 소리(남녀 목소리 구분) / 만들기 시트 하·중·상 세 칸, 기본 중 / 고친 3장면(자기소개·오토바이 기사·병문안)이 새 대사로 다시 읽히는지
