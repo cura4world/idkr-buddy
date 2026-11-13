@@ -25,7 +25,19 @@ dist-ssr
 
 # Android signing (never commit)
 *.jks
+*.keystore
 keystore/
+
+# 비밀값이 들어갈 수 있는 파일 (never commit) — 2026-11-14 출시 전 점검 S-10
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*service-account*.json
+*-credentials.json
+.dev.vars
 
 # 빌드 때 CSV 에서 생성되는 파일 — 추적하면 빌드마다 변경으로 잡혀 커밋에 딸려 들어간다
 src/data/seed.json
