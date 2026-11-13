@@ -13,13 +13,14 @@ import { Tier, TIER_LABEL, setPreviewTier, usePlan } from "@/lib/plan";
 import {
   clearPreviewData, onPreviewChange, previewBuildLabel, previewTrialUsed, setPreviewTrialUsed,
 } from "@/lib/preview";
-import { getGeminiApiKey, setGeminiApiKey } from "@/lib/gemini";
+import { getGeminiApiKey, setGeminiApiKey, cleanGeminiKeyInput, geminiKeyInputProblem } from "@/lib/gemini";
 
 const TIERS: Tier[] = ["free", "trial", "plus", "special", "admin"];
 
+// 끝자리와 길이만 보여 줍니다 — 길이로 일부만 복사됐는지 알 수 있습니다(AQ. 키는 53자).
 function maskKey(k: string): string {
   if (!k) return "";
-  return "끝자리 " + k.slice(-4);
+  return "끝자리 " + k.slice(-4) + " · " + k.length + "자";
 }
 
 export default function PreviewPanel() {
@@ -29,6 +30,7 @@ export default function PreviewPanel() {
   const [savedKey, setSavedKey] = useState<string>(getGeminiApiKey());
   const [keyInput, setKeyInput] = useState("");
   const [keyCheck, setKeyCheck] = useState("");
+  const [keyError, setKeyError] = useState("");
   const [checking, setChecking] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
   const [wiping, setWiping] = useState(false);
@@ -80,19 +82,30 @@ export default function PreviewPanel() {
   };
 
   const saveKey = () => {
-    const k = keyInput.trim();
-    if (!k) return;
     // 붙여 넣을 때 섞여 들어온 띄어쓰기·줄바꿈은 키에 없는 글자라 모두 뺍니다
-    setGeminiApiKey(k.split(" ").join("").split("\n").join("").split("\t").join(""));
+    const k = cleanGeminiKeyInput(keyInput);
+    if (!k) return;
+    // 회원키(KK-…)를 넣었거나 일부만 복사된 값은 저장하지 않고 이유를 보여 줍니다.
+    // 접두어(AIza / AQ.)로는 막지 않습니다 — 예전 AIza 키도 계속 동작합니다.
+    const problem = geminiKeyInputProblem(k);
+    if (problem) {
+      setKeyError(problem);
+      return;
+    }
+    setGeminiApiKey(k);
     setSavedKey(getGeminiApiKey());
     setKeyInput("");
+    setKeyError("");
     setKeyCheck("");
+    // 저장한 키가 구글에서 통하는지 바로 한 번 확인합니다.
+    void checkKey();
   };
 
   const removeKey = () => {
     setGeminiApiKey("");
     setSavedKey("");
     setKeyInput("");
+    setKeyError("");
     setKeyCheck("");
   };
 
@@ -236,8 +249,8 @@ export default function PreviewPanel() {
                   autoCapitalize="off"
                   spellCheck={false}
                   value={keyInput}
-                  onChange={(e) => setKeyInput(e.target.value)}
-                  placeholder="AIza…"
+                  onChange={(e) => { setKeyInput(e.target.value); if (keyError) setKeyError(""); }}
+                  placeholder="AQ.…"
                   className="h-10 min-w-0 flex-1 rounded-[10px] border border-border bg-background px-3 text-[13px] text-foreground outline-none focus:border-primary"
                 />
                 <button
@@ -259,6 +272,9 @@ export default function PreviewPanel() {
                   </button>
                 ) : null}
               </div>
+              {keyError ? (
+                <p className="mt-1.5 text-[12px] leading-relaxed break-words text-red-600" role="alert">{keyError}</p>
+              ) : null}
               {savedKey ? (
                 <div className="mt-2">
                   <button
