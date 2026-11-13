@@ -1,15 +1,12 @@
 import { useState, useEffect } from "react";
 import { addWord, getCategories } from "@/lib/store";
 import { fillWordWithGemini, hasGeminiApiKey } from "@/lib/gemini";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useBackClose } from "@/hooks/useBackClose";
 import { aiErrorToast } from "@/lib/aiErrors";
+import FormSheet, { FORM_C, FORM_FIELD_CLASS, FORM_INPUT_CLASS, FormLabel, FormPrimaryButton } from "@/components/FormSheet";
+import { CategoryGlyph } from "@/components/CategoryIcon";
 
 interface AddWordDialogProps {
   open: boolean;
@@ -19,6 +16,7 @@ interface AddWordDialogProps {
   onAdded: (newWordId: string) => void;
 }
 
+// 2026-11-13 사용자 요청: 새 입력 시트(FormSheet) 디자인으로 다시 만듦. 기능·검증·저장은 그대로입니다.
 export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, categoryId: categoryIdProp, onAdded }: AddWordDialogProps) {
   const [word, setWord] = useState("");
   const [meaning, setMeaning] = useState("");
@@ -85,87 +83,118 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
     onOpenChange(false);
   };
 
+  const selectedCat = categories.find((c) => c.id === categoryId) || null;
+  const canSubmit = !!word.trim() && !!meaning.trim();
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm mx-auto bg-card">
-        <DialogHeader>
-          <DialogTitle className="font-body text-gray-900">새 단어 추가</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between">
-              <Label className="font-body text-sm text-gray-900">인도네시아어</Label>
-              {canAutoFill && (
-                <button
-                  type="button"
-                  onClick={handleAutoFill}
-                  disabled={filling}
-                  className="flex items-center gap-1 text-xs text-primary font-body disabled:opacity-50"
-                >
-                  {filling ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-3.5 h-3.5" />
-                  )}
-                  자동 채우기
-                </button>
-              )}
-            </div>
-            <Input
-              value={word}
-              onChange={(e) => setWord(e.target.value)}
-              placeholder="Selamat pagi"
-              className="mt-1 font-word"
-              autoFocus
-            />
-          </div>
-          <div>
-            <Label className="font-body text-sm text-gray-900">한국어 뜻</Label>
-            <Input
-              value={meaning}
-              onChange={(e) => setMeaning(e.target.value)}
-              placeholder="좋은 아침"
-              className="mt-1 font-body"
-            />
-          </div>
-          <div>
-            <Label className="font-body text-sm text-gray-900">예문 (인도네시아어)</Label>
-            <Input
-              value={example}
-              onChange={(e) => setExample(e.target.value)}
-              placeholder="Selamat pagi, apa kabar?"
-              className="mt-1 font-word"
-            />
-          </div>
-          <div>
-            <Label className="font-body text-sm text-gray-900">예문 뜻 (한국어)</Label>
-            <Input
-              value={exampleMeaning}
-              onChange={(e) => setExampleMeaning(e.target.value)}
-              placeholder="좋은 아침, 어떻게 지내세요?"
-              className="mt-1 font-body"
-            />
-          </div>
-          <div>
-            <Label className="font-body text-sm text-gray-900">카테고리</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="카테고리 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.emoji} {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="submit" className="w-full">
-            추가하기
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <FormSheet
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title="단어 추가"
+      desc="단어와 뜻, 예문을 직접 넣으세요"
+      icon={<Plus size={20} strokeWidth={1.8} />}
+      tileBg="#DDF0EA"
+      tileInk="#2C6D63"
+      onSubmit={handleSubmit}
+      footer={
+        <FormPrimaryButton type="submit" disabled={!canSubmit} muted={!canSubmit}>
+          추가하기
+        </FormPrimaryButton>
+      }
+    >
+      <div>
+        <FormLabel>인도네시아어</FormLabel>
+        <div className={FORM_FIELD_CLASS} style={{ minHeight: 44 }}>
+          <input
+            value={word}
+            onChange={(e) => setWord(e.target.value)}
+            placeholder="Selamat pagi"
+            className={FORM_INPUT_CLASS + " font-word"}
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoFocus
+          />
+          {canAutoFill ? (
+            <button
+              type="button"
+              onClick={handleAutoFill}
+              disabled={filling}
+              className="shrink-0 h-7 px-2.5 rounded-full flex items-center gap-1 font-gothic text-[0.75rem] font-semibold disabled:opacity-60"
+              style={{ background: FORM_C.tealBg, color: FORM_C.teal }}
+            >
+              {filling ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} strokeWidth={2} />}
+              자동 채우기
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div>
+        <FormLabel>한국어 뜻</FormLabel>
+        <div className={FORM_FIELD_CLASS} style={{ minHeight: 44 }}>
+          <input
+            value={meaning}
+            onChange={(e) => setMeaning(e.target.value)}
+            placeholder="좋은 아침"
+            className={FORM_INPUT_CLASS + " font-body"}
+          />
+        </div>
+      </div>
+
+      <div>
+        <FormLabel hint="선택">예문 (인도네시아어)</FormLabel>
+        <div className={FORM_FIELD_CLASS} style={{ minHeight: 44 }}>
+          <input
+            value={example}
+            onChange={(e) => setExample(e.target.value)}
+            placeholder="Selamat pagi, apa kabar?"
+            className={FORM_INPUT_CLASS + " font-word"}
+            autoCapitalize="none"
+            autoCorrect="off"
+          />
+        </div>
+      </div>
+
+      <div>
+        <FormLabel hint="선택">예문 뜻 (한국어)</FormLabel>
+        <div className={FORM_FIELD_CLASS} style={{ minHeight: 44 }}>
+          <input
+            value={exampleMeaning}
+            onChange={(e) => setExampleMeaning(e.target.value)}
+            placeholder="좋은 아침, 어떻게 지내세요?"
+            className={FORM_INPUT_CLASS + " font-body"}
+          />
+        </div>
+      </div>
+
+      <div>
+        <FormLabel>카테고리</FormLabel>
+        <div className={"relative " + FORM_FIELD_CLASS} style={{ minHeight: 44 }}>
+          {selectedCat ? (
+            <span className="shrink-0 flex items-center text-[1rem] leading-none" aria-hidden="true">
+              <CategoryGlyph value={selectedCat.emoji} size={17} />
+            </span>
+          ) : null}
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className={FORM_INPUT_CLASS + " appearance-none pr-6 font-body"}
+            style={{ color: FORM_C.txt }}
+          >
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            size={18}
+            strokeWidth={2}
+            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2"
+            style={{ color: FORM_C.sub }}
+          />
+        </div>
+      </div>
+    </FormSheet>
   );
 }
