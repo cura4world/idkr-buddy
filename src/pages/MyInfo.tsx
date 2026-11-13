@@ -23,7 +23,7 @@ import {
 import SettingsDialog, { REOPEN_SETTINGS_KEY } from "@/components/SettingsDialog";
 import BackupRestoreDialog from "@/components/BackupRestoreDialog";
 import { useBackClose } from "@/hooks/useBackClose";
-import { buildBackupFile, describeSummary, formatBytes } from "@/lib/transfer";
+import { buildBackupFile, describeSummary, formatBytes, getBackupFileSavedAt, markBackupFileSaved } from "@/lib/transfer";
 import MedaliSheet from "@/components/MedaliSheet";
 import PlusLockBox from "@/components/PlusLockBox";
 import { ProfileAvatar, profileName } from "@/components/BottomTabs";
@@ -383,6 +383,8 @@ const MyInfo = () => {
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveBusy, setMoveBusy] = useState(false);
+  // 마지막으로 백업 파일을 저장한 시각(없으면 0) — 공개판은 데이터가 이 폰에만 있어 백업 여부를 보여 줍니다(D-01)
+  const [backupAt, setBackupAt] = useState<number>(() => getBackupFileSavedAt());
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [ttsConfirm, setTtsConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -481,6 +483,10 @@ const MyInfo = () => {
         toast(ok
           ? "백업 파일(" + formatBytes(f.bytes) + ")을 다운로드 폴더에 저장했습니다 — " + describeSummary(f.summary)
           : "백업 파일을 저장하지 못했습니다", { duration: 7000 });
+        if (ok) {
+          markBackupFileSaved();
+          setBackupAt(getBackupFileSavedAt());
+        }
       } else {
         const a = document.createElement("a");
         a.href = f.href;
@@ -489,6 +495,8 @@ const MyInfo = () => {
         a.click();
         document.body.removeChild(a);
         toast("백업 파일(" + formatBytes(f.bytes) + ")을 다운로드 폴더에 저장합니다 — " + describeSummary(f.summary), { duration: 7000 });
+        markBackupFileSaved();
+        setBackupAt(getBackupFileSavedAt());
       }
     } catch (e) {
       toast("백업 파일을 만들지 못했습니다");
@@ -776,7 +784,14 @@ const MyInfo = () => {
           {publicLike ? null : (
             <Row icon={I_CLOUD} label="서버 자동 백업" onClick={onAutoBackup} right={<Toggle on={autoBackupOn} />} />
           )}
-          <Row icon={I_PHONE} label="새 폰으로 옮기기" onClick={onMoveRow} last />
+          {/* 공개판: 데이터가 이 폰에만 있으므로 "백업"을 앞세우고 마지막 백업 날짜를 보여 줍니다(D-01). 관리자판·회원판은 예전 그대로 */}
+          <Row
+            icon={I_PHONE}
+            label={publicLike ? "백업·새 폰으로 옮기기" : "새 폰으로 옮기기"}
+            value={publicLike ? (backupAt > 0 ? "마지막 백업 " + dotDate(backupAt) : "백업 아직 없음") : undefined}
+            onClick={onMoveRow}
+            last
+          />
         </Card>
         <Card style={{ overflow: "hidden" }}>
           <Row icon={I_TRASH} label="저장된 읽기 음성 비우기" onClick={() => setTtsConfirm(true)} last={!session} />
@@ -902,11 +917,15 @@ const MyInfo = () => {
       <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-sm mx-auto bg-card">
           <DialogHeader>
-            <DialogTitle className="font-body text-gray-900">새 폰으로 옮기기</DialogTitle>
+            <DialogTitle className="font-body text-gray-900">백업·새 폰으로 옮기기</DialogTitle>
           </DialogHeader>
           <p className="font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
-            내 단어장·직접 넣은 단어·설정을 백업 파일로 저장하세요. 새 폰에서 이 화면의
+            학습 기록은 이 폰에만 저장됩니다. 앱을 지우거나 폰을 바꾸면 사라지므로 백업 파일을 저장해 두세요.
+            내 단어장·직접 넣은 단어·불러온 이야기·만든 회화집·설정이 담깁니다. 새 폰에서 이 화면의
             "백업 파일 불러오기"로 그 파일을 고르면 지금 있는 것과 합쳐집니다.
+          </p>
+          <p className="font-gothic text-[0.6875rem] font-semibold" style={{ color: INK }}>
+            마지막 백업: {backupAt > 0 ? dotDate(backupAt) : "아직 없음"}
           </p>
           <button
             type="button"
