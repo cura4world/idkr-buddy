@@ -102,11 +102,13 @@ export function isBuiltInCategory(c: Category): boolean {
 // 처음 설치 때 깔리는 예시 단어장·단어. 공개판(스토어 앱·미리보기)은 예시 없이 빈 상태로 시작합니다
 // (QA Q16 — 시안 W1 의 처음 상태. "보관한 단어장 4권 · 모은 단어 0" 이 헷갈림). 관리자판·회원판은 예전 그대로.
 // defaultCategories·defaultWords 자체는 그대로 둡니다 — isBuiltIn* 판단과 sharedIdMigration 이 씁니다.
+// 사본을 돌려줍니다 — 받은 쪽(addCategory 등)이 배열을 고치면 원본 목록까지 바뀌어, 새로 만든 단어장이
+// "기본 단어장"으로 잘못 판정될 수 있었습니다(저장소가 빈 첫 호출에서만. 2026-11-14 테스트로 발견).
 function initialCategories(): Category[] {
-  return isStoreApp() ? [] : defaultCategories;
+  return isStoreApp() ? [] : defaultCategories.slice();
 }
 function initialWords(): Word[] {
-  return isStoreApp() ? [] : defaultWords;
+  return isStoreApp() ? [] : defaultWords.slice();
 }
 
 export function getCategories(): Category[] {
@@ -121,8 +123,29 @@ export function getCategories(): Category[] {
   return initialCategories();
 }
 
-export function saveCategories(categories: Category[]) {
-  try { localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories)); } catch (e) {}
+// 저장이 실패하면(저장 공간 가득 등) 화면은 된 것처럼 보이는데 다음에 켜면 사라집니다(출시 전 점검 D-04·C-21).
+// 실패를 삼키지 않고 창에 알립니다 — App.tsx 가 이 신호를 받아 한 번 안내합니다. 저장 함수는 성공 여부를 돌려줍니다.
+export const SAVE_FAILED_EVENT = "kata-save-failed";
+function reportSaveFailed(): void {
+  try { window.dispatchEvent(new Event(SAVE_FAILED_EVENT)); } catch (e) {}
+}
+
+/** 새 ID. crypto.randomUUID 가 없는 오래된 웹뷰에서도 단어·단어장을 추가할 수 있게 대체를 둡니다(C-21). */
+function newId(): string {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  } catch (e) {}
+  return "w" + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+}
+
+export function saveCategories(categories: Category[]): boolean {
+  try {
+    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+    return true;
+  } catch (e) {
+    reportSaveFailed();
+    return false;
+  }
 }
 
 export function getWords(): Word[] {
@@ -137,8 +160,14 @@ export function getWords(): Word[] {
   return initialWords();
 }
 
-export function saveWords(words: Word[]) {
-  try { localStorage.setItem(WORDS_KEY, JSON.stringify(words)); } catch (e) {}
+export function saveWords(words: Word[]): boolean {
+  try {
+    localStorage.setItem(WORDS_KEY, JSON.stringify(words));
+    return true;
+  } catch (e) {
+    reportSaveFailed();
+    return false;
+  }
 }
 
 // ── 단어 뜻 조회 실패 안내문 ───────────────────────────────────────────
@@ -306,7 +335,7 @@ export function ensureMapWordbook(): string {
 
 export function addCategory(name: string, emoji: string): Category {
   const categories = getCategories();
-  const cat: Category = { id: crypto.randomUUID(), name, emoji };
+  const cat: Category = { id: newId(), name, emoji };
   // 새 단어장은 '내 단어장' 바로 다음에 넣습니다 — 내 단어장 화면에서 최신이 위로 오도록.
   // (addWord 가 내 단어장 단어를 다루는 방식과 같습니다. 표시 순서 = 저장 순서)
   const myIdx = categories.findIndex((c) => c.id === MY_WORDBOOK_ID);
@@ -396,7 +425,7 @@ export function moveCategoryToBottom(id: string) {
 
 export function addWord(word: Omit<Word, "id" | "createdAt">): Word {
   const words = getWords();
-  const newWord: Word = { ...word, id: crypto.randomUUID(), createdAt: Date.now() };
+  const newWord: Word = { ...word, id: newId(), createdAt: Date.now() };
   if (word.categoryId === MY_WORDBOOK_ID) {
     // '내 단어장'은 최신 단어가 맨 위 (표시 순서 = 저장 순서라 드래그 정렬과도 어긋나지 않음)
     const firstIdx = words.findIndex((w) => w.categoryId === MY_WORDBOOK_ID);
@@ -583,40 +612,62 @@ export function exportPersonalWordsToCSV(): { csv: string; count: number } {
   return { csv: bom + lines.join(CR + NL) + (lines.length > 0 ? CR + NL : ""), count: lines.length };
 }
 
-export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imported: number; errors: number } {
-  function parseCSVLine(line: string): string[] {
-    const result: string[] = [];
-    let current = "";
-    let inQuotes = false;
-    let i = 0;
-    while (i < line.length) {
-      const char = line[i];
-      if (inQuotes) {
-        if (char === '"') {
-          if (line[i + 1] === '"') { current += '"'; i += 2; }
-          else { inQuotes = false; i++; }
-        } else { current += char; i++; }
-      } else {
-        if (char === '"') { inQuotes = true; i++; }
-        else if (char === ',') { result.push(current.trim()); current = ""; i++; }
-        else { current += char; i++; }
-      }
+/**
+ * CSV 글을 줄(칸 배열)로 나눕니다. 따옴표 안의 쉼표·줄바꿈을 한 칸으로 읽습니다.
+ * 내보내기(exportWordsToCSV)는 줄바꿈이 든 칸을 따옴표로 감싸므로, 줄바꿈으로 먼저 자르면 자기 출력을
+ * 못 읽습니다(출시 전 점검 D-06).
+ */
+export function parseCsvRows(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cur = "";
+  let inQ = false;
+  const NL = String.fromCharCode(10);
+  const CR = String.fromCharCode(13);
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false;
+      } else cur += ch;
+      continue;
     }
-    result.push(current.trim());
-    return result;
+    if (ch === '"') inQ = true;
+    else if (ch === ",") { row.push(cur.trim()); cur = ""; }
+    else if (ch === NL || ch === CR) {
+      if (ch === CR && text[i + 1] === NL) i++;
+      row.push(cur.trim());
+      cur = "";
+      if (row.some((x) => x !== "")) rows.push(row);
+      row = [];
+    } else cur += ch;
   }
+  row.push(cur.trim());
+  if (row.some((x) => x !== "")) rows.push(row);
+  return rows;
+}
+
+/**
+ * skipped: 그 단어장에 같은 단어·같은 뜻이 이미 있어 넣지 않은 줄 수 — 같은 파일을 두 번 넣어도 두 배가 되지 않습니다(D-06).
+ * saved: 저장에 성공했는가(저장 공간이 가득 차면 false).
+ */
+export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imported: number; errors: number; skipped: number; saved: boolean } {
   const bom = String.fromCharCode(0xFEFF);
   const cleanCsv = csv.startsWith(bom) ? csv.slice(1) : csv;
-  const newline = new RegExp("\\r?\\n");
-  const lines = cleanCsv.split(newline).filter((l) => l.trim());
+  const lines = parseCsvRows(cleanCsv);
   let imported = 0;
   let errors = 0;
+  let skipped = 0;
   const words = getWords();
   const categories = getCategories();
   const newSavedIds: string[] = [];
   let categoriesChanged = false;
+  // 이미 있는 것: 단어장 + 단어(소문자) + 뜻
+  const sameKey = (catId: string, w: string, m: string) => catId + "\u0001" + w.trim().toLowerCase() + "\u0001" + m.trim();
+  const have = new Set<string>();
+  for (const w of words) have.add(sameKey(w.categoryId, w.word || "", w.meaning || ""));
   for (let i = 0; i < lines.length; i++) {
-    const parts = parseCSVLine(lines[i]);
+    const parts = lines[i];
     if (parts.length >= 2 && parts[0].trim() !== "") {
       const [word, meaning, example, exampleMeaning, categoryName, categoryEmoji, marked] = parts;
       let catId = forceCategoryId;
@@ -626,7 +677,7 @@ export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imp
           let cat = categories.find((c) => c.id === name || c.name === name);
           if (!cat) {
             // 백업 복원 시 없는 카테고리는 자동 생성
-            cat = { id: crypto.randomUUID(), name: name, emoji: (categoryEmoji || "").trim() || "📁" };
+            cat = { id: newId(), name: name, emoji: (categoryEmoji || "").trim() || "📁" };
             categories.push(cat);
             categoriesChanged = true;
           }
@@ -635,21 +686,26 @@ export function importWordsFromCSV(csv: string, forceCategoryId?: string): { imp
           catId = categories[0]?.id || "daily";
         }
       }
-      const newWord: Word = { id: crypto.randomUUID(), word, meaning, example: example || "", exampleMeaning: exampleMeaning || "", categoryId: catId, createdAt: Date.now() };
+      const key = sameKey(catId, word, meaning || "");
+      if (have.has(key)) { skipped++; continue; }
+      have.add(key);
+      const newWord: Word = { id: newId(), word, meaning, example: example || "", exampleMeaning: exampleMeaning || "", categoryId: catId, createdAt: Date.now() };
       words.push(newWord);
       if ((marked || "").trim() === "1") newSavedIds.push(newWord.id);
       imported++;
     } else { errors++; }
   }
-  if (categoriesChanged) saveCategories(categories);
-  saveWords(words);
+  let saved = true;
+  if (categoriesChanged) saved = saveCategories(categories) && saved;
+  saved = saveWords(words) && saved;
+  if (!saved) return { imported: 0, errors, skipped, saved: false };
   if (newSavedIds.length > 0) {
     try {
       const ids = getSavedWordIds();
       localStorage.setItem(SAVED_KEY, JSON.stringify(ids.concat(newSavedIds)));
     } catch (e) {}
   }
-  return { imported, errors };
+  return { imported, errors, skipped, saved: true };
 }
 
 export function reorderWords(categoryId: string, fromIndex: number, toIndex: number) {
