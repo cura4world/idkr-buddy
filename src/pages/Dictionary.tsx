@@ -1066,6 +1066,15 @@ const Dictionary = () => {
                 )}
               </BodyCard>
             )}
+            {/* AI 풀이 신고 — 문장 풀이에도 둡니다(2026-11-14 P-05). 스토어 앱(공개판)에서만 보입니다 */}
+            <div className="flex justify-center [&>div>button]:text-[#6B7479]">
+              <AiReportButton
+                feature="dictionary"
+                input={idSentence.original}
+                output={idSentence.translation + (idSentence.natural.id ? " / " + idSentence.natural.id : "")}
+                className="flex flex-col items-center"
+              />
+            </div>
           </>
         )}
 
@@ -1115,6 +1124,15 @@ const Dictionary = () => {
                 ))}
               </section>
             </BodyCard>
+            {/* AI 풀이 신고 — 한국어 단어 풀이에도 둡니다(P-05) */}
+            <div className="flex justify-center [&>div>button]:text-[#6B7479]">
+              <AiReportButton
+                feature="dictionary"
+                input={koWord.query}
+                output={JSON.stringify(koWord.candidates)}
+                className="flex flex-col items-center"
+              />
+            </div>
           </>
         )}
 
@@ -1157,6 +1175,15 @@ const Dictionary = () => {
                 </section>
               )}
             </BodyCard>
+            {/* AI 풀이 신고 — 한국어 문장 번역에도 둡니다(P-05) */}
+            <div className="flex justify-center [&>div>button]:text-[#6B7479]">
+              <AiReportButton
+                feature="dictionary"
+                input={koSentence.query}
+                output={JSON.stringify({ casual: koSentence.casual, formal: koSentence.formal })}
+                className="flex flex-col items-center"
+              />
+            </div>
           </>
         )}
 
