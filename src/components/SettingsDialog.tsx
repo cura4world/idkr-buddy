@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getGeminiApiKey, setGeminiApiKey } from "@/lib/gemini";
+import { getGeminiApiKey, setGeminiApiKey, memberKeyInGeminiProblem } from "@/lib/gemini";
 import { getClaudeApiKey, setClaudeApiKey } from "@/lib/claude";
 import { exportPersonalWordsToCSV, getPrivateFolderName, setPrivateFolderName } from "@/lib/store";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -465,6 +465,12 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   };
 
   const handleSave = () => {
+    // 회원키(KK-…)는 아래 회원 칸에 넣는 것이라 Gemini 칸에 넣으면 막습니다(비워 저장하면 삭제 — 그대로).
+    const geminiKeyProblem = memberKeyInGeminiProblem(apiKey);
+    if (geminiKeyProblem) {
+      toast(geminiKeyProblem);
+      return;
+    }
     setGeminiApiKey(apiKey);
     setClaudeApiKey(claudeKey);
     setSermonBase(sermonBase);
@@ -1048,9 +1054,12 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               autoComplete="off"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="AIza..."
+              placeholder="AQ.…"
               className="mt-1 text-sm"
             />
+            {memberKeyInGeminiProblem(apiKey) ? (
+              <p className="mt-2 text-xs text-red-600 font-gothic" role="alert">{memberKeyInGeminiProblem(apiKey)}</p>
+            ) : null}
             <p className="mt-2 text-xs text-muted-foreground font-gothic">
               단어 추가 시 뜻과 예문을 자동으로 채우는 데 사용됩니다. 키는 이 기기에만 저장되며, Google AI Studio에서 무료로 발급받을 수 있습니다. 비워두고 저장하면 키가 삭제됩니다.
             </p>
