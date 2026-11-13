@@ -73,11 +73,25 @@ export function getTier(): Tier {
   const live = typeof p.until === "number" && p.until > Date.now();
   if (p.tier === "admin" && (!p.until || live)) return "admin";
   if (p.tier === "special" && (!p.until || live)) return "special";
+  // 심사용 계정(review): 화면·잠금은 Plus 와 똑같습니다. Special 과 달리 신앙·뉴스 메뉴는 열리지 않습니다.
+  if (p.tier === "review" && (!p.until || live)) return "plus";
   // 서버는 체험을 {tier:"trial", trial:true} 로 줍니다. 예전 모양 {tier:"plus", trial:true} 도 받습니다.
   if ((p.tier === "plus" || p.tier === "trial") && live) {
     return p.trial || p.tier === "trial" ? "trial" : "plus";
   }
   return "free";
+}
+
+/**
+ * 심사용 계정인가 — 관리자가 서버에서 준 "review" 등급. 등급(getTier)은 "plus" 로 보이므로,
+ * 구독 화면·내 정보에서 "구독 관리" 대신 "심사용 계정"이라고 적을 때만 이 함수를 씁니다.
+ */
+export function isReviewAccount(): boolean {
+  if (getPreviewTier() || !isStoreApp()) return false;
+  const s = getSession();
+  if (!s || !s.plan) return false;
+  const p = s.plan as { tier?: string; until?: number };
+  return p.tier === "review" && (!p.until || p.until > Date.now());
 }
 
 export function hasPlus(): boolean {
