@@ -103,7 +103,13 @@ const TRIAL_TOTAL_TTL_SEC = 400 * 24 * 3600;
 const TRIAL_DAYS = 7;
 const AI_TIMEOUT_MS = 100000;
 const API_TIMEOUT_MS = 15000;
-const ENT_RECHECK_MS = 60 * 60 * 1000;
+// Play 에 구독 상태를 다시 묻는 간격 (2026-11-14 출시 전 점검 B-01·B-02·B-04)
+const ENT_LIVE_RECHECK_MS = 24 * 60 * 60 * 1000; // 이용 중: 만료 전이라도 하루에 한 번 (환불·취소를 알아채려고)
+const ENT_RECHECK_MS = 60 * 60 * 1000; // 만료 뒤·무료로 내려간 뒤·Play 가 잠깐 안 될 때: 한 시간에 한 번까지
+const ENT_ACK_RETRY_MS = 10 * 60 * 1000; // 확인(acknowledge)이 안 된 구매: 10분에 한 번까지 다시 시도
+const ENT_FREE_RECHECK_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // 무료로 내려간 뒤에도 30일 동안은 다시 묻는다
+const ENT_OUTAGE_GRACE_MS = 24 * 60 * 60 * 1000; // 만료 시각이 지났는데 Play 가 안 될 때: 하루까지는 지금 등급 유지
+const ACK_FAIL_TTL_SEC = 7 * 24 * 3600;
 const DEFAULT_PRODUCT_IDS = ["plus"];
 const VALID_SUB_STATES = [
   "SUBSCRIPTION_STATE_ACTIVE",
@@ -426,7 +432,12 @@ function publicUser(user) {
 // ── 플랜 ─────────────────────────────────────────────────────
 
 // 등급: free · trial · plus · special · admin
-//   ent:<uid> = { tier, productId, purchaseToken, tokenHash, until, trial, state, checkedAt, staff }
+//   ent:<uid> = { tier, productId, purchaseToken, tokenHash, until, trial, state, checkedAt, staff,
+//                 triedAt?, freeSince?, ackPending?, ackFailedAt? }
+//     checkedAt   Play 가 마지막으로 답해 준 시각
+//     triedAt     Play 에 물었지만 답을 못 받은(일시 오류) 마지막 시각 — 답을 받으면 지워짐
+//     freeSince   이 구매가 무료로 내려간 시각 — 그 뒤 30일 동안은 한 시간에 한 번까지 Play 에 다시 묻습니다
+//     ackPending  Play 는 유효하다고 했는데 확인(acknowledge)이 아직 안 된 구매 — 다음 /me·/billing/verify 때 다시 시도
 //   staff = { tier: "special"|"admin", until(0=무기한), note, at } — 관리자가 /admin/special 로 준 등급.
 //   Play 검증이 ent 를 다시 써도 staff 는 남습니다. ent.tier 를 KV 에서 직접 special·admin 으로 적어도 인정합니다.
 // 앱에 주는 plan: { tier, until, trial?, productId? }  (trial 이면 trial: true)
@@ -449,26 +460,77 @@ function paidPlan(ent, until) {
   return { tier: "plus", until, productId: ent.productId };
 }
 
+function isPaidTier(ent) {
+  return !!ent && (ent.tier === "plus" || ent.tier === "trial");
+}
+
+/**
+ * 지금 Play 에 이 계정의 구독 상태를 다시 물어야 하는가.
+ *   이용 중(만료 전)      마지막 답에서 하루가 지났으면 — 환불·취소(권한 회수)는 만료 전에 일어납니다(B-01).
+ *                        확인(acknowledge)이 안 된 구매는 10분에 한 번까지(B-04).
+ *   만료 시각이 지남      만료 뒤에 아직 묻지 않았으면 바로, 그 뒤로는 한 시간에 한 번까지.
+ *   무료로 내려감         구매 토큰이 있으면 내려간 뒤 30일 동안 한 시간에 한 번까지 — 갱신이 늦게 반영됐거나
+ *                        결제 수단을 고쳐 구독이 살아난 사용자가 무료로 굳지 않게(B-02).
+ */
+function shouldAskPlay(ent, now) {
+  if (!ent || !ent.purchaseToken || !ent.productId) return false;
+  const checked = ent.checkedAt || 0;
+  const last = Math.max(checked, ent.triedAt || 0);
+  if (isPaidTier(ent)) {
+    if (ent.until > now) {
+      if (ent.ackPending) return now - last > ENT_ACK_RETRY_MS;
+      return now - checked > ENT_LIVE_RECHECK_MS && now - last > ENT_RECHECK_MS;
+    }
+    return last < ent.until || now - last > ENT_RECHECK_MS;
+  }
+  if (ent.tier === "free") {
+    const since = ent.freeSince || checked;
+    return now - since < ENT_FREE_RECHECK_WINDOW_MS && now - last > ENT_RECHECK_MS;
+  }
+  return false;
+}
+
+/**
+ * Play 에 다시 묻고 ent 를 고쳐 돌려줍니다.
+ *   Play 가 답함            verifyWithPlay 가 ent 를 새로 씁니다(환불·취소·만료면 무료로, 갱신됐으면 새 만료 시각으로).
+ *   Play 가 "이 구매 없음"  (4xx — 없는 토큰·다른 상품·다른 계정) 무료로 적습니다.
+ *   일시 오류(5xx·통신)     등급은 그대로 두고 물어본 시각만 남깁니다 → 한 시간 뒤 다시.
+ */
+async function recheckWithPlay(env, uid, ent, now) {
+  try {
+    const r = await verifyWithPlay(env, uid, ent.productId, ent.purchaseToken);
+    return r.ent || ent;
+  } catch (e) {
+    const gone = e instanceof HttpError && e.status >= 400 && e.status < 500;
+    if (gone) {
+      ent.tier = "free";
+      ent.until = 0;
+      ent.trial = false;
+      ent.state = e.code;
+      ent.checkedAt = now;
+      ent.freeSince = ent.freeSince || now;
+      delete ent.triedAt;
+      delete ent.ackPending;
+    } else {
+      ent.triedAt = now;
+    }
+    try { await kvPutJson(env, "ent:" + uid, ent); } catch (e2) {}
+    return ent;
+  }
+}
+
 async function getPlan(env, uid) {
-  const ent = await kvGetJson(env, "ent:" + uid);
+  let ent = await kvGetJson(env, "ent:" + uid);
   const now = Date.now();
+  if (env.PLAY_SERVICE_ACCOUNT && shouldAskPlay(ent, now)) ent = await recheckWithPlay(env, uid, ent, now);
   const staff = staffPlan(ent, now);
   if (staff) return staff;
-  if (!ent || (ent.tier !== "plus" && ent.tier !== "trial")) return { tier: "free", until: 0 };
+  if (!isPaidTier(ent)) return { tier: "free", until: 0 };
   if (ent.until > now) return paidPlan(ent, ent.until);
-  // 만료가 지났으면 갱신됐는지 한 시간에 한 번까지 Play 에 다시 묻습니다.
-  if (ent.purchaseToken && env.PLAY_SERVICE_ACCOUNT && now - (ent.checkedAt || 0) > ENT_RECHECK_MS) {
-    try {
-      const r = await verifyWithPlay(env, uid, ent.productId, ent.purchaseToken);
-      if (r.until > now) return paidPlan({ tier: r.trial ? "trial" : "plus", trial: r.trial, productId: ent.productId }, r.until);
-    } catch (e) {
-      // 실패해도 확인 시각은 남겨, 요청마다 Play 를 다시 부르지 않게 합니다(한 시간 뒤 재시도).
-      try {
-        ent.checkedAt = now;
-        await kvPutJson(env, "ent:" + uid, ent);
-      } catch (e2) {}
-    }
-  }
+  // 만료 시각은 지났는데 Play 가 답을 못 준 경우(일시 오류): 하루까지는 지금 등급을 유지하고 한 시간 뒤 다시 묻습니다.
+  // Play 가 한 번이라도 답하면 ent 가 새로 쓰이므로(무료 또는 새 만료 시각) 이 길로 오지 않습니다.
+  const unanswered = (ent.triedAt || 0) > (ent.checkedAt || 0) && (ent.triedAt || 0) >= ent.until;
+  if (unanswered && now - ent.until < ENT_OUTAGE_GRACE_MS) return paidPlan(ent, ent.until + ENT_OUTAGE_GRACE_MS);
   return { tier: "free", until: 0 };
 }
 
@@ -695,19 +757,9 @@ async function verifyWithPlay(env, uid, productId, purchaseToken) {
   const owner = await env.PUBLIC_KV.get("ptok:" + tokenHash);
   if (owner && owner !== uid) throw new HttpError(409, "PURCHASE_OWNED_BY_OTHER");
 
-  const valid = VALID_SUB_STATES.indexOf(sub.subscriptionState) >= 0 && until > Date.now();
-  const trial = valid && isFreeTrialPhase(sub, item, Date.now());
-
-  // 확인(acknowledge)하지 않으면 사흘 뒤 Google 이 환불합니다.
-  if (valid && sub.acknowledgementState === "ACKNOWLEDGEMENT_STATE_PENDING") {
-    const ack = await tfetch(
-      base + "/purchases/subscriptions/" + encodeURIComponent(productId) +
-        "/tokens/" + encodeURIComponent(purchaseToken) + ":acknowledge",
-      { method: "POST", headers: { authorization: "Bearer " + access, "content-type": "application/json" }, body: "{}" },
-      API_TIMEOUT_MS,
-    );
-    if (!ack.ok) throw new HttpError(502, "ACK_FAILED");
-  }
+  const now = Date.now();
+  const valid = VALID_SUB_STATES.indexOf(sub.subscriptionState) >= 0 && until > now;
+  const trial = valid && isFreeTrialPhase(sub, item, now);
 
   await env.PUBLIC_KV.put("ptok:" + tokenHash, uid, { expirationTtl: 400 * 24 * 3600 });
   // 이 계정에 묶인 구매 토큰을 모두 기억해 두었다가 계정 삭제 때 전부 풉니다
@@ -718,6 +770,13 @@ async function verifyWithPlay(env, uid, productId, purchaseToken) {
     await kvPutJson(env, "uptok:" + uid, mineTok.slice(-50), 400 * 24 * 3600);
   }
   const prevEnt = await kvGetJson(env, "ent:" + uid);
+  const sameToken = !!prevEnt && prevEnt.tokenHash === tokenHash;
+
+  // 끝난 구매(만료·환불된 옛 토큰)가 지금 이용 중인 다른 구매를 덮어써 무료로 만들지 않게 합니다.
+  if (!valid && prevEnt && !sameToken && isPaidTier(prevEnt) && prevEnt.until > now) {
+    return { valid: false, until: 0, trial: false, ackPending: false, ent: prevEnt };
+  }
+
   const nextEnt = {
     tier: valid ? (trial ? "trial" : "plus") : "free",
     productId,
@@ -726,12 +785,65 @@ async function verifyWithPlay(env, uid, productId, purchaseToken) {
     until: valid ? until : 0,
     trial,
     state: sub.subscriptionState || "",
-    checkedAt: Date.now(),
+    checkedAt: now,
   };
+  // 무료로 내려간 시각 — 같은 구매로 이미 내려가 있었으면 처음 시각을 지킵니다(30일 재확인 기간의 기준).
+  if (!valid) nextEnt.freeSince = (sameToken && prevEnt.tier === "free" && prevEnt.freeSince) || now;
   // 관리자가 준 Special Member·관리자 등급은 Play 검증으로 지워지지 않게 그대로 둡니다.
   if (prevEnt && prevEnt.staff) nextEnt.staff = prevEnt.staff;
+
+  // Play 가 유효하다고 한 구매는 권한(ent)을 먼저 저장합니다. 확인(acknowledge)이 실패해도 Plus 는 열리고,
+  // 확인은 다음 /me·/billing/verify 때 다시 시도합니다 — 사흘 안에 확인하지 못하면 Google 이 환불합니다(B-04).
+  const needAck = valid && sub.acknowledgementState === "ACKNOWLEDGEMENT_STATE_PENDING";
+  if (needAck) nextEnt.ackPending = true;
   await kvPutJson(env, "ent:" + uid, nextEnt);
-  return { valid, until: valid ? until : 0, trial };
+
+  if (needAck) {
+    let ackStatus = 0;
+    try {
+      const ack = await tfetch(
+        base + "/purchases/subscriptions/" + encodeURIComponent(productId) +
+          "/tokens/" + encodeURIComponent(purchaseToken) + ":acknowledge",
+        { method: "POST", headers: { authorization: "Bearer " + access, "content-type": "application/json" }, body: "{}" },
+        API_TIMEOUT_MS,
+      );
+      ackStatus = ack.status;
+    } catch (e) {
+      ackStatus = 0; // 통신 오류·시간 초과
+    }
+    if (ackStatus >= 200 && ackStatus < 300) {
+      delete nextEnt.ackPending;
+      await kvPutJson(env, "ent:" + uid, nextEnt);
+      try { await env.PUBLIC_KV.delete("ackfail:" + tokenHash); } catch (e) {}
+    } else {
+      await logAckFailure(env, uid, tokenHash, ackStatus);
+    }
+  } else if (sameToken && prevEnt.ackPending) {
+    // 앞서 실패했던 확인이 그사이 끝났거나(Play 가 확인됨으로 답함) 구매가 끝난 경우 — 실패 기록을 치웁니다.
+    try { await env.PUBLIC_KV.delete("ackfail:" + tokenHash); } catch (e) {}
+  }
+  return { valid, until: valid ? until : 0, trial, ackPending: !!nextEnt.ackPending, ent: nextEnt };
+}
+
+/**
+ * 확인(acknowledge) 실패 기록 — 관리자가 알 수 있게 Worker 로그와 KV(ackfail:<토큰 해시>, 7일)에 남깁니다.
+ * 403 이 이어지면 Play Console 에서 서비스 계정의 "주문 및 구독 관리" 권한이 빠진 것입니다(05 체크리스트 6절).
+ * 구매 토큰 원문·이메일은 적지 않습니다.
+ */
+async function logAckFailure(env, uid, tokenHash, status) {
+  try {
+    console.error("[kata-public] ACK_FAILED status=" + status + " uid=" + uid + " token=" + tokenHash.slice(0, 12));
+  } catch (e) {}
+  try {
+    const prev = (await kvGetJson(env, "ackfail:" + tokenHash)) || {};
+    await kvPutJson(env, "ackfail:" + tokenHash, {
+      uid,
+      status,
+      first: prev.first || Date.now(),
+      last: Date.now(),
+      count: (prev.count || 0) + 1,
+    }, ACK_FAIL_TTL_SEC);
+  } catch (e) {}
 }
 
 /**
@@ -834,7 +946,10 @@ async function handleDelete(request, env) {
   if (ent && ent.tokenHash && toks.indexOf(ent.tokenHash) < 0) toks.push(ent.tokenHash);
   for (const th of toks) {
     // 다른 계정이 주인인 토큰은 건드리지 않음
-    if ((await env.PUBLIC_KV.get("ptok:" + th)) === uid) await env.PUBLIC_KV.delete("ptok:" + th);
+    if ((await env.PUBLIC_KV.get("ptok:" + th)) === uid) {
+      await env.PUBLIC_KV.delete("ptok:" + th);
+      await env.PUBLIC_KV.delete("ackfail:" + th);
+    }
   }
   await env.PUBLIC_KV.delete("uptok:" + uid);
   await env.PUBLIC_KV.delete("ent:" + uid);
@@ -965,7 +1080,8 @@ async function handleBillingVerify(request, env) {
   if (!purchaseToken || productIds(env).indexOf(productId) < 0) throw new HttpError(400, "BAD_REQUEST");
   const r = await verifyWithPlay(env, a.uid, productId, purchaseToken);
   const plan = await getPlan(env, a.uid);
-  return json(request, { valid: r.valid, plan });
+  // ackPending: Plus 는 열렸지만 Play 확인(acknowledge)이 아직 안 됨 — 서버가 다음 요청 때 다시 시도합니다.
+  return json(request, { valid: r.valid, plan, ackPending: !!r.ackPending });
 }
 
 function clip(v, n) {
