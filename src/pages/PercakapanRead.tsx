@@ -46,6 +46,7 @@ const speakWord = (text: string) => {
   } catch (e) {}
 };
 import PhraseFindBar from "@/components/PhraseFindBar";
+import AiReportButton from "@/components/AiReportButton";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { isBackCloseEntry } from "@/hooks/useBackClose";
 
@@ -585,6 +586,17 @@ const PercakapanRead = () => {
                 );
               })}
             </div>
+            {/* 직접 만든 회화(AI 가 만든 대화)에만 신고 단추 — 스토어 앱(공개판)에서만 보입니다(2026-11-14 P-05) */}
+            {scene.custom ? (
+              <div className="mt-3 flex justify-center">
+                <AiReportButton
+                  feature="percakapan"
+                  input={scene.title}
+                  output={scene.lines.map((l) => l.id + " / " + l.ko).join("\n")}
+                  className="flex flex-col items-center"
+                />
+              </div>
+            ) : null}
           </>
         )}
       </div>
