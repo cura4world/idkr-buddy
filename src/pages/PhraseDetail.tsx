@@ -23,6 +23,7 @@ import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
 import AiReportButton from "@/components/AiReportButton";
 import { publicAiErrorText } from "@/lib/aiErrors";
+import { isPreviewBuild } from "@/lib/plan";
 
 /* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 */
 const speak = (text: string, lang: "id" | "ko") => {
@@ -252,7 +253,8 @@ const PhraseDetail = () => {
       }
       else if (msg === "RATE_LIMIT") setError("잠시 뒤에 다시 시도해 주세요");
       else if (msg.indexOf("QUOTA") === 0) setError("오늘 볼 수 있는 해설을 모두 보았습니다. 내일 다시 볼 수 있습니다");
-      else setError("설명을 불러오지 못했습니다");
+      // 미리보기 빌드에서는 실제 원인을 알 수 있게 오류 코드를 붙입니다(공개판 정식 앱 문구는 그대로).
+      else setError("설명을 불러오지 못했습니다" + (isPreviewBuild() ? " (" + (msg || "UNKNOWN") + ")" : ""));
     } finally {
       setLoading(false);
     }
