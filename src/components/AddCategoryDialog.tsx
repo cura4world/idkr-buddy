@@ -1,11 +1,11 @@
 import { useState } from "react";
+import { FolderPlus } from "lucide-react";
 import { addCategory } from "@/lib/store";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { makeCategoryIcon } from "@/lib/categoryIcon";
 import { useBackClose } from "@/hooks/useBackClose";
+import FormSheet, { FORM_FIELD_CLASS, FORM_INPUT_CLASS, FormLabel, FormPrimaryButton } from "@/components/FormSheet";
+import IconColorPicker from "@/components/IconColorPicker";
+import { CategoryTile } from "@/components/CategoryIcon";
 
 interface Props {
   open: boolean;
@@ -13,46 +13,13 @@ interface Props {
   onAdded: () => void;
 }
 
-const emojis = [
-  "📚", "✈️", "🏠", "💼", "🎵", "🛒", "💬", "🌏",
-  "👋", "🍜", "🔢", "☀️", "❤️", "⭐", "🎮", "🏃",
-  "🐱", "🌸", "🎨", "📱", "🚗", "🏫", "🏥", "⚽",
-  "🎬", "📖", "🧳", "🍕", "☕", "🌙", "🔥", "💡",
-  "🎓", "💪", "🧠", "🗣️", "✍️", "🛫", "🏖️", "🎉",
-  "🐶", "🐻", "🦁", "🐸", "🦋", "🌺", "🌴", "🍎",
-  "🍰", "🎂", "🍷", "🥤", "🏀", "🎾", "🏈", "🎯",
-  "🎪", "🎭", "🎤", "🎧", "📷", "🔑", "💎", "👑",
-  "🌈", "⚡", "❄️", "🌊", "🏔️", "🌻", "🍀", "🌵",
-  "🦄", "🐧", "🐼", "🦊", "🐝", "🐳", "🦀", "🐙",
-  "🚀", "🛸", "⛵", "🚲", "🏍️", "🚁", "🚂", "⛺",
-  "🗽", "🗼", "🏰", "⛩️", "💊", "🔬", "🧪", "📐",
-  "🧩", "🎲", "♟️", "🪁",
-  // 기독교 관련
-  "✝️", "⛪", "🙏", "📿", "🕊️", "👼", "😇", "🕯️",
-  "📖", "🔔", "💒", "🌟", "✨", "🫒", "🍞", "🍇",
-  "⭐", "🐑", "🐟", "🪽",
-  // 추가 아이콘
-  "🧭", "🪐", "🌍", "🌎", "🌏", "🏝️", "🗻", "🌋",
-  "🏜️", "🌾", "🍂", "🍁", "🌿", "☘️", "🪴", "🌹",
-  "🌷", "💐", "🪻", "🌼", "🥀", "🍄", "🐢", "🦅",
-  "🦈", "🐬", "🦎", "🦉", "🦩", "🐿️", "🦔", "🦗",
-  "🎻", "🥁", "🎺", "🎸", "🪗", "🎹", "🪈", "📯",
-  "🏋️", "🤸", "🧘", "🏄", "🏊", "🚴", "⛷️", "🤿",
-  "🛹", "🪂",
-  // 심플 스타일 아이콘 (도형/기호/화살표/기본 오브젝트)
-  "✅", "❎", "❌", "➕", "➖", "➗", "〰️",
-  "⚪", "⚫", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "🟤",
-  "🟥", "🟧", "🟨", "🟩", "🟦", "🟪", "🟫", "⬛", "⬜",
-  "◼️", "◻️", "▪️", "▫️", "🔲", "🔳",
-  "▲", "▼", "▶️", "◀️", "⏺️", "⏹️", "⏸️",
-  "⬆️", "⬇️", "⬅️", "➡️", "↖️", "↗️", "↙️", "↘️", "🔁",
-  "★", "☆", "✦", "✧", "✳️", "❇️",
-  "📌", "🏷️", "📝", "📎", "🔖", "🗂️", "📁", "🗃️",
-];
+// 2026-11-13 사용자 요청: 새 입력 시트(FormSheet) 디자인 + 이모지 대신 선 아이콘·색 타일.
+// 저장은 기존 category.emoji 칸에 "icon:<이름>:<색키>" 로 합니다(lib/categoryIcon.ts).
+const DEFAULT_ICON = makeCategoryIcon("BookOpen", "teal");
 
 export default function AddCategoryDialog({ open, onOpenChange, onAdded }: Props) {
   const [name, setName] = useState("");
-  const [emoji, setEmoji] = useState("📚");
+  const [icon, setIcon] = useState(DEFAULT_ICON);
 
   // 폰의 뒤로가기는 이 창만 닫습니다(화면을 떠나지 않음)
   useBackClose(open, () => onOpenChange(false));
@@ -60,43 +27,45 @@ export default function AddCategoryDialog({ open, onOpenChange, onAdded }: Props
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    addCategory(name.trim(), emoji);
+    addCategory(name.trim(), icon);
     setName("");
+    setIcon(DEFAULT_ICON);
     onAdded();
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm mx-auto bg-card">
-        <DialogHeader>
-          <DialogTitle className="font-body text-black">새 단어장</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label className="font-body text-sm text-black">이름</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="여행" className="mt-1" autoFocus />
+    <FormSheet
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title="단어장 만들기"
+      desc="주제별로 새 단어장을 만드세요"
+      icon={<FolderPlus size={20} strokeWidth={1.8} />}
+      tileBg="#E2E6F3"
+      tileInk="#2F3E7C"
+      onSubmit={handleSubmit}
+      footer={
+        <FormPrimaryButton type="submit" disabled={!name.trim()} muted={!name.trim()}>
+          만들기
+        </FormPrimaryButton>
+      }
+    >
+      <div>
+        <FormLabel>이름</FormLabel>
+        <div className="flex items-center gap-2.5">
+          <CategoryTile value={icon} className="w-11 h-11 rounded-xl" iconSize={22} />
+          <div className={"flex-1 min-w-0 " + FORM_FIELD_CLASS} style={{ minHeight: 44 }}>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="예: 여행"
+              className={FORM_INPUT_CLASS + " font-body"}
+              autoFocus
+            />
           </div>
-          <div>
-            <Label className="font-body text-sm text-black">아이콘</Label>
-            <ScrollArea className="h-40 mt-1 rounded-md border">
-              <div className="flex gap-2 flex-wrap p-2">
-                {emojis.map((e) => (
-                  <button
-                    key={e}
-                    type="button"
-                    onClick={() => setEmoji(e)}
-                    className={`text-2xl p-1 rounded-md transition-colors ${emoji === e ? "bg-primary/10" : "hover:bg-muted"}`}
-                  >
-                    {e}
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-          <Button type="submit" className="w-full">만들기</Button>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+      <IconColorPicker value={icon} onChange={setIcon} />
+    </FormSheet>
   );
 }
