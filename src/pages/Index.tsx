@@ -766,11 +766,19 @@ const Index = () => {
 
   // ── 공개판(스토어 앱) 홈 — 시안 H5(무료) · H6(Plus 이상). 설정은 하단 탭 "내 정보"로 옮겼습니다.
   if (storeApp) {
+    // 2026-11-13 사용자 요청: 소제목 첫 글자를 아이콘 타일 왼쪽 끝(33px)에 맞추고 앞에 청록 점(매단 불릿).
+    //   33px = 본문 좌우 여백 16 + 목록 테두리 1 + 줄 안쪽 여백 16 → 소제목 왼쪽 여백 17px(px 고정, 글자 크기 단계와 무관).
+    //   점은 글자 바깥 빈 공간에 absolute 로 매달아 글자를 밀지 않습니다: 지름 5px, 글자와의 간격 6px(점 왼쪽 끝 = 글자 시작 - 11px),
+    //   세로는 글자 줄 가운데(top 50%)라 글자 85~115% 에서도 가운데입니다.
     const sectionTitle = (t: string) => (
       <p
         className="font-gothic"
-        style={{ margin: "0 4px 9px", fontSize: hrem(14), fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
+        style={{ position: "relative", margin: "0 0 9px 17px", fontSize: hrem(14), fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
       >
+        <span
+          aria-hidden="true"
+          style={{ position: "absolute", left: -11, top: "50%", width: 5, height: 5, marginTop: -2.5, borderRadius: "50%", background: "hsl(var(--primary))" }}
+        />
         {t}
       </p>
     );
