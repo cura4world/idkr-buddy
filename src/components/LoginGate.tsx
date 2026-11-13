@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { isStoreApp, PRIVACY_URL, TERMS_URL } from "@/lib/platform";
 import {
   getSession,
@@ -15,8 +16,12 @@ import {
   SESSION_EXPIRED_TEXT,
   PublicSession,
 } from "@/lib/account";
-import { autoRestoreOnce } from "@/lib/billing";
+import { autoRestoreOnce, onVerifyEvent, resumeVerifyIfNeeded, retryVerifyNow } from "@/lib/billing";
 import { isPreview } from "@/lib/preview";
+import { isOtherAccountCode, TOAST_OTHER_ACCOUNT, TOAST_VERIFIED, TOAST_VERIFIED_TRIAL } from "@/lib/plusCopy";
+
+// 화면이 다시 보일 때 서버에서 등급을 새로 받는 최소 간격 (2026-11-14 출시 전 점검 C-13)
+const REFRESH_GAP_MS = 10 * 60 * 1000;
 
 const SignInScreen = () => {
   const [busy, setBusy] = useState(false);
@@ -83,15 +88,52 @@ const LoginGate = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!store) return;
     const off = onSessionChange(setSession);
-    // 앱이 켜질 때 서버에서 플랜을 다시 받습니다. 세션이 끊겼으면 로그인 화면으로 돌아갑니다.
-    // 그다음 구매를 조용히 다시 확인합니다(확인 못 한 구매가 환불되지 않도록).
-    if (getSession()) refreshMe().catch(() => {}).finally(() => autoRestoreOnce());
+    let lastRefreshAt = 0;
+
+    // 서버에서 등급을 새로 받고, 그다음 구매를 조용히 다시 확인합니다(확인 못 한 구매가 환불되지 않도록).
+    // 세션이 끊겼으면 로그인 화면으로 돌아갑니다.
+    const refresh = (again: boolean) => {
+      if (!getSession()) return;
+      lastRefreshAt = Date.now();
+      refreshMe().catch(() => {}).finally(() => autoRestoreOnce(again));
+    };
+
+    // 앱이 켜질 때 한 번. 지난번에 끝내지 못한 "결제 확인 중"이 있으면 이어 갑니다.
+    refresh(false);
+    resumeVerifyIfNeeded();
+
+    // 로그인 직후(다른 계정으로 다시 로그인한 경우 포함)에도 구매를 다시 확인합니다.
     const offRestore = onSessionChange((s) => {
       if (s) autoRestoreOnce();
     });
+
+    // 화면이 다시 보일 때: 확인 중인 결제는 바로 다시 검증하고, 등급은 10분에 한 번까지 새로 받습니다.
+    // 스토어 앱은 뒤로가기로 꺼지지 않아 페이지가 며칠 살아 있습니다 — 그사이 구독이 갱신·만료·환불돼도
+    // 앱을 완전히 닫지 않고 반영되게 합니다.
+    const onVisible = () => {
+      try {
+        if (document.visibilityState !== "visible") return;
+      } catch (e) {
+        return;
+      }
+      retryVerifyNow();
+      if (Date.now() - lastRefreshAt >= REFRESH_GAP_MS) refresh(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+
+    // 자동 재검증의 결과 알림 — 결제 직후 확인이 실패했던 구매가 뒤늦게 확인됐을 때.
+    const offVerify = onVerifyEvent((e) => {
+      if (e.type === "done") toast(e.plan.tier === "trial" ? TOAST_VERIFIED_TRIAL : TOAST_VERIFIED);
+      else if (e.type === "stopped" && isOtherAccountCode(e.code)) toast(TOAST_OTHER_ACCOUNT, { duration: 6000 });
+    });
+
     return () => {
       off();
       offRestore();
+      offVerify();
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
     };
   }, [store]);
 
