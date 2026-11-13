@@ -3,7 +3,14 @@
 세션을 시작하면 `CLAUDE.md` → `DECISIONS.md` → 이 파일 순서로 읽는다. 이 파일은 **세션을 끝낼 때마다** 고친다.
 상세한 기술 기록은 저장소 밖 개발 요약 `../kata-kata-dev-summary.md`(로컬 파일, 이 저장소에는 없음)가 정본이다. 여기에는 복제하지 않는다.
 
-마지막 갱신: 2026-11-13 (Bahasa Hari Ini 상세 화면: 미리보기 키 오류 원인 확정 + 오류 예방 A~D, 14커밋. 앞서 두 세션 갈라짐 정리와 게시용 정책 HTML 3개)
+마지막 갱신: 2026-11-13 (정책 페이지 게시 완료·시행일 반영. 앞서 Bahasa Hari Ini 상세 화면: 미리보기 키 오류 원인 확정 + 오류 예방 A~D, 14커밋. 두 세션 갈라짐 정리와 게시용 정책 HTML 3개)
+
+## 정책 페이지 게시 완료 (2026-11-13, `release/public`)
+
+- 정책 3개가 `naruve-ganada` #108(빌드 0.1.36)로 https://naruve.app/apps/kata-kata/{privacy,terms,delete} 에 **게시됐다. 시행일은 2026-11-13(ISO 형식).**
+- 이 저장소의 `docs/release/policy-final/{privacy,terms}.html` 과 `public/{privacy,terms}.html` 의 `[시행일]`·`[effective date]` 8곳을 같은 날짜로 채워 정본을 게시본과 맞췄다.
+  `policy-final` 3개는 naruve-ganada main(c5568a5)의 `docs/apps/kata-kata/{privacy,terms,delete}/index.html` 과 바이트 단위로 같다.
+- **정책 문구를 고치면 이 저장소(`public/`·`docs/release/policy-final/`)를 먼저 고치고, 가나다(naruve-ganada) 게시본도 같이 바꾼다.**
 
 ## Bahasa Hari Ini 상세 화면 — 오류 예방과 배치 수정 (2026-11-13, `release/public`)
 
@@ -83,7 +90,7 @@
   `docs/release/05-arga-checklist.md`(원격의 "보안 작업 완료" 표시 + 로컬의 "빈칸 채움" 표시를 둘 다 살림), `HANDOFF.md`(맨 위 갱신 줄을 하나로 합침).
   코드(`platform.ts`·`MyInfo.tsx`)와 정책 HTML 은 원격이 건드리지 않아 충돌 없었다. 정리 전 로컬 상태는 로컬 브랜치 `backup/release-public-local-2026-11-13`(2fe4ec7)에 남겨 두었다(push 안 함, 며칠 뒤 지워도 됨).
 - **게시용 정책 HTML**: `docs/release/policy-final/{privacy,terms,delete}.html` — 앱 CSS·스크립트 없이 단독으로 열리는 파일, 링크는 `https://naruve.app/apps/kata-kata/{privacy,terms,delete}`.
-  HQ 가 `naruve-ganada` 의 `docs/apps/kata-kata/{privacy,terms,delete}/index.html` 로 올린다. **`[시행일]`·`[effective date]`(privacy·terms 각 2곳, 모두 4곳)만 비어 있다 — 게시하는 날 채운다.**
+  HQ 가 `naruve-ganada` 의 `docs/apps/kata-kata/{privacy,terms,delete}/index.html` 로 올린다. **`[시행일]`·`[effective date]` 는 2026-11-13 으로 채웠다(아래 "정책 페이지 게시 완료" 참고).**
   `public/` 의 같은 이름 파일이 정본 원문이므로, 문구를 고치면 두 곳을 같이 고친다.
 - **영어판 분리 판단**: `/privacy/en` 같은 별도 주소는 두지 않는다. 한 페이지에 한국어 아래 영어가 같이 있고(`#en` 앵커), Play Console 은 주소 하나만 받으므로 하나로 충분하다. 영어 스토어 등록정보가 따로 생겨 영어 전용 주소를 요구받을 때 다시 본다.
 - **앞으로의 규칙**: `release/public` 작업은 **한 번에 한 세션만** 하고, 시작할 때 `git fetch` 후 pull(또는 rebase), 끝날 때 **반드시 push** 한다.
