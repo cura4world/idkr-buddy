@@ -19,6 +19,19 @@ import {
 } from "@/lib/sermon";
 import { deleteInk } from "@/lib/sermonInk";
 import { PUB, PUB_CARD, PUB_TILE, PUB_SOFT_BTN, PUB_SOFT_BTN_STYLE, PubNotice } from "@/components/PubKit";
+import { isStoreApp } from "@/lib/platform";
+import { isPreviewBuild } from "@/lib/plan";
+
+// 설교문 서버 설정(주소·비밀키)이 없을 때의 안내.
+// 2026-11-13 사용자 보고: 공개판·미리보기에는 서버 주소·비밀키 칸도 회원키 칸도 없어 따라 할 수 없는 안내였습니다.
+//   미리보기 빌드        → 미리보기에서는 불러오지 않는다고 알림
+//   정식 스토어 앱        → 관리자 회원키가 있는 기기에서 볼 수 있다고 알림
+//   관리자판·회원판(웹·APK) → 예전 문구 그대로
+function notConfiguredText(period: boolean): string {
+  if (isPreviewBuild()) return "미리보기에서는 설교문을 불러오지 않습니다. 관리자판 앱에서 확인하세요.";
+  if (isStoreApp()) return "설교문은 관리자 회원키가 있는 기기에서 볼 수 있습니다.";
+  return "설정에서 설교문 서버 주소와 비밀키를 넣어 주세요" + (period ? "." : "");
+}
 
 // 왼쪽으로 이만큼 밀고 손을 떼면 밀린 채로 고정됩니다 (단어 카드와 같은 값)
 const SWIPE_THRESHOLD = 80;
@@ -191,7 +204,8 @@ const Sermons = () => {
       setItems(cached);
       setLastSync(getLastSync());
 
-      if (!hasSermonConfig()) return;
+      // 미리보기에서는 들어올 때 서버와 맞추지 않습니다(2026-11-13)
+      if (isPreviewBuild() || !hasSermonConfig()) return;
       syncSermons()
         .then(() => getCachedSermons())
         .then((fresh) => {
@@ -213,7 +227,7 @@ const Sermons = () => {
   const handleSync = () => {
     if (syncing) return;
     if (!hasSermonConfig()) {
-      toast("설정에서 설교문 서버 주소와 비밀키를 넣어 주세요");
+      toast(notConfiguredText(false));
       return;
     }
     setSyncing(true);
@@ -232,7 +246,7 @@ const Sermons = () => {
       .catch((e: any) => {
         const code = (e && e.message) || "";
         if (code === "UNAUTHORIZED") toast("비밀키가 맞지 않습니다. 설정을 확인해 주세요");
-        else if (code === "NO_CONFIG") toast("설정에서 설교문 서버 주소와 비밀키를 넣어 주세요");
+        else if (code === "NO_CONFIG") toast(notConfiguredText(false));
         else toast("불러오지 못했습니다");
       })
       .finally(() => setSyncing(false));
@@ -357,7 +371,7 @@ const Sermons = () => {
           </div>
         ) : !configured ? (
           <div className="mt-3">
-            <PubNotice>설정에서 설교문 서버 주소와 비밀키를 넣어 주세요.</PubNotice>
+            <PubNotice>{notConfiguredText(true)}</PubNotice>
           </div>
         ) : (
           <div className="mt-3">
