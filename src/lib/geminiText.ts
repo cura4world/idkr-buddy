@@ -62,6 +62,17 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/** 구글의 400 응답 본문(error.details)에 reason "API_KEY_INVALID" 가 있는가. 본문을 못 읽으면 false. */
+async function hasInvalidKeyReason(res: Response): Promise<boolean> {
+  try {
+    const j = await res.clone().json();
+    const details = j && j.error && Array.isArray(j.error.details) ? j.error.details : [];
+    return details.some((d: any) => d && d.reason === "API_KEY_INVALID");
+  } catch {
+    return false;
+  }
+}
+
 async function callOnce(
   model: string,
   apiKey: string,
@@ -111,6 +122,14 @@ async function callOnce(
   const pubErr = publicProxyError(res, target);
   if (pubErr) throw new Error(pubErr);
   if (!res.ok) {
+    // 내 키로 직접 부른 경우(서버를 거치지 않음)의 키 오류.
+    //   400 + 상세 이유 API_KEY_INVALID → 키 모양이 틀림(회원키를 Gemini 칸에 넣은 경우 등. 2026-11-13 폴드6 진단)
+    //   401(ACCESS_TOKEN_TYPE_UNSUPPORTED 등)  → 키 종류가 맞지 않음
+    // 그 밖의 400 은 요청 형식 문제라 예전처럼 BAD_REQUEST 입니다(DECISIONS 5장: 400 을 통째로 키 오류로 보면 오진).
+    if (!target.viaProxy) {
+      if (res.status === 401) throw new Error("INVALID_API_KEY");
+      if (res.status === 400 && (await hasInvalidKeyReason(res))) throw new Error("INVALID_API_KEY");
+    }
     if (res.status === 403) throw new Error("INVALID_API_KEY");
     if (res.status === 400) throw new Error("BAD_REQUEST");
     if (res.status === 404) throw new Error("MODEL_NOT_FOUND");
