@@ -1058,6 +1058,182 @@ test("C-02 실패(5xx)한 호출은 요청 번호가 있어도 칸을 돌려받�
   resetWorld();
 });
 
+// ── 3차(2026-11-14): 심사용 등급 · 관리자 삭제 · 긴급 차단 · 자동 갱신 표시 · 신고 보관 ──
+
+test("심사용 등급(review): plus 와 같은 한도, staff 전용은 아님, 주기·거두기·미리 주기", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const adm = { "x-admin-key": "admin-key" };
+  // 아직 로그인한 적 없는 심사용 계정에 미리 줌
+  const pre = await call(env, "POST", "/admin/special", { headers: adm, body: { email: "Review@Example.com", action: "grant", tier: "review", note: "play-review" } });
+  assert.equal(pre.status, 200, JSON.stringify(pre.data));
+  assert.equal(pre.data.pending, true);
+  assert.equal(pre.data.plan.tier, "review");
+  const t = await login(env, { sub: "9701", email: "review@example.com" });
+  const me = await call(env, "GET", "/me", { token: t });
+  assert.equal(me.data.plan.tier, "review");
+  // 한도는 plus 와 같음: 이야기 하루 5·한 달 60, 회화 만들기 3, 긴 읽기 5
+  assert.deepEqual(me.data.features.story.limit, { day: 5, month: 60 });
+  assert.deepEqual(me.data.features["percakapan-make"].limit, { day: 3, month: 30 });
+  assert.equal(me.data.features.longread.locked, false);
+  assert.equal(me.data.features["shared-audio"].locked, false);
+  // 무료에서 잠긴 기능이 열림
+  assert.equal((await ai(env, t, "percakapan-make")).status, 200);
+  assert.equal((await ai(env, t, "longread", null, { "x-kata-unit": "rv1" })).status, 200);
+  // plus 처럼 상한이 있음(Special·관리자처럼 무제한이 아님)
+  for (let i = 0; i < 5; i++) assert.equal((await ai(env, t, "story")).status, 200);
+  assert.equal((await ai(env, t, "story")).data.error, "QUOTA_STORY");
+
+  // 이미 로그인한 계정에도 바로 줄 수 있고, Play 검증이 지우지 않음
+  const t2 = await login(env, { sub: "9702", email: "review2@example.com" });
+  const g = await call(env, "POST", "/admin/special", { headers: adm, body: { email: "review2@example.com", tier: "review" } });
+  assert.equal(g.data.pending, false);
+  assert.equal(g.data.plan.tier, "review");
+  assert.equal(await tierOf(env, t2), "review");
+  // 조회·거두기
+  const q = await call(env, "GET", "/admin/special?email=review2@example.com", { headers: adm });
+  assert.equal(q.data.plan.tier, "review");
+  const rv = await call(env, "POST", "/admin/special", { headers: adm, body: { email: "review2@example.com", action: "revoke" } });
+  assert.equal(rv.data.plan.tier, "free");
+  assert.equal(await tierOf(env, t2), "free");
+  // 기한을 주면 그 뒤에는 무료
+  await call(env, "POST", "/admin/special", { headers: adm, body: { email: "review2@example.com", tier: "review", until: Date.now() + DAY } });
+  assert.equal(await tierOf(env, t2), "review");
+  clockOffset = DAY + MIN;
+  assert.equal(await tierOf(env, t2), "free");
+  // 관리자 열쇠 없이는 줄 수 없음
+  assert.equal((await call(env, "POST", "/admin/special", { body: { email: "x@example.com", tier: "review" } })).status, 403);
+  // 미리 준 등급에는 수명이 있음(끝내 로그인하지 않은 이메일의 흔적이 남지 않게)
+  resetWorld();
+});
+
+test("자동 갱신 표시(autoRenew): 해지한 구독은 만료까지 Plus 이고 autoRenew 는 false", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9711", email: "ar@example.com" });
+  const { v } = await buy(env, t, { days: 30 });
+  assert.equal(v.data.plan.autoRenew, true);
+  playSub.subscriptionState = "SUBSCRIPTION_STATE_CANCELED";
+  const again = await call(env, "POST", "/billing/verify", { token: t, body: { productId: "plus", purchaseToken: "tok-buy" } });
+  assert.equal(again.data.plan.tier, "plus");
+  assert.equal(again.data.plan.autoRenew, false);
+  assert.equal((await call(env, "GET", "/me", { token: t })).data.plan.autoRenew, false);
+  resetWorld();
+});
+
+test("관리자 삭제(/admin/delete): 이메일로 요청한 계정을 앱 안 삭제와 똑같이 지운다", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const adm = { "x-admin-key": "admin-key" };
+  const t = await login(env, { sub: "9721", email: "gone@example.com" });
+  await buy(env, t, { days: 30, token: "tok-gone" });
+  await ai(env, t, "story");
+  await call(env, "POST", "/report", { token: t, body: { feature: "story", reason: "이상함" } });
+  assert.equal((await call(env, "POST", "/admin/delete", { body: { email: "gone@example.com" } })).status, 403);
+  const del = await call(env, "POST", "/admin/delete", { headers: adm, body: { email: "Gone@Example.com" } });
+  assert.equal(del.status, 200, JSON.stringify(del.data));
+  assert.equal(del.data.deleted, true);
+  assert.equal(del.data.hadSubscription, true);
+  const keys = [...env.PUBLIC_KV.m.keys()];
+  assert.deepEqual(keys.filter((k) => !k.startsWith("report:")), [], "남은 키: " + keys.join(", "));
+  assert.equal(JSON.parse(env.PUBLIC_KV.m.get(keys.find((k) => k.startsWith("report:")))).uid, null);
+  assert.equal((await call(env, "GET", "/me", { token: t })).status, 401);
+  // 없는 계정
+  assert.equal((await call(env, "POST", "/admin/delete", { headers: adm, body: { email: "nobody@example.com" } })).data.error, "USER_NOT_FOUND");
+  resetWorld();
+});
+
+test("긴급 차단(AI_PAUSED): free 는 무료만, all 은 모두 멈추고 한도는 쓰지 않는다", async () => {
+  resetWorld();
+  const envFree = makeEnv({ AI_PAUSED: "free" });
+  const tf = await login(envFree, { sub: "9731", email: "p1@example.com" });
+  const r = await ai(envFree, tf, "text");
+  assert.equal(r.status, 503);
+  assert.equal(r.data.error, "SERVICE_PAUSED");
+  assert.equal((await call(envFree, "GET", "/me", { token: tf })).data.usage.text, 0);
+  await buy(envFree, tf, { days: 30 });
+  assert.equal((await ai(envFree, tf, "text")).status, 200); // 구독 중인 사람은 계속 됨
+  const envAll = makeEnv({ AI_PAUSED: "all" });
+  const ta = await login(envAll, { sub: "9732", email: "p2@example.com" });
+  await buy(envAll, ta, { days: 30 });
+  assert.equal((await ai(envAll, ta, "text")).data.error, "SERVICE_PAUSED");
+  // 로그인·등급 확인은 멈추지 않음
+  assert.equal((await call(envAll, "GET", "/me", { token: ta })).status, 200);
+  resetWorld();
+});
+
+test("신고: 계정을 지워도 보관 기간을 새로 시작하지 않고, 목록은 다음 쪽을 볼 수 있다", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const ttls = new Map();
+  const rawPut = env.PUBLIC_KV.put.bind(env.PUBLIC_KV);
+  env.PUBLIC_KV.put = async (k, val, opts) => { ttls.set(k, opts && opts.expirationTtl); return rawPut(k, val, opts); };
+  const rawList = env.PUBLIC_KV.list.bind(env.PUBLIC_KV);
+  env.PUBLIC_KV.list = async (o = {}) => {
+    // 가짜 KV 에 쪽 나누기(cursor)를 붙입니다
+    const all = (await rawList({ prefix: o.prefix, limit: 100000 })).keys;
+    const start = o.cursor ? Number(o.cursor) : 0;
+    const lim = o.limit || 1000;
+    const keys = all.slice(start, start + lim);
+    const done = start + lim >= all.length;
+    return { keys, list_complete: done, cursor: done ? undefined : String(start + lim) };
+  };
+  const t = await login(env, { sub: "9741", email: "rep@example.com" });
+  for (let i = 0; i < 3; i++) await call(env, "POST", "/report", { token: t, body: { feature: "story", reason: "r" + i } });
+  const adm = { "x-admin-key": "admin-key" };
+  const p1 = await call(env, "GET", "/admin/reports?limit=2", { headers: adm });
+  assert.equal(p1.data.items.length, 2);
+  assert.ok(p1.data.nextCursor);
+  const p2 = await call(env, "GET", "/admin/reports?limit=2&cursor=" + encodeURIComponent(p1.data.nextCursor), { headers: adm });
+  assert.equal(p2.data.items.length, 1);
+  assert.equal(p2.data.nextCursor, null);
+
+  // 100일 뒤에 계정 삭제 → 신고는 80일만 더 남아야 함(180일을 새로 받지 않음)
+  clockOffset = 100 * DAY;
+  const t2 = await login(env, { sub: "9741", email: "rep@example.com" });
+  const del = await call(env, "POST", "/account/delete", { token: t2 });
+  assert.equal(del.status, 200);
+  const repKeys = [...env.PUBLIC_KV.m.keys()].filter((k) => k.startsWith("report:"));
+  assert.equal(repKeys.length, 3);
+  for (const k of repKeys) {
+    assert.equal(JSON.parse(env.PUBLIC_KV.m.get(k)).uid, null);
+    const ttl = ttls.get(k);
+    assert.ok(ttl > 79 * 86400 && ttl <= 80 * 86400, "남은 수명(초): " + ttl);
+  }
+  resetWorld();
+});
+
+test("체험 기록(B-08)·계정 표식 없는 구매 표시(B-13)", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9751", email: "tr@example.com" });
+  const me = await call(env, "GET", "/me", { token: t });
+  const trialSub = (tok) => ({
+    subscriptionState: "SUBSCRIPTION_STATE_ACTIVE",
+    acknowledgementState: "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED",
+    startTime: new Date(Date.now()).toISOString(),
+    lineItems: [{ productId: "plus", expiryTime: new Date(Date.now() + 7 * DAY).toISOString(), offerPhase: { freeTrial: {} } }],
+    externalAccountIdentifiers: tok === "tok-t2" ? undefined : { obfuscatedExternalAccountId: me.data.accountId },
+  });
+  playSub = trialSub("tok-t1");
+  await call(env, "POST", "/billing/verify", { token: t, body: { productId: "plus", purchaseToken: "tok-t1" } });
+  let ent = entOf(env, me.data.user.id);
+  assert.equal(ent.tier, "trial");
+  assert.equal(ent.trialRepeat, undefined);
+  assert.equal(ent.unbound, undefined);
+  // 같은 구매를 다시 검증해도 횟수는 그대로
+  await call(env, "POST", "/billing/verify", { token: t, body: { productId: "plus", purchaseToken: "tok-t1" } });
+  assert.equal(JSON.parse(env.PUBLIC_KV.m.get("trial:" + me.data.user.id)).tokens.length, 1);
+  // 다른 Play 계정으로 시작한 두 번째 체험(표식도 없음) → 기록에 남음
+  clockOffset = 8 * DAY;
+  playSub = trialSub("tok-t2");
+  await call(env, "POST", "/billing/verify", { token: t, body: { productId: "plus", purchaseToken: "tok-t2" } });
+  ent = entOf(env, me.data.user.id);
+  assert.equal(ent.trialRepeat, 2);
+  assert.equal(ent.unbound, true);
+  resetWorld();
+});
+
 test("끝난 옛 구매를 검증해도 지금 이용 중인 구독이 무료로 덮이지 않는다", async () => {
   resetWorld();
   const env = makeEnv();
