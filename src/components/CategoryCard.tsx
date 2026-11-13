@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Category, getWordsByCategory } from "@/lib/store";
 import { bookNumberText, bookTitle } from "@/lib/wordbookGroups";
+import { CategoryTile } from "@/components/CategoryIcon";
 
 /* 단어장 한 줄 (시안: 단어장 폴더 · 추천안 / 내 단어장 · 추천안).
 
@@ -31,12 +32,7 @@ export default function CategoryCard({ category, variant = "folder", tile = "#EE
         onContextMenu={(e) => e.preventDefault()}
         className={"w-full flex items-center gap-3 py-3 pl-3.5 pr-3 text-left select-none active:bg-[#F6F7F5]" + rowBorder}
       >
-        <span
-          className="w-9 h-9 shrink-0 rounded-xl flex items-center justify-center text-[1.0625rem]"
-          style={{ background: tile }}
-        >
-          {category.emoji}
-        </span>
+        <CategoryTile value={category.emoji} fallbackBg={tile} className="w-9 h-9 rounded-xl" iconSize={19} emojiClassName="text-[1.0625rem]" />
         <span className="flex-1 min-w-0 flex flex-col gap-px">
           <span className="block truncate font-body text-[0.9375rem] text-[#1D1F1E]">{category.name}</span>
           <span className="block font-gothic text-[0.75rem] text-[#646C72]">
@@ -63,12 +59,7 @@ export default function CategoryCard({ category, variant = "folder", tile = "#EE
         onClick={() => navigate("/category/" + category.id)}
         className="flex flex-1 min-w-0 items-center gap-3 text-left"
       >
-        <span
-          className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center text-[1.1875rem]"
-          style={{ background: tile }}
-        >
-          {category.emoji}
-        </span>
+        <CategoryTile value={category.emoji} fallbackBg={tile} className="w-10 h-10 rounded-xl" iconSize={20} emojiClassName="text-[1.1875rem]" />
         <span className="flex-1 min-w-0">
           {/* 이름은 자르지 않고 두 줄까지 꺾습니다(QA Q06 — 360px·글자 115% 이상에서 잘리던 것).
               낱말 중간이 아니라 띄어쓰기와 "·" 뒤에서만 꺾고, 그래도 안 들어가면 그때만 글자 사이에서. */}
