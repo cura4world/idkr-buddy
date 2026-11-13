@@ -1213,7 +1213,8 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
                 {/* 단어 줄: 단어·뜻 | (색연필 그림은 이 줄 빈칸에 깔림) | 사전(내 단어장만) · 스피커 */}
                 <div className={"relative flex items-center " + (category.isShared ? "gap-2" : "gap-0.5")}>
                   {category.isShared ? <WordIllust scene={scenes[w.word]} measureKey={w.word + "|" + w.meaning} /> : null}
-                  <div className="relative z-[1] flex-1 min-w-0 content-bump">
+                  {/* pl-3 = 아래 예문 상자의 왼쪽 안쪽 여백(pl-3)과 같아, 단어·뜻의 첫 글자가 예문 첫 글자와 같은 세로줄에 놓입니다 */}
+                  <div className="relative z-[1] flex-1 min-w-0 pl-3 content-bump">
                     <p className="m-0 font-word text-[1.1875rem] font-semibold leading-[1.35] text-[#104B60] break-words">{w.word}</p>
                     <p className="mt-px font-gothic text-[0.8125rem] font-semibold text-[#34332F]">{displayMeaning(w.meaning)}</p>
                   </div>
