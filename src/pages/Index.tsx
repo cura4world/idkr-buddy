@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCategories, getWords, getWordsByCategory, takePurgedFailedWords } from "@/lib/store";
 import { getBook } from "@/lib/bible";
@@ -136,6 +136,16 @@ const H_LINE = "#E3E8EB";
 const H_LOCK = "#8F7E4E";
 const hrem = (px: number) => px / 16 + "rem";
 
+// 2026-11-13 사용자 요청: 공개판 홈은 화면 높이에 맞춰 여백만 줄여 한 화면에. BAHASA HARI INI 카드는 줄이지 않음.
+// 무료는 Plus 박스 윗부분이 살짝 보이게.
+//   "맞춤 정도" --kata-fit(0~1) 하나로 아래 여백들을 함께 보간합니다. 0 = 지금 모양 그대로, 1 = 가장 줄임.
+//   글자 크기는 줄이지 않고 transform scale 도 쓰지 않습니다. 값은 Index 의 fitHome 이 정해 홈 컨테이너에 CSS 변수로만 넣습니다.
+//   줄이는 곳(지금 → 가장 줄임): 머리 위 28→12·아래 26→12·검색창 위 16→6·날짜-로고 사이 6→2 / 목록 줄 위아래 12→6 /
+//   구역 사이 18(Plus 이상 22)→10 / 소제목 아래 9→6 / 본문 아래 16→8 / Plus 박스 위아래 11→7.
+const fitPx = (from: number, to: number) => "calc(" + from + "px - " + (from - to) + "px * var(--kata-fit, 0))";
+/** 무료: 문화 구역 아래 Plus 안내 박스의 윗부분이 최소 이만큼(px) 보이게 */
+const FIT_PEEK = 28;
+
 
 // 무료 사용자의 "다른 문장" 은 하루 한 번 (결정 문서 무료와 Plus 표)
 const FREE_PHRASE_DAY_KEY = "kata-free-phrase-refresh-day";
@@ -190,7 +200,7 @@ const PubRow = ({ tileBg, icon, title, sub, locked, onClick, last, meta }: PubRo
     onClick={onClick}
     aria-label={locked ? title + ", Plus 회원 기능" : undefined}
     className="w-full flex items-center text-left active:bg-black/[0.03] transition-colors"
-    style={{ gap: 12, padding: "12px 16px", borderBottom: last ? "0" : "1px solid " + H_LINE }}
+    style={{ gap: 12, padding: fitPx(12, 6) + " 16px", borderBottom: last ? "0" : "1px solid " + H_LINE }}
   >
     <span
       className="shrink-0 flex items-center justify-center"
@@ -764,6 +774,95 @@ const Index = () => {
     </div>
   ) : null;
 
+  // ── 화면 높이 맞춤(공개판 홈) — 위의 fitPx 설명 참고. 2026-11-13 사용자 요청.
+  //   기준선: 무료 = Plus 박스 윗부분 28px 이 보이는 곳(박스 위 끝 + 28), 체험·Plus·Special·관리자 = 문화 구역 마지막 줄 아래 끝.
+  //   맞춤 정도 0 에서 기준선(b0)과 1 에서 기준선(b1)을 같은 순간에 재고(그림이 그려지기 전이라 깜빡이지 않음),
+  //   f = (b0 - 보이는 높이) / (b0 - b1) 을 0~1 로 잘라 정합니다. 보이는 높이 = 창 높이 - 하단 탭 막대 높이.
+  //   최대로 줄여도 안 들어가면 f = 1 로 두고 평소처럼 스크롤합니다. setState 없이 CSS 변수만 바꿉니다(CLAUDE.md WebView 주의).
+  const homeRef = useRef<HTMLDivElement | null>(null);
+  const tabProbeRef = useRef<HTMLDivElement | null>(null);
+  const fitRef = useRef(0);
+  const fitHome = useCallback(() => {
+    const root = homeRef.current;
+    const probe = tabProbeRef.current;
+    if (!root || !probe) return;
+    try {
+      // 글자를 입력하는 동안(키보드가 창 높이를 줄임)에는 다시 재지 않습니다.
+      const ae = document.activeElement as HTMLElement | null;
+      if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
+      const plusBox = root.querySelector('[data-fit-anchor="plus"]') as HTMLElement | null;
+      const anchor = plusBox || (root.querySelector('[data-fit-anchor="culture"]') as HTMLElement | null);
+      if (!anchor) return;
+      const visible = (window.innerHeight || document.documentElement.clientHeight) - probe.offsetHeight;
+      const baseline = () => {
+        const r = anchor.getBoundingClientRect();
+        return (plusBox ? r.top + FIT_PEEK : r.bottom) + window.scrollY;
+      };
+      root.style.setProperty("--kata-fit", "0");
+      const b0 = baseline();
+      root.style.setProperty("--kata-fit", "1");
+      const b1 = baseline();
+      const saving = b0 - b1;
+      let f = 0;
+      if (b0 > visible && saving > 0) f = Math.min(1, Math.max(0, (b0 - visible) / saving));
+      f = Math.ceil(f * 100) / 100; // 올림 — 반올림하면 기준선이 1px 모자랄 수 있습니다
+      // 값이 거의 안 변했으면 그대로 둡니다(다시 그리기·무한 반복 방지)
+      const next = Math.abs(f - fitRef.current) < 0.015 ? fitRef.current : f;
+      fitRef.current = next;
+      root.style.setProperty("--kata-fit", String(next));
+    } catch (e) {
+      /* 맞춤 실패는 지금 모양 그대로 둡니다 */
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (storeApp) fitHome();
+  }, [storeApp, fitHome, phrase, phraseLoading, plus, staff, tier]);
+
+  useEffect(() => {
+    if (!storeApp) return;
+    // requestAnimationFrame 은 가려진 화면(백그라운드)에서 멈추므로 짧은 타이머로 묶어 부릅니다.
+    let timer = 0;
+    const schedule = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => { timer = 0; fitHome(); }, 30);
+    };
+    window.addEventListener("resize", schedule);
+    window.addEventListener("orientationchange", schedule);
+    document.addEventListener("focusout", schedule); // 검색 입력이 끝나면 다시
+    let vv: VisualViewport | null = null;
+    try { vv = window.visualViewport || null; } catch (e) { vv = null; }
+    if (vv) vv.addEventListener("resize", schedule);
+    // 글자 크기 단계(루트 글자 크기)와 하단 탭 막대 높이 변수는 <html> 의 style 로 바뀝니다. 홈 컨테이너 안의 변경은 보지 않으므로 반복되지 않습니다.
+    let mo: MutationObserver | null = null;
+    try {
+      mo = new MutationObserver(schedule);
+      mo.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+    } catch (e) { mo = null; }
+    try {
+      const fr = (document as any).fonts;
+      if (fr && fr.ready && typeof fr.ready.then === "function") fr.ready.then(schedule);
+    } catch (e) {}
+    // 오늘의 문장 카드 높이(줄 바뀜)는 맞춤 정도와 무관하므로 지켜봐도 반복되지 않습니다.
+    let ro: ResizeObserver | null = null;
+    try {
+      const card = homeRef.current ? (homeRef.current.querySelector('[data-fit-card="1"]') as HTMLElement | null) : null;
+      if (card && typeof ResizeObserver !== "undefined") {
+        ro = new ResizeObserver(schedule);
+        ro.observe(card);
+      }
+    } catch (e) { ro = null; }
+    return () => {
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("orientationchange", schedule);
+      document.removeEventListener("focusout", schedule);
+      if (vv) vv.removeEventListener("resize", schedule);
+      if (mo) mo.disconnect();
+      if (ro) ro.disconnect();
+    };
+  }, [storeApp, fitHome]);
+
   // ── 공개판(스토어 앱) 홈 — 시안 H5(무료) · H6(Plus 이상). 설정은 하단 탭 "내 정보"로 옮겼습니다.
   if (storeApp) {
     // 2026-11-13 사용자 요청: 소제목 첫 글자를 아이콘 타일 왼쪽 끝(33px)에 맞추고 앞에 청록 점(매단 불릿).
@@ -773,7 +872,7 @@ const Index = () => {
     const sectionTitle = (t: string) => (
       <p
         className="font-gothic"
-        style={{ position: "relative", margin: "0 0 9px 17px", fontSize: hrem(14), fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
+        style={{ position: "relative", margin: "0 0 " + fitPx(9, 6) + " 17px", fontSize: hrem(14), fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
       >
         <span
           aria-hidden="true"
@@ -800,13 +899,16 @@ const Index = () => {
 
     return (
       <div
+        ref={homeRef}
         className="w-full max-w-lg mx-auto bg-background flex flex-col"
         style={{ minHeight: "calc(100dvh - var(--kata-tabbar-h, 0px))", color: "#141819" }}
       >
         <style>{FOG_CSS}</style>
+        {/* 하단 탭 막대 높이를 재는 보이지 않는 자(화면 높이 맞춤용 — fitHome) */}
+        <div ref={tabProbeRef} aria-hidden="true" style={{ position: "absolute", visibility: "hidden", pointerEvents: "none", width: 0, height: "var(--kata-tabbar-h, 0px)" }} />
 
         {/* ── 머리 ── */}
-        <div className="relative shrink-0" style={{ background: H_DEEP, padding: "28px 20px 26px" }}>
+        <div className="relative shrink-0" style={{ background: H_DEEP, padding: fitPx(28, 12) + " 20px " + fitPx(26, 12) }}>
           {/* 장식만 블록 안에서 잘라냅니다(최근 검색어 박스가 잘리지 않게) */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <svg className="absolute left-0 top-0" width="390" height="170" aria-hidden="true">
@@ -861,7 +963,7 @@ const Index = () => {
           </div>
 
           <div className="relative flex items-start justify-between">
-            <div className="min-w-0 flex flex-col" style={{ gap: 6 }}>
+            <div className="min-w-0 flex flex-col" style={{ gap: fitPx(6, 2) }}>
               <p
                 className="font-gothic uppercase"
                 style={{ margin: 0, fontSize: hrem(11), fontWeight: 600, letterSpacing: "0.1em", color: "#CFE1E7" }}
@@ -910,7 +1012,7 @@ const Index = () => {
           </div>
 
           {/* 검색 */}
-          <div ref={searchAreaRef} className="relative" style={{ marginTop: 16 }}>
+          <div ref={searchAreaRef} className="relative" style={{ marginTop: fitPx(16, 6) }}>
             <div className="flex items-center min-w-0" style={{ gap: 8 }}>
               <div
                 className="flex-1 min-w-0 flex items-center bg-white"
@@ -978,10 +1080,11 @@ const Index = () => {
         {/* ── 본문 ── */}
         <div
           className="flex-1 flex flex-col"
-          style={{ padding: plus ? "16px 16px 16px" : "14px 16px 16px", gap: plus ? 22 : 18 }}
+          style={{ padding: (plus ? "16px" : "14px") + " 16px " + fitPx(16, 8), gap: plus ? fitPx(22, 10) : fitPx(18, 10) }}
         >
-          {/* 오늘의 인도네시아어 */}
+          {/* 오늘의 인도네시아어 — 화면 높이 맞춤에서 줄이지 않습니다(크기·안쪽 여백·문장·뜻 그대로, 줄임표로 자르지도 않음) */}
           <section
+            data-fit-card="1"
             role="button"
             tabIndex={0}
             onClick={() => openPhrase()}
@@ -1087,7 +1190,7 @@ const Index = () => {
           {/* 문화 */}
           <section>
             {sectionTitle("문화")}
-            <div className={listBox} style={listStyle}>
+            <div className={listBox} style={listStyle} data-fit-anchor="culture">
               <PubRow
                 tileBg="#FCE6D9"
                 icon={tileIcon("#B4501F", (
@@ -1223,8 +1326,9 @@ const Index = () => {
             <button
               type="button"
               onClick={() => navigate(PAYWALL_PATH)}
+              data-fit-anchor="plus"
               className="w-full flex items-center text-left active:opacity-90"
-              style={{ gap: 12, padding: "11px 12px 11px 14px", background: "#FFF6DC", border: "1px solid #F1E0AE", borderRadius: 16 }}
+              style={{ gap: 12, padding: fitPx(11, 7) + " 12px " + fitPx(11, 7) + " 14px", background: "#FFF6DC", border: "1px solid #F1E0AE", borderRadius: 16 }}
             >
               <span
                 className="shrink-0 flex items-center justify-center bg-white"
