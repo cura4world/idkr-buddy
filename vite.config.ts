@@ -66,7 +66,8 @@ export default defineConfig(({ mode }) => ({
         // 그 단어장을 열 때 받은 것만 폰에 남깁니다(src/lib/illust.ts).
         // 글꼴(약 2.5MB, Gowun Dodum 은 95조각)도 설치 때 한꺼번에 받지 않습니다. 화면에 나온 글자가 든
         // 조각만 처음 볼 때 받아 "kata-fonts" 에 남깁니다. 파일 이름에 해시가 있어 글꼴이 바뀔 때만 새로 받습니다.
-        // (스토어 앱은 APK 안의 파일을 바로 읽으므로 이 캐시와 상관없이 오프라인에서도 글꼴이 나옵니다.)
+        // (미리보기 APK 는 웹 파일을 APK 안에 담아 이 캐시와 상관없이 오프라인에서도 글꼴이 나옵니다. 스토어 앱은
+        //  GitHub Pages 를 원격으로 열기 때문에 이 캐시에 받아 둔 글꼴 조각만 오프라인에서 나옵니다 — C-26.)
         globIgnores: ["**/illust-*.json", "**/*.woff2", "**/*.woff"],
         runtimeCaching: [
           {
@@ -86,7 +87,8 @@ export default defineConfig(({ mode }) => ({
             },
           },
         ],
-        navigateFallbackDenylist: [/^\/~oauth/, /^\/.well-known\//],
+        // 저장소 규칙: 정규식 리터럴 대신 new RegExp (C-27)
+        navigateFallbackDenylist: [new RegExp("^/~oauth"), new RegExp("^/\\.well-known/")],
       },
       manifest: {
         name: "Kata kata - 인도네시아어 단어장",
