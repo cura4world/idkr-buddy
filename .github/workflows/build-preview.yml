@@ -7,8 +7,10 @@ name: Build Preview APK (공개판 미리보기)
 #   지금 쓰는 앱(cura4world.github.io)과 출처가 달라 localStorage·IndexedDB 가 섞이지 않습니다.
 # - 스토어 앱·관리자판과 패키지 이름이 달라 나란히 설치됩니다.
 # - 로그인·결제는 콘솔 설정 전이라 쓰지 않습니다(통로는 있지만 언제나 PREVIEW 오류를 돌려줌).
-# - 디버그 서명 APK 를 프리릴리스 preview-latest 에 올립니다. 매번 지우고 다시 만들어 받는 주소가 같습니다:
-#   https://github.com/cura4world/idkr-buddy/releases/download/preview-latest/kata-kata-preview.apk
+# - 디버그 서명 APK 를 이 실행의 산출물(Artifacts, 14일 보관)로 올립니다. 2026-11-14 부터 공개 프리릴리스
+#   (받는 주소가 고정이던 것)에는 올리지 않습니다 — 로그인 없이 누구나 받을 수 있었기 때문입니다.
+#   받는 곳: 저장소 → Actions → 이 실행 → 맨 아래 Artifacts 의 kata-kata-preview-apk (GitHub 로그인 필요, zip 을 풀면 APK).
+#   PC 에서는: gh run download <실행 번호> -n kata-kata-preview-apk
 # - 서명 키는 실행마다 같아야 덮어 설치가 됩니다. 비밀값 PREVIEW_KEYSTORE_BASE64 가 있으면 그것을,
 #   없으면 처음 한 번 만든 키를 Actions 캐시에 두고 계속 씁니다(캐시가 7일 넘게 안 쓰이면 사라짐 →
 #   그때는 폰에서 미리보기 앱을 지우고 새로 설치).
@@ -29,7 +31,7 @@ on:
       - '.github/workflows/build-preview.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: build-preview
@@ -981,28 +983,29 @@ jobs:
             echo "::error title=Preview build failed::${ERR}"
           fi
 
-      - name: Publish prerelease (preview-latest)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
+      - name: APK 와 빌드 정보 준비
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk kata-kata-preview.apk
+          mkdir -p preview-out
+          cp app/build/outputs/apk/debug/app-debug.apk preview-out/kata-kata-preview.apk
           SUBJ=$(git log -1 --format=%s)
           {
             echo "출시 전 검사용 미리보기 APK (app.naruve.katakata.preview)"
             echo ""
+            echo "- 버전: 0.9.${GITHUB_RUN_NUMBER}-preview"
             echo "- 커밋: ${PV_SHA} (${GITHUB_REF_NAME})"
             echo "- 커밋 시각: ${PV_COMMIT_TIME} KST"
             echo "- 빌드 시각: ${PV_BUILD_TIME} KST · 실행 #${GITHUB_RUN_NUMBER}"
             echo "- 마지막 커밋: ${SUBJ}"
             echo ""
             echo "지금 쓰는 Kata kata 앱과 데이터가 따로입니다. 설치가 막히면 폰에서 미리보기 앱을 지우고 다시 설치하세요."
-          } > release-notes.md
-          gh release delete preview-latest --yes --cleanup-tag || true
-          gh api -X DELETE "repos/${GH_REPO}/git/refs/tags/preview-latest" > /dev/null 2>&1 || true
-          gh release create preview-latest kata-kata-preview.apk \
-            --prerelease \
-            --target "${GITHUB_SHA}" \
-            --title "Kata kata 미리보기 · ${PV_SHA}" \
-            --notes-file release-notes.md
-          echo "받는 주소: https://github.com/${GH_REPO}/releases/download/preview-latest/kata-kata-preview.apk"
+          } > preview-out/build-info.txt
+          cat preview-out/build-info.txt
+
+      # 공개 프리릴리스(preview-latest)에는 올리지 않습니다(2026-11-14). 이 실행의 산출물로만, 14일 동안 보관합니다.
+      - name: Upload APK (산출물, 14일 보관)
+        uses: actions/upload-artifact@v4
+        with:
+          name: kata-kata-preview-apk
+          path: preview-out/
+          retention-days: 14
+          if-no-files-found: error
