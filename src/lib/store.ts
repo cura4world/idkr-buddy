@@ -269,7 +269,11 @@ function removeUntouchedSamplesOnce() {
   } catch (e) {}
 }
 
-initSharedCategories();
+// 이 줄은 앱이 켜질 때(모듈을 불러올 때) 돕니다. 여기서 예외가 나가면 매 실행 흰 화면이 되므로 받아 둡니다
+// (저장 공간 가득·저장값 깨짐 등 — 출시 전 점검 C-03). 실패하면 이번 실행은 시드 동기화 없이 열리고 다음 실행 때 다시 시도합니다.
+try {
+  initSharedCategories();
+} catch (e) {}
 removeUntouchedSamplesOnce();
 ensureMyWordbook();
 sortMyWordbookNewestFirstOnce();
