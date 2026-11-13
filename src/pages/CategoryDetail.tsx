@@ -14,13 +14,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Copy, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Copy, Trash2, X, ChevronDown, ChevronRight, ChevronUp, FileSpreadsheet, FolderPlus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { isStoreApp } from "@/lib/platform";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { GROUP_STYLES, GroupKey, groupOf, bookTitle, bookNumberText, displayMeaning } from "@/lib/wordbookGroups";
 import { loadIllustBook, hasIllustBook, IllustScene } from "@/lib/illust";
-import { useCompactPill } from "@/lib/useCompactPill";
+import FormSheet from "@/components/FormSheet";
+import { CategoryTile } from "@/components/CategoryIcon";
 import { useBackClose } from "@/hooks/useBackClose";
 
 const MY_WORDBOOK_ID = "my-wordbook";
@@ -210,10 +211,13 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   const [editWord, setEditWord] = useState<Word | null>(null);
   // 머리줄 ⋮ 메뉴와 보관한 단어장 이름 변경·삭제
   const [menuOpen, setMenuOpen] = useState(false);
+  // 머리줄 + 버튼이 여는 "추가하기" 시트 (2026-11-13: 단어 추가·단어장 만들기·CSV 가져오기를 한 곳으로)
+  const [plusOpen, setPlusOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteCatOpen, setDeleteCatOpen] = useState(false);
   // 폰 뒤로가기는 창·메뉴만 닫습니다(QA Q03). 단어 추가·고치기·CSV·단어장 만들기·이름 변경 창은 창 쪽에서 처리합니다.
   useBackClose(menuOpen, () => setMenuOpen(false));
+  useBackClose(plusOpen, () => setPlusOpen(false));
   useBackClose(archiveOpen, () => setArchiveOpen(false));
   useBackClose(moveOpen, () => setMoveOpen(false));
   useBackClose(deleteCatOpen, () => setDeleteCatOpen(false));
@@ -373,11 +377,6 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   // "내 단어장"은 다른 진입 화면과 같은 인니어 대문자 표제,
   // 사용자가 만든 폴더 이름은 한글이라 본문 폰트를 씁니다.
   const isMine = category?.id === MY_WORDBOOK_ID;
-  // 헤더 "KOSAKATAKU" 를 자르지 않도록, 자리가 모자라면 "단어 추가" 알약을 + 동그라미로 줄입니다(QA Q09).
-  const mineTitleRef = useRef<HTMLHeadingElement>(null);
-  const addPillRef = useRef<HTMLButtonElement>(null);
-  const addLabelRef = useRef<HTMLSpanElement>(null);
-  const addCompact = useCompactPill(mineTitleRef, addPillRef, addLabelRef, isMine && editable);
   // 내 단어장 안에 보관해 둔 단어장들. addCategory 가 앞에 넣으므로 최신이 위입니다.
   const archived: Category[] = isMine
     ? categories.filter((c) => !c.isShared && c.id !== MY_WORDBOOK_ID)
@@ -937,18 +936,23 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
     });
   };
 
-  const menuItems: { label: string; onClick: () => void; danger?: boolean }[] = isMine
+  // ⋮ 메뉴는 관리 기능만 남습니다(2026-11-13 사용자 요청). 내 단어장은 관리할 것이 없어 ⋮ 가 없고,
+  // 추가하는 일(단어 추가·단어장 만들기·CSV 가져오기)은 머리의 + 버튼이 여는 "추가하기" 시트에 모았습니다.
+  const menuItems: { label: string; onClick: () => void; danger?: boolean }[] = isArchived
     ? [
-        { label: "단어장 만들기", onClick: () => setAddCatOpen(true) },
-        { label: "CSV 가져오기", onClick: () => setCsvOpen(true) },
+        { label: "이름 변경", onClick: () => setRenameOpen(true) },
+        { label: "단어장 삭제", onClick: () => setDeleteCatOpen(true), danger: true },
       ]
-    : isArchived
-      ? [
-          { label: "CSV 가져오기", onClick: () => setCsvOpen(true) },
-          { label: "이름 변경", onClick: () => setRenameOpen(true) },
-          { label: "단어장 삭제", onClick: () => setDeleteCatOpen(true), danger: true },
-        ]
-      : [];
+    : [];
+
+  // "추가하기" 시트의 줄. 내 단어장은 세 줄, 보관한 단어장은 단어 추가·CSV 가져오기 두 줄.
+  const plusItems: { key: string; title: string; sub: string; tileBg: string; ink: string; icon: React.ReactNode; onClick: () => void }[] = [
+    { key: "word", title: "단어 추가", sub: "단어와 뜻, 예문을 직접 넣으세요", tileBg: "#DDF0EA", ink: "#2C6D63", icon: <Plus size={17} strokeWidth={1.8} />, onClick: () => setAddOpen(true) },
+    ...(isMine
+      ? [{ key: "cat", title: "단어장 만들기", sub: "주제별로 새 단어장을 만드세요", tileBg: "#E2E6F3", ink: "#2F3E7C", icon: <FolderPlus size={17} strokeWidth={1.8} />, onClick: () => setAddCatOpen(true) }]
+      : []),
+    { key: "csv", title: "CSV 가져오기", sub: "엑셀·CSV 파일의 단어를 한 번에 넣으세요", tileBg: "#E4EEF6", ink: "#2B5F86", icon: <FileSpreadsheet size={17} strokeWidth={1.8} />, onClick: () => setCsvOpen(true) },
+  ];
 
   return (
     <div
@@ -967,9 +971,8 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
           </button>
         ) : null}
         {isMine ? (
-          // 제목은 자르지 않습니다(QA Q09). 자리가 모자라면 오른쪽 "단어 추가" 알약이 + 동그라미로 줄어듭니다.
+          // 제목은 자르지 않습니다(QA Q09). 오른쪽은 36px + 동그라미 하나뿐이라 좁은 폭·큰 글자에서도 자리가 넉넉합니다.
           <h1
-            ref={mineTitleRef}
             className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]"
             style={{ minWidth: "fit-content" }}
           >
@@ -991,21 +994,15 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
           </span>
         )}
         {editable ? (
-          // 좁은 폭·큰 글자에서는 + 만 남은 동그라미가 됩니다(useCompactPill).
+          // 2026-11-13 사용자 요청: "+ 단어 추가" 알약 대신 + 동그라미 하나(36px). 누르면 "추가하기" 시트가 올라옵니다.
           <button
-            ref={addPillRef}
             type="button"
-            onClick={() => setAddOpen(true)}
-            aria-label="단어 추가"
-            className={
-              "h-9 rounded-full bg-[#E3EEEC] text-[#2C6D63] font-gothic text-[0.8125rem] font-semibold flex items-center active:opacity-80 " +
-              (addCompact ? "w-9 shrink-0 justify-center" : "min-w-9 overflow-hidden pl-[11px] pr-[13px] gap-[5px]")
-            }
+            onClick={() => setPlusOpen(true)}
+            aria-label="추가하기"
+            className="rounded-full bg-[#E3EEEC] text-[#2C6D63] flex items-center justify-center shrink-0 active:opacity-80"
+            style={{ width: 36, height: 36 }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            {addCompact ? null : <span ref={addLabelRef} className="whitespace-nowrap">단어 추가</span>}
+            <Plus size={18} strokeWidth={2.4} />
           </button>
         ) : null}
         {menuItems.length > 0 ? (
@@ -1315,6 +1312,38 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
           ) : null}
         </div>
       )}
+      {/* 추가하기 시트 — 줄 모양은 홈 목록 줄(PubRow)과 같게(32px 색 타일 + 선 아이콘, 제목 0.9375rem, 설명 0.75rem 회색, 줄 사이 얇은 선).
+          줄을 누르면 시트를 닫은 뒤(히스토리 칸이 빠진 다음) 해당 시트를 엽니다(closeThen). */}
+      <FormSheet
+        open={plusOpen}
+        onClose={() => setPlusOpen(false)}
+        title="추가하기"
+        desc="하나를 고르세요"
+        icon={<Plus size={20} strokeWidth={1.8} />}
+        tileBg="#DDF0EA"
+        tileInk="#2C6D63"
+      >
+        <div className="overflow-hidden bg-white" style={{ border: "1px solid #E3E8EB", borderRadius: 16 }}>
+          {plusItems.map((m, i) => (
+            <button
+              key={m.key}
+              type="button"
+              onClick={() => closeThen(() => setPlusOpen(false), m.onClick)}
+              className="w-full flex items-center text-left active:bg-black/[0.03] transition-colors"
+              style={{ gap: 12, padding: "12px 16px", borderBottom: i < plusItems.length - 1 ? "1px solid #E3E8EB" : "0" }}
+            >
+              <span className="shrink-0 flex items-center justify-center" style={{ width: 32, height: 32, borderRadius: 9, background: m.tileBg, color: m.ink }}>
+                {m.icon}
+              </span>
+              <span className="flex-1 min-w-0 flex flex-col" style={{ gap: 2 }}>
+                <span className="truncate font-body text-[0.9375rem]" style={{ color: "#1D1F1E" }}>{m.title}</span>
+                <span className="font-gothic text-[0.75rem]" style={{ color: "#646C72" }}>{m.sub}</span>
+              </span>
+              <ChevronRight size={17} className="shrink-0" style={{ color: "#B5BCC1" }} />
+            </button>
+          ))}
+        </div>
+      </FormSheet>
       <AddWordDialog
         open={addOpen}
         onOpenChange={(o) => { setAddOpen(o); if (!o) { setSelectedIds([]); lastSelectedId.current = null; } }}
@@ -1444,9 +1473,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
                     (i === moveTargets.length - 1 ? "" : "border-b border-border")
                   }
                 >
-                  <span className="w-8 h-8 shrink-0 rounded-full border border-border flex items-center justify-center text-[0.9375rem]">
-                    {cat.emoji}
-                  </span>
+                  <CategoryTile value={cat.emoji} fallbackBg="#FFFFFF" className="w-8 h-8 rounded-full border border-border" iconSize={16} emojiClassName="text-[0.9375rem]" />
                   <span className="min-w-0 flex-1">
                     <span className="block text-[0.875rem] text-foreground truncate">{cat.name}</span>
                     <span className="mt-0.5 block font-word text-[0.6875rem] text-muted-foreground">
