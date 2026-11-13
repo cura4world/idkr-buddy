@@ -426,7 +426,7 @@ const Percakapan = () => {
                 <MessagesSquare size={20} strokeWidth={1.8} />
               </span>
               <span className="flex-1 min-w-0">
-                <span className="block text-[1.125rem] font-semibold" style={{ color: C.txt }}>회화집 만들기</span>
+                <span className="block text-[1rem] font-semibold" style={{ color: C.txt }}>회화집 만들기</span>
                 <span className="block mt-0.5 font-gothic text-[0.78125rem]" style={{ color: C.sub }}>
                   상황을 적으면 두 사람의 대화를 만듭니다
                 </span>
@@ -451,7 +451,7 @@ const Percakapan = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="예: 병원 예약 바꾸기"
-                    className="flex-1 min-w-0 bg-transparent outline-none text-[0.9375rem] py-2"
+                    className="flex-1 min-w-0 bg-transparent outline-none text-[0.875rem] py-2"
                     style={{ color: C.txt }}
                     autoCapitalize="none"
                     autoCorrect="off"
@@ -462,13 +462,13 @@ const Percakapan = () => {
               <div>
                 {labelEl("카테고리")}
                 <div className={"relative " + fieldClass} style={{ minHeight: 44 }}>
-                  <span className="text-[1.125rem] leading-none shrink-0" aria-hidden="true">
+                  <span className="text-[1rem] leading-none shrink-0" aria-hidden="true">
                     {catId === NEW_CAT ? "💬" : selectedCat ? selectedCat.emoji : ""}
                   </span>
                   <select
                     value={catId}
                     onChange={(e) => setCatId(e.target.value)}
-                    className="flex-1 min-w-0 appearance-none bg-transparent outline-none text-[0.9375rem] py-2 pr-6"
+                    className="flex-1 min-w-0 appearance-none bg-transparent outline-none text-[0.875rem] py-2 pr-6"
                     style={{ color: C.txt }}
                   >
                     {cats.map((c) => (
@@ -494,7 +494,7 @@ const Percakapan = () => {
                       value={newCatKo}
                       onChange={(e) => setNewCatKo(e.target.value)}
                       placeholder="새 카테고리 이름 (한국어)"
-                      className="flex-1 min-w-0 bg-transparent outline-none text-[0.9375rem] py-2"
+                      className="flex-1 min-w-0 bg-transparent outline-none text-[0.875rem] py-2"
                       style={{ color: C.txt }}
                     />
                   </div>
@@ -503,7 +503,7 @@ const Percakapan = () => {
                       value={newCatId}
                       onChange={(e) => setNewCatId(e.target.value)}
                       placeholder="새 카테고리 이름 (인도네시아어)"
-                      className="flex-1 min-w-0 bg-transparent outline-none font-word text-[0.9375rem] py-2"
+                      className="flex-1 min-w-0 bg-transparent outline-none font-word text-[0.875rem] py-2"
                       style={{ color: C.txt }}
                       autoCapitalize="none"
                       autoCorrect="off"
@@ -520,7 +520,7 @@ const Percakapan = () => {
                     onChange={(e) => setSituation(e.target.value)}
                     placeholder="예: 예약한 날 일이 생겨서, 병원에 전화해 다음 주로 날짜를 바꾸려고 함"
                     rows={2}
-                    className="flex-1 min-w-0 resize-none bg-transparent outline-none text-[0.9375rem] leading-[1.5] py-[9px] break-keep"
+                    className="flex-1 min-w-0 resize-none bg-transparent outline-none text-[0.875rem] leading-[1.5] py-[9px] break-keep"
                     style={{ color: C.txt }}
                   />
                 </div>
