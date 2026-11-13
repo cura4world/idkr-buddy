@@ -329,6 +329,11 @@ jobs:
           import android.widget.Toast;
           import android.content.SharedPreferences;
           import android.webkit.RenderProcessGoneDetail;
+          import android.webkit.WebResourceError;
+          import android.view.Gravity;
+          import android.view.View;
+          import android.widget.Button;
+          import android.widget.LinearLayout;
           import android.widget.ScrollView;
           import android.widget.TextView;
           import java.io.PrintWriter;
@@ -399,6 +404,10 @@ jobs:
               }
 
               private WebView webView;
+              // 웹 화면을 불러오지 못했을 때 웹뷰 기본 오류 페이지 대신 보여 주는 안내 (2026-11-14, C-01 — 스토어 앱과 같은 코드.
+              // 미리보기는 웹 파일이 APK 안에 있어 평소에는 뜰 일이 없습니다)
+              private View offlineView;
+              private boolean loadFailed = false;
               private WebViewAssetLoader assetLoader;
               private ValueCallback<Uri[]> fileCallback;
               private PermissionRequest pendingPermissionRequest;
@@ -833,6 +842,23 @@ jobs:
                           return assetLoader.shouldInterceptRequest(request.getUrl());
                       }
 
+                      // 화면(메인 프레임)을 불러오지 못하면 영어 기본 오류 페이지·주소 대신 자체 안내를 보여 줍니다.
+                      @Override
+                      public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                          if (request != null && request.isForMainFrame()) showOffline();
+                      }
+
+                      @Override
+                      public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
+                          if (request != null && request.isForMainFrame() && errorResponse != null
+                                  && errorResponse.getStatusCode() >= 500) showOffline();
+                      }
+
+                      @Override
+                      public void onPageFinished(WebView view, String url) {
+                          if (!loadFailed) hideOffline();
+                      }
+
                       // 웹 화면 프로세스가 죽으면, 이것을 처리하지 않을 때 앱 전체가 함께 꺼집니다.
                       @Override
                       public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
@@ -918,6 +944,9 @@ jobs:
 
                   root.addView(webView, new FrameLayout.LayoutParams(
                       FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+                  offlineView = buildOfflineView();
+                  root.addView(offlineView, new FrameLayout.LayoutParams(
+                      FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
                   setContentView(root);
                   // 상단바·하단바 글자색은 화면을 붙인 "뒤에" 정합니다. 붙이기 전에 부르면 DecorView 가 없어
                   // Android 16(갤럭시 폴드6)에서 NullPointerException 으로 앱이 바로 꺼졌습니다(2026-11-11).
@@ -930,6 +959,75 @@ jobs:
                   } else {
                       webView.loadUrl(APP_BASE);
                   }
+              }
+
+              // ── 불러오기 실패 안내 (C-01, build-store.yml 과 같은 코드) ──
+              private View buildOfflineView() {
+                  LinearLayout box = new LinearLayout(this);
+                  box.setOrientation(LinearLayout.VERTICAL);
+                  box.setGravity(Gravity.CENTER);
+                  box.setBackgroundColor(Color.parseColor("#F0F2F4"));
+                  int pad = offDp(32);
+                  box.setPadding(pad, pad, pad, pad);
+                  box.setClickable(true);
+
+                  TextView title = new TextView(this);
+                  title.setText("인터넷에 연결되지 않았습니다.");
+                  title.setTextSize(18);
+                  title.setTextColor(Color.parseColor("#1D1F1E"));
+                  title.setGravity(Gravity.CENTER);
+                  box.addView(title);
+
+                  TextView sub = new TextView(this);
+                  sub.setText("연결을 확인한 뒤 다시 시도하세요.");
+                  sub.setTextSize(14);
+                  sub.setTextColor(Color.parseColor("#646C72"));
+                  sub.setGravity(Gravity.CENTER);
+                  LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(
+                      LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                  subLp.topMargin = offDp(8);
+                  box.addView(sub, subLp);
+
+                  Button retry = new Button(this);
+                  retry.setText("다시 시도");
+                  retry.setAllCaps(false);
+                  retry.setTextSize(15);
+                  retry.setOnClickListener(new View.OnClickListener() {
+                      @Override
+                      public void onClick(View v) {
+                          retryLoad();
+                      }
+                  });
+                  LinearLayout.LayoutParams btnLp = new LinearLayout.LayoutParams(
+                      LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                  btnLp.topMargin = offDp(24);
+                  box.addView(retry, btnLp);
+
+                  box.setVisibility(View.GONE);
+                  return box;
+              }
+
+              private int offDp(int v) {
+                  return Math.round(v * getResources().getDisplayMetrics().density);
+              }
+
+              private void showOffline() {
+                  loadFailed = true;
+                  if (webView != null) webView.setVisibility(View.INVISIBLE);
+                  if (offlineView != null) offlineView.setVisibility(View.VISIBLE);
+              }
+
+              private void hideOffline() {
+                  if (offlineView != null && offlineView.getVisibility() == View.VISIBLE) {
+                      offlineView.setVisibility(View.GONE);
+                      if (webView != null) webView.setVisibility(View.VISIBLE);
+                  }
+              }
+
+              private void retryLoad() {
+                  if (webView == null) return;
+                  loadFailed = false;
+                  webView.loadUrl(APP_BASE);
               }
 
               @Override
