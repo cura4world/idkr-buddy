@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, ChevronDown, ChevronRight, Loader2, Lock, MessagesSquare, Plus, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Loader2, Lock, MessagesSquare, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import {
@@ -26,6 +26,7 @@ import { builtinScenesOf } from "@/data/percakapan";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { isStoreApp } from "@/lib/platform";
 import LevelCircles from "@/components/LevelCircles";
+import FormSheet, { FORM_FIELD_CLASS, FormLabel, FormPrimaryButton } from "@/components/FormSheet";
 import { useCompactPill } from "@/lib/useCompactPill";
 import { aiErrorToast } from "@/lib/aiErrors";
 import { useBackClose } from "@/hooks/useBackClose";
@@ -291,19 +292,9 @@ const Percakapan = () => {
   };
 
   const selectedCat = cats.find((c) => c.id === catId) || null;
-  const fieldClass =
-    "rounded-[14px] border-[1.5px] border-[#DDE3E6] bg-white box-border px-3.5 flex items-center gap-2 " +
-    "focus-within:border-[#2C6D63] focus-within:shadow-[0_0_0_3px_#E3EEEC]";
-  const labelEl = (t: string, hint?: string) => (
-    <p className="mb-1.5 font-gothic text-[0.84375rem] font-bold" style={{ color: "#3B4245" }}>
-      {t}
-      {hint ? (
-        <span className="ml-1.5 text-[0.75rem] font-medium" style={{ color: C.mute }}>
-          {hint}
-        </span>
-      ) : null}
-    </p>
-  );
+  // 입력칸·칸 이름 모양은 공용 FormSheet 와 같습니다
+  const fieldClass = FORM_FIELD_CLASS;
+  const labelEl = (t: string, hint?: string) => <FormLabel hint={hint}>{t}</FormLabel>;
 
   return (
     <div className="min-h-screen w-full max-w-lg mx-auto overflow-x-clip bg-background pb-9">
@@ -401,49 +392,33 @@ const Percakapan = () => {
         )}
       </div>
 
-      {/* 만들기 시트 — 아래에서 올라옵니다 (시안 PC4) */}
-      {makeOpen ? (
-        <div className="fixed inset-0 z-50" onClick={closeMake}>
-          <div className="absolute inset-0" style={{ background: "rgba(20,30,35,0.38)" }} />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="회화집 만들기"
-            className="absolute bottom-0 left-0 right-0 max-w-lg mx-auto bg-white overflow-y-auto"
-            style={{
-              borderRadius: "22px 22px 0 0",
-              maxHeight: "92dvh",
-              padding: "8px 20px calc(18px + env(safe-area-inset-bottom)) 20px",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mx-auto mb-2.5 h-1 w-9 rounded-full" style={{ background: C.line }} />
-            <div className="flex items-center gap-3">
-              <span
-                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "#E4EEF6", color: "#2B5F86" }}
-              >
-                <MessagesSquare size={20} strokeWidth={1.8} />
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="block text-[1rem] font-semibold" style={{ color: C.txt }}>회화집 만들기</span>
-                <span className="block mt-0.5 font-gothic text-[0.78125rem]" style={{ color: C.sub }}>
-                  상황을 적으면 두 사람의 대화를 만듭니다
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={closeMake}
-                className="w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0"
-                style={{ background: "#F1F4F5", color: C.sub }}
-                title="닫기"
-                aria-label="닫기"
-              >
-                <X size={15} strokeWidth={2.2} />
-              </button>
-            </div>
-
-            <div className="mt-3.5 flex flex-col gap-[13px]">
+      {/* 만들기 시트 — 공용 FormSheet(아래에서 올라옴, 시안 PC4). 2026-11-13: 이 시트의 모양을 공용 컴포넌트로 옮김 */}
+      <FormSheet
+        open={makeOpen}
+        onClose={closeMake}
+        closeLocked={creating}
+        title="회화집 만들기"
+        desc="상황을 적으면 두 사람의 대화를 만듭니다"
+        icon={<MessagesSquare size={20} strokeWidth={1.8} />}
+        tileBg="#E4EEF6"
+        tileInk="#2B5F86"
+        footer={
+          <>
+            <FormPrimaryButton onClick={handleCreate} disabled={creating || quotaHit} muted={quotaHit} dim={creating}>
+              {creating ? (
+                <><Loader2 size={17} className="animate-spin" /> 만드는 중...</>
+              ) : (
+                <><Plus size={17} strokeWidth={2.4} /> 회화집 만들기</>
+              )}
+            </FormPrimaryButton>
+            <p className="mt-2 text-center font-gothic text-[0.75rem]" style={{ color: quotaHit ? C.sub : C.mute }}>
+              {quotaHit
+                ? "오늘 만들 수 있는 회화집을 모두 만들었습니다 · 내일 다시 만들 수 있습니다"
+                : "만드는 데 20초쯤 걸립니다"}
+            </p>
+          </>
+        }
+      >
               <div>
                 {labelEl("회화집 이름")}
                 <div className={fieldClass} style={{ minHeight: 44 }}>
@@ -536,33 +511,7 @@ const Percakapan = () => {
                   disabled={creating}
                 />
               </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleCreate}
-              disabled={creating || quotaHit}
-              className="mt-4 w-full h-12 rounded-2xl flex items-center justify-center gap-2 font-gothic text-[0.9375rem] font-semibold"
-              style={
-                quotaHit
-                  ? { background: "#E9EDEF", color: C.mute }
-                  : { background: C.teal, color: "#FFFFFF", opacity: creating ? 0.75 : 1 }
-              }
-            >
-              {creating ? (
-                <><Loader2 size={17} className="animate-spin" /> 만드는 중...</>
-              ) : (
-                <><Plus size={17} strokeWidth={2.4} /> 회화집 만들기</>
-              )}
-            </button>
-            <p className="mt-2 text-center font-gothic text-[0.75rem]" style={{ color: quotaHit ? C.sub : C.mute }}>
-              {quotaHit
-                ? "오늘 만들 수 있는 회화집을 모두 만들었습니다 · 내일 다시 만들 수 있습니다"
-                : "만드는 데 20초쯤 걸립니다"}
-            </p>
-          </div>
-        </div>
-      ) : null}
+      </FormSheet>
 
       {/* 백업이 있을 때 물어보는 시트 */}
       {restoreOpen ? (
