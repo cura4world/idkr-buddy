@@ -1156,7 +1156,7 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
       {
         "file": "Jesus Statue Maumere.jpg",
         "thumb": "https://upload.wikimedia.org/wikipedia/commons/b/b3/Jesus_Statue_Maumere.jpg",
-        "author": "(작가 표시 없음)",
+        "author": "Snpoj (영어 위키백과)",
         "license": "CC BY-SA 3.0",
         "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
         "page": "https://commons.wikimedia.org/wiki/File:Jesus_Statue_Maumere.jpg"
@@ -1236,7 +1236,7 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
       {
         "file": "Tour de Singkarak 2013 (2).jpg",
         "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Tour_de_Singkarak_2013_%282%29.jpg/500px-Tour_de_Singkarak_2013_%282%29.jpg",
-        "author": "https://www.flickr.com/people/60933389@N06/",
+        "author": "Ikhvan (Flickr)",
         "license": "CC BY 2.0",
         "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
         "page": "https://commons.wikimedia.org/wiki/File:Tour_de_Singkarak_2013_(2).jpg"
@@ -1404,14 +1404,6 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "jawa",
     "photos": [
       {
-        "file": "Bupati Probolinggo Raden Toemenggoeng Djojonegoro.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Bupati_Probolinggo_Raden_Toemenggoeng_Djojonegoro.jpg/500px-Bupati_Probolinggo_Raden_Toemenggoeng_Djojonegoro.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY 4.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
-        "page": "https://commons.wikimedia.org/wiki/File:Bupati_Probolinggo_Raden_Toemenggoeng_Djojonegoro.jpg"
-      },
-      {
         "file": "COLLECTIE TROPENMUSEUM Feestelijke optocht tijdens een Javaanse bruiloft te Probolinggo Oost-Java TMnr 10002996.jpg",
         "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/COLLECTIE_TROPENMUSEUM_Feestelijke_optocht_tijdens_een_Javaanse_bruiloft_te_Probolinggo_Oost-Java_TMnr_10002996.jpg/500px-COLLECTIE_TROPENMUSEUM_Feestelijke_optocht_tijdens_een_Javaanse_bruiloft_te_Probolinggo_Oost-Java_TMnr_10002996.jpg",
         "author": "Unknown author Unknown author",
@@ -1462,12 +1454,12 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "bali-nusa",
     "photos": [
       {
-        "file": "Faroe.sumba.3.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Faroe.sumba.3.jpg/500px-Faroe.sumba.3.jpg",
-        "author": "Erik Christensen",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
-        "page": "https://commons.wikimedia.org/wiki/File:Faroe.sumba.3.jpg"
+        "file": "Kampung Adat Ratenggaro - Sumba.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Kampung_Adat_Ratenggaro_-_Sumba.jpg/500px-Kampung_Adat_Ratenggaro_-_Sumba.jpg",
+        "author": "Sandhi Irawan",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Kampung_Adat_Ratenggaro_-_Sumba.jpg"
       },
       {
         "file": "COLLECTIE TROPENMUSEUM Drie aanzienlijke vrouwen gekleed in een danskostuum Kanangar Soemba TMnr 10005880.jpg",
@@ -1653,7 +1645,7 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
       {
         "file": "Padang Panjang Train - Sawahlunto.jpg",
         "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Padang_Panjang_Train_-_Sawahlunto.jpg/500px-Padang_Panjang_Train_-_Sawahlunto.jpg",
-        "author": "https://www.flickr.com/photos/mightybowo/",
+        "author": "Mighty Bowo (Flickr)",
         "license": "CC BY-SA 2.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
         "page": "https://commons.wikimedia.org/wiki/File:Padang_Panjang_Train_-_Sawahlunto.jpg"
