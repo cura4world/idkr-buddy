@@ -5,7 +5,7 @@
 // 주의: gemini.ts 를 import 하지 않습니다. gemini.ts 가 이 파일을 import 하므로
 // 순환 참조를 피하기 위해 API 키는 localStorage 에서 직접 읽습니다.
 
-import { geminiTarget, handleQuotaResponse, lastQuotaCode, publicProxyError, AiKind } from "@/lib/aiProxy";
+import { geminiTarget, handleQuotaResponse, lastQuotaCode, newRequestId, publicProxyError, AiKind } from "@/lib/aiProxy";
 const KEY_STORAGE = "geminiApiKey";
 
 function readApiKey(): string {
@@ -80,9 +80,10 @@ async function callOnce(
   timeoutMs: number,
   maxOutputTokens: number,
   kind: AiKind = "text",
+  req = "",
 ): Promise<string> {
   // 내 키가 있으면 직접, 없고 회원키가 있으면 Worker 를 거칩니다.
-  const target = geminiTarget(model, apiKey, kind);
+  const target = geminiTarget(model, apiKey, kind, "", req);
   if (!target) throw new Error("NO_API_KEY");
 
   const controller = new AbortController();
@@ -157,13 +158,16 @@ export async function callGeminiText(
 
   const startedAt = Date.now();
   let lastError: unknown = new Error("SERVER_ERROR");
+  // 이 한 번의 부름(= 한 번의 누름)을 가리키는 번호. 아래의 재시도·모델 바꿈이 모두 같은 번호로 가서,
+  // 공개판 서버가 한 번으로 셉니다(빈 응답·시간 초과가 한도를 여러 칸 깎지 않게 — 출시 전 점검 C-02).
+  const req = newRequestId();
 
   for (const model of TEXT_MODEL_CANDIDATES) {
     for (let i = 0; i < MAX_TRIES_PER_MODEL; i++) {
       if (Date.now() - startedAt > deadline) throw lastError;
 
       try {
-        return await callOnce(model, apiKey, prompt, timeoutMs, maxOutputTokens, opts.kind || "text");
+        return await callOnce(model, apiKey, prompt, timeoutMs, maxOutputTokens, opts.kind || "text", req);
       } catch (e: any) {
         lastError = e;
         const code = (e && e.message) || "";
