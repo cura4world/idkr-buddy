@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import { PRIVACY_URL, TERMS_URL } from "@/lib/platform";
 import { getSession, onSessionChange, PublicSession } from "@/lib/account";
-import { isPreviewBuild, usePlan } from "@/lib/plan";
+import { isPreviewBuild, isReviewAccount, usePlan } from "@/lib/plan";
 import {
   billingAvailable,
   isVerifyingPurchase,
@@ -42,6 +42,8 @@ import {
   LINK_TERMS,
   NOTE_AI_VOICE,
   NOTE_PRICE_FAILED,
+  NOTE_TRIAL_HALF,
+  STATE_REVIEW_SUB,
   NOTE_PRICE_LOADING,
   NOTE_VERIFYING_LINES,
   noteNoTrialLines,
@@ -289,7 +291,15 @@ const Plus = () => {
 
   // 이미 열린 계정의 상자 문구
   const stateTitle = tier === "trial" ? STATE_TRIAL : tier === "plus" ? STATE_PLUS : tier === "special" ? STATE_SPECIAL : STATE_ADMIN;
-  const stateSub = !staff && paidUntil > 0 ? stateUntilText(shortDate(paidUntil), tier === "trial") : STATE_STAFF_SUB;
+  // 심사용 계정은 Plus 와 같은 화면에 "심사용 계정" 한 줄(구독이 아니라 결제·해지할 것이 없음).
+  // 해지한 구독(autoRenew false)은 "자동 갱신" 대신 "…까지 이용 · 자동 갱신 꺼짐".
+  const review = isReviewAccount();
+  const autoRenew = !(session && session.plan.autoRenew === false);
+  const stateSub = review
+    ? STATE_REVIEW_SUB
+    : !staff && paidUntil > 0 ? stateUntilText(shortDate(paidUntil), tier === "trial", autoRenew) : STATE_STAFF_SUB;
+  // 구독 관리(Google Play)로 보낼 수 있는 계정인가 — 실제 구독이 있는 계정만
+  const canManage = !staff && !review && !preview && billingAvailable();
 
   const yearlyChosen = chosen.key === "yearly";
   // 버튼 아래 안내 — 첫 줄은 자동 결제 고지. 결제 확인 중·가격을 못 받았을 때는 그 안내로 바꿉니다.
@@ -458,11 +468,11 @@ const Plus = () => {
         {entitled ? (
           <button
             type="button"
-            onClick={() => (!staff && !preview && billingAvailable() ? manageSubscription() : close())}
+            onClick={() => (canManage ? manageSubscription() : close())}
             className={"w-full " + gothic}
             style={{ height: 52, borderRadius: 16, backgroundColor: C.gold, color: "#FFFFFF", fontSize: "0.96875rem", fontWeight: 700 }}
           >
-            {!staff && !preview && billingAvailable() ? CTA_MANAGE : CTA_CLOSE}
+            {canManage ? CTA_MANAGE : CTA_CLOSE}
           </button>
         ) : (
           <>
@@ -498,7 +508,14 @@ const Plus = () => {
             </p>
           </>
         )}
-        <p className={"m-0 text-center " + gothic} style={{ fontSize: "0.71875rem", lineHeight: 1.5, color: C.faint }}>
+        <p className={"m-0 text-center " + gothic} style={{ fontSize: "0.71875rem", lineHeight: 1.5, color: C.faint, wordBreak: "keep-all" }}>
+          {/* 체험으로 시작할 수 있을 때는 체험 한도가 절반이라는 것도 함께 알립니다(B-10) */}
+          {!entitled && !verifying && trialText ? (
+            <>
+              {NOTE_TRIAL_HALF}
+              <br />
+            </>
+          ) : null}
           {NOTE_AI_VOICE}
         </p>
         <div className={"flex " + gothic} style={{ marginTop: 4, gap: 16, fontSize: "0.75rem", color: C.lead }}>
