@@ -314,12 +314,14 @@ const Plus = () => {
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col" style={{ padding: "0 24px", gap: 22 }}>
+      {/* 2026-11-13 사용자 요청: 위쪽 글자 한 단계 작게, 구독 버튼 높이 52→48(안내 문구부터 끝까지는 그대로).
+          위쪽 어떤 글자도 아래 안내 문구(0.75rem)보다 작지 않습니다. 영역 gap 22→18, 요금·상태 상자 안쪽 위아래 14→12. */}
+      <div className="flex-1 min-h-0 flex flex-col" style={{ padding: "0 24px", gap: 18 }}>
         <div>
-          <h1 className="font-word m-0" style={{ fontSize: "1.75rem", fontWeight: 600, lineHeight: 1.2 }} aria-label={PLUS_TITLE}>
+          <h1 className="font-word m-0" style={{ fontSize: "1.625rem", fontWeight: 600, lineHeight: 1.2 }} aria-label={PLUS_TITLE}>
             {PLUS_TITLE_BRAND} <span style={{ color: C.gold }}>{PLUS_TITLE_MARK}</span>
           </h1>
-          <p className={gothic} style={{ margin: "8px 0 0", fontSize: "0.875rem", lineHeight: 1.6, color: C.lead, wordBreak: "keep-all" }}>
+          <p className={gothic} style={{ margin: "8px 0 0", fontSize: "0.8125rem", lineHeight: 1.6, color: C.lead, wordBreak: "keep-all" }}>
             {PLUS_LEAD_LINES.map((l, i) => (
               <span key={i}>
                 {i > 0 ? <br /> : null}
@@ -339,11 +341,11 @@ const Plus = () => {
                 <PerkIcon name={p.icon} />
               </span>
               <span className="flex-1 min-w-0">
-                <span className="block" style={{ fontSize: "0.9375rem", fontWeight: 600 }}>
+                <span className="block" style={{ fontSize: "0.875rem", fontWeight: 600 }}>
                   {p.title}
                   {p.note ? <span style={{ marginLeft: 5, fontWeight: 500, color: C.gray }}>{p.note}</span> : null}
                 </span>
-                <span className={"block " + gothic} style={{ marginTop: 1, fontSize: "0.78125rem", color: C.gray }}>
+                <span className={"block " + gothic} style={{ marginTop: 1, fontSize: "0.75rem", color: C.gray }}>
                   {p.sub}
                 </span>
               </span>
@@ -354,7 +356,7 @@ const Plus = () => {
         {entitled ? (
           <div
             className="flex items-center"
-            style={{ borderRadius: 16, border: "2px solid " + C.gold, backgroundColor: C.goldBg, padding: "14px 16px", gap: 12 }}
+            style={{ borderRadius: 16, border: "2px solid " + C.gold, backgroundColor: C.goldBg, padding: "12px 16px", gap: 12 }}
           >
             <span
               className="flex items-center justify-center"
@@ -363,8 +365,8 @@ const Plus = () => {
               <CheckIcon />
             </span>
             <span className="flex-1 min-w-0">
-              <span className={"block " + gothic} style={{ fontSize: "0.96875rem", fontWeight: 700 }}>{stateTitle}</span>
-              <span className={"block " + gothic} style={{ marginTop: 2, fontSize: "0.8125rem", color: C.gray }}>{stateSub}</span>
+              <span className={"block " + gothic} style={{ fontSize: "0.90625rem", fontWeight: 700 }}>{stateTitle}</span>
+              <span className={"block " + gothic} style={{ marginTop: 2, fontSize: "0.75rem", color: C.gray }}>{stateSub}</span>
             </span>
           </div>
         ) : (
@@ -384,7 +386,7 @@ const Plus = () => {
                     border: on ? "2px solid " + C.gold : "1.5px solid " + C.line,
                     backgroundColor: on ? C.goldBg : "#FFFFFF",
                     boxSizing: "border-box",
-                    padding: "14px 16px",
+                    padding: "12px 16px",
                     gap: 12,
                   }}
                 >
@@ -402,11 +404,11 @@ const Plus = () => {
                     {on ? <span style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.gold }} /> : null}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className={"block " + gothic} style={{ fontSize: "0.96875rem", fontWeight: 700 }}>{c.label}</span>
-                    <span className={"block " + gothic} style={{ marginTop: 2, fontSize: "0.8125rem", color: C.gray }}>{c.sub}</span>
+                    <span className={"block " + gothic} style={{ fontSize: "0.90625rem", fontWeight: 700 }}>{c.label}</span>
+                    <span className={"block " + gothic} style={{ marginTop: 2, fontSize: "0.75rem", color: C.gray }}>{c.sub}</span>
                   </span>
                   {c.right ? (
-                    <span className={gothic} style={{ fontSize: "0.9375rem", fontWeight: 700, color: on ? C.goldInk : C.ink }}>
+                    <span className={gothic} style={{ fontSize: "0.875rem", fontWeight: 700, color: on ? C.goldInk : C.ink }}>
                       {c.right}
                     </span>
                   ) : null}
@@ -456,7 +458,7 @@ const Plus = () => {
               onClick={buy}
               disabled={busy}
               className={"w-full flex items-center justify-center gap-2 disabled:opacity-60 " + gothic}
-              style={{ height: 52, borderRadius: 16, backgroundColor: C.gold, color: "#FFFFFF", fontSize: "0.96875rem", fontWeight: 700 }}
+              style={{ height: 48, borderRadius: 16, backgroundColor: C.gold, color: "#FFFFFF", fontSize: "0.90625rem", fontWeight: 700 }}
             >
               {busy ? <Loader2 size={18} className="animate-spin" /> : null}
               {ctaLabel}
