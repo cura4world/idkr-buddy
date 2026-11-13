@@ -959,7 +959,9 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
       style={asTab ? { minHeight: "calc(100dvh - var(--kata-tabbar-h, 0px))" } : undefined}
     >
       {hasScenes ? <PencilDefs /> : null}
-      <header className={"sticky top-0 z-30 h-14 bg-background text-foreground border-b border-[#E3E8EB] flex items-center gap-3 " + (editable ? "pl-4 pr-2" : "px-4")}>
+      {/* 오른쪽 여백: 내 단어장은 + 동그라미가 맨 끝이라 누르기 편하게 본문 옆 여백(16px)만큼 띄웁니다(2026-11-13 사용자 요청).
+          보관한 단어장은 맨 끝이 ⋮(40px 단추)라 예전 그대로 8px. */}
+      <header className={"sticky top-0 z-30 h-14 bg-background text-foreground border-b border-[#E3E8EB] flex items-center gap-3 " + (isMine ? "px-4" : editable ? "pl-4 pr-2" : "px-4")}>
         {showBack ? (
           <button
             onClick={handleBack}
