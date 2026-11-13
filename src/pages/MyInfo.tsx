@@ -27,7 +27,7 @@ import { buildBackupFile, describeSummary, formatBytes, getBackupFileSavedAt, ma
 import MedaliSheet from "@/components/MedaliSheet";
 import PlusLockBox from "@/components/PlusLockBox";
 import { ProfileAvatar, profileName } from "@/components/BottomTabs";
-import { usePlan, PAYWALL_PATH, Tier, TIER_LABEL, isPreviewBuild } from "@/lib/plan";
+import { usePlan, PAYWALL_PATH, Tier, TIER_LABEL, isPreviewBuild, isReviewAccount } from "@/lib/plan";
 import { getSession, onSessionChange, signOut, deleteAccount, PublicSession } from "@/lib/account";
 import { billingAvailable, manageSubscription } from "@/lib/billing";
 import { usePlusPricing } from "@/lib/playOffers";
@@ -279,6 +279,7 @@ const MyInfo = () => {
   const preview = isPreviewBuild();
   const publicLike = storeApp || preview;
   const pricing = usePlusPricing(publicLike && tier === "free");
+  const review = isReviewAccount();
   const [session, setSession] = useState<PublicSession | null>(getSession());
   useEffect(() => onSessionChange(setSession), []);
 
@@ -598,24 +599,35 @@ const MyInfo = () => {
             <Row
               icon={I_DOC}
               label="회원 등급"
-              value={tier === "trial" ? "Plus · 무료 체험 중" : "Plus" + (period ? " · " + period : "")}
+              value={review ? "Plus · 심사용 계정" : tier === "trial" ? "Plus · 무료 체험 중" : "Plus" + (period ? " · " + period : "")}
               onClick={() => navigate(PAYWALL_PATH)}
+              last={review}
             />
-            <Row
-              icon={I_CARD}
-              label="구독 관리"
-              value={until > Date.now() ? (tier === "trial" ? "첫 결제 " : "다음 결제 ") + dotDate(until) : undefined}
-              onClick={openManage}
-              last
-            />
+            {/* 심사용 계정은 구독이 아니라 관리할 결제가 없습니다. 해지한 구독은 "다음 결제" 대신 "…까지 이용"(B-09). */}
+            {review ? null : (
+              <Row
+                icon={I_CARD}
+                label="구독 관리"
+                value={until > Date.now()
+                  ? (session && session.plan.autoRenew === false
+                      ? dotDate(until) + "까지 이용"
+                      : (tier === "trial" ? "첫 결제 " : "다음 결제 ") + dotDate(until))
+                  : undefined}
+                onClick={openManage}
+                last
+              />
+            )}
           </Card>
         ) : (
           <Card style={{ overflow: "hidden" }}>
             <Row
               icon={I_DOC}
               label="회원 등급"
-              value={TIER_LABEL[tier] + " · 기한 없음"}
-              onClick={() => toast(TIER_LABEL[tier] + " 등급은 기한 없이 모든 기능을 사용할 수 있습니다")}
+              // 서버가 기한을 준 Special·관리자 등급은 그 날짜를 보입니다("기한 없음"이라고 하지 않음)
+              value={TIER_LABEL[tier] + (until > Date.now() ? " · " + dotDate(until) + "까지" : " · 기한 없음")}
+              onClick={() => toast(until > Date.now()
+                ? TIER_LABEL[tier] + " 등급은 " + dotDate(until) + "까지 모든 기능을 사용할 수 있습니다"
+                : TIER_LABEL[tier] + " 등급은 기한 없이 모든 기능을 사용할 수 있습니다")}
               last={publicLike}
             />
             {/* 회원키 관리는 관리자판·회원판의 설정 창에서만 됩니다. 공개판은 서버가 생길 때까지 줄을 숨깁니다. */}
