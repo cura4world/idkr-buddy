@@ -727,7 +727,9 @@ export async function getSayAudioUrl(
     const have = await getCachedAudio(ckey);
     if (have) return have;
     if (opts && opts.cacheOnly) return null;
-    const url = await generateAudioForText(chunks[0], voiceName);
+    // 캐시 키가 "say:" 이므로 재생 쪽(ttsKindForKey)과 같은 이름 word-audio 로 셉니다.
+    // (예전에는 기본값 "tts" 로 갔습니다 — 공개판 서버가 무료의 "tts" 를 잠그면서 맞춤. 사용법은 그대로)
+    const url = await generateAudioForText(chunks[0], voiceName, 0, TTS_MODEL, true, "word-audio");
     await saveCachedAudio(ckey, url);
     return url;
   } catch {
