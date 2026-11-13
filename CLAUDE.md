@@ -75,6 +75,12 @@
   잡혀 커밋에 딸려 들어갈 뻔한 전례가 있다
 - **`git add -A` / `git commit -a` 금지** — 바꾼 파일을 **경로로 지정해** 담는다(`git add <경로>`).
   한 번에 담으면 생성 파일이나 걷어내야 할 임시 진단 코드가 조용히 섞인다
+- **APK 는 공개 릴리스에 올리지 않는다 — Actions 산출물로만**(14일 보관). 받는 주소가 고정된 공개 릴리스
+  (`latest`·`preview-latest`)는 로그인·결제 없이 누구나 앱을 받는 길이라 2026-11-14 에 지웠다. 워크플로에
+  `gh release create`·`action-gh-release`·태그 push 를 다시 넣지 말 것. 보존본은 저장소 밖 `../apk-backup/`
+- **가격·체험 기간을 고정 글자로 쓰지 말 것** — 화면의 금액·"7일" 은 `src/lib/playOffers.ts` 가 주는 Play 값만 쓴다
+  (`usePlusPricing()`). 월 환산은 Play 연 가격 ÷ 12 로 계산한다. 고정값(`plusCopy.ts` 의 `FALLBACK_*`)은 미리보기 빌드의
+  대체값일 뿐이다. 화면의 금액이 실제 청구액과 달라지면 Play 정책 위반이다
 
 ## 필수 패턴
 - 모든 `speechSynthesis` 호출은 optional chaining + try/catch로 감싼다 (WebView에서 `undefined`일 수 있음)
@@ -206,6 +212,8 @@ src/
   lib/illust.ts·illustFit.ts + data/illust/ 색연필 그림(README 가 정본) · lib/kataHariIni.ts + data/kataHariIniWords.ts
   퍼즐 정답 동결본(맨 끝에만 붙임) · lib/mapPhotos.ts 지도 사진 고정 목록(scripts/build-map-photos.mjs, Actions 에서 생성) ·
   hooks/useBackClose.ts 창·시트 뒤로가기 닫기 · components/BottomTabs·PlusLockBox·PreviewPanel·WordIllust·LevelCircles·WordMiniSheet ·
+  components/WebGate.tsx 스토어 앱이 아니고 회원키·예전 설정도 없는 방문자에게 앱 대신 보이는 안내 화면(회원키 입력 포함, 2026-11-14) ·
+  components/ErrorBoundary.tsx 화면 오류 시 흰 화면 대신 "다시 열기" · lib/playOffers.ts Play 가격·체험 제안(가격을 보이는 곳은 모두 이것을 씀) ·
   components/FormSheet.tsx 입력 시트 공용 디자인(회화집 만들기·단어 추가·단어장 만들기·CSV·이름 변경·추가하기는 이것을 씀) ·
   components/CategoryIcon.tsx 단어장 아이콘을 그리는 한 곳 + lib/categoryIcon.ts 저장 형태 `Category.emoji` = 옛 이모지 또는 `icon:<lucide 이름>:<색키>`
   (단어장 아이콘을 그릴 때 `{cat.emoji}` 를 직접 쓰지 말 것 — CategoryTile/CategoryGlyph 로)
