@@ -1,8 +1,11 @@
 // src/pages/Plus.tsx
 // Kata kata Plus (구독) 화면 — 시안 PW1(7일 무료 체험, 연간 기본 선택)·PW2(체험을 이미 쓴 계정) 그대로.
 //   · 혜택 5줄(귤색 아이콘 상자) → 요금제 2칸(연간·월간 라디오 카드) → 황금갈색 버튼 하나 → 안내 → 링크
-//   · 가격은 Play 에서 받은 값(formattedPrice). 못 받으면(미리보기 APK·조회 실패) 결정 문서의 고정 가격
-//   · 체험 여부는 Play 제안의 freeTrialPeriod. Play 가 없으면 미리보기의 "체험 이미 사용" 스위치를 따름
+//   · 가격·체험은 Play 에서 받은 값만(src/lib/playOffers.ts). 정식 스토어 앱에서 아직 못 받았으면 가격 자리는
+//     "가격을 불러오는 중", 구독 버튼은 누를 수 없음. 고정 원화 가격은 미리보기 빌드의 대체값으로만 씀
+//   · 연간 카드는 실제 청구액("연 34,800원")을 크게, 월 환산("(월 2,900원)" = 연 가격 ÷ 12)을 작게
+//   · 버튼 바로 아래 첫 줄은 자동 결제 고지("해지 전까지 매년/매달 자동으로 결제됩니다.")
+//   · 결제는 끝났는데 서버 확인이 아직이면 "결제는 완료되었습니다. 확인 중입니다." — 자동으로 다시 확인(billing.ts)
 //   · 이미 열린 계정(체험 중·Plus·Special·관리자)은 요금제 대신 "이용 중" 상자
 // 문구는 src/lib/plusCopy.ts, 등급은 src/lib/plan.ts.
 
@@ -14,40 +17,48 @@ import { goBackOr } from "@/lib/nav";
 import { PRIVACY_URL, TERMS_URL } from "@/lib/platform";
 import { getSession, onSessionChange, PublicSession } from "@/lib/account";
 import { isPreviewBuild, usePlan } from "@/lib/plan";
-import { previewTrialUsed } from "@/lib/preview";
 import {
   billingAvailable,
+  isVerifyingPurchase,
   manageSubscription,
-  periodText,
+  onVerifyEvent,
   PlanOffer,
   purchase,
-  queryOffers,
-  restorePurchases,
+  restoreDetailed,
 } from "@/lib/billing";
+import { loadOffers, usePlusPricing } from "@/lib/playOffers";
 import {
   CTA_CLOSE,
   CTA_MANAGE,
   CTA_MONTHLY,
+  CTA_VERIFYING,
   CTA_YEARLY,
   ctaTrial,
   discountBadge,
-  FALLBACK_MONTHLY_WON,
-  FALLBACK_YEARLY_WON,
+  isOtherAccountCode,
+  LINK_PRICE_RETRY,
   LINK_PRIVACY,
   LINK_RESTORE,
   LINK_TERMS,
   NOTE_AI_VOICE,
-  NOTE_NO_TRIAL_LINES,
+  NOTE_PRICE_FAILED,
+  NOTE_PRICE_LOADING,
+  NOTE_VERIFYING_LINES,
+  noteNoTrialLines,
   noteTrialLines,
+  perMonthNote,
   PLAN_MONTHLY_LABEL,
   PLAN_MONTHLY_SUB,
   PLAN_YEARLY_LABEL,
+  PLAN_YEARLY_SUB,
   PLUS_LEAD_LINES,
   PLUS_PERKS,
   PLUS_TITLE,
   PLUS_TITLE_BRAND,
   PLUS_TITLE_MARK,
   PlusPerkIcon,
+  PRICE_FAILED,
+  PRICE_LOADING,
   STATE_ADMIN,
   STATE_PLUS,
   STATE_SPECIAL,
@@ -56,14 +67,16 @@ import {
   stateUntilText,
   TOAST_NO_BILLING,
   TOAST_NO_OFFERS,
+  TOAST_OTHER_ACCOUNT,
   TOAST_PENDING,
   TOAST_PREVIEW,
   TOAST_RESTORE_NONE,
+  TOAST_RESTORE_RETRY,
   TOAST_RESTORED,
   TOAST_STARTED,
   TOAST_TRIAL_STARTED,
+  TOAST_VERIFYING,
   toastFailed,
-  wonText,
 } from "@/lib/plusCopy";
 
 // 시안 색 (docs/release/08 공통 규칙: Plus 는 귤색 상자 + 황금갈색 버튼)
@@ -80,31 +93,9 @@ const C = {
   closeBg: "#F1F4F5",
 };
 
-const DEFAULT_TRIAL_TEXT = "7일";
-// 미리보기 APK 의 "체험 이미 사용" 스위치는 src/lib/preview.ts 의 previewTrialUsed() 를 씁니다(병합 후 한 곳으로).
+// 가격·체험 계산(원화 표기, 월 환산, 할인율, 미리보기 대체값)은 src/lib/playOffers.ts 에 있습니다.
 
 type PlanKey = "yearly" | "monthly";
-
-function isYearly(o: PlanOffer): boolean {
-  return o.billingPeriod === "P1Y";
-}
-
-const NON_DIGIT = new RegExp("[^0-9]", "g");
-
-function digitsOf(s: string): number {
-  const n = Number(String(s || "").replace(NON_DIGIT, ""));
-  return isFinite(n) ? n : 0;
-}
-
-/** 원화면 Play 의 "₩34,800" 을 시안처럼 "34,800원" 으로. 다른 통화는 Play 값 그대로. */
-function isWon(s: string): boolean {
-  const t = String(s || "").trim();
-  return t.indexOf("₩") === 0 || t.indexOf("KRW") >= 0 || t.slice(-1) === "원";
-}
-function priceText(formatted: string): string {
-  if (isWon(formatted)) return wonText(digitsOf(formatted));
-  return String(formatted || "").trim();
-}
 
 function shortDate(t: number): string {
   const d = new Date(t);
@@ -187,10 +178,14 @@ interface PlanCard {
   key: PlanKey;
   label: string;
   sub: string;
-  right: string;
+  /** 실제 청구액 — 큰 글자. "연 34,800원" · "월 3,900원". 아직 못 받았으면 "" */
+  price: string;
+  /** 연간의 월 환산 — 작은 덧말 "(월 2,900원)". 없으면 "" */
+  priceNote: string;
   badge: string;
   offer: PlanOffer | null;
-  priceForNote: string; // "연 34,800원" · "월 3,900원"
+  /** 체험 기간 "7일" · 체험 제안이 없으면 "" */
+  trial: string;
 }
 
 const Plus = () => {
@@ -198,69 +193,63 @@ const Plus = () => {
   const location = useLocation();
   const { tier } = usePlan();
   const [session, setSession] = useState<PublicSession | null>(getSession());
-  const [offers, setOffers] = useState<PlanOffer[] | null>(null);
   const [selected, setSelected] = useState<PlanKey>("yearly");
   const [busy, setBusy] = useState(false);
+  const [verifying, setVerifying] = useState<boolean>(() => isVerifyingPurchase());
   const preview = isPreviewBuild();
+  const pricing = usePlusPricing();
 
   useEffect(() => onSessionChange(setSession), []);
 
+  // 결제는 끝났는데 서버 확인이 아직인 동안 "확인 중" 안내를 보여 줍니다. 성공·중단 알림은 LoginGate 가 띄웁니다.
+  useEffect(() => onVerifyEvent((e) => setVerifying(e.type === "verifying")), []);
+
+  // 이 화면을 열 때마다 Play 가격·체험 제안을 새로 받습니다(받는 동안에는 앞서 받은 값을 보여 줌).
+  // 못 받은 채로 화면에 돌아오면 다시 받습니다.
   useEffect(() => {
-    let alive = true;
-    queryOffers().then((list) => {
-      if (!alive) return;
-      // 같은 기본 요금제에 체험 제안과 일반 제안이 함께 오면 체험 쪽을 씁니다(Play 가 자격을 판단).
-      const byPlan: Record<string, PlanOffer> = {};
-      list.forEach((o) => {
-        const prev = byPlan[o.basePlanId];
-        if (!prev || (!prev.freeTrialPeriod && o.freeTrialPeriod)) byPlan[o.basePlanId] = o;
-      });
-      setOffers(Object.keys(byPlan).map((k) => byPlan[k]));
-    });
-    return () => { alive = false; };
+    loadOffers(true);
+    const onVisible = () => {
+      try {
+        if (document.visibilityState === "visible") loadOffers();
+      } catch (e) {}
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
-  const yearlyOffer = offers ? offers.find((o) => isYearly(o)) || null : null;
-  const monthlyOffer = offers ? offers.find((o) => o.billingPeriod === "P1M") || null : null;
+  const priceReady = pricing.state === "ready";
 
-  const cards: PlanCard[] = useMemo(() => {
-    const yFormatted = yearlyOffer ? yearlyOffer.formattedPrice : "";
-    const mFormatted = monthlyOffer ? monthlyOffer.formattedPrice : "";
-    const yPrice = yFormatted ? priceText(yFormatted) : wonText(FALLBACK_YEARLY_WON);
-    const mPrice = mFormatted ? priceText(mFormatted) : wonText(FALLBACK_MONTHLY_WON);
-    // 월 환산과 할인율 — 원화일 때만 계산(통화마다 소수점 자리가 달라서). Play 가 없으면 고정 가격으로.
-    const yWon = yFormatted ? (isWon(yFormatted) ? digitsOf(yFormatted) : 0) : FALLBACK_YEARLY_WON;
-    const mWon = mFormatted ? (isWon(mFormatted) ? digitsOf(mFormatted) : 0) : FALLBACK_MONTHLY_WON;
-    const perMonth = yWon > 0 ? "월 " + wonText(Math.round(yWon / 12)) : "";
-    const pct = yWon > 0 && mWon > 0 ? Math.round((1 - yWon / (mWon * 12)) * 100) : 0;
-    return [
-      {
-        key: "yearly",
-        label: PLAN_YEARLY_LABEL,
-        sub: "연 " + yPrice,
-        right: perMonth,
-        badge: pct > 0 ? discountBadge(pct) : "",
-        offer: yearlyOffer,
-        priceForNote: "연 " + yPrice,
-      },
-      {
-        key: "monthly",
-        label: PLAN_MONTHLY_LABEL,
-        sub: PLAN_MONTHLY_SUB,
-        right: "월 " + mPrice,
-        badge: "",
-        offer: monthlyOffer,
-        priceForNote: "월 " + mPrice,
-      },
-    ];
-  }, [yearlyOffer, monthlyOffer]);
+  const cards: PlanCard[] = useMemo(() => [
+    {
+      key: "yearly",
+      label: PLAN_YEARLY_LABEL,
+      sub: PLAN_YEARLY_SUB,
+      price: pricing.yearlyPrice ? "연 " + pricing.yearlyPrice : "",
+      priceNote: pricing.yearlyPerMonth ? perMonthNote(pricing.yearlyPerMonth) : "",
+      badge: pricing.discountPercent > 0 ? discountBadge(pricing.discountPercent) : "",
+      offer: pricing.yearlyOffer,
+      trial: pricing.trialYearly,
+    },
+    {
+      key: "monthly",
+      label: PLAN_MONTHLY_LABEL,
+      sub: PLAN_MONTHLY_SUB,
+      price: pricing.monthlyPrice ? "월 " + pricing.monthlyPrice : "",
+      priceNote: "",
+      badge: "",
+      offer: pricing.monthlyOffer,
+      trial: pricing.trialMonthly,
+    },
+  ], [
+    pricing.yearlyPrice, pricing.yearlyPerMonth, pricing.discountPercent, pricing.yearlyOffer, pricing.trialYearly,
+    pricing.monthlyPrice, pricing.monthlyOffer, pricing.trialMonthly,
+  ]);
 
   const chosen = cards.find((c) => c.key === selected) || cards[0];
-  const playLoaded = !!offers && offers.length > 0;
-  // 체험 가능 여부: Play 제안이 있으면 그 값, 없으면 미리보기 스위치(미리보기가 아니면 가능한 것으로)
-  const trialText = playLoaded
-    ? (chosen.offer ? periodText(chosen.offer.freeTrialPeriod) : "")
-    : (preview && previewTrialUsed() ? "" : DEFAULT_TRIAL_TEXT);
+  // 체험 문구는 Play 체험 제안이 있을 때만(미리보기는 "체험 이미 사용" 스위치). 가격을 못 받았으면 보이지 않습니다.
+  const trialText = priceReady && chosen.price ? chosen.trial : "";
+  // 정식 스토어 앱에서는 Play 가격을 받은 요금제만 살 수 있습니다. 미리보기는 눌러도 결제하지 않습니다.
+  const canBuy = priceReady && !!chosen.price && (preview || !!chosen.offer);
 
   const entitled = tier !== "free";
   const staff = tier === "special" || tier === "admin";
@@ -269,14 +258,16 @@ const Plus = () => {
   const close = () => goBackOr(navigate, location.key, "/");
 
   const buy = async () => {
-    if (busy) return;
+    if (busy || verifying) return;
     if (preview) { toast(TOAST_PREVIEW); return; }
     if (!billingAvailable()) { toast(TOAST_NO_BILLING); return; }
     if (!chosen.offer) { toast(TOAST_NO_OFFERS); return; }
     setBusy(true);
     const r = await purchase(chosen.offer);
     setBusy(false);
-    if (r.status === "plus") toast(r.plan.tier === "trial" ? TOAST_TRIAL_STARTED : TOAST_STARTED);
+    if (r.status === "plus") toast(r.restored ? TOAST_RESTORED : r.plan.tier === "trial" ? TOAST_TRIAL_STARTED : TOAST_STARTED);
+    // 결제는 끝났고 서버 확인만 남음 — 다시 결제하라고 하지 않습니다. 자동으로 다시 확인합니다(billing.ts).
+    else if (r.status === "verifying") toast(TOAST_VERIFYING);
     else if (r.status === "pending") toast(TOAST_PENDING);
     else if (r.status === "error") toast(toastFailed(r.code));
   };
@@ -286,9 +277,12 @@ const Plus = () => {
     if (preview) { toast(TOAST_PREVIEW); return; }
     if (!billingAvailable()) { toast(TOAST_NO_BILLING); return; }
     setBusy(true);
-    const plan = await restorePurchases();
+    const r = await restoreDetailed();
     setBusy(false);
-    toast(plan ? TOAST_RESTORED : TOAST_RESTORE_NONE);
+    if (r.status === "plus") toast(TOAST_RESTORED);
+    else if (r.status === "verifying") toast(TOAST_VERIFYING);
+    else if (r.status === "none") toast(TOAST_RESTORE_NONE);
+    else toast(isOtherAccountCode(r.code) ? TOAST_OTHER_ACCOUNT : TOAST_RESTORE_RETRY);
   };
 
   const gothic = "font-gothic";
@@ -297,11 +291,24 @@ const Plus = () => {
   const stateTitle = tier === "trial" ? STATE_TRIAL : tier === "plus" ? STATE_PLUS : tier === "special" ? STATE_SPECIAL : STATE_ADMIN;
   const stateSub = !staff && paidUntil > 0 ? stateUntilText(shortDate(paidUntil), tier === "trial") : STATE_STAFF_SUB;
 
-  const noteLines = trialText ? noteTrialLines(trialText, chosen.priceForNote) : NOTE_NO_TRIAL_LINES;
-  const ctaLabel = trialText ? ctaTrial(trialText) : chosen.key === "yearly" ? CTA_YEARLY : CTA_MONTHLY;
+  const yearlyChosen = chosen.key === "yearly";
+  // 버튼 아래 안내 — 첫 줄은 자동 결제 고지. 결제 확인 중·가격을 못 받았을 때는 그 안내로 바꿉니다.
+  const noteLines = verifying
+    ? NOTE_VERIFYING_LINES
+    : !canBuy
+      ? [pricing.state === "failed" ? NOTE_PRICE_FAILED : NOTE_PRICE_LOADING]
+      : trialText
+        ? noteTrialLines(trialText, chosen.price, yearlyChosen)
+        : noteNoTrialLines(yearlyChosen);
+  const ctaLabel = verifying ? CTA_VERIFYING : trialText ? ctaTrial(trialText) : yearlyChosen ? CTA_YEARLY : CTA_MONTHLY;
+  const priceMissing = pricing.state === "failed" ? PRICE_FAILED : PRICE_LOADING;
 
   return (
-    <div className="min-h-[100dvh] max-w-lg mx-auto flex flex-col font-body" style={{ backgroundColor: "#FFFFFF", color: C.ink, lineHeight: "normal" }}>
+    // 2026-11-14 U-01: 이 화면에는 하단 탭 막대가 뜨므로 최소 높이에서 막대 높이를 뺍니다(빼지 않으면 버튼·약관 링크가 막대 뒤로 밀림).
+    <div
+      className="max-w-lg mx-auto flex flex-col font-body"
+      style={{ minHeight: "calc(100dvh - var(--kata-tabbar-h, 0px))", backgroundColor: "#FFFFFF", color: C.ink, lineHeight: "normal" }}
+    >
       <div className="flex justify-end shrink-0" style={{ padding: "8px 8px 0" }}>
         <button
           type="button"
@@ -407,11 +414,17 @@ const Plus = () => {
                     <span className={"block " + gothic} style={{ fontSize: "0.90625rem", fontWeight: 700 }}>{c.label}</span>
                     <span className={"block " + gothic} style={{ marginTop: 2, fontSize: "0.75rem", color: C.gray }}>{c.sub}</span>
                   </span>
-                  {c.right ? (
-                    <span className={gothic} style={{ fontSize: "0.875rem", fontWeight: 700, color: on ? C.goldInk : C.ink }}>
-                      {c.right}
+                  {/* 실제 청구액을 크게, 연간의 월 환산은 그 아래 작게(Play 구독 정책: 연간을 월 단가 위주로 보이지 않음) */}
+                  {c.price ? (
+                    <span className={"flex flex-col items-end " + gothic} style={{ flex: "none" }}>
+                      <span style={{ fontSize: "0.9375rem", fontWeight: 700, color: on ? C.goldInk : C.ink }}>{c.price}</span>
+                      {c.priceNote ? (
+                        <span style={{ marginTop: 2, fontSize: "0.6875rem", color: C.gray }}>{c.priceNote}</span>
+                      ) : null}
                     </span>
-                  ) : null}
+                  ) : (
+                    <span className={gothic} style={{ flex: "none", fontSize: "0.75rem", color: C.faint }}>{priceMissing}</span>
+                  )}
                   {c.badge ? (
                     <span
                       className={"absolute " + gothic}
@@ -456,20 +469,32 @@ const Plus = () => {
             <button
               type="button"
               onClick={buy}
-              disabled={busy}
+              disabled={busy || verifying || !canBuy}
               className={"w-full flex items-center justify-center gap-2 disabled:opacity-60 " + gothic}
               style={{ height: 48, borderRadius: 16, backgroundColor: C.gold, color: "#FFFFFF", fontSize: "0.90625rem", fontWeight: 700 }}
             >
-              {busy ? <Loader2 size={18} className="animate-spin" /> : null}
+              {busy || verifying ? <Loader2 size={18} className="animate-spin" /> : null}
               {ctaLabel}
             </button>
-            <p className={"m-0 text-center " + gothic} style={{ fontSize: "0.75rem", lineHeight: 1.55, color: C.gray }}>
+            <p
+              className={"m-0 text-center " + gothic}
+              role={verifying ? "status" : undefined}
+              style={{ fontSize: "0.75rem", lineHeight: 1.55, color: C.gray, wordBreak: "keep-all" }}
+            >
               {noteLines.map((l, i) => (
                 <span key={i}>
                   {i > 0 ? <br /> : null}
                   {l}
                 </span>
               ))}
+              {!verifying && pricing.state === "failed" ? (
+                <>
+                  {" "}
+                  <button type="button" onClick={() => loadOffers(true)} style={{ textDecoration: "underline", color: C.lead }}>
+                    {LINK_PRICE_RETRY}
+                  </button>
+                </>
+              ) : null}
             </p>
           </>
         )}
