@@ -986,7 +986,10 @@ const Index = () => {
             <div className="flex items-center" style={{ gap: 2 }}>
               <p
                 className="font-gothic min-w-0 truncate"
-                style={{ margin: 0, fontSize: "min(" + hrem(14) + ", 14.5px)", fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
+                // 2026-11-13 사용자 요청(B안): 소제목(단어장·인도네시아…)과 같은 진회색이라 구분이 안 돼 앱 대표 청록(--primary Sea Pine)으로,
+                // 자간을 0.09em 으로 넓힘. 글자 크기는 지금(14px 상한 14.5px)을 지킵니다 — 요청에 적힌 0.75rem 은 예전 관리자판 홈 카드의 값이라
+                // 그대로 쓰면 오히려 작아집니다.
+                style={{ margin: 0, fontSize: "min(" + hrem(14) + ", 14.5px)", fontWeight: 700, letterSpacing: "0.09em", color: "hsl(var(--primary))" }}
               >
                 BAHASA HARI INI
               </p>
@@ -1037,9 +1040,9 @@ const Index = () => {
             ) : null}
           </section>
 
-          {/* 단어장 */}
+          {/* 학습 (2026-11-13 사용자 요청: 소제목을 두 글자로 통일 — 학습·문화·신앙) */}
           <section>
-            {sectionTitle("단어장")}
+            {sectionTitle("학습")}
             <div className={listBox} style={listStyle}>
               <PubRow
                 tileBg="#DDF0EA"
@@ -1049,7 +1052,7 @@ const Index = () => {
                     <path d="M15.5 5.2l3.9-1 3.6 14.6-3.9 1z" />
                   </>
                 ))}
-                title="인도네시아어 단어장"
+                title="단어장"
                 sub="Kosakata"
                 meta={pubWordCount > 0 ? pubWordCount.toLocaleString("ko-KR") + "단어" : undefined}
                 locked={!plus}
@@ -1063,7 +1066,7 @@ const Index = () => {
                     <path d="M9 16h7l5 4v-9h-3" />
                   </>
                 ))}
-                title="인도네시아어 회화집"
+                title="회화집"
                 sub="Percakapan"
                 meta={pubSceneCount ? pubSceneCount.toLocaleString("ko-KR") + "대화" : undefined}
                 locked={!plus}
@@ -1073,9 +1076,9 @@ const Index = () => {
             </div>
           </section>
 
-          {/* 인도네시아 */}
+          {/* 문화 */}
           <section>
-            {sectionTitle("인도네시아")}
+            {sectionTitle("문화")}
             <div className={listBox} style={listStyle}>
               <PubRow
                 tileBg="#FCE6D9"
@@ -1125,12 +1128,29 @@ const Index = () => {
             </div>
           </section>
 
-          {/* 말씀과 기도 · 설교 — 공개판에서는 관리자·Special Member 에게만 보입니다(2026-11-12 사용자 요청).
-              순서·이름은 관리자판 홈과 같게, 모양은 공개판 홈 목록(PubRow)과 같게 둡니다. 설교는 관리자만. */}
+          {/* 신앙 — 공개판에서는 관리자·Special Member 에게만 보입니다(2026-11-12 사용자 요청).
+              모양은 공개판 홈 목록(PubRow)과 같게 둡니다. 설교문은 관리자만.
+              2026-11-13 사용자 요청: 설교문은 사용 빈도가 높아 신앙 첫 줄(오늘의 묵상 위)로 옮기고, 따로 있던 "설교" 구역은 없앴습니다. */}
           {staff ? (
             <section>
-              {sectionTitle("말씀과 기도")}
+              {sectionTitle("신앙")}
               <div className={listBox} style={listStyle}>
+                {tier === "admin" ? (
+                  <PubRow
+                    tileBg="#ECE8F6"
+                    icon={tileIcon("#5B4A8C", (
+                      <>
+                        <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z" />
+                        <path d="M5 17a3 3 0 0 1 3-3h11" />
+                        <path d="M10 4v6l2-1.5L14 10V4" />
+                      </>
+                    ))}
+                    title="설교문"
+                    sub="Khotbah"
+                    locked={false}
+                    onClick={() => navigate("/sermon")}
+                  />
+                ) : null}
                 <PubRow
                   tileBg="#FFF3D6"
                   icon={tileIcon("#8A6A12", (
@@ -1184,29 +1204,6 @@ const Index = () => {
                   sub="Doa"
                   locked={false}
                   onClick={() => navigate("/prayer")}
-                  last
-                />
-              </div>
-            </section>
-          ) : null}
-
-          {tier === "admin" ? (
-            <section>
-              {sectionTitle("설교")}
-              <div className={listBox} style={listStyle}>
-                <PubRow
-                  tileBg="#ECE8F6"
-                  icon={tileIcon("#5B4A8C", (
-                    <>
-                      <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z" />
-                      <path d="M5 17a3 3 0 0 1 3-3h11" />
-                      <path d="M10 4v6l2-1.5L14 10V4" />
-                    </>
-                  ))}
-                  title="설교문"
-                  sub="Khotbah"
-                  locked={false}
-                  onClick={() => navigate("/sermon")}
                   last
                 />
               </div>
