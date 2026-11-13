@@ -1,0 +1,882 @@
+{
+  "_meta": {
+    "notice": "예문(examples)은 Gemini 가 만들고 Claude 가 교차 검수한 것으로, 나중에 인도네시아 원어민 확인 대상입니다. 해설을 고치려면 이 파일을 직접 고치지 말고 scripts/gen-phrase-seed.mjs 로 다시 만들거나, 고친 항목을 _meta.edits 에 적으세요.",
+    "source": "scripts/gen-phrase-seed.mjs",
+    "generatedAt": "2026-11-13",
+    "models": [
+      "gemini-3.8-flash"
+    ],
+    "reviewed": "2026-11-13 Claude 교차 검수 — 36개 전부 읽음(뜻·예문 자연스러움·note 가 meaning 과 겹치는지). 고친 항목 15건은 edits 에 적음. 나머지는 수정 없음.",
+    "edits": [
+      {
+        "phrase": "Sambil menyelam minum air.",
+        "field": "examples.1.id",
+        "why": "예문 문법이 어색함(주어 뒤에 속담이 바로 붙음) → 'itu namanya ...' 로 자연스럽게"
+      },
+      {
+        "phrase": "Seperti katak dalam tempurung.",
+        "field": "meaning",
+        "why": "'갇힌 … 갇혀' 낱말 반복"
+      },
+      {
+        "phrase": "Ringan sama dijinjing, berat sama dipikul.",
+        "field": "meaning",
+        "why": "'고통'은 한국어로 괴로움이라 오해됨 — 인니어 발음에 맞춰 표기"
+      },
+      {
+        "phrase": "Sepandai-pandai tupai melompat, sekali waktu jatuh juga.",
+        "field": "note",
+        "why": "근거가 불확실한 변형('pasti'·'pernah')을 확인된 변형('akhirnya')으로 교체"
+      },
+      {
+        "phrase": "Ada gula, ada semut.",
+        "field": "note",
+        "why": "'Bak ada gula, ada semut' 는 실제로 쓰이는 형태인지 확인되지 않아 뺌"
+      },
+      {
+        "phrase": "Ada gula, ada semut.",
+        "field": "examples.2.ko",
+        "why": "한국어 해석이 어색함"
+      },
+      {
+        "phrase": "Bagai pinang dibelah dua.",
+        "field": "meaning",
+        "why": "띄어쓰기"
+      },
+      {
+        "phrase": "Bagai pinang dibelah dua.",
+        "field": "note",
+        "why": "'매우 흔하게'는 근거 없는 과장"
+      },
+      {
+        "phrase": "Diam itu emas.",
+        "field": "examples.1.id",
+        "why": "예문 문법이 어색함('lebih baik diam itu emas saja')"
+      },
+      {
+        "phrase": "Diam itu emas.",
+        "field": "examples.1.ko",
+        "why": "예문 수정에 맞춘 해석"
+      },
+      {
+        "phrase": "Diam itu emas.",
+        "field": "note",
+        "why": "속담 철자(하이픈 없음)"
+      },
+      {
+        "phrase": "Sedia payung sebelum hujan.",
+        "field": "examples.0.id",
+        "why": "예문 문법이 어색함(속담 뒤 'kalau' 연결)"
+      },
+      {
+        "phrase": "Besar kepala",
+        "field": "examples.1.situasi",
+        "why": "오타(건만 → 거만)"
+      },
+      {
+        "phrase": "Kutu buku",
+        "field": "note",
+        "why": "note 가 meaning 의 직역 설명과 겹침 → 쓸 때 주의할 점으로 교체"
+      },
+      {
+        "phrase": "Berakit-rakit ke hulu, berenang-renang ke tepian.",
+        "field": "note",
+        "why": "'앞 구절만 쓰는 것이 일상적'이라는 단정은 근거가 약함"
+      }
+    ]
+  },
+  "phrases": {
+    "Sedikit-sedikit, lama-lama menjadi bukit.": {
+      "ko": "조금씩 모으다 보면 언덕이 됩니다. 티끌 모아 태산.",
+      "meaning": "'Sedikit(조금)'과 'lama(오랜 시간)'를 반복하여 '조금씩 시간이 지나다 보면 큰 언덕이 된다'는 뜻으로, 한국의 속담 '티끌 모아 태산'과 같은 의미입니다. 적은 돈을 꾸준히 모으거나 매일 작은 노력을 쌓아 큰 성과를 이루고자 할 때, 상대방을 격려하고 동기를 북돋기 위해 자주 사용합니다.",
+      "examples": [
+        {
+          "id": "Tabung saja seribu rupiah setiap hari. Sedikit-sedikit, lama-lama menjadi bukit.",
+          "ko": "매일 천 루피아씩이라도 저축해 봐. 티끌 모아 태산이잖아.",
+          "situasi": "친구에게 적은 돈이라도 꾸준히 저축해 보라고 권하는 상황"
+        },
+        {
+          "id": "Hafalkan lima kosakata baru setiap hari. Sedikit-sedikit, lama-lama menjadi bukit.",
+          "ko": "매일 새 단어를 다섯 개씩 외워 보세요. 조금씩 쌓이다 보면 큰 산이 됩니다.",
+          "situasi": "학생에게 매일 꾸준히 단어를 외우도록 독려하는 상황"
+        },
+        {
+          "id": "Jangan malas, cicil tugasmu dari sekarang. Sedikit-sedikit, lama-lama menjadi bukit, kan?",
+          "ko": "미루지 말고 지금부터 과제를 조금씩 해 둬. 티끌 모아 태산이라고 하잖아?",
+          "situasi": "과제를 미루는 친구에게 미리 조금씩 해 두라고 조언하는 상황"
+        }
+      ],
+      "note": "'menjadi'는 어근 'jadi(되다)'에 접두사 'meN-'이 붙어 '~이 되다'라는 능동 동사가 된 형태이며, 'sedikit-sedikit'과 'lama-lama'처럼 단어를 첩어(반복)로 써서 '조금씩', '점차'라는 점진적인 과정을 나타냅니다."
+    },
+    "Air tenang menghanyutkan.": {
+      "ko": "잔잔한 물이 배를 떠내려 보냅니다. 조용한 사람이 더 깊습니다.",
+      "meaning": "겉으로는 조용하고 온순해 보이지만 속으로는 깊은 지혜나 놀라운 능력을 품고 있는 사람, 혹은 겉보기와 달리 방심할 수 없는 사람을 비유하는 속담입니다. 평소 말수가 적던 사람이 예상치 못한 큰 성과를 내거나 반전 실력을 보여줄 때, 또는 겉모습만 보고 남을 함부로 얕보지 말아야 할 때 주로 사용합니다.",
+      "examples": [
+        {
+          "id": "Dia kelihatannya pendiam, tapi ternyata pintar sekali. Benar kata orang, air tenang menghanyutkan.",
+          "ko": "그 사람은 조용해 보이지만 알고 보니 정말 똑똑해요. 잔잔한 물이 깊다는 말이 딱 맞네요.",
+          "situasi": "평소 얌전하던 동료가 어려운 문제를 척척 해결한 모습을 보았을 때"
+        },
+        {
+          "id": "Jangan remehkan dia, ya. Ingat peribahasa air tenang menghanyutkan.",
+          "ko": "그 사람 얕보지 마세요. 잔잔한 물이 더 무섭다는 속담을 잊지 마시고요.",
+          "situasi": "말수가 적은 사람을 만만하게 여기는 상대방에게 주의를 줄 때"
+        },
+        {
+          "id": "Kemarin dia tiba-tiba menang lomba, padahal biasanya diam saja. Air tenang menghanyutkan!",
+          "ko": "어제 그 친구가 갑자기 대회에서 1등을 했어요. 평소엔 가만히 있더니, 정말 조용한 실력자라니까요!",
+          "situasi": "늘 묵묵하던 친구가 깜짝 성과를 거두었을 때 감탄하며"
+        }
+      ],
+      "note": "'menghanyutkan'은 '떠내려가다'라는 뜻의 어근 'hanyut'에 사동 접미사 '-kan'과 동사 접두사 'meN-'이 붙어 '무언가를 휩쓸어 떠내려가게 하다'라는 뜻이 됩니다."
+    },
+    "Tak ada gading yang tak retak.": {
+      "ko": "금 가지 않은 상아는 없습니다. 완벽한 사람은 없습니다.",
+      "meaning": "아무리 귀하고 단단한 코끼리 상아에도 금이 가 있듯이, 세상에 결점이나 흠이 전혀 없는 완벽한 사람이나 사물은 없다는 뜻입니다. 누군가가 실수를 해서 자책할 때 위로하거나, 발표 등을 마친 뒤 자신의 부족함을 겸손하게 인정하고 양해를 구할 때 자주 사용합니다.",
+      "examples": [
+        {
+          "id": "Jangan terlalu sedih, kamu sudah berusaha. Tak ada gading yang tak retak.",
+          "ko": "너무 슬퍼하지 마, 넌 최선을 다했잖아. 완벽한 사람은 없는 법이야.",
+          "situasi": "시험이나 면접에서 실수하고 낙담한 친구를 위로할 때"
+        },
+        {
+          "id": "Mohon maaf jika ada kekurangan, karena tak ada gading yang tak retak.",
+          "ko": "부족한 점이 있었다면 양해 부탁드립니다, 완벽한 사람은 없으니까요.",
+          "situasi": "공식적인 발표나 연설을 마무리하며 청중에게 겸손하게 인사할 때"
+        },
+        {
+          "id": "Wajar kalau dia buat salah. Tak ada gading yang tak retak, kan?",
+          "ko": "그 사람이 실수하는 건 당연한 일이야. 누구나 결점은 있는 법이잖아?",
+          "situasi": "직장 동료나 친구의 실수를 너그럽게 감싸줄 때"
+        }
+      ],
+      "note": "이 속담은 공식적인 발표나 연설의 맺음말(penutup)에서 관용구처럼 널리 쓰이며, 'tak' 대신 'tiada'를 써서 'Tiada gading yang tak retak'이라고 표현하기도 합니다."
+    },
+    "Malu bertanya, sesat di jalan.": {
+      "ko": "묻기를 부끄러워하면 길에서 헤맵니다.",
+      "meaning": "잘 모르는 것이 있을 때 묻기를 부끄러워하고 망설이면 결국 큰 손해를 보거나 일을 그르치게 된다는 뜻의 대표적인 속담입니다. 실제 길을 잃었을 때뿐만 아니라 공부, 업무, 일상생활에서 질문하기를 어려워하는 사람에게 조언하거나 용기를 북돋아 줄 때 자주 사용합니다.",
+      "examples": [
+        {
+          "id": "Kalau kamu belum paham tugasnya, tanya saja ke bos. Malu bertanya, sesat di jalan lho.",
+          "ko": "업무 내용을 아직 이해 못 했으면 팀장님께 여쭤봐. 묻기를 망설이면 결국 손해잖아.",
+          "situasi": "직장 동료가 모르는 게 있으면서도 상사에게 질문하기를 주저하고 있을 때"
+        },
+        {
+          "id": "Kita kayaknya nyasar nih, ayo tanya orang di situ. Malu bertanya, sesat di jalan.",
+          "ko": "우리 길을 잃은 것 같아, 저기 있는 분께 여쭤보자. 부끄러워하다가 더 헤맬라.",
+          "situasi": "여행이나 외출 중 실제로 길을 잃어 주변 사람에게 길을 묻자고 설득할 때"
+        },
+        {
+          "id": "Jangan takut tanya ke guru kalau ada yang sulit, ya. Malu bertanya, sesat di jalan.",
+          "ko": "어려운 부분이 있으면 선생님께 여쭤보는 걸 두려워하지 마. 묻지 않으면 혼자 헤매게 된단다.",
+          "situasi": "수업 내용이 이해되지 않아도 질문하지 못하는 자녀나 학생에게 격려할 때"
+        }
+      ],
+      "note": "'bertanya'는 어근 'tanya(질문)'에 동작을 나타내는 접두사 'ber-'가 붙어 '질문하다'가 된 단어이며, 'sesat'은 '길을 잃다, 방황하다'라는 의미의 어근입니다."
+    },
+    "Berakit-rakit ke hulu, berenang-renang ke tepian.": {
+      "ko": "먼저 고생하고 나중에 즐깁니다. 고생 끝에 낙이 옵니다.",
+      "meaning": "직역하면 '뗏목을 타고 물살을 거슬러 상류로 가고, 헤엄쳐서 물가로 나온다'는 뜻으로, 한국의 '고생 끝에 낙이 온다'와 같은 의미입니다. 지금 겪는 힘든 과정을 잘 이겨내면 나중에 반드시 달콤한 보상이 온다는 격려와 위로를 건넬 때 자주 쓰입니다.",
+      "examples": [
+        {
+          "id": "Ayo semangat belajarnya! Ingat, berakit-rakit ke hulu, berenang-renang ke tepian.",
+          "ko": "힘내서 공부하자! 고생 끝에 낙이 온다는 말 기억하지?",
+          "situasi": "시험공부로 지쳐 있는 친구를 응원할 때"
+        },
+        {
+          "id": "Sekarang kita kerja keras dulu. Berakit-rakit ke hulu, berenang-renang ke tepian, nanti hasilnya pasti manis.",
+          "ko": "지금은 먼저 열심히 일하자. 고생 끝에 낙이 온다고, 나중엔 분명 좋은 결과가 있을 거야.",
+          "situasi": "새로운 사업이나 프로젝트를 시작하며 동료를 격려할 때"
+        },
+        {
+          "id": "Tidak apa-apa hidup hemat sekarang, berakit-rakit ke hulu, berenang-renang ke tepian demi masa depan.",
+          "ko": "지금 아껴 쓰는 건 괜찮아. 미래를 위해 먼저 고생하고 나중에 누리면 되지.",
+          "situasi": "저축이나 미래를 위해 절약하며 생활하는 가족에게 말할 때"
+        }
+      ],
+      "note": "원래 뒤에 'bersakit-sakit dahulu, bersenang-senang kemudian(먼저 아프고 나중에 즐겁다)'이라는 대구 구절이 이어지지만, 보통 앞뒤 두 줄을 함께 말하지만, 앞 구절만 말해도 뜻이 통합니다."
+    },
+    "Di mana bumi dipijak, di situ langit dijunjung.": {
+      "ko": "밟고 선 땅에서는 그곳의 하늘을 받듭니다. 그 고장의 법을 따르세요.",
+      "meaning": "한국 속담의 '로마에 가면 로마법을 따르라'와 같은 뜻으로, 자신이 머무는 곳의 법, 규칙, 관습을 존중하고 따라야 한다는 것을 의미합니다. 다른 지역으로 이사를 가거나 여행을 갔을 때 현지 문화와 예절에 맞추어 행동해야 함을 조언할 때 자주 쓰입니다.",
+      "examples": [
+        {
+          "id": "Waktu masuk ke pura di Bali, kita harus pakai sarung. Di mana bumi dipijak, di situ langit dijunjung.",
+          "ko": "발리 사원에 들어갈 때는 사롱을 둘러야 해요. 로마에 가면 로마법을 따라야 하니까요.",
+          "situasi": "발리 힌두교 사원을 방문할 때 현지 복장 규범을 지켜야 한다고 설명하는 상황"
+        },
+        {
+          "id": "Kamu sekarang tinggal di Indonesia, jadi belajarlah budayanya. Ingat, di mana bumi dipijak, di situ langit dijunjung.",
+          "ko": "너 이제 인도네시아에 사니까 여기 문화를 배워 봐. 로마에 가면 로마법을 따르라는 말 잊지 마.",
+          "situasi": "인도네시아로 갓 이주해 온 지인에게 현지 문화를 존중하며 적응하라고 조언하는 상황"
+        },
+        {
+          "id": "Meskipun terasa aneh buat kita, jangan mengejek adat mereka. Di mana bumi dipijak, di situ langit dijunjung.",
+          "ko": "우리에게는 낯설게 느껴지더라도 그들의 관습을 비웃으면 안 돼. 그 고장에 가면 그 고장 법을 따라야지.",
+          "situasi": "여행지에서 낯선 전통 의식을 보고 무례하게 반응하려는 동행을 타이르는 상황"
+        }
+      ],
+      "note": "'dipijak'은 어근 pijak(밟다)에, 'dijunjung'은 어근 junjung(받들다)에 각각 수동 접두사 di-가 결합하여 대구를 이루는 문장 구조입니다."
+    },
+    "Sambil menyelam minum air.": {
+      "ko": "잠수하면서 물도 마십니다. 일석이조.",
+      "meaning": "한 가지 일을 하면서 동시에 또 다른 유익한 일을 해결하여 두 가지 이득을 얻는 상황을 뜻합니다. 한국 속담의 '꿩 먹고 알 먹기'나 한자성어 '일석이조(一石二鳥)'와 똑같은 뜻으로 쓰입니다. 일상에서 어떤 행동 하나로 덤으로 좋은 결과를 얻었을 때 자주 사용하는 매우 친숙한 속담입니다.",
+      "examples": [
+        {
+          "id": "Aku dinas ke Bali sekalian liburan di sana. Sambil menyelam minum air.",
+          "ko": "나 발리로 출장 가는 김에 거기서 휴가도 보내려고. 일석이조지.",
+          "situasi": "업무차 떠난 출장지에서 관광과 휴식까지 한 번에 즐기려는 상황"
+        },
+        {
+          "id": "Belajar bahasa lewat film itu namanya sambil menyelam minum air, dapat ilmu dan terhibur.",
+          "ko": "영화로 언어를 배우는 건 일석이조야, 지식도 얻고 재미도 있잖아.",
+          "situasi": "좋아하는 취미 활동을 즐기면서 공부 효과까지 동시에 챙길 때"
+        },
+        {
+          "id": "Kita belanja bulanan sekalian jalan-jalan di mall, sambil menyelam minum air, kan?",
+          "ko": "우리 장 보면서 몰 구경도 같이 하자, 꿩 먹고 알 먹기잖아?",
+          "situasi": "필수적인 장보기를 하러 간 김에 쇼핑몰 나들이까지 함께 하려는 상황"
+        }
+      ],
+      "note": "비슷한 인도네시아 속담으로 'Sekali merengkuh dayung, dua tiga pulau terlampaui'(노를 한 번 저어 두세 개 섬을 지나치다)가 있으며, 'menyelam'은 어근 'selam(잠수)'에 능동 접두사 'meN-'이 붙어 만들어진 동사입니다."
+    },
+    "Bersatu kita teguh, bercerai kita runtuh.": {
+      "ko": "뭉치면 굳건하고 흩어지면 무너집니다.",
+      "meaning": "사람들이 마음을 모아 단결하면 강해지지만, 서로 분열하고 흩어지면 약해져 실패한다는 뜻의 대표적인 인도네시아 속담입니다. 한국의 '뭉치면 살고 흩어지면 죽는다'와 같은 표현으로, 단체 활동이나 팀 프로젝트에서 협동심과 단결의 중요성을 강조할 때 자주 씁니다.",
+      "examples": [
+        {
+          "id": "Ayo kerja sama, ingat kata pepatah: bersatu kita teguh, bercerai kita runtuh.",
+          "ko": "다 같이 협력하자, 속담에도 있잖아: 뭉치면 강하고 흩어지면 무너진다고.",
+          "situasi": "조별 과제나 팀 프로젝트를 시작하며 팀원들의 협동을 독려할 때"
+        },
+        {
+          "id": "Jangan saling menyalahkan, bersatu kita teguh, bercerai kita runtuh.",
+          "ko": "서로 탓하지 말자, 뭉치면 굳건하고 흩어지면 무너지는 법이야.",
+          "situasi": "경기나 일에서 위기를 맞아 팀원들끼리 다툼이 생기려고 할 때"
+        },
+        {
+          "id": "Kita harus kompak agar menang, bersatu kita teguh, bercerai kita runtuh!",
+          "ko": "우리가 이기려면 똘똘 뭉쳐야 해, 뭉치면 살고 흩어지면 죽는다!",
+          "situasi": "체육대회나 단체 경기 시작 전 다 같이 결의를 다질 때"
+        }
+      ],
+      "note": "어근 'satu(하나)'와 'cerai(나뉘다)'에 상태나 행동을 만드는 접두사 'ber-'가 붙어 'bersatu(단결하다)'와 'bercerai(흩어지다)'가 대구를 이루는 구조입니다."
+    },
+    "Habis gelap terbitlah terang.": {
+      "ko": "어둠이 지나면 빛이 떠오릅니다.",
+      "meaning": "힘든 고난이나 시련의 시기를 견뎌내면 반드시 좋은 날과 희망이 찾아온다는 뜻입니다. 어려운 상황에 처해 낙담한 친구나 지인을 위로하고 용기를 북돋워 줄 때 주로 사용합니다.",
+      "examples": [
+        {
+          "id": "Jangan menyerah sekarang ya, habis gelap terbitlah terang.",
+          "ko": "지금 포기하지 마, 어둠이 지나면 반드시 빛이 올 거야.",
+          "situasi": "시험이나 면접에 떨어져 낙담한 친구를 위로할 때"
+        },
+        {
+          "id": "Percayalah, habis gelap terbitlah terang, semua masalah pasti ada jalannya.",
+          "ko": "믿어봐, 고생 끝에 낙이 온다고, 모든 문제에는 반드시 해결책이 있어.",
+          "situasi": "일이 잘 풀리지 않아 불안해하는 직장 동료를 격려할 때"
+        },
+        {
+          "id": "Kita harus sabar dulu, ingat pepatah habis gelap terbitlah terang.",
+          "ko": "우리 조금만 더 참아보자, 어둠이 지나면 빛이 온다는 속담도 있잖아.",
+          "situasi": "힘든 프로젝트를 진행하며 지친 팀원들과 서로 힘을 낼 때"
+        }
+      ],
+      "note": "'terbitlah'는 '떠오르다'를 뜻하는 동사 어근 'terbit'에 강조를 나타내는 접미사 '-lah'가 결합된 형태입니다."
+    },
+    "Buah jatuh tidak jauh dari pohonnya.": {
+      "ko": "열매는 나무에서 멀리 떨어지지 않습니다. 그 아버지에 그 아들.",
+      "meaning": "자녀의 외모, 성격, 행동이나 재능이 부모를 꼭 닮았다는 뜻을 나타내는 인도네시아의 대표적인 속담입니다. 한국어의 '그 아버지에 그 아들' 또는 '피는 못 속인다'와 같은 맥락으로 이해하시면 됩니다. 주로 아이가 부모와 똑같은 행동을 하거나 부모의 재능을 그대로 이어받은 모습을 보았을 때 자연스럽게 사용합니다.",
+      "examples": [
+        {
+          "id": "Budi pintar sekali main gitar seperti ayahnya. Memang buah jatuh tidak jauh dari pohonnya.",
+          "ko": "부디는 아빠를 닮아서 기타를 정말 잘 치네요. 정말 피는 못 속여요.",
+          "situasi": "아들이 아빠처럼 악기를 수준급으로 연주하는 모습을 보고 칭찬할 때"
+        },
+        {
+          "id": "Wajah Nina mirip sekali dengan ibunya. Buah jatuh tidak jauh dari pohonnya.",
+          "ko": "니나의 얼굴이 엄마와 정말 붕어빵이네요. 열매는 나무에서 멀리 떨어지지 않는다더니 딱 맞아요.",
+          "situasi": "아이의 얼굴 생김새가 부모와 매우 닮았을 때"
+        },
+        {
+          "id": "Sifatnya yang keras kepala sama persis dengan bapaknya, buah jatuh tidak jauh dari pohonnya.",
+          "ko": "그 사람의 고집스러운 성격은 아버지를 똑 닮았어요, 그 아버지에 그 아들이네요.",
+          "situasi": "성격이나 특유의 버릇이 부모와 똑같다고 말할 때"
+        }
+      ],
+      "note": "단어 끝의 '-nya'는 소유나 특정 대상을 가리키는 접미사로 여기서는 '그 나무'를 뜻합니다. 칭찬하는 긍정적인 상황뿐만 아니라 부모의 부정적인 성격이나 버릇을 닮았을 때도 두루 쓸 수 있습니다."
+    },
+    "Tong kosong nyaring bunyinya.": {
+      "ko": "빈 통이 소리가 큽니다. 빈 수레가 요란합니다.",
+      "meaning": "한국 속담 '빈 수레가 요란하다'와 정확히 같은 뜻의 표현입니다. 지식이나 실속이 부족한 사람일수록 아는 체를 많이 하거나 겉으로 큰소리를 칠 때, 그 사람의 가벼움을 꼬집기 위해 주로 사용합니다.",
+      "examples": [
+        {
+          "id": "Dia banyak bicara tapi tidak ada hasilnya, seperti tong kosong nyaring bunyinya.",
+          "ko": "그는 말은 많이 하지만 아무런 성과가 없어요, 마치 빈 수레가 요란한 것처럼요.",
+          "situasi": "말만 번지르르하고 일의 실속은 없는 직장 동료를 평가할 때"
+        },
+        {
+          "id": "Jangan cuma jadi tong kosong nyaring bunyinya, tunjukkan dengan bukti!",
+          "ko": "빈 수레가 요란한 것처럼 입만 살지 말고, 행동과 결과로 보여줘!",
+          "situasi": "자신만만하게 큰소리만 치는 친구에게 실천을 강조하며 충고할 때"
+        },
+        {
+          "id": "Orang pintar biasanya tenang, bukan seperti tong kosong nyaring bunyinya.",
+          "ko": "진짜 똑똑한 사람은 보통 조용하지, 빈 수레처럼 요란하지 않아요.",
+          "situasi": "진정한 실력자는 겸손하고 과묵하다는 점을 이야기할 때"
+        }
+      ],
+      "note": "'bunyinya'는 어근 'bunyi(소리)'에 대명사적 접미사 '-nya(그것의)'가 붙은 형태이며, 상대를 무시하거나 비판하는 강한 뉘앙스가 있으므로 윗사람이나 공식적인 대화 상대 앞에서는 사용을 피해야 합니다."
+    },
+    "Nasi sudah menjadi bubur.": {
+      "ko": "밥이 이미 죽이 되었습니다. 엎지른 물입니다.",
+      "meaning": "이미 밥이 끓여져 죽이 되어 버리면 다시 밥으로 되돌릴 수 없듯이, 이미 일어난 일이라 되돌릴 수 없고 후회해도 소용없다는 뜻의 속담입니다. 한국어의 '이미 엎지른 물이다'와 완전히 같은 맥락으로, 돌이킬 수 없는 실수를 자책하는 사람을 위로하거나 체념하고 받아들여야 할 때 자주 씁니다.",
+      "examples": [
+        {
+          "id": "Jangan terlalu sedih, nasi sudah menjadi bubur. Lebih baik kita cari solusi sekarang.",
+          "ko": "너무 슬퍼하지 마, 이미 엎지른 물이잖아. 지금은 해결책을 찾는 게 더 나아.",
+          "situasi": "시험이나 프로젝트에서 실수하고 낙담한 친구를 달랠 때"
+        },
+        {
+          "id": "Saya menyesal membeli barang ini, tapi nasi sudah menjadi bubur karena tidak bisa dikembalikan.",
+          "ko": "이 물건을 산 게 후회되지만, 환불이 안 되니 이미 엎지른 물이에요.",
+          "situasi": "환불 불가인 물건을 잘못 구매하고 아쉬워할 때"
+        },
+        {
+          "id": "Sudahlah, nasi sudah menjadi bubur. Lain kali kamu harus lebih hati-hati, ya.",
+          "ko": "됐어, 이미 벌어진 일인걸. 다음번에는 더 조심해야 해.",
+          "situasi": "작은 실수를 한 후배나 자녀에게 지나간 일이라며 주의를 줄 때"
+        }
+      ],
+      "note": "동사 'menjadi'는 어근 'jadi(되다)'에 접두사 'meN-'이 결합한 형태이며, 편한 일상 구어체에서는 접두사를 생략하고 'Nasi sudah jadi bubur'라고 줄여 쓰기도 합니다."
+    },
+    "Seperti katak dalam tempurung.": {
+      "ko": "껍데기 속 개구리 같습니다. 우물 안 개구리.",
+      "meaning": "한국어의 '우물 안 개구리'와 정확히 같은 의미를 가진 인도네시아 대표 속담입니다. 세상 물정을 잘 모르고 자신의 좁은 견문과 생각 안에서만 사는 사람을 가리킬 때 씁니다. 주로 시야를 넓히고 새로운 세상을 경험하라고 조언하거나 스스로를 겸손하게 돌아볼 때 자주 사용합니다.",
+      "examples": [
+        {
+          "id": "Jangan cuma diam di rumah, nanti kamu seperti katak dalam tempurung.",
+          "ko": "집에만 있지 마, 그러다 우물 안 개구리 된다.",
+          "situasi": "친구가 다양한 경험을 해보길 바라며 외출이나 새로운 도전을 권유할 때"
+        },
+        {
+          "id": "Setelah ikut acara ini, aku baru sadar selama ini aku seperti katak dalam tempurung.",
+          "ko": "이번 행사에 참여하고 나서야 내가 그동안 우물 안 개구리였다는 걸 깨달았어.",
+          "situasi": "뛰어난 사람들을 만나고 자신의 좁은 시야를 겸손하게 반성할 때"
+        },
+        {
+          "id": "Kita harus banyak membaca agar tidak menjadi seperti katak dalam tempurung.",
+          "ko": "우리는 우물 안 개구리가 되지 않으려면 책을 많이 읽어야 해.",
+          "situasi": "지식과 견문을 넓히기 위해 배움의 중요성을 강조할 때"
+        }
+      ],
+      "note": "여기서 'tempurung'은 본래 단단한 '코코넛 껍질'을 뜻하며, 상대방에게 직접 쓰면 무시하는 말이 될 수 있으므로 주로 자기반성이나 완곡한 권유를 할 때 씁니다."
+    },
+    "Ringan sama dijinjing, berat sama dipikul.": {
+      "ko": "가벼우면 같이 들고, 무거우면 같이 집니다.",
+      "meaning": "쉬운 일이나 어려운 일, 기쁨이나 슬픔을 함께 나누며 협력하자는 의미를 담은 대표적인 인도네시아 속담입니다. 인도네시아 고유의 상부상조 공동체 정신인 'gotong royong(고똥 로용)'을 상징하며, 동료나 이웃과 힘을 합쳐 일을 헤쳐 나갈 때 자주 씁니다.",
+      "examples": [
+        {
+          "id": "Tugas ini memang banyak, tapi ringan sama dijinjing, berat sama dipikul, ya.",
+          "ko": "이 업무가 확실히 많기는 하지만, 가벼운 일이든 무거운 일이든 함께 나눠서 해요.",
+          "situasi": "직장 동료들이 많은 양의 업무를 함께 분담하며 서로를 북돋울 때"
+        },
+        {
+          "id": "Mari kita bersihkan lingkungan ini bersama, ringan sama dijinjing, berat sama dipikul.",
+          "ko": "이 동네를 다 같이 청소합시다. 백지장도 맞들면 낫잖아요.",
+          "situasi": "마을 주민들이 모여 함께 동네 환경 미화를 시작할 때"
+        },
+        {
+          "id": "Kamu jangan khawatir, kita hadapi masalah ini bersama, ringan sama dijinjing, berat sama dipikul.",
+          "ko": "너무 걱정하지 마, 우리 같이 해결하자. 고난도 기쁨도 함께 나누는 법이니까.",
+          "situasi": "혼자 힘든 일을 겪고 있는 친구를 곁에서 위로하고 도우려 할 때"
+        }
+      ],
+      "note": "손에 가볍게 들다라는 뜻의 어근 'jinjing'과 어깨에 메다라는 뜻의 'pikul'에 각각 수동태 접두사 'di-'가 결합하여 짐의 무게에 따른 운반 방식을 대칭 구조로 표현한 문장입니다."
+    },
+    "Tak kenal maka tak sayang.": {
+      "ko": "알지 못하면 사랑하지 못합니다.",
+      "meaning": "서로를 잘 모르면 애정이나 정이 생길 수 없다는 뜻의 대표적인 인도네시아 속담입니다. 새로운 모임에서 어색함을 풀고 자기소개를 할 때 분위기를 부드럽게 만들기 위해 자주 쓰이며, 사람뿐만 아니라 새로운 문화나 음식 등을 먼저 경험해 보라고 권할 때도 널리 쓰입니다.",
+      "examples": [
+        {
+          "id": "Halo semuanya, tak kenal maka tak sayang, jadi saya mau kenalkan diri dulu ya.",
+          "ko": "여러분 안녕하세요, 모르면 정이 들지 않으니 먼저 제 소개를 드릴게요.",
+          "situasi": "발표나 모임 시작 전 청중에게 자기소개를 할 때"
+        },
+        {
+          "id": "Coba kamu ngobrol dulu sama dia, tak kenal maka tak sayang kan?",
+          "ko": "그 친구랑 먼저 이야기해 봐, 알아야 정도 생기는 법이잖아?",
+          "situasi": "새로 온 친구에게 낯을 가리는 지인에게 먼저 다가가 보라고 권할 때"
+        },
+        {
+          "id": "Makanan ini enak kok, tak kenal maka tak sayang, ayo coba sedikit dulu!",
+          "ko": "이 음식 정말 맛있어, 안 겪어보면 모르는 거니까 일단 조금만 먹어 봐!",
+          "situasi": "생소한 인도네시아 전통 음식을 망설이는 친구에게 먹어보라고 권할 때"
+        }
+      ],
+      "note": "여기서 'tak'은 부정어 'tidak'의 줄임말이며, 접속사 'maka(그러므로/그러면)'를 사용하여 원인과 결과를 간결하고 운율감 있게 이어주는 고전적인 문장 구조입니다."
+    },
+    "Sepandai-pandai tupai melompat, sekali waktu jatuh juga.": {
+      "ko": "다람쥐도 언젠가는 떨어집니다. 원숭이도 나무에서 떨어집니다.",
+      "meaning": "아무리 어떤 일에 능숙하고 똑똑한 사람이라도 언젠가는 실수를 하거나 실패할 때가 있다는 뜻의 속담입니다. 일상에서는 전문가의 실수를 위로할 때뿐만 아니라, 아무리 치밀하게 잘못이나 비밀을 숨겨도 언젠가는 들통난다는 경고의 의미로도 자주 쓰입니다.",
+      "examples": [
+        {
+          "id": "Jangan terlalu sedih, sepandai-pandai tupai melompat, sekali waktu jatuh juga.",
+          "ko": "너무 슬퍼하지 마, 원숭이도 나무에서 떨어질 때가 있잖아.",
+          "situasi": "늘 잘하던 친구가 시험이나 경기에서 뜻밖의 실수를 하고 풀이 죽어 있을 때 위로하는 상황"
+        },
+        {
+          "id": "Akhirnya dia ketahuan curang. Sepandai-pandai tupai melompat, sekali waktu jatuh juga.",
+          "ko": "결국 그 사람 부정행위 한 거 들통났어. 꼬리가 길면 밟히는 법이지.",
+          "situasi": "오랫동안 교묘하게 남을 속여 오던 사람의 잘못이 마침내 밝혀졌을 때"
+        },
+        {
+          "id": "Sopir ahli pun bisa salah jalan, sepandai-pandai tupai melompat, sekali waktu jatuh juga.",
+          "ko": "베테랑 운전사도 길을 잘못 들 수 있죠, 원숭이도 나무에서 떨어지니까요.",
+          "situasi": "운전 경력이 긴 사람이 길을 잘못 찾아 당황해할 때 가볍게 다독여 주는 상황"
+        }
+      ],
+      "note": "'se- + 형용사 중복(sepandai-pandai)' 구조는 '아무리 ~할지라도'라는 양보의 뜻을 나타내며, 'sekali waktu' 대신 'akhirnya'(결국)를 넣어 'Sepandai-pandai tupai melompat, akhirnya jatuh juga'라고도 말합니다."
+    },
+    "Rajin pangkal pandai.": {
+      "ko": "부지런함이 지혜의 뿌리입니다.",
+      "meaning": "부지런히 노력하고 배움을 게을리하지 않으면 결국 똑똑하고 지혜로워진다는 뜻의 속담입니다. 주로 공부나 일을 귀찮아하는 아이나 학생에게 성실함과 꾸준함의 중요성을 격려하며 가르칠 때 자주 씁니다.",
+      "examples": [
+        {
+          "id": "Jangan malas belajar, ya. Ingat, rajin pangkal pandai.",
+          "ko": "공부 게을리하지 마라. 기억하렴, 부지런해야 똑똑해진단다.",
+          "situasi": "엄마가 숙제하기 싫어하는 아이를 타이르는 상황"
+        },
+        {
+          "id": "Dia dulu tidak bisa bahasa Indonesia, tapi sekarang lancar sekali. Rajin pangkal pandai.",
+          "ko": "그는 예전에 인도네시아어를 못했지만 지금은 정말 유창해요. 역시 부지런함이 배움의 근본이에요.",
+          "situasi": "꾸준히 노력해서 실력이 크게 향상된 동료를 칭찬하는 상황"
+        },
+        {
+          "id": "Ayo kita latihan lagi! Rajin pangkal pandai, kan?",
+          "ko": "우리 한 번 더 연습하자! 부지런해야 실력이 느는 법이잖아?",
+          "situasi": "시험이나 발표를 앞두고 친구와 함께 복습을 독려하는 상황"
+        }
+      ],
+      "note": "이 표현은 흔히 '절약은 부의 근본이다'라는 뜻의 'Hemat pangkal kaya'와 짝을 이루어 'Rajin pangkal pandai, hemat pangkal kaya'라는 완전한 대구 형태로도 매우 자주 쓰입니다."
+    },
+    "Hemat pangkal kaya.": {
+      "ko": "절약이 넉넉함의 뿌리입니다.",
+      "meaning": "아끼고 절약하는 습관이 부자가 되는 밑거름이자 비결이라는 뜻의 대표적인 인도네시아 속담입니다. 충동구매를 하거나 과소비하는 사람에게 절약의 중요성을 일깨워 줄 때, 또는 저축을 권유할 때 자주 사용합니다.",
+      "examples": [
+        {
+          "id": "Jangan boros belanja, ingat kata pepatah, hemat pangkal kaya.",
+          "ko": "쇼핑할 때 너무 낭비하지 마, 속담에도 있잖아, 절약이 부의 근본이라고.",
+          "situasi": "친구가 필요 없는 물건을 계속 사려고 할 때"
+        },
+        {
+          "id": "Dari kecil ibu selalu ajari aku menabung, katanya hemat pangkal kaya.",
+          "ko": "어릴 때부터 어머니는 절약이 부자가 되는 길이라며 늘 저축을 가르치셨어요.",
+          "situasi": "어릴 적 돈을 모으던 습관에 대해 대화할 때"
+        },
+        {
+          "id": "Mulai besok kita bawa bekal saja ya, hemat pangkal kaya kan!",
+          "ko": "우리 내일부터 그냥 도시락 싸 오자, 아껴야 부자 되지!",
+          "situasi": "외식비를 아끼기 위해 직장 동료에게 도시락을 제안할 때"
+        }
+      ],
+      "note": "'pangkal'은 원래 '나무의 밑동'이나 '시작점'을 뜻하며, 이 속담과 짝을 이루는 표현으로 부지런해야 똑똑해진다는 뜻의 'Rajin pangkal pandai'가 있습니다."
+    },
+    "Ada gula, ada semut.": {
+      "ko": "설탕이 있는 곳에 개미가 있습니다. 이익이 있는 곳에 사람이 모입니다.",
+      "meaning": "직역하면 '설탕이 있는 곳에 개미가 있다'라는 뜻으로, 돈을 벌 기회나 이익이 생기는 곳에는 자연스럽게 사람들이 모여들기 마련이라는 뜻의 인도네시아 대표 속담입니다. 일자리가 많은 대도시나 장사가 잘되는 번화가에 사람이 붐비는 현상을 빗대어 자주 사용합니다.",
+      "examples": [
+        {
+          "id": "Banyak orang pindah ke kota ini karena banyak lowongan kerja. Ya, ada gula, ada semut.",
+          "ko": "일자리가 많아서 많은 사람들이 이 도시로 이사 오네요. 맞아요, 이익이 있는 곳에 사람이 모이는 법이죠.",
+          "situasi": "대도시에 일자리를 찾아 사람들이 모여드는 모습을 보며 이야기할 때"
+        },
+        {
+          "id": "Toko baru itu selalu ramai karena sering bagi-bagi promo. Ada gula, ada semut.",
+          "ko": "그 새 가게는 할인을 자주 해서 항상 붐벼요. 설탕이 있는 곳에 개미가 꼬이는 격이죠.",
+          "situasi": "파격적인 혜택 때문에 손님이 몰리는 인기 매장을 볼 때"
+        },
+        {
+          "id": "Banyak yang ikut lomba itu karena hadiahnya besar. Benar kata orang, ada gula ada semut.",
+          "ko": "상금이 커서 많은 사람들이 그 대회에 참가했어요. 옛말이 틀리지 않네요. 이익이 있는 곳에 사람이 모이니까요.",
+          "situasi": "큰 상금 소식에 대회 참가자가 몰렸다는 이야기를 나눌 때"
+        }
+      ],
+      "note": "'Di mana ada gula, di situ ada semut'(설탕이 있는 곳에 개미가 있다)처럼 풀어서 말하기도 합니다."
+    },
+    "Bagai pinang dibelah dua.": {
+      "ko": "빈랑을 둘로 쪼갠 것 같습니다. 붕어빵처럼 닮았습니다.",
+      "meaning": "하나의 빈랑 열매를 반으로 딱 쪼갠 것처럼 외모나 모습이 매우 똑 닮았을 때 쓰는 표현입니다. 한국어의 '붕어빵이다'나 '판박이다'에 해당하며, 주로 쌍둥이나 부모와 자식처럼 서로 쏙 빼닮은 사람을 묘사할 때 자주 씁니다.",
+      "examples": [
+        {
+          "id": "Kamu sama adikmu mirip banget, bagai pinang dibelah dua.",
+          "ko": "너랑 네 동생 정말 많이 닮았다, 완전 붕어빵 같아.",
+          "situasi": "서로 너무 닮은 형제나 자매를 보았을 때"
+        },
+        {
+          "id": "Wajah anak itu dan ayahnya bagai pinang dibelah dua.",
+          "ko": "그 아이와 아빠의 얼굴은 판박이처럼 닮았어요.",
+          "situasi": "아이가 아빠를 쏙 빼닮은 모습을 이야기할 때"
+        },
+        {
+          "id": "Mereka berdua kembar, jadi wajar kalau bagai pinang dibelah dua.",
+          "ko": "두 사람은 쌍둥이라서 붕어빵처럼 닮은 게 당연해요.",
+          "situasi": "일란성 쌍둥이의 외모가 똑같은 것을 설명할 때"
+        }
+      ],
+      "note": "'dibelah'는 '쪼개다'라는 뜻의 어근 'belah'에 수동태 접두사 'di-'가 붙은 형태이며, 문어체 속담이지만 일상 회화에서도 비유로 쓰입니다."
+    },
+    "Diam itu emas.": {
+      "ko": "침묵은 금입니다.",
+      "meaning": "'침묵은 금이다'라는 한국 속담과 뜻이 완전히 같은 표현입니다. 괜히 말을 보태어 오해나 갈등을 키우기보다는, 조용히 말을 아끼는 것이 훨씬 더 현명하고 이득이 된다는 의미로 쓰입니다. 주로 다툼이 일어나기 쉬운 상황이나 불필요한 말실수를 피해야 할 때 조언하는 말로 사용합니다.",
+      "examples": [
+        {
+          "id": "Daripada ikut ribut, ingat kata orang, diam itu emas.",
+          "ko": "같이 싸움에 휘말리느니, 침묵이 금이라는 말을 기억해.",
+          "situasi": "친구들 사이에 말다툼이 벌어졌을 때 끼어들지 말라고 말리는 상황"
+        },
+        {
+          "id": "Bos lagi marah, jadi lebih baik kita diam saja hari ini. Diam itu emas.",
+          "ko": "사장님이 지금 화나셨으니까 오늘은 그냥 조용히 있는 게 좋겠어. 침묵은 금이니까.",
+          "situasi": "상사의 기분이 좋지 않을 때 동료에게 말조심하라고 당부하는 상황"
+        },
+        {
+          "id": "Aku tidak mau berkomentar, kadang diam itu emas.",
+          "ko": "난 아무 말도 얹고 싶지 않아. 가끔은 침묵이 금이니까.",
+          "situasi": "민감한 화제에 대해 굳이 의견을 내지 않고 말을 아끼려는 상황"
+        }
+      ],
+      "note": "말조심을 강조하는 비슷한 인도네시아 속담으로는 '말이 화를 부른다'는 뜻의 'Mulutmu harimaumu(네 입이 너의 호랑이다)'가 있습니다."
+    },
+    "Sedia payung sebelum hujan.": {
+      "ko": "비 오기 전에 우산을 준비합니다. 유비무환.",
+      "meaning": "어려운 상황이나 문제가 닥치기 전에 미리 철저히 준비해야 한다는 뜻으로, 한국어의 '유비무환(有備無患)'에 해당하는 대표적인 속담입니다. 시험, 건강, 재정 관리 등 예상치 못한 일에 대비할 것을 권유하거나 조언할 때 자주 쓰입니다.",
+      "examples": [
+        {
+          "id": "Bawa uang tunai sedikit ya, sedia payung sebelum hujan, siapa tahu kartunya tidak bisa dipakai.",
+          "ko": "카드가 안 될 수도 있으니 혹시 모를 상황에 대비해서 현금 조금 챙겨 둬.",
+          "situasi": "친구가 외출이나 여행을 떠나기 전 챙겨줄 때"
+        },
+        {
+          "id": "Aku selalu simpan salinan dokumen di flashdisk, sedia payung sebelum hujan.",
+          "ko": "혹시 문제가 생길 때를 대비해서 나는 항상 USB에 문서 복사본을 저장해 둬.",
+          "situasi": "과제나 업무 파일을 백업해 두는 습관을 말할 때"
+        },
+        {
+          "id": "Ayo kita belajar dari sekarang, sedia payung sebelum hujan biar nanti tidak panik.",
+          "ko": "나중에 당황하지 않게 미리미리 준비하는 셈 치고 지금부터 공부하자.",
+          "situasi": "시험을 앞두고 친구에게 미리 공부하자고 독려할 때"
+        }
+      ],
+      "note": "'sedia'는 '준비하다'라는 뜻의 동사 어근으로, 문어체 격언이지만 일상 회화에서도 문장 끝에 조언이나 이유를 덧붙일 때 어색함 없이 널리 쓰입니다."
+    },
+    "Panjang tangan": {
+      "ko": "손이 길다 → 손버릇이 나쁘다",
+      "meaning": "'Panjang tangan'은 글자 그대로 '손이 길다'라는 뜻이지만, 실제로는 남의 물건을 몰래 훔치는 습관이 있는 사람, 즉 '손버릇이 나쁘다' 또는 '도벽이 있다'는 뜻으로 쓰입니다. 주로 주변에서 물건을 자주 슬쩍하거나 훔치는 사람을 지칭할 때 사용합니다.",
+      "examples": [
+        {
+          "id": "Jangan biarkan dia masuk ke kamarmu, dia panjang tangan.",
+          "ko": "그 사람 네 방에 들어오지 못하게 해, 걔 손버릇이 나쁘거든.",
+          "situasi": "도벽이 있는 사람이 방에 들어오지 못하도록 친구에게 경고하는 상황"
+        },
+        {
+          "id": "Uang di laci sering hilang, sepertinya ada yang panjang tangan di kantor ini.",
+          "ko": "서랍 속 돈이 자주 없어지는데, 이 사무실에 손버릇 나쁜 사람이 있는 것 같아요.",
+          "situasi": "직장에서 물건이 반복해서 사라져 누군가를 의심하는 상황"
+        },
+        {
+          "id": "Dia dijauhi teman-temannya karena suka panjang tangan.",
+          "ko": "그는 손버릇이 나쁜 탓에 친구들에게 따돌림을 당했어요.",
+          "situasi": "도벽 때문에 친구들과 멀어진 사람에 대해 이야기하는 상황"
+        }
+      ],
+      "note": "직접적으로 'pencuri(도둑)'라고 부르는 것보다 완곡한 표현이지만, 타인의 도덕성을 크게 비판하는 말이므로 면전에서 직접 쓰거나 가벼운 농담으로 사용하지 않도록 주의해야 합니다."
+    },
+    "Ringan tangan": {
+      "ko": "손이 가볍다 → 남을 잘 도와준다",
+      "meaning": "'Ringan(가벼운)'과 'tangan(손)'이 합쳐진 관용 표현으로, 직역하면 '손이 가볍다'이지만 실제로는 '남을 기꺼이 잘 도와준다'는 뜻입니다. 주변에 일손이 필요하거나 곤란한 사람이 있을 때 망설이지 않고 발 벗고 나서는 다정한 사람을 칭찬할 때 자주 씁니다.",
+      "examples": [
+        {
+          "id": "Dia orangnya ringan tangan, selalu mau bantu teman yang kesusahan.",
+          "ko": "그는 남을 잘 돕는 사람이라, 어려움에 처한 친구를 항상 도와줘요.",
+          "situasi": "평소 주변 사람들을 잘 챙기고 돕는 친구를 칭찬할 때"
+        },
+        {
+          "id": "Terima kasih ya sudah jadi tetangga yang ringan tangan.",
+          "ko": "기꺼이 손을 보태 주는 좋은 이웃이 되어 줘서 정말 고마워요.",
+          "situasi": "이사나 집안일 등 곤란한 일을 선뜻 도와준 이웃에게 감사 인사를 전할 때"
+        },
+        {
+          "id": "Kalau kita ringan tangan, orang lain juga akan senang berteman dengan kita.",
+          "ko": "우리가 먼저 남을 잘 도와주면, 다른 사람들도 우리와 친구가 되는 걸 좋아할 거예요.",
+          "situasi": "남을 배려하고 돕는 태도의 좋은 점을 조언해 줄 때"
+        }
+      ],
+      "note": "이 표현은 문맥에 따라 '손찌검을 잘하다(폭력적이다)'라는 부정적인 뜻으로도 쓰이므로 상황을 잘 살펴야 하며, 반대 표현으로는 일하기 싫어하고 돕지 않는다는 뜻의 'berat tangan'이 있습니다."
+    },
+    "Turun tangan": {
+      "ko": "손을 내리다 → 직접 나서서 돕다",
+      "meaning": "'Turun tangan'은 직역하면 '손을 내리다'이지만, 실제로는 문제 해결을 위해 '직접 나서다', '발 벗고 돕다'라는 뜻의 관용 표현입니다. 다른 사람들이 일을 해결하지 못하거나 상황이 복잡해졌을 때, 영향력 있는 사람이나 책임자가 직접 팔을 걷어붙이고 개입할 때 주로 쓰입니다.",
+      "examples": [
+        {
+          "id": "Masalah ini sudah terlalu rumit, jadi manajer harus turun tangan.",
+          "ko": "이 문제는 너무 복잡해져서 매니저님이 직접 나서야 해요.",
+          "situasi": "동료들끼리 해결하지 못한 업무 문제를 상사가 직접 개입해 처리해야 할 때"
+        },
+        {
+          "id": "Ayah akhirnya turun tangan membantu adik mengerjakan PR-nya.",
+          "ko": "아빠가 결국 동생 숙제를 도와주려고 직접 나서셨어요.",
+          "situasi": "동생이 혼자 숙제를 끝내지 못해 쩔쩔맬 때 아버지가 도와주는 상황"
+        },
+        {
+          "id": "Kalau kita tidak turun tangan sekarang, acaranya bisa berantakan.",
+          "ko": "우리가 지금 직접 나서지 않으면 행사가 엉망이 될 수도 있어.",
+          "situasi": "행사 준비가 잘 진행되지 않아 친구들에게 함께 돕자고 권유하는 상황"
+        }
+      ],
+      "note": "반대 표현으로는 책임을 회피하고 손을 떼는 것을 뜻하는 'lepas tangan'이나 아무것도 하지 않고 수수방관하는 'berpangku tangan'이 있습니다."
+    },
+    "Angkat tangan": {
+      "ko": "손을 들다 → 포기하다",
+      "meaning": "'Angkat tangan'은 글자 그대로 '손을 들다'라는 뜻이지만, 관용적으로는 '항복하다' 혹은 '포기하다'라는 의미로 쓰입니다. 어떤 일이 너무 어렵거나 감당하기 힘들어서 더 이상 손을 쓸 수 없을 때, 또는 패배를 인정할 때 자주 사용합니다.",
+      "examples": [
+        {
+          "id": "Soal ujian ini sulit sekali, aku angkat tangan deh.",
+          "ko": "이번 시험 문제 너무 어렵다, 난 포기할래.",
+          "situasi": "도저히 풀리지 않는 어려운 문제를 마주했을 때"
+        },
+        {
+          "id": "Dokter sudah angkat tangan karena penyakitnya sangat parah.",
+          "ko": "병이 너무 심해서 의사도 손을 뗐습니다(포기했습니다).",
+          "situasi": "의학적으로 더 이상 치료할 방법이 없다는 소식을 전할 때"
+        },
+        {
+          "id": "Jangan angkat tangan dulu, kita coba sekali lagi ya!",
+          "ko": "벌써 포기하지 마, 우리 한 번만 더 해보자!",
+          "situasi": "어려운 과제를 하다가 지쳐 있는 동료나 친구를 격려할 때"
+        }
+      ],
+      "note": "일상 표현인 'menyerah(포기하다, 굴복하다)'와 같은 뜻으로 바꿔 쓸 수 있으며, 문맥에 따라 교실에서 발표할 때처럼 문자 그대로 '손을 들다'라는 뜻으로도 사용됩니다."
+    },
+    "Banting tulang": {
+      "ko": "뼈를 내던지다 → 뼈 빠지게 일하다",
+      "meaning": "직역하면 '뼈를 내던지다'라는 뜻으로, 가족을 부양하거나 생계를 위해 온 힘을 다해 뼈 빠지게 일한다는 의미의 관용 표현입니다. 한국어의 '등골이 휘도록 일하다' 또는 '뼈 빠지게 일하다'와 아주 비슷한 뉘앙스로, 누군가의 힘든 노동과 헌신을 표현할 때 씁니다.",
+      "examples": [
+        {
+          "id": "Ayah banting tulang setiap hari demi keluarga.",
+          "ko": "아버지는 가족을 위해 매일 뼈 빠지게 일하십니다.",
+          "situasi": "가족을 위해 헌신하시는 부모님에 대해 말할 때"
+        },
+        {
+          "id": "Dia harus banting tulang untuk membayar biaya kuliah adiknya.",
+          "ko": "그는 동생의 대학교 등록금을 내기 위해 뼈 빠지게 일해야 해요.",
+          "situasi": "학비를 벌기 위해 힘들게 일하는 형편을 설명할 때"
+        },
+        {
+          "id": "Kita harus banting tulang sekarang supaya masa depan lebih baik.",
+          "ko": "더 나은 미래를 위해 우리는 지금 뼈 빠지게 일해야 해.",
+          "situasi": "친구에게 함께 힘내서 열심히 살자고 격려할 때"
+        }
+      ],
+      "note": "비슷한 관용구로 '땀을 쥐어짜다'라는 뜻의 'peras keringat'가 있으며, 평상시에는 쉬운 표현인 'kerja keras(열심히 일하다)'로 바꾸어 쓸 수도 있습니다."
+    },
+    "Naik darah": {
+      "ko": "피가 오르다 → 화가 나다",
+      "meaning": "'naik(오르다)'과 'darah(피)'가 합쳐진 관용 표현으로, 머리로 피가 솟구치듯 '몹시 화가 나다' 또는 '욱하다'를 뜻합니다. 답답하거나 괘씸한 상황 때문에 순간적으로 이성을 잃고 발끈 화를 낼 때 자주 씁니다.",
+      "examples": [
+        {
+          "id": "Jangan bikin aku naik darah lagi, ya!",
+          "ko": "나 또 뚜껑 열리게(화나게) 만들지 마, 알겠지?",
+          "situasi": "친구가 선을 넘는 장난을 쳐서 정색하며 경고할 때"
+        },
+        {
+          "id": "Dia langsung naik darah waktu mendengar berita itu.",
+          "ko": "그는 그 소식을 듣자마자 바로 버럭 화를 냈어요.",
+          "situasi": "안 좋은 소식을 듣고 격분하는 사람을 설명할 때"
+        },
+        {
+          "id": "Sabar dulu, jangan cepat naik darah begitu.",
+          "ko": "일단 진정해, 그렇게 쉽게 발끈하지 말고.",
+          "situasi": "흥분해서 화를 내려는 상대를 차분하게 달랠 때"
+        }
+      ],
+      "note": "비슷한 관용구로 'naik pitam(격분하다)'이 있으며, 단순히 화난 상태를 뜻하는 일반 동사 'marah'보다 감정이 격하게 치밀어 오르는 뉘앙스를 담고 있습니다."
+    },
+    "Besar kepala": {
+      "ko": "머리가 크다 → 거만하다",
+      "meaning": "'Besar(크다)'와 'kepala(머리)'가 합쳐진 관용 표현으로, 직역하면 '머리가 크다'이지만 실제로는 '거만하다', '우쭐대다', '잘난 체하다'라는 뜻입니다. 주로 어떤 성과를 거두거나 칭찬을 받은 뒤 기고만장해진 사람의 태도를 꼬집거나, 그렇게 되지 말라고 조언할 때 씁니다.",
+      "examples": [
+        {
+          "id": "Jangan besar kepala dulu, ini baru langkah awal.",
+          "ko": "벌써부터 우쭐대지 마, 이건 이제 시작일 뿐이야.",
+          "situasi": "작은 성공에 들떠 있는 친구를 진정시키며 조언하는 상황"
+        },
+        {
+          "id": "Sejak jadi juara, dia jadi besar kepala dan jarang menyapa kami.",
+          "ko": "대회에서 우승한 뒤로 걔는 거만해져서 우리한테 인사도 잘 안 해.",
+          "situasi": "성공 후 태도가 거만해진 사람에 대해 이야기하는 상황"
+        },
+        {
+          "id": "Meskipun nilainya selalu bagus, dia tidak pernah besar kepala.",
+          "ko": "성적이 항상 좋은데도 그 친구는 절대 잘난 척하지 않아요.",
+          "situasi": "능력이 뛰어나지만 겸손한 사람을 칭찬하는 상황"
+        }
+      ],
+      "note": "일반적인 단어로는 'sombong(거만하다)'과 뜻이 같으며, 반대 표현으로는 '겸손하다'를 뜻하는 'rendah hati(직역: 낮은 마음)'를 씁니다."
+    },
+    "Kutu buku": {
+      "ko": "책벌레 → 공부만 파는 사람",
+      "meaning": "'Kutu buku'는 직역하면 '책의 벌레'로, 한국어의 '책벌레'처럼 책 읽기를 매우 좋아하거나 공부에 몰두하는 사람을 가리킵니다. 평소에 늘 책을 손에서 놓지 않거나 도서관을 자주 찾는 사람을 친근하게 부를 때 자주 씁니다.",
+      "examples": [
+        {
+          "id": "Dia memang kutu buku, setiap hari selalu pergi ke perpustakaan.",
+          "ko": "그 친구는 정말 책벌레라서 매일 도서관에 가요.",
+          "situasi": "공부를 열심히 하고 책을 많이 읽는 친구를 소개할 때"
+        },
+        {
+          "id": "Kakak saya kutu buku, jadi kamarnya penuh dengan buku.",
+          "ko": "우리 형은 책벌레라서 방이 온통 책으로 가득 차 있어요.",
+          "situasi": "방에 책이 엄청 많은 가족에 대해 이야기할 때"
+        },
+        {
+          "id": "Jangan jadi kutu buku terus, ayo sekali-kali main di luar!",
+          "ko": "맨날 책만 파지 말고, 가끔은 밖에 나가서 좀 놀자!",
+          "situasi": "주말에도 집에서 공부나 독서만 하는 친구를 데리고 나가려 할 때"
+        }
+      ],
+      "note": "친구 사이에서는 칭찬으로도 놀림으로도 쓰여서 말투와 상대에 따라 느낌이 달라집니다. 'kutu'는 원래 머릿니 같은 작은 벌레를 뜻합니다."
+    },
+    "Buah bibir": {
+      "ko": "입술의 열매 → 사람들 입에 오르내리는 화제",
+      "meaning": "'buah bibir'는 직역하면 '입술의 열매'로, 사람들의 입에 자주 오르내리는 '화젯거리'나 '입방아', '이야깃거리'를 뜻합니다. 어떤 사람이나 사건이 칭찬받을 일이든 안 좋은 일이든 간에 주변 사람들이나 대중 사이에서 큰 관심을 끌며 이야기의 중심이 될 때 사용합니다.",
+      "examples": [
+        {
+          "id": "Berita pernikahan mereka jadi buah bibir di kantor.",
+          "ko": "그들의 결혼 소식이 사무실에서 큰 화젯거리가 되었어요.",
+          "situasi": "사내 커플의 깜짝 결혼 발표로 동료들이 다 함께 그 이야기를 나누는 상황"
+        },
+        {
+          "id": "Dia menjadi buah bibir karena prestasinya di sekolah.",
+          "ko": "그 친구는 학교에서 거둔 우수한 성과 덕분에 화제의 인물이 되었어요.",
+          "situasi": "뛰어난 활약으로 선생님과 친구들 사이에서 칭찬 섞인 주목을 받는 상황"
+        },
+        {
+          "id": "Jangan buat masalah kalau tidak mau jadi buah bibir tetangga.",
+          "ko": "이웃들의 입방아에 오르고 싶지 않다면 말썽을 피우지 마세요.",
+          "situasi": "동네 사람들의 구설수에 휘말리지 않도록 조심하라고 충고하는 상황"
+        }
+      ],
+      "note": "비슷한 표현으로 'buah mulut'(입의 열매)을 쓰기도 하며, 인도네시아어에서 'buah'는 '열매'라는 뜻 외에도 'buah pikiran(아이디어/생각)', 'buah tangan(선물)'처럼 어떤 대상의 결과물이나 화제를 나타내는 관용구에 자주 쓰입니다."
+    },
+    "Makan hati": {
+      "ko": "마음을 먹다 → 속을 끓이다",
+      "meaning": "'속을 끓이다', '속이 썩다', '마음고생을 심하게 하다'라는 뜻의 관용 표현입니다. 다른 사람의 말이나 행동 때문에 말도 못 하고 혼자 속으로 큰 스트레스를 받거나 끙끙 앓을 때 주로 씁니다.",
+      "examples": [
+        {
+          "id": "Kerja sama dia cuma bikin makan hati terus.",
+          "ko": "그 사람이랑 일하면 계속 속만 썩어요.",
+          "situasi": "제멋대로 행동하는 직장 동료 때문에 스트레스받으며 하소연할 때"
+        },
+        {
+          "id": "Jangan terlalu makan hati, nanti kamu malah sakit.",
+          "ko": "너무 속 끓이지 마요, 그러다 오히려 병나요.",
+          "situasi": "인간관계 문제로 혼자 끙끙 앓는 친구를 진심으로 위로할 때"
+        },
+        {
+          "id": "Pacaran sama dia cuma bikin makan hati saja.",
+          "ko": "그 사람이랑 연애하는 건 그저 마음고생만 시킬 뿐이에요.",
+          "situasi": "자신을 배려하지 않는 연인 때문에 힘들어하며 친구에게 털어놓을 때"
+        }
+      ],
+      "note": "한국어의 '마음을 먹다(결심하다)'와 형태가 비슷해서 결심한다는 뜻으로 오해하기 쉬우니 주의해야 합니다. 서운하거나 상처받았을 때 쓰는 'sakit hati'와도 상황에 따라 비슷하게 쓰입니다."
+    },
+    "Gulung tikar": {
+      "ko": "돗자리를 말다 → 사업이 망하다",
+      "meaning": "'Gulung tikar'는 글자 그대로 '돗자리를 말다'라는 뜻이지만, 비유적으로 '사업이 망하다', '폐업하다'를 뜻하는 대표적인 관용 표현입니다. 장사를 접고 짐을 정리해 떠나는 모습에서 유래했으며, 자영업 가게나 기업이 경영난으로 문을 닫을 때 자주 씁니다.",
+      "examples": [
+        {
+          "id": "Banyak toko baju yang gulung tikar karena sepi pembeli.",
+          "ko": "손님이 없어서 문을 닫은 옷가게가 많아요.",
+          "situasi": "불경기로 인해 주변 상점들이 폐업하는 상황을 말할 때"
+        },
+        {
+          "id": "Kafe favorit saya akhirnya gulung tikar bulan lalu.",
+          "ko": "제가 제일 좋아하던 카페가 결국 지난달에 폐업했어요.",
+          "situasi": "자주 가던 단골 가게가 문을 닫아 아쉬워할 때"
+        },
+        {
+          "id": "Kalau rugi terus, bisnis ini bisa gulung tikar.",
+          "ko": "계속 적자가 나면 이 사업은 망할 수도 있어요.",
+          "situasi": "사업의 매출 부진과 미래를 걱정하며 대화할 때"
+        }
+      ],
+      "note": "직설적으로 '파산하다'를 뜻하는 네덜란드어 유래 단어 'bangkrut'이나 'tutup usaha'(폐업하다)와 바꿔 쓸 수 있습니다."
+    },
+    "Bermuka dua": {
+      "ko": "두 얼굴을 갖다 → 겉과 속이 다르다",
+      "meaning": "앞에서는 친절하게 행동하면서 뒤에서는 험담을 하거나 다른 태도를 보이는 '겉과 속이 다른 사람'을 가리키는 표현입니다. 한국어의 '앞뒤가 다르다' 또는 '두 얼굴을 가졌다'와 똑같은 상황에서 비판할 때 자주 사용합니다.",
+      "examples": [
+        {
+          "id": "Jangan percaya sama dia, dia orangnya bermuka dua.",
+          "ko": "그 사람 믿지 마, 겉과 속이 다른 사람이야.",
+          "situasi": "친구에게 믿지 못할 사람에 대해 경고할 때"
+        },
+        {
+          "id": "Aku paling tidak suka orang yang bermuka dua.",
+          "ko": "나는 앞뒤가 다른 사람이 제일 싫어.",
+          "situasi": "위선적인 사람에 대한 자신의 생각을 이야기할 때"
+        },
+        {
+          "id": "Di depanku dia baik sekali, tapi ternyata dia bermuka dua.",
+          "ko": "내 앞에서는 정말 착했는데, 알고 보니 두 얼굴을 가진 사람이었어.",
+          "situasi": "뒤통수를 맞고 배신감을 느꼈을 때"
+        }
+      ],
+      "note": "접두사 ber-(가지다)에 명사 muka(얼굴)와 수사 dua(둘)가 결합한 구조이며, 상대를 강하게 비난하는 부정적인 표현이므로 당사자 면전에서는 쓰지 않는 것이 좋습니다."
+    },
+    "Tangan kanan": {
+      "ko": "오른손 → 가장 믿는 사람",
+      "meaning": "'Tangan(손)'과 'kanan(오른쪽)'이 합쳐져 직역하면 '오른손'이지만, 한국어의 '오른팔'처럼 '가장 신임하는 심복이나 핵심 조력자'를 뜻합니다. 주로 회사나 조직에서 윗사람이 가장 믿고 중요한 일을 맡기는 측근을 가리킬 때 씁니다.",
+      "examples": [
+        {
+          "id": "Pak Budi adalah tangan kanan bos di kantor kami.",
+          "ko": "부디 씨는 우리 사무실에서 사장님의 오른팔이에요.",
+          "situasi": "직장 동료에게 사장님이 가장 신임하는 직원을 알려줄 때"
+        },
+        {
+          "id": "Dia sudah lama menjadi tangan kanan manajer itu.",
+          "ko": "그는 오랫동안 그 매니저의 오른팔 역할을 해왔어요.",
+          "situasi": "어떤 사람이 오랫동안 핵심 측근으로 일해왔음을 설명할 때"
+        },
+        {
+          "id": "Kalau mau bicara dengan direktur, hubungi tangan kanannya dulu.",
+          "ko": "이사님과 이야기하고 싶다면, 먼저 그의 오른팔에게 연락해 보세요.",
+          "situasi": "윗사람을 만나기 위해 가장 가까운 비서나 측근을 거쳐야 한다고 조언할 때"
+        }
+      ],
+      "note": "비유적 의미뿐만 아니라 실제 신체 부위인 '오른손'을 가리킬 때도 똑같이 쓰이므로 앞뒤 문맥을 보고 구분해야 합니다."
+    },
+    "Keras kepala": {
+      "ko": "머리가 단단하다 → 고집이 세다",
+      "meaning": "'keras(단단한)'와 'kepala(머리)'가 합쳐져 직역하면 '머리가 단단하다'이지만, 실제로는 '고집이 세다' 또는 '융통성이 없다'라는 뜻으로 쓰입니다. 다른 사람의 조언이나 충고를 듣지 않고 자기 고집만 부리는 사람을 묘사할 때 자주 사용하는 관용 표현입니다.",
+      "examples": [
+        {
+          "id": "Dia sangat keras kepala, tidak mau dengar nasihat orang tua.",
+          "ko": "그는 너무 고집이 세서 부모님의 조언을 들으려고 하지 않아요.",
+          "situasi": "충고를 무시하는 친구의 완고한 태도를 다른 사람에게 이야기할 때"
+        },
+        {
+          "id": "Jangan keras kepala, minum obat ini supaya cepat sembuh.",
+          "ko": "고집부리지 말고, 빨리 나으려면 이 약 먹어.",
+          "situasi": "아픈데도 약을 안 먹겠다고 버티는 가족을 달래는 상황"
+        },
+        {
+          "id": "Kenapa kamu keras kepala sekali? Coba dengarkan penjelasanku dulu.",
+          "ko": "왜 그렇게 고집을 부려? 일단 내 설명 먼저 들어봐.",
+          "situasi": "자기 의견만 내세우는 상대방을 답답해하며 설득하려 할 때"
+        }
+      ],
+      "note": "반대말로는 말을 잘 듣고 순종적이라는 뜻의 'penurut'이 있으며, 부정적인 뉘앙스가 강하므로 윗사람에게 직접 쓰면 무례하게 들릴 수 있어 주의해야 합니다."
+    }
+  }
+}
