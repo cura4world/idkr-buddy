@@ -54,6 +54,7 @@ import MyInfo from "./pages/MyInfo";
 import BottomTabs from "@/components/BottomTabs";
 import ScrollManager from "@/components/ScrollManager";
 import LoginGate from "@/components/LoginGate";
+import WebGate from "@/components/WebGate";
 import HiddenInPublic from "@/components/HiddenInPublic";
 import { installStoreTtsShim } from "@/lib/storeTtsShim";
 import PreviewPanel from "@/components/PreviewPanel";
@@ -92,6 +93,8 @@ const App = () => (
     <TooltipProvider>
       <Sonner duration={2000} />
       <BrowserRouter basename="/idkr-buddy">
+        {/* 브라우저·관리자판 APK 에서 회원키도 예전 설정도 없는 방문자는 앱 대신 안내 화면 (2026-11-14) */}
+        <WebGate>
         <LoginGate>
         {/* 화면을 옮길 때 스크롤 위치: 새 화면은 맨 위, 뒤로가기는 보던 자리 (Routes 보다 앞에 둠) */}
         <ScrollManager />
@@ -143,6 +146,7 @@ const App = () => (
         {/* 공개판 하단 탭 — 홈·내 단어장·게임·내 정보 네 화면에서만 스스로 나타납니다 */}
         <BottomTabs />
         </LoginGate>
+        </WebGate>
         {showPreviewPanel ? <PreviewPanel /> : null}
       </BrowserRouter>
     </TooltipProvider>
