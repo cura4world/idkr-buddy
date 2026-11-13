@@ -51,7 +51,8 @@ export default function BackupRestoreDialog({ open, onOpenChange }: BackupRestor
       return;
     }
     const s = summarize(b);
-    const any = s.words + s.categories + s.saved + s.highlights + s.prayers + s.ink + s.medali + s.phrases > 0 ||
+    const any = s.words + s.categories + s.saved + s.highlights + s.prayers + s.ink + s.medali + s.phrases +
+      (s.stories || 0) + (s.scenes || 0) > 0 ||
       Object.keys(b.ls).length > 0;
     setBundle(any ? b : null);
     setMsg(any ? "" : "백업에 옮길 내용이 없습니다");
@@ -86,10 +87,12 @@ export default function BackupRestoreDialog({ open, onOpenChange }: BackupRestor
     setBusy(true);
     try {
       const r = await applyBundle(bundle);
-      toast("되돌렸습니다 — 새로 들어간 단어 " + r.words + "개" + (r.categories > 0 ? ", 단어장 " + r.categories + "개" : ""));
+      toast("되돌렸습니다 — 새로 들어간 단어 " + r.words + "개" + (r.categories > 0 ? ", 단어장 " + r.categories + "개" : "") +
+        ((r.skipped || 0) > 0 ? " (이미 있는 단어 " + r.skipped + "개는 넣지 않음)" : ""));
       setTimeout(() => { window.location.reload(); }, 1200);
     } catch (e) {
-      toast("되돌리지 못했습니다");
+      const m = e instanceof Error ? e.message : "";
+      toast(m === "SAVE_FAILED" ? "저장하지 못했습니다. 폰의 저장 공간을 확인해 주세요" : "되돌리지 못했습니다");
       setBusy(false);
     }
   };
