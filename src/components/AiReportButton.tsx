@@ -10,7 +10,8 @@ import { isStoreApp } from "@/lib/platform";
 import { hasPublicSession, sendAiReport } from "@/lib/account";
 
 interface Props {
-  feature: "dictionary" | "story" | "phrase" | "percakapan" | "tips" | "map";
+  // word = 단어 미니 시트의 풀이 · fill = 단어 추가 창의 자동 채우기 (2026-11-14 P-05 에서 추가)
+  feature: "dictionary" | "story" | "phrase" | "percakapan" | "tips" | "map" | "word" | "fill";
   input: string;  // 사용자가 찾은 말·고른 주제
   output: string; // AI 가 만든 내용(앞부분이면 충분)
   className?: string;
