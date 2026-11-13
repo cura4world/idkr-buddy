@@ -380,7 +380,7 @@ const Percakapan = () => {
                   </span>
                   <span className="flex-1 min-w-0">
                     {/* 회화집 제목은 2026-11-11 사용자 요청으로 굵게 */}
-                    <span className="block truncate text-[0.875rem] font-bold" style={{ color: C.txt }}>{c.title}</span>
+                    <span className="block truncate text-[0.9375rem] font-bold" style={{ color: C.txt }}>{c.title}</span>
                     <span className="block mt-px truncate font-word text-[0.75rem]" style={{ color: C.sub }}>{c.titleId}</span>
                   </span>
                   <span className="shrink-0 font-gothic text-[0.78125rem]" style={{ color: C.mute }}>{c.count}개</span>
