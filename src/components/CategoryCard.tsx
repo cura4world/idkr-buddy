@@ -74,7 +74,7 @@ export default function CategoryCard({ category, variant = "folder", tile = "#EE
               낱말 중간이 아니라 띄어쓰기와 "·" 뒤에서만 꺾고, 그래도 안 들어가면 그때만 글자 사이에서. */}
           {/* 단어장 제목은 2026-11-11 사용자 요청으로 굵게 (번호는 그대로 보통 굵기) */}
           <span
-            className="block font-body text-[0.875rem] font-bold leading-[1.3] text-[#1D1F1E]"
+            className="block font-body text-[0.9375rem] font-bold leading-[1.3] text-[#1D1F1E]"
             style={{ wordBreak: "keep-all", overflowWrap: "anywhere" }}
           >
             {num ? <span className="mr-1.5 font-word text-[0.75rem] font-normal text-[#9AA1A6]">{num}</span> : null}
