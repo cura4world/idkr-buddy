@@ -30,6 +30,7 @@ import { ProfileAvatar, profileName } from "@/components/BottomTabs";
 import { usePlan, PAYWALL_PATH, Tier, TIER_LABEL, isPreviewBuild } from "@/lib/plan";
 import { getSession, onSessionChange, signOut, deleteAccount, PublicSession } from "@/lib/account";
 import { billingAvailable, manageSubscription } from "@/lib/billing";
+import { usePlusPricing } from "@/lib/playOffers";
 import { isStoreApp, storeAppVersion, hasNativeFileSave, saveFileNative, PRIVACY_URL, TERMS_URL, BUSINESS_INFO_URL } from "@/lib/platform";
 import { getEdition, EDITION_LABEL } from "@/lib/access";
 import { getMemberProfile } from "@/lib/member";
@@ -277,6 +278,7 @@ const MyInfo = () => {
   const storeApp = isStoreApp();
   const preview = isPreviewBuild();
   const publicLike = storeApp || preview;
+  const pricing = usePlusPricing(publicLike && tier === "free");
   const [session, setSession] = useState<PublicSession | null>(getSession());
   useEffect(() => onSessionChange(setSession), []);
 
@@ -512,6 +514,16 @@ const MyInfo = () => {
       : EDITION_LABEL[getEdition()];
   const until = session && session.plan && typeof session.plan.until === "number" ? session.plan.until : 0;
   const period = planPeriod(session);
+  // 회원 구역 Plus 상자의 요금 두 줄 — Play 에서 받은 가격으로만 만듭니다(월 환산 = Play 연 가격 ÷ 12).
+  // 아직 못 받았으면 금액 대신 소개 문구를 보입니다. 고정 원화 금액은 미리보기 빌드의 대체값뿐입니다.
+  const plusLines: [string, string] = pricing.state === "ready" && pricing.monthlyPrice
+    ? [
+        "월 " + pricing.monthlyPrice + ",",
+        pricing.yearlyPerMonth
+          ? "연간 구독 시 월 " + pricing.yearlyPerMonth
+          : pricing.yearlyPrice ? "연간 구독 시 연 " + pricing.yearlyPrice : "언제든 해지할 수 있습니다",
+      ]
+    : ["단어장·게임·회화·지도까지", "모든 기능이 열립니다"];
   const tail = memberKeyTail(session);
   const hm = splitHM(view.totalMs);
 
@@ -567,7 +579,7 @@ const MyInfo = () => {
           <>
             <PlusLockBox
               title="Kata kata Plus"
-              lines={["월 3,900원,", "연간 구독 시 월 2,900원"]}
+              lines={plusLines}
               onClick={() => navigate(PAYWALL_PATH)}
               wholeBox
             />
@@ -578,7 +590,7 @@ const MyInfo = () => {
             <Row
               icon={I_DOC}
               label="회원 등급"
-              value={tier === "trial" ? "Plus · 7일 체험 중" : "Plus" + (period ? " · " + period : "")}
+              value={tier === "trial" ? "Plus · 무료 체험 중" : "Plus" + (period ? " · " + period : "")}
               onClick={() => navigate(PAYWALL_PATH)}
             />
             <Row
