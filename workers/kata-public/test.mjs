@@ -67,6 +67,7 @@ async function sha256hex(t) {
 const calls = [];
 let playSub = null; // 테스트마다 바꿈
 let proxyStatus = 200;
+let proxyEmpty = false; // true 면 AI 가 200 으로 답하지만 글·소리가 비어 있음
 let playStatus = 200; // Play 구독 조회 응답 상태 (503 = 일시 오류 흉내)
 let ackStatus = 200;  // Play 확인(acknowledge) 응답 상태 (403 = 서비스 계정 권한 빠짐 흉내)
 
@@ -87,7 +88,12 @@ globalThis.fetch = async (url, init = {}) => {
   }
   if (url === PROXY) {
     if (proxyStatus !== 200) return new Response(JSON.stringify({ error: { code: proxyStatus } }), { status: proxyStatus });
-    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "ok" }] } }] }), {
+    // 음성 요청에는 소리 자료를, 글 요청에는 글을 돌려줍니다. proxyEmpty 면 200 인데 내용이 빈 응답.
+    const wantsAudio = String(init.body || "").indexOf("AUDIO") >= 0;
+    const part = proxyEmpty
+      ? (wantsAudio ? {} : { text: "" })
+      : (wantsAudio ? { inlineData: { mimeType: "audio/L16", data: "AAAA" } } : { text: "ok" });
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [part] } }] }), {
       status: 200, headers: { "content-type": "application/json" },
     });
   }
@@ -198,7 +204,8 @@ test("AI 대리 호출: 허용·차단·한도·출력 상한", async () => {
   __resetCachesForTest();
   calls.length = 0;
   proxyStatus = 200;
-  const env = makeEnv({ LIMITS_JSON: JSON.stringify({ free: { tts: 2 } }) });
+  // 무료의 예전 이름표 tts 는 기본이 잠금(S-20)이라, 이 테스트에서는 풀어서 한도 2 로 둡니다.
+  const env = makeEnv({ LIMITS_JSON: JSON.stringify({ free: { tts: { locked: false, day: 2 } } }) });
   const t = await login(env);
   const path = (m) => "/ai/gemini/" + m + ":generateContent";
 
@@ -261,7 +268,7 @@ test("AI 대리 호출: 허용 목록 밖의 칸은 버리고, 너무 긴 글은
     contents: [{ parts: [{ text: "Selamat", speech_metadata: { style: "pelan", other: 1 } }] }],
     generationConfig: { responseModalities: ["AUDIO", "TEXT"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }, temperature: 2 },
   };
-  assert.equal((await call(env, "POST", path("gemini-3.8-flash-lite-tts"), { token: t, body: tts, headers: { "x-kata-kind": "tts" } })).status, 200);
+  assert.equal((await call(env, "POST", path("gemini-3.8-flash-lite-tts"), { token: t, body: tts, headers: { "x-kata-kind": "word-audio" } })).status, 200);
   const sentTts = JSON.parse(calls.find((c) => c.url === PROXY).init.body);
   assert.deepEqual(sentTts.contents[0].parts[0], { text: "Selamat", speech_metadata: { style: "pelan" } });
   assert.deepEqual(sentTts.generationConfig.responseModalities, ["AUDIO"]);
@@ -444,10 +451,12 @@ test("무료: 이야기 하루 1편, 회화 만들기·긴 읽기·공용 소리
   assert.equal((await ai(env, t, "phrase")).status, 200);
   assert.equal((await ai(env, t, "phrase")).data.error, "QUOTA_PHRASE");
 
-  // 모르는 이름은 거절, 예전 이름(text/tts)은 그대로 받음
+  // 모르는 이름은 거절, 예전 이름 text 는 그대로 받음. 예전 이름 tts 는 무료에서 잠금(S-20 — 잠긴 음성 기능의 뒷문이 되지 않게)
   assert.equal((await ai(env, t, "banana")).data.error, "KIND_NOT_ALLOWED");
   assert.equal((await ai(env, t, "text")).status, 200);
-  assert.equal((await ai(env, t, "tts")).status, 200);
+  const oldTts = await ai(env, t, "tts");
+  assert.equal(oldTts.status, 403);
+  assert.equal(oldTts.data.error, "PLUS_REQUIRED");
 
   const me = await call(env, "GET", "/me", { token: t });
   const f = me.data.features;
@@ -462,7 +471,8 @@ test("무료: 이야기 하루 1편, 회화 만들기·긴 읽기·공용 소리
   // 예전 칸은 그대로
   assert.equal(me.data.limits.text, 200);
   assert.equal(me.data.usage.text, 1);
-  assert.equal(me.data.usage.tts, 1);
+  assert.equal(me.data.usage.tts, 0); // 무료에서는 잠겨 있어 세지 않음
+  assert.equal(f.tts.locked, true);
 });
 
 test("무료: 사전 처음 찾는 말 하루 50", async () => {
@@ -690,6 +700,7 @@ function resetWorld() {
   playStatus = 200;
   ackStatus = 200;
   proxyStatus = 200;
+  proxyEmpty = false;
   playSub = null;
 }
 
@@ -940,6 +951,110 @@ test("S10-b Play 오류가 하루 넘게 이어지면 무료로 보이지만, �
   playSub.lineItems[0].expiryTime = new Date(Date.now() + 30 * DAY).toISOString();
   clockOffset = 2 * DAY + HOUR + 5 * MIN;
   assert.equal(await tierOf(env, t), "plus");
+  resetWorld();
+});
+
+// ── 출시 전 점검 C-02: 실패한 AI 호출이 한도를 깎지 않게 ─────────
+
+test("C-02 빈 응답(200 인데 글이 없음)은 한도를 쓰지 않는다 — 글·소리 모두", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9601", email: "c02@example.com" });
+  const storyLeft = async () => (await call(env, "GET", "/me", { token: t })).data.features.story;
+
+  // 무료 이야기는 하루 1편. 빈 응답이 세 번 와도 한 편도 쓰지 않은 것으로.
+  proxyEmpty = true;
+  for (let i = 0; i < 3; i++) {
+    const r = await ai(env, t, "story");
+    assert.equal(r.status, 200); // 앱은 본문을 보고 EMPTY_RESPONSE 로 처리
+  }
+  assert.equal((await storyLeft()).used.day, 0);
+  assert.equal((await storyLeft()).used.month, 0);
+
+  // 제대로 온 응답만 셈
+  proxyEmpty = false;
+  assert.equal((await ai(env, t, "story")).status, 200);
+  assert.equal((await storyLeft()).used.day, 1);
+  assert.equal((await ai(env, t, "story")).data.error, "QUOTA_STORY");
+
+  // 소리도 같음
+  proxyEmpty = true;
+  await ai(env, t, "word-audio");
+  let me = await call(env, "GET", "/me", { token: t });
+  assert.equal(me.data.features["word-audio"].used.day, 0);
+  proxyEmpty = false;
+  await ai(env, t, "word-audio");
+  me = await call(env, "GET", "/me", { token: t });
+  assert.equal(me.data.features["word-audio"].used.day, 1);
+  resetWorld();
+});
+
+test("C-02 같은 요청 번호(x-kata-req)의 재시도·모델 바꿈은 한 번만 센다", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9602", email: "c02b@example.com" });
+  const used = async (k) => (await call(env, "GET", "/me", { token: t })).data.features[k].used.day;
+  const req = { "x-kata-req": "press0001abcdef" };
+
+  // 한 번의 누름: 앱이 응답을 못 받아(시간 초과) 같은 번호로 다시 부르고, 모델도 바꿔 부름 → 1칸
+  assert.equal((await ai(env, t, "dict-new", null, req)).status, 200);
+  assert.equal((await ai(env, t, "dict-new", null, req)).status, 200);
+  const other = await call(env, "POST", aiPath("gemini-3.5-flash-lite"), { token: t, body: textBody(), headers: Object.assign({ "x-kata-kind": "dict-new" }, req) });
+  assert.equal(other.status, 200);
+  assert.equal(await used("dict-new"), 1);
+
+  // 번호가 다르면 새 누름
+  assert.equal((await ai(env, t, "dict-new", null, { "x-kata-req": "press0002abcdef" })).status, 200);
+  assert.equal(await used("dict-new"), 2);
+
+  // 번호가 없으면 예전처럼 호출마다 셈
+  await ai(env, t, "dict-new");
+  await ai(env, t, "dict-new");
+  assert.equal(await used("dict-new"), 4);
+
+  // 같은 번호라도 요청 내용이 다르면 새 누름(번호만 돌려 써서 한도를 늘리지 못함)
+  const diff = { contents: [{ parts: [{ text: "다른 내용" }] }], generationConfig: {} };
+  assert.equal((await ai(env, t, "dict-new", diff, req)).status, 200);
+  assert.equal(await used("dict-new"), 5);
+
+  // 하루 1편인 무료 이야기: 빈 응답 → 같은 번호로 재시도 → 성공. 한 편만 쓰고, 그 재시도는 막히지 않음
+  const sreq = { "x-kata-req": "storypress00001" };
+  proxyEmpty = true;
+  await ai(env, t, "story", null, sreq);
+  proxyEmpty = false;
+  assert.equal((await ai(env, t, "story", null, sreq)).status, 200);
+  assert.equal((await ai(env, t, "story", null, sreq)).status, 200); // 응답을 못 받은 줄 알고 한 번 더 — 같은 누름
+  assert.equal(await used("story"), 1);
+  assert.equal((await ai(env, t, "story", null, { "x-kata-req": "storypress00002" })).data.error, "QUOTA_STORY");
+
+  // 같은 번호를 9번 넘게 돌려 쓰면 다시 셈 / 5분이 지나도 다시 셈
+  const many = { "x-kata-req": "manymanymany001" };
+  for (let i = 0; i < 9; i++) await ai(env, t, "text", null, many);
+  assert.equal(await used("text"), 1);
+  await ai(env, t, "text", null, many);
+  assert.equal(await used("text"), 2);
+  clockOffset = 6 * MIN;
+  await ai(env, t, "text", null, many);
+  assert.equal(await used("text"), 3);
+
+  // 번호 모양이 이상하면 없는 것으로 보고 호출마다 셈
+  await ai(env, t, "text", null, { "x-kata-req": "bad id!" });
+  await ai(env, t, "text", null, { "x-kata-req": "bad id!" });
+  assert.equal(await used("text"), 5);
+  resetWorld();
+});
+
+test("C-02 실패(5xx)한 호출은 요청 번호가 있어도 칸을 돌려받고, 다음 재시도가 새로 한 칸을 잡는다", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9603", email: "c02c@example.com" });
+  const req = { "x-kata-req": "failthenok00001" };
+  proxyStatus = 503;
+  assert.equal((await ai(env, t, "story", null, req)).status, 503);
+  assert.equal((await call(env, "GET", "/me", { token: t })).data.features.story.used.day, 0);
+  proxyStatus = 200;
+  assert.equal((await ai(env, t, "story", null, req)).status, 200);
+  assert.equal((await call(env, "GET", "/me", { token: t })).data.features.story.used.day, 1);
   resetWorld();
 });
 
