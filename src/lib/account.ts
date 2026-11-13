@@ -29,10 +29,13 @@ export interface PublicUser {
  * 예전 서버는 체험을 {tier:"plus", trial:true} 로 줄 수도 있어 plan.ts 가 둘 다 받습니다.
  */
 export interface PublicPlan {
-  tier: "free" | "trial" | "plus" | "special" | "admin";
+  /** review = 심사용 계정(Google Play 심사자용). 기능은 plus 와 같고 화면에도 Plus 로 보입니다(plan.ts). */
+  tier: "free" | "trial" | "plus" | "review" | "special" | "admin";
   until: number;
   trial?: boolean;
   productId?: string;
+  /** 구독의 자동 갱신이 켜져 있는가. false = Play 에서 해지함(만료 시각까지는 이용). 옛 서버 응답에는 없음 */
+  autoRenew?: boolean;
 }
 
 export interface PublicSession {
