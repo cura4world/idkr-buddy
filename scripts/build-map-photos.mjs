@@ -31,13 +31,33 @@ const THUMB_W = 640;
 // 지점 → 직접 고른 Commons 파일 이름 (앞에 "File:" 없이). 자동 결과보다 먼저 씁니다.
 const PICK = {
   // "Borobudur": ["Borobudur-Nothwest-view.jpg"],
+  // 2026-11-14 출시 전 점검 K-02: 자동 선택이 페로 제도의 숨바 마을 사진(Faroe.sumba.3.jpg)을 골라 직접 고름.
+  "Pulau Sumba": ["Kampung Adat Ratenggaro - Sumba.jpg"],
 };
 // 어디에도 쓰지 않을 파일 이름
 // 2026-11-11 첫 실행 확인: 도시(마나도) 대표 사진으로 교회 건물 두 장이 들어와 공개판에 맞지 않아 뺍니다.
 const SKIP = new Set([
   "Cathedral Church Manado - panoramio.jpg",
   "Gereja Pantekosta di Indonesia (GPdI) Manado - panoramio.jpg",
+  // 2026-11-14 K-02: 인도네시아 숨바 섬이 아니라 페로 제도(Faroe)의 숨바 마을
+  "Faroe.sumba.3.jpg",
+  // 2026-11-14 K-01: CC BY 인데 저작자 불명(식민지 시대 군수 초상) — 저작자를 표시할 수 없어 쓰지 않음
+  "Bupati Probolinggo Raden Toemenggoeng Djojonegoro.jpg",
 ]);
+
+// 원본 페이지의 저작자 칸이 비었거나 주소뿐인 사진의 저작자 (2026-11-14 K-01 — 원본 설명 글과 Flickr 계정 이름에서 확인).
+// 자동으로 읽은 값 대신 이 이름을 씁니다.
+const AUTHOR_FIX = {
+  "Jesus Statue Maumere.jpg": "Snpoj (영어 위키백과)",
+  "Tour de Singkarak 2013 (2).jpg": "Ikhvan (Flickr)",
+  "Padang Panjang Train - Sawahlunto.jpg": "Mighty Bowo (Flickr)",
+};
+// 저작자 표시가 조건인 라이선스(CC BY·CC BY-SA)인데 저작자를 알 수 없는 사진은 고르지 않습니다.
+const NEEDS_AUTHOR = new RegExp("^CC BY", "i");
+const NO_AUTHOR = new RegExp("^\\s*$|unknown author|^https?://", "i");
+function attributable(i) {
+  return !(NEEDS_AUTHOR.test(i.license || "") && NO_AUTHOR.test(i.author || ""));
+}
 // 사진을 두지 않을 지점 (그 지점을 잘 보여 주는 자유 사진이 없을 때)
 const NONE = new Set([]);
 
@@ -251,7 +271,7 @@ async function fileInfo(names) {
         width: ii.width || 0,
         height: ii.height || 0,
         mime: String(ii.mime || ""),
-        author: plain(m.Artist && m.Artist.value).slice(0, 120),
+        author: AUTHOR_FIX[title.replace(new RegExp("^File:"), "")] || plain(m.Artist && m.Artist.value).slice(0, 120),
         license: plain(m.LicenseShortName && m.LicenseShortName.value).slice(0, 60),
         licenseUrl: String((m.LicenseUrl && m.LicenseUrl.value) || ""),
         page: String(ii.descriptionurl || ""),
@@ -316,6 +336,7 @@ async function main() {
     for (const i of infos) {
       if (picked.length >= 2) break;
       if (used.has(i.file) || used.has(i.thumb)) continue;
+      if (!attributable(i)) continue; // 저작자를 표시할 수 없는 CC BY 계열 사진은 쓰지 않음(K-01)
       picked.push(i);
       used.add(i.file);
       used.add(i.thumb);
