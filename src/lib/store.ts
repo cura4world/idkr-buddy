@@ -160,6 +160,22 @@ export function getWords(): Word[] {
   return initialWords();
 }
 
+// 단어장별 단어 수. 저장된 글이 그대로면 다시 풀지 않고 앞서 센 것을 씁니다 — 단어장 폴더 화면은 한 번 그릴 때
+// 단어장마다 전체 단어(80만 자)를 JSON 으로 다시 풀어 82번을 반복했습니다(출시 전 점검 C-23).
+let countCache: { raw: string; counts: Record<string, number> } | null = null;
+export function getWordCount(categoryId: string): number {
+  let raw = "";
+  try { raw = localStorage.getItem(WORDS_KEY) || ""; } catch (e) {}
+  if (!countCache || countCache.raw !== raw) {
+    const counts: Record<string, number> = {};
+    for (const w of getWords()) counts[w.categoryId] = (counts[w.categoryId] || 0) + 1;
+    // getWords 가 처음 호출에서 기본값을 저장했을 수 있어, 저장된 글을 다시 읽어 열쇠로 삼습니다
+    try { raw = localStorage.getItem(WORDS_KEY) || ""; } catch (e) {}
+    countCache = { raw, counts };
+  }
+  return countCache.counts[categoryId] || 0;
+}
+
 export function saveWords(words: Word[]): boolean {
   try {
     localStorage.setItem(WORDS_KEY, JSON.stringify(words));
