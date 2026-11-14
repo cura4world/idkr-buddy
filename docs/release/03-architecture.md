@@ -91,7 +91,21 @@ staff 전용 화면(신앙 메뉴·관리자 화면)은 열지 않습니다. `sp
 앱은 `review` 를 Plus 로 다루고(`plan.ts` `getTier`), 내 정보·구독 화면에 "심사용 계정"이라고만 표시합니다(`isReviewAccount`).
 
 **AI 일시 중지 `AI_PAUSED` (2026-11-14)**: Worker 변수. `all` 이면 모든 등급, `free` 면 무료 등급의 `/ai/*` 요청에 503 `SERVICE_PAUSED` 를 줍니다
-(한도를 잡기 전에 거절하므로 횟수는 깎이지 않음). 비우면 평소대로. 전체 하루 상한은 아직 없습니다 — 계정별 한도만 있습니다.
+(한도를 잡기 전에 거절하므로 횟수는 깎이지 않음). 비우면 평소대로.
+
+**전체 하루 상한 `AI_DAILY_BUDGET` (2026-11-14, S-21)**: Worker 변수. 하루(한국 날짜)에 AI 쪽으로 나가는 호출 수의 상한 — `5000` 또는 `{"all":5000,"tts":2000}`(`text` 도 가능).
+세는 단위는 실제로 나간 호출(재시도·긴 읽기의 조각도 한 번씩)이고, AI 쪽이 오류로 답한 호출은 돌려줍니다. 닿으면 무료·체험·Plus·심사용에 503 `SERVICE_PAUSED {reason:"budget"}`
+(계정 칸은 돌려줌), Special·관리자는 막지 않습니다. 비우면 상한 없음, 잘못 적으면 0 으로 보고 막습니다. `GET /admin/budget` 으로 서버가 읽은 값과 오늘 나간 수를 봅니다.
+`SERVICE_PAUSED` 응답에는 머리글 `x-kata-paused: 1` 이 붙고, 앱(`aiProxy.ts` `publicProxyError`)은 이것을 보고 다른 모델로 다시 부르지 않고 "지금은 사용할 수 없습니다"로 끝냅니다.
+
+**사용량 카운터 — Durable Object (2026-11-14, S-22)**: 바인딩 `USAGE_DO`(클래스 `UsageCounter`, SQLite 방식 — 무료 요금제 가능)가 있으면 사용량을 KV 대신 거기에 셉니다.
+계정마다 객체 하나(`u:<uid>`)가 요청을 한 줄로 처리해 동시 요청에도 정확하고, 전체 하루 상한은 객체 `budget` 하나가 셉니다. 저장 키·모양은 아래 KV 표의 `use:`·`usem:`·`uset:` 와 같고(전체 칸은 `budget:<날짜>`),
+수명이 없는 저장소라 날짜가 바뀔 때와 하루 한 번 알람으로 지난 칸을 지웁니다(3일·다음 달 10일·400일). 계정 삭제 때 객체를 비웁니다.
+바인딩이 없거나 객체 호출이 실패하면 그 요청은 KV 방식으로 처리합니다. 어느 쪽이든 **칸을 적지 못하면 AI 를 부르지 않습니다**(503 `SERVICE_PAUSED {reason:"store"}`).
+세는 규칙은 한 벌(`reserveCore`·`refundCore`·`budgetTakeCore`)이고 저장소만 갈아 끼웁니다. 신고의 하루 상한도 같은 카운터로 셉니다.
+
+**신고 알림 — 텔레그램 (2026-11-14, P-19)**: 비밀값 `TELEGRAM_BOT_TOKEN`·`TELEGRAM_CHAT_ID` 가 둘 다 있으면 새 신고를 알립니다(기능·시각·글 앞부분 30자, 계정 정보 없음, 이메일·긴 숫자 모양은 가림).
+한 번 알리면 한 시간 동안은 세기만 하고(KV `tg:reports`), 그 뒤 첫 신고 또는 Cron(`scheduled`, 매시간)이 묶어서 알립니다. 알림 실패는 신고 저장·응답에 영향을 주지 않습니다. 하루 상한에 닿았을 때도 하루 한 번 알립니다.
 
 ### 기능별 한도 (S41, 2026-11-11 — 정본: 결정 문서 "무료와 Plus", 사본: `08-polish-stories.md`)
 
@@ -209,6 +223,9 @@ curl -X POST https://kata-public.cura4world.workers.dev/admin/special \
 | `PLAY_SERVICE_ACCOUNT` | 비밀 | Play Developer API 서비스 계정 JSON |
 | `ADMIN_KEY` | 비밀 | 신고 조회·등급 주기·계정 삭제 대행(`/admin/*`) |
 | `AI_PAUSED` | 변수 (선택, 평소에는 없음) | `all` / `free` — AI 요청 비상 중지(위 "AI 일시 중지") |
+| `AI_DAILY_BUDGET` | 변수 (선택, 권장) | 전체 하루 호출 수 상한(위 "전체 하루 상한"). 비우면 없음 |
+| `USAGE_DO` | Durable Object 바인딩 (선택, 권장) | 사용량 카운터 `UsageCounter`. `wrangler deploy` 로만 만들어짐. 없으면 KV 로 셈 |
+| `TELEGRAM_BOT_TOKEN` · `TELEGRAM_CHAT_ID` | 비밀 (선택) | 신고·하루 상한 알림. 둘 다 있을 때만 보냄 |
 | `LIMITS_JSON` | 변수 (선택) | 한도 덮어쓰기 — 적은 칸만 바뀜. `{"plus":{"story":{"day":6,"month":70}},"trial":{"longread":{"total":20}},"free":{"tts":0}}` (숫자 하나 = 하루 상한, `null` = 그 기간 제한 없음, `"locked":true` = 잠금). 예전 모양 `{"free":{"text":200}}` 도 그대로 받음 |
 
 ## 왜 이렇게 했나
