@@ -43,14 +43,14 @@ const AiReportButton = ({ feature, input, output, className }: Props) => {
           ? "오늘은 더 보낼 수 없습니다. 내일 다시 보내 주세요"
           : code === "NETWORK_FAILED"
             ? "보내지 못했습니다. 인터넷 연결을 확인해 주세요"
-            : "보내지 못했습니다. 잠시 뒤 다시 눌러 주세요",
+            : "보내지 못했습니다. 잠시 뒤 다시 시도하세요",
       );
     }
     setBusy(false);
   };
 
   // AI 가 만든 내용임을 결과 끝에 밝힙니다(Play 의 AI 생성 콘텐츠 정책. 출시 전 점검 P-24).
-  const AI_NOTE = "AI 가 만든 내용입니다";
+  const AI_NOTE = "AI가 만든 내용입니다";
 
   if (sent) {
     return (
