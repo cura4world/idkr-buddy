@@ -147,6 +147,7 @@ features: { <kind>: { locked, hidden,
 Play `subscriptionsv2` 의 `lineItems[].offerPhase.freeTrial` 이 있으면 체험. `offerPhase` 칸이 없는 응답이면
 제안 ID·태그에 `trial` 이 들어 있고 `startTime` 에서 8일이 안 됐을 때만 체험으로 봅니다(체험 뒤에도 offerId 는 남으므로).
 Play 콘솔에서 체험 제안 ID 에 `trial` 을 넣어 두면(예: `trial-7d`) 대비책도 맞습니다.
+실제로 만든 제안 ID 는 `trial-7d-monthly`·`trial-7d-yearly` 입니다(2026-11-14, `DECISIONS.md` 16장) — 둘 다 `trial` 이 들어 있어 대비책에 맞습니다.
 
 **체험 기록 `trial:<uid>` (2026-11-14)**: 체험으로 판정된 구매 토큰의 해시를 계정별로 적어 둡니다(`{first, firstToken, tokens[], last}`, 400일).
 한 계정에서 체험 토큰이 둘 이상이면 `ent.trialRepeat` 에 그 수를 남깁니다 — 지금은 **기록만** 하고 막지는 않습니다
