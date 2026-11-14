@@ -7,6 +7,8 @@ import { isMemberActive } from "@/lib/member";
 import { claudeTarget, handleQuotaResponse } from "@/lib/aiProxy";
 const CLAUDE_KEY_STORAGE = "claudeApiKey";
 const CLAUDE_MODEL = "claude-sonnet-5";
+// 호출 하나(재시도·본문 읽기 포함)의 마감. 묵상 한 편은 길어 1~2분이 걸리기도 해 넉넉히 잡습니다.
+const CLAUDE_TIMEOUT_MS = 180000;
 
 export function getClaudeApiKey(): string {
   try {
@@ -44,10 +46,24 @@ export async function callClaudeJSON(
   const target = claudeTarget(getClaudeApiKey());
   if (!target) throw new Error("NO_API_KEY");
 
+  // 응답이 안 오면 "만드는 중"이 끝나지 않으므로 마감을 겁니다(출시 전 점검 C-16).
+  // 재시도와 본문 읽기까지 통틀어 한 번의 마감입니다. 넘기면 TIMEOUT 으로 끝납니다.
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    try {
+      controller.abort();
+    } catch {
+      // 무시
+    }
+  }, CLAUDE_TIMEOUT_MS);
+
   const doFetch = () =>
     fetch(target.url, {
       method: "POST",
       headers: target.headers,
+      signal: controller.signal,
       body: JSON.stringify({
         model: CLAUDE_MODEL,
         max_tokens: maxTokens,
@@ -56,42 +72,53 @@ export async function callClaudeJSON(
       }),
     });
 
-  let res: Response;
+  let data: any;
   try {
-    res = await doFetch();
-  } catch {
-    throw new Error("NETWORK_FAILED");
-  }
-
-  // 하루 사용량 한도(대리 호출)면 재시도하지 않습니다.
-  if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA");
-
-  // 일시적 혼잡(429/529)은 한 번 재시도
-  if (res.status === 429 || res.status === 529) {
-    await new Promise((r) => setTimeout(r, 2500));
+    let res: Response;
     try {
       res = await doFetch();
     } catch {
-      throw new Error("NETWORK_FAILED");
+      throw new Error(timedOut ? "TIMEOUT" : "NETWORK_FAILED");
     }
-  }
 
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 403) throw new Error("INVALID_API_KEY");
-    if (res.status === 429) throw new Error("RATE_LIMIT");
-    if (res.status === 529) throw new Error("OVERLOADED");
-    let msg = "";
+    // 하루 사용량 한도(대리 호출)면 재시도하지 않습니다.
+    if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA");
+
+    // 일시적 혼잡(429/529)은 한 번 재시도
+    if (res.status === 429 || res.status === 529) {
+      await new Promise((r) => setTimeout(r, 2500));
+      try {
+        res = await doFetch();
+      } catch {
+        throw new Error(timedOut ? "TIMEOUT" : "NETWORK_FAILED");
+      }
+    }
+
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) throw new Error("INVALID_API_KEY");
+      if (res.status === 429) throw new Error("RATE_LIMIT");
+      if (res.status === 529) throw new Error("OVERLOADED");
+      let msg = "";
+      try {
+        const j = await res.json();
+        msg = (j && j.error && j.error.message) || "";
+      } catch {
+        // 응답 본문이 JSON이 아니면 무시
+      }
+      if (msg.toLowerCase().indexOf("credit") >= 0) throw new Error("NO_CREDIT");
+      throw new Error("REQUEST_FAILED_" + res.status);
+    }
+
     try {
-      const j = await res.json();
-      msg = (j && j.error && j.error.message) || "";
-    } catch {
-      // 응답 본문이 JSON이 아니면 무시
+      data = await res.json();
+    } catch (e) {
+      // 본문을 받는 중에 마감에 걸린 경우만 TIMEOUT 으로 바꿉니다. 그 밖에는 예전처럼 그대로 던집니다.
+      if (timedOut) throw new Error("TIMEOUT");
+      throw e;
     }
-    if (msg.toLowerCase().indexOf("credit") >= 0) throw new Error("NO_CREDIT");
-    throw new Error("REQUEST_FAILED_" + res.status);
+  } finally {
+    clearTimeout(timer);
   }
-
-  const data = await res.json();
   // 응답 content는 블록 배열이며, thinking 블록이 섞일 수 있어 text 블록만 사용
   const blocks: any[] = Array.isArray(data?.content) ? data.content : [];
   const textBlock = blocks.find((b) => b && b.type === "text");
