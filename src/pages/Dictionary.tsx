@@ -24,6 +24,7 @@ import AiReportButton from "@/components/AiReportButton";
 import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
 import { lastQuotaNotice } from "@/lib/aiProxy";
 import { publicAiErrorText } from "@/lib/aiErrors";
+import { isStoreApp } from "@/lib/platform";
 import { dropReturnTicket } from "@/lib/readReturn";
 import { medaliEngine } from "@/lib/medali";
 import { useBackClose } from "@/hooks/useBackClose";
@@ -290,7 +291,12 @@ const Dictionary = () => {
     if (code === "EMPTY_WORD") return "단어를 입력해주세요.";
     if (code === "TIMEOUT") return "응답이 늦어 검색을 중단했습니다. 다시 시도해주세요.";
     if (code === "NETWORK") return "네트워크 연결을 확인해주세요.";
-    if (code === "SERVER_ERROR") return "Gemini 서버 오류입니다. 잠시 후 다시 시도해주세요.";
+    // 공개판(스토어 앱) 사용자에게는 AI 공급사 이름을 내보이지 않습니다(출시 전 점검 C-18).
+    if (code === "SERVER_ERROR") {
+      return isStoreApp()
+        ? "서버 오류입니다. 잠시 후 다시 시도하세요."
+        : "Gemini 서버 오류입니다. 잠시 후 다시 시도해주세요.";
+    }
     if (code === "BAD_REQUEST") return "요청 처리에 실패했습니다. 잠시 후 다시 시도해주세요.";
     return "검색에 실패했습니다. 잠시 후 다시 시도해주세요.";
   };
