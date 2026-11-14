@@ -56,7 +56,7 @@ export function recordsFrom(rounds: GameRound[]): Records {
   const dengar = max("dengar");
   if (dengar > 0) out.dengar = "최고 " + dengar + "개";
   const susun = minSec("susun");
-  if (susun > 0) out.susun = "최고 " + susun + "초";
+  if (susun > 0) out.susun = "가장 빠른 기록 " + susun + "초";
   const eja = max("eja");
   if (eja > 0) out.eja = "최고 " + eja + "개";
   const tangkap = max("tangkap");
@@ -183,7 +183,7 @@ const Permainan = () => {
         {!plus ? (
           <PlusLockBox
             title="게임은 Plus 회원 기능입니다"
-            lines={["Plus로 모든 게임을 열고,", "맞힌 단어는 훈장 · 별로 쌓입니다"]}
+            lines={["Plus로 모든 게임을 열고,", "맞힌 단어는 별이 됩니다"]}
             onClick={() => navigate(PAYWALL_PATH)}
           />
         ) : null}
@@ -237,7 +237,7 @@ const Permainan = () => {
 
         {plus ? (
           <p className="mt-1.5 text-center font-gothic text-[10.5px]" style={{ color: G.faint }}>
-            게임에서 맞힌 단어는 Medali Bintang에 쌓입니다
+            맞힌 단어는 별이 됩니다
           </p>
         ) : null}
       </div>
