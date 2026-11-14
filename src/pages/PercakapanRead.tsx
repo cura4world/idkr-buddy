@@ -221,7 +221,9 @@ const PercakapanRead = () => {
   }, []);
 
   // 재생 오류 알림
-  const [lastErr, setLastErr] = useState(0);
+  // 들어올 때 이미 있던 오류 시각에서 시작합니다 — 0 에서 시작하면 예전 화면에서 난 오류가
+  // 이 화면에 들어올 때마다 누르지도 않았는데 다시 떴습니다(출시 전 점검 C-09).
+  const [lastErr, setLastErr] = useState(() => percakapanAudioPlayer.getSnapshot().errorAt);
   useEffect(() => {
     if (!snap.errorAt || snap.errorAt === lastErr) return;
     setLastErr(snap.errorAt);
@@ -260,6 +262,10 @@ const PercakapanRead = () => {
   }, [snap, scene]);
 
   const mineAll = !!scene && snap.sceneId === scene.id && snap.lineIndex === null;
+
+  // 무료에게 잠긴 기본 회화인가. 위 useEffect 가 구독 화면으로 보내지만 그 전에 한 번은 그려지므로,
+  // 그리는 쪽에서도 본문·듣기 단추·화자 안내를 내지 않습니다(출시 전 점검 E-09).
+  const locked = !!scene && !plan.plus && !scene.custom;
 
   // ---------- 전체 듣기 중 지금 읽는 줄 짐작 ----------
   // 전체 듣기는 소리 파일 하나라 줄 경계를 모릅니다. 재생 위치(비율)를 줄마다의 글자 수
@@ -422,7 +428,7 @@ const PercakapanRead = () => {
       : "전체 듣기"
     : "전체 듣기";
 
-  const roleItems: { s: PercakapanSpeaker; text: string }[] = scene
+  const roleItems: { s: PercakapanSpeaker; text: string }[] = scene && !locked
     ? [
         { s: "A" as PercakapanSpeaker, text: scene.roles.A + " · " + voiceText(scene.voices ? scene.voices.A : "m") },
         { s: "B" as PercakapanSpeaker, text: scene.roles.B + " · " + voiceText(scene.voices ? scene.voices.B : "f") },
@@ -449,14 +455,15 @@ const PercakapanRead = () => {
             <ArrowLeft size={20} />
           </button>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-semibold leading-tight">
+            {/* 긴 제목은 자르지 않고 두 줄까지 보입니다(U-04). 글자 크기는 그대로 */}
+            <h1 className="line-clamp-2 break-words text-base font-semibold leading-tight">
               {scene ? scene.title : "회화집"}
             </h1>
             <p className="mt-px truncate font-word text-[0.75rem]" style={{ color: "#646C72" }}>
               {scene ? scene.titleId : ""}
             </p>
           </div>
-          {scene ? (
+          {scene && !locked ? (
             <button
               type="button"
               onClick={() => percakapanAudioPlayer.playAll(scene)}
@@ -527,6 +534,9 @@ const PercakapanRead = () => {
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
             <Loader2 size={16} className="animate-spin" /> 불러오는 중...
           </div>
+        ) : locked ? (
+          // 잠긴 기본 회화: 본문을 그리지 않습니다. 곧 구독 화면으로 넘어갑니다(위 useEffect).
+          <div className="py-16" />
         ) : (
           <>
             <div className="overflow-hidden" style={CARD_STYLE}>
