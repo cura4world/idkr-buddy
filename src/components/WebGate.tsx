@@ -68,18 +68,18 @@ const NoticeScreen = () => {
         </h1>
         {/* 좁은 화면에서 "있습니다."만 다음 줄로 떨어지지 않게 두 덩어리로 끊습니다 */}
         <p className="mt-4 text-[1.0625rem] leading-relaxed text-foreground">
-          <span className="inline-block">Kata kata 는 Google Play 앱으로</span>{" "}
+          <span className="inline-block">Kata kata는 Google Play 앱으로</span>{" "}
           <span className="inline-block">이용할 수 있습니다.</span>
         </p>
         <p className="mt-1.5 text-[0.875rem] leading-relaxed text-muted-foreground" style={{ wordBreak: "keep-all" }}>
-          인도네시아어를 단어부터 문장까지. 사전·단어장·이야기·회화를 한곳에서.
+          인도네시아어를 단어부터 문장까지. 사전·단어장·이야기·회화집을 한곳에서.
         </p>
         {PLAY_STORE_URL ? (
           <a
             href={PLAY_STORE_URL}
             className="mt-6 w-full h-[54px] rounded-[27px] border border-border bg-card text-[0.9375rem] font-gothic font-semibold text-foreground flex items-center justify-center active:bg-muted"
           >
-            Google Play 에서 받기
+            Google Play에서 받기
           </a>
         ) : null}
       </div>
