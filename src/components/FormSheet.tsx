@@ -138,9 +138,9 @@ export default function FormSheet({
             {icon}
           </span>
           <span className="flex-1 min-w-0">
-            <span className="block text-[1rem] font-semibold" style={{ color: FORM_C.txt }}>{title}</span>
+            <span className="block text-[1rem] font-semibold break-keep" style={{ color: FORM_C.txt }}>{title}</span>
             {desc ? (
-              <span className="block mt-0.5 font-gothic text-[0.78125rem]" style={{ color: FORM_C.sub }}>{desc}</span>
+              <span className="block mt-0.5 font-gothic text-[0.78125rem] break-keep" style={{ color: FORM_C.sub }}>{desc}</span>
             ) : null}
           </span>
           <button
