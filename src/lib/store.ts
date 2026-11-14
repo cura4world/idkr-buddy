@@ -195,6 +195,17 @@ export const LOOKUP_FAIL_TEXT = "뜻을 불러오지 못했습니다. 다시 눌
 // 예전 문구("…못했어요")로 저장된 것도 알아봐야 하므로 둘 다 둔다 (2026-11 말투 통일).
 const LOOKUP_FAIL_HEADS = ["뜻을 불러오지 못했습니다", "뜻을 불러오지 못했어요"];
 
+/**
+ * 단어 팝업의 조회 실패 안내문. 한도 초과(오류 코드가 "QUOTA…")면 다시 눌러도 같은 답이므로
+ * "다시 눌러 주세요" 대신 한도 안내(quotaNotice — aiProxy 의 lastQuotaNotice())를 붙입니다(출시 전 점검 C-17).
+ * 앞머리는 LOOKUP_FAIL_TEXT 와 같아 isFailedMeaning 이 그대로 알아봅니다(단어장에 뜻으로 저장되지 않음).
+ */
+export function lookupFailText(err: unknown, quotaNotice: string): string {
+  const code = err instanceof Error ? err.message : "";
+  if (code.indexOf("QUOTA") === 0 && quotaNotice) return LOOKUP_FAIL_HEADS[0] + ". " + quotaNotice;
+  return LOOKUP_FAIL_TEXT;
+}
+
 // 빈 뜻은 실패로 보지 않는다 — CSV로 들어온 정상 단어를 지우면 안 되기 때문.
 export function isFailedMeaning(meaning: string): boolean {
   const m = (meaning || "").trim();
