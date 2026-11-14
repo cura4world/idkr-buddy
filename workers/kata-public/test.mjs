@@ -610,6 +610,37 @@ test("체험 판정 대비책: offerPhase 가 없으면 제안 이름의 trial +
   assert.equal(paid.tier, "plus");
 });
 
+// 2026-11-14 Play Console 에 실제로 만든 값: 상품 plus · 기본 요금제 monthly / yearly ·
+// 체험 제안 trial-7d-monthly / trial-7d-yearly. 콘솔의 이름을 바꾸면 이 테스트도 같이 고칩니다.
+test("콘솔 실제 값: 체험 제안 trial-7d-monthly·trial-7d-yearly 는 대비책에서도 체험으로, 제안 없는 구매는 Plus 로", async () => {
+  __resetCachesForTest();
+  const env = makeEnv({ PRODUCT_IDS: "plus" });
+  const cases = [
+    { sub: "6101", basePlanId: "monthly", offerId: "trial-7d-monthly", days: 7, want: "trial" },
+    { sub: "6102", basePlanId: "yearly", offerId: "trial-7d-yearly", days: 7, want: "trial" },
+    { sub: "6103", basePlanId: "monthly", offerId: undefined, days: 30, want: "plus" },
+    { sub: "6104", basePlanId: "yearly", offerId: undefined, days: 365, want: "plus" },
+  ];
+  for (const c of cases) {
+    const t = await login(env, { sub: c.sub, email: "c" + c.sub + "@example.com" });
+    const od = { basePlanId: c.basePlanId };
+    if (c.offerId) od.offerId = c.offerId;
+    const plan = await makePlus(env, t, {
+      startTime: new Date(Date.now() - 3600000).toISOString(),
+      lineItems: [{ productId: "plus", expiryTime: new Date(Date.now() + c.days * 86400000).toISOString(), offerDetails: od }],
+    });
+    assert.equal(plan.tier, c.want, c.basePlanId + " / " + c.offerId);
+    assert.equal(plan.productId, "plus");
+  }
+  // 체험이 끝나 첫 결제가 된 뒤(시작 9일째)에는 같은 제안 이름이어도 Plus
+  const t5 = await login(env, { sub: "6105", email: "c6105@example.com" });
+  const after = await makePlus(env, t5, {
+    startTime: new Date(Date.now() - 9 * 86400000).toISOString(),
+    lineItems: [{ productId: "plus", expiryTime: new Date(Date.now() + 28 * 86400000).toISOString(), offerDetails: { basePlanId: "monthly", offerId: "trial-7d-monthly" } }],
+  });
+  assert.equal(after.tier, "plus");
+});
+
 test("관리자: Special Member 주기(로그인 전 이메일로 미리)·거두기, Play 검증이 지우지 않음", async () => {
   __resetCachesForTest();
   proxyStatus = 200;
