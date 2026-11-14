@@ -96,7 +96,7 @@ const STATIC_PHRASES: Phrase[] = [
   { kind: "ungkapan", id: "Banting tulang", ko: "뼈를 내던지다 → 뼈 빠지게 일하다" },
   { kind: "ungkapan", id: "Naik darah", ko: "피가 오르다 → 화가 나다" },
   { kind: "ungkapan", id: "Besar kepala", ko: "머리가 크다 → 거만하다" },
-  { kind: "ungkapan", id: "Kutu buku", ko: "책벌레 → 공부만 파는 사람" },
+  { kind: "ungkapan", id: "Kutu buku", ko: "책벌레 → 책을 아주 좋아하는 사람" },
   { kind: "ungkapan", id: "Buah bibir", ko: "입술의 열매 → 사람들 입에 오르내리는 화제" },
   { kind: "ungkapan", id: "Makan hati", ko: "마음을 먹다 → 속을 끓이다" },
   { kind: "ungkapan", id: "Gulung tikar", ko: "돗자리를 말다 → 사업이 망하다" },
