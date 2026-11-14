@@ -11,6 +11,10 @@ import { generateTip, saveTip, listTips, deleteTip, TipRecord } from "@/lib/tips
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { aiErrorToast } from "@/lib/aiErrors";
 import AiReportButton from "@/components/AiReportButton";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 
 const InsightTips = () => {
@@ -41,6 +45,8 @@ const InsightTips = () => {
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 길게 눌러 지우려는 정보(확인 창이 떠 있는 동안)
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
 
   // ---------- 돌아올 자리로 되돌리기 ----------
@@ -131,12 +137,15 @@ const InsightTips = () => {
   };
 
   const startPress = (id: string) => {
-    pressTimer.current = setTimeout(() => {
-      if (confirm("이 정보를 삭제하시겠습니까?")) {
-        deleteTip(id);
-        setTips((prev) => prev.filter((t) => t.id !== id));
-      }
-    }, 600);
+    // 웹뷰 기본 확인 창(confirm)은 제목에 페이지 주소가 보일 수 있어, 앱의 확인 창을 씁니다(출시 전 점검 C-22)
+    pressTimer.current = setTimeout(() => setDeleteId(id), 600);
+  };
+  const confirmDelete = () => {
+    const id = deleteId;
+    setDeleteId(null);
+    if (!id) return;
+    deleteTip(id).catch(() => {});
+    setTips((prev) => prev.filter((t) => t.id !== id));
   };
   const cancelPress = () => {
     if (pressTimer.current) clearTimeout(pressTimer.current);
@@ -253,6 +262,21 @@ const InsightTips = () => {
           <Trash2 size={11} /> 카드를 길게 누르면 삭제할 수 있습니다
         </p>
       )}
+
+      <AlertDialog open={deleteId !== null} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+        <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-body text-[0.9375rem] text-gray-900">이 정보를 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription className="font-gothic text-[0.6875rem] leading-relaxed">
+              삭제한 정보는 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-body">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="font-body bg-red-600 hover:bg-red-700 text-white">삭제</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
