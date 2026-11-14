@@ -14,7 +14,8 @@
 - [ ] 2026-09-20 자동 보안 검사 결과 재검토 (`HANDOFF.md` 1번). 이것이 끝나기 전에는 "출시 가능"으로 보지 않습니다.
 - [x] 문서의 빈칸 채우기(2026-11-12 HQ 값으로 채움): 사업자명 Naruve Studio(나루브스튜디오) · 대표자 박창홍 · 사업자등록번호 216-09-73358 · 지원 이메일 support@naruve.app · 개인정보 보호책임자 박창홍 · 사업장 주소와 사업용 전화번호는 `terms.html` 의 "사업자 정보" 칸에만 둠(`privacy.html` 에는 주소 없음)
   → `public/privacy.html`, `public/terms.html`, `public/delete-account.html`, `06-store-listing.md`
-- [ ] **시행일**(`privacy.html`·`terms.html` 의 `[시행일]` `[effective date]`)은 HQ 가 게시하는 날짜로 정한다. 게시본은 HQ 가 `naruve-ganada` 의 `docs/apps/kata-kata/{privacy,terms,delete}/index.html` 로 올린다.
+- [x] **시행일** — 2026-11-13 으로 채움(최종 수정 2026-11-14). 게시본은 `naruve-ganada` 의 `docs/apps/kata-kata/{privacy,terms,delete}/index.html` 이고,
+      이 저장소의 `docs/release/policy-final/` 과 `public/` 사본이 그것과 같은 내용이어야 한다(고치면 세 곳을 함께).
 
 ## 1. 업로드 키 만들기 (PC, 5분)
 
@@ -69,7 +70,9 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 4. [ ] 비밀값:
    - `AI_PROXY_URL`, `PROXY_SECRET` — **kata-sermon Worker 에 넣은 것과 같은 값** (Cloud Run 중계)
    - `PLAY_SERVICE_ACCOUNT` — 3-5번의 JSON
-   - `ADMIN_KEY` — 아무 긴 무작위 문자열 (신고 조회용, 따로 보관)
+   - `ADMIN_KEY` — 아무 긴 무작위 문자열 (신고 조회·등급 지정·계정 삭제 대행용, 따로 보관)
+   - (평소에는 넣지 않음) `AI_PAUSED` — AI 요청을 급히 멈출 때만 넣는 변수. `free` 면 무료 계정만, `all` 이면 모두 멈춥니다
+     (앱에는 평소의 서버 오류 안내가 나옵니다 — 한도는 깎이지 않음). 지우면 바로 풀립니다. 비용이 갑자기 늘 때 쓰는 비상 차단입니다.
 5. [ ] 주소 확인: `https://kata-public.cura4world.workers.dev/` 를 열면 `{"ok":true,"service":"kata-public"}`
    - 주소가 다르면 `src/lib/account.ts` 의 `PUBLIC_BASE` 한 줄을 고칩니다
 6. [ ] ⚠ **Cloud Run 호출 형식 대조** — 저는 kata-sermon Worker 소스를 볼 수 없어서, 결정 기록에 적힌 대로
@@ -114,7 +117,7 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 - [ ] 설정 → 라이선스 테스트 → Arga 님 계정 추가 (실제 결제 없이 구독 시험)
 - [ ] **(f) 환불 처리 방침 정하기** — 콘솔에서 환불할 때 두 가지가 있습니다.
   - "환불 + 권한 회수(구독 취소)": 서버가 **하루 안에** 알아채고 무료로 내립니다(마지막 확인에서 24시간이 지난 뒤 첫 요청 때 Play 에 다시 묻습니다).
-    바로 내려야 하면 Cloudflare KV 에서 그 계정의 `ent:<uid>` 를 지웁니다(관리자가 준 Special 등급이 있었다면 다시 줘야 함).
+    바로 내려야 하면 Cloudflare KV 에서 그 계정의 `ent:<uid>` 를 지웁니다(관리자가 준 Special·심사용 등급이 있었다면 다시 줘야 함).
   - "환불만"(권한은 그대로): Play 가 만료일까지 이용 가능하다고 답하므로 Plus 가 만료일까지 유지됩니다.
   - 어느 쪽을 기본으로 할지, 환불 문의를 어디로 받을지(support@naruve.app) 정해 둡니다.
 - [ ] **(g) 실시간 개발자 알림(RTDN) — 지금은 연결하지 않음으로 결정해 둠** — 환불·갱신을 서버가 Play 에 주기적으로
@@ -129,16 +132,19 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 - [ ] 앱 액세스: "로그인이 필요함" → **심사용 계정**을 적습니다(안내문은 `06-store-listing.md` "심사자 안내문" 그대로).
       예전 안내("아무 Google 계정으로 로그인하면 모든 기능")는 사실과 달랐습니다 — 무료 계정은 기본 단어장·게임 6종·회화집·지도·이해가 잠겨 있습니다.
   - [ ] **심사용 Google 계정 만들기**: 심사에만 쓰는 새 Google 계정을 하나 만듭니다(개인 계정을 쓰지 않음). 2단계 인증은 끕니다 — 심사자가 문자 인증을 받을 수 없습니다.
-  - [ ] **그 계정에 Special 등급 주기** (4절의 Worker 가 배포된 뒤). PC 명령창에서, `<ADMIN_KEY>` 는 4-4 에서 정한 값:
+  - [ ] **그 계정에 심사용 등급(review) 주기** (4절의 Worker 가 배포된 뒤 — 2026-11-14 결정: Special 이 아니라 심사용 등급).
+        심사용 등급은 **Plus 와 똑같이** 열립니다(한도도 Plus 와 같음). 신앙 메뉴·관리자 화면은 열리지 않고, 결제 없이 쓰며, 기한이 없습니다.
+        PC 명령창에서, `<ADMIN_KEY>` 는 4-4 에서 정한 값:
         ```
-        curl -X POST https://kata-public.cura4world.workers.dev/admin/special -H "content-type: application/json" -H "x-admin-key: <ADMIN_KEY>" -d "{\"email\":\"심사용계정@gmail.com\",\"action\":\"grant\",\"tier\":\"special\",\"note\":\"play-review\"}"
+        curl -X POST https://kata-public.cura4world.workers.dev/admin/special -H "content-type: application/json" -H "x-admin-key: <ADMIN_KEY>" -d "{\"email\":\"심사용계정@gmail.com\",\"action\":\"grant\",\"tier\":\"review\",\"note\":\"play-review\"}"
         ```
-        아직 로그인한 적 없는 계정이면 `"pending":true` 로 답하고, 그 계정이 앱에 처음 로그인할 때 등급이 붙습니다.
+        아직 로그인한 적 없는 계정이면 `"pending":true` 로 답하고, 그 계정이 앱에 처음 로그인할 때 등급이 붙습니다(미리 준 등급은 400일 안에 로그인해야 함).
         확인: `curl "https://kata-public.cura4world.workers.dev/admin/special?email=심사용계정@gmail.com" -H "x-admin-key: <ADMIN_KEY>"`
-  - [ ] 내부 테스트 앱에 그 계정으로 로그인해 잠긴 화면이 모두 열리는지 직접 확인한 뒤, Play Console 앱 액세스에 이메일·비밀번호를 적습니다.
-  - **⚠ 결정이 필요한 점**: Special 등급에는 일반 사용자에게 보이지 않는 신앙 메뉴(묵상·성경·일대일·기도문·뉴스)가 홈에 함께 보입니다.
-    이 화면들은 공개판에서 키가 없어 동작하지 않으므로(HANDOFF "기능 연결은 아직"), **심사자가 동작하지 않는 화면을 볼 수 있습니다.**
-    피하려면 서버에 "Plus 만 여는 심사용 등급"을 주는 길을 하나 더 만들면 됩니다(코드 추가 필요 — CC 에게). 그 전까지는 Special 로 진행하되 이 점을 알고 계세요.
+        거두기(심사가 끝난 뒤): 같은 명령에서 `"action":"grant"` 를 `"action":"revoke"` 로.
+  - [ ] 내부 테스트 앱에 그 계정으로 로그인해 확인합니다 — ① 홈이 Plus 사용자와 같은 모습(신앙 메뉴 없음) ② 잠겨 있던 기본 단어장·게임 6종·회화집·지도·이해가 열림
+        ③ 내 정보의 등급 칸에 "Plus · 심사용 계정", 구독 화면에 "심사용 계정"이 보이고 "구독 관리" 줄은 없음.
+        확인한 뒤 Play Console 앱 액세스에 이메일·비밀번호를 적습니다.
+  - 심사자가 **결제 흐름**을 보려면 무료 계정이 필요합니다. 심사용 계정은 이미 열려 있어 구독 버튼이 나오지 않으므로, 안내문에 "구독 화면은 다른 Google 계정(무료)으로 로그인하면 볼 수 있다"고 적어 두었습니다(`06-store-listing.md`).
 - [ ] 광고: 없음
 - [ ] 콘텐츠 등급 설문: 교육, 폭력·성적 내용 없음, 사용자 간 소통 없음, AI 생성 콘텐츠 있음(신고 기능 있음)
 - [ ] 타겟층: **16세 이상**을 권합니다 (약관은 만 14세 이상. 13~15세를 넣으면 청소년 대상 추가 검토가 붙음)
@@ -157,10 +163,10 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 
 - [ ] 처음 열면 로그인 화면 → Google 로그인 → 홈
 - [ ] 홈에 뉴스·말씀과 기도·설교가 없음, 맨 아래 "구독 / Kata kata Plus"
-- [ ] 사전에서 `buruk` 검색 → 결과 → 내 단어장에 담기 → 결과 맨 끝 "풀이가 이상해요" 보임
-- [ ] 단어 발음 버튼 → Gemini 음성으로 들림 (폰 기계음 아님)
-- [ ] 이야기 만들기 → 뒷면 끝 신고 버튼
-- [ ] 지도 → 핀 → 사진 아래 "사진: 저작자 (라이선스) / Wikimedia Commons"
+- [ ] 사전에서 `buruk` 검색 → 결과 → 내 단어장에 담기 → 결과 맨 끝에 "AI 가 만든 내용입니다"와 "풀이가 이상합니다"가 보임
+- [ ] 단어 발음 버튼 → 인도네시아어 낱말은 폰 내장 음성으로 바로 들림(한도에 세지 않음). 예문·한국어 뜻 듣기는 Gemini 음성
+- [ ] 이야기 불러오기 → 뒷면 끝 신고 버튼
+- [ ] 지도 → 핀 → 사진이 보임(시트에는 출처를 적지 않음). 내 정보 → 사진 출처에 그 사진의 작가·라이선스·원본 링크가 있음
 - [ ] 하단 탭 내 정보 → 백업·새 폰으로 옮기기 → 백업 파일 저장 → 다운로드 폴더에 파일
 - [ ] Plus → 가격 두 개(연간 카드: "연 34,800원" 크게 · "(월 2,900원)" 작게, Play Console 값과 같은지) → 버튼 바로 아래 첫 줄
       "해지 전까지 매년 자동으로 결제됩니다." → (라이선스 테스터로) 구독 → "Plus 이용 중"
@@ -182,11 +188,11 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 - **관리자판 APK 빌드(`build-apk.yml`)도 지금은 실패할 가능성이 큽니다.** 스토어 빌드를 만들다 보니
   `android-actions/setup-android@v3` 가 2026-11 러너에서 실패했습니다(마지막 성공은 2026-08-10).
   다음에 관리자판 APK 를 다시 빌드할 일이 생기면 `build-store.yml` 처럼 SDK 설정 단계를 바꿔야 합니다.
-- 공개판 사용량 한도(무료 텍스트 200·음성 30/일 등)는 **잠정값**입니다. Worker 변수 `LIMITS_JSON` 하나로 바꿉니다.
-- 단어 발음 듣기도 음성 한도에 들어갑니다(같은 단어는 기기에 저장돼 두 번째부터는 세지 않음). 재논의 때 함께 정하면 됩니다.
-- **스토어 앱에서 한국어 문장 듣기**(단어장 뜻·오늘의 문장 풀이 등)도 Gemini 음성으로 갑니다. 지금 음성 요청은
-  "인도네시아어를 읽어라" 지시로 가므로 한국어 발음 품질은 확인이 필요하고, 한도도 함께 씁니다.
-  음성 재논의 때 "한국어 듣기를 뺄지 / 따로 지시할지"를 같이 정하면 됩니다(폰 내장 음성은 넣지 않기로 함).
+- 공개판 사용량 한도는 `workers/kata-public/worker.js` 의 `DEFAULT_LIMITS` 가 정본입니다(무료: 이야기 하루 1 · 새 사전 풀이 하루 50 ·
+  오늘의 문장 하루 1 · 긴 읽기와 회화 만들기는 잠김 / Plus: 이야기 하루 5·한 달 60, 회화 만들기 하루 3·한 달 30, 긴 읽기 하루 5·한 달 50 /
+  체험: 이 가운데 네 가지가 Plus 의 절반). 운영 중에는 Worker 변수 `LIMITS_JSON` 하나로 바꿉니다.
+- **단어 발음**: 스토어 앱에서 인도네시아어 낱말은 폰 내장 음성으로 읽습니다(2026-11 결정, 한도에 세지 않음).
+  예문·문장·한국어 듣기는 Gemini 음성이고 한도(`word-audio` 등)에 들어갑니다. 같은 글은 기기에 저장돼 두 번째부터는 세지 않습니다.
 - 사용량 한도는 서버가 **부르기 전에 한 칸을 잡고, 실패하면 돌려주는** 방식입니다. Cloudflare KV 는 동시에 쓰는
   값을 원자적으로 맞춰 주지 않아, 한 사람이 같은 순간에 여러 요청을 몰아 보내면 한도를 조금 넘길 수 있습니다.
   사용자가 늘어나면 카운터를 Durable Object 로 바꾸는 것을 권합니다(그때 요청 주세요).
