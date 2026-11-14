@@ -29,13 +29,15 @@ import LevelCircles from "@/components/LevelCircles";
 import FormSheet, { FORM_FIELD_CLASS, FormLabel, FormPrimaryButton } from "@/components/FormSheet";
 import { useCompactPill } from "@/lib/useCompactPill";
 import { aiErrorToast } from "@/lib/aiErrors";
+import { lastQuotaNotice } from "@/lib/aiProxy";
 import { useBackClose } from "@/hooks/useBackClose";
 
 const RESTORE_ASKED_KEY = "percakapan-restore-asked";
 const NEW_CAT = "__new__";
 const LOCK_TEXT = "회화집은 Plus 회원 기능입니다";
 
-type CatRow = PercakapanCategory & { count: number };
+// mineOnly: 이 등급에 가려진 폴더(교회와 신앙)인데 직접 만든 대화가 있어 그 대화만 센 줄(percakapan.ts listCategories, D-21)
+type CatRow = PercakapanCategory & { count: number; mineOnly?: boolean };
 
 const C = {
   txt: "#1D1F1E",
@@ -83,7 +85,8 @@ const Percakapan = () => {
 
   const [allCats, setAllCats] = useState<CatRow[]>([]);
   // 교회와 신앙(staffOnly)은 listCategories 가 이미 거릅니다. 등급이 바뀐 직후를 위해 화면에서도 한 번 더.
-  const cats = allCats.filter((c) => isCategoryVisible(c.id));
+  // 가려진 폴더라도 직접 만든 대화가 들어 있는 줄(mineOnly)은 남깁니다(D-21).
+  const cats = allCats.filter((c) => isCategoryVisible(c.id) || c.mineOnly === true);
 
   // 만들기 시트
   const [makeOpen, setMakeOpen] = useState(false);
@@ -97,6 +100,8 @@ const Percakapan = () => {
   const [creating, setCreating] = useState(false);
   // 서버가 오늘 만들기 한도를 다 썼다고 알려 왔는지 (이 화면에 있는 동안만)
   const [quotaHit, setQuotaHit] = useState(false);
+  // 그때 서버가 알려 준 안내 문장(오늘/이번 달 구분이 들어 있음) — 버튼 아래에 그 문장을 그대로 씁니다(출시 전 점검 A-08)
+  const [quotaNote, setQuotaNote] = useState("");
 
   // 백업 복원 물어보기 시트
   const [restoreOpen, setRestoreOpen] = useState(false);
@@ -193,7 +198,7 @@ const Percakapan = () => {
   const openCat = (c: CatRow) => {
     // 무료: 기본 회화집은 잠겨 있고, 직접 만든 회화집이 든 폴더만 열립니다.
     if (!plan.plus) {
-      const mine = c.custom ? c.count : c.count - builtinScenesOf(c.id).length;
+      const mine = c.custom || c.mineOnly ? c.count : c.count - builtinScenesOf(c.id).length;
       if (mine <= 0) {
         goLocked();
         return;
@@ -206,7 +211,7 @@ const Percakapan = () => {
     if (creating) return;
     const trimmed = name.trim();
     if (!trimmed) {
-      toast.error("회화집 이름을 넣어 주세요");
+      toast.error("대화 이름을 넣어 주세요");
       return;
     }
 
@@ -216,7 +221,7 @@ const Percakapan = () => {
     if (catId === NEW_CAT) {
       const ko = newCatKo.trim();
       if (!ko) {
-        toast.error("새 카테고리 이름을 넣어 주세요");
+        toast.error("새 주제 이름을 넣어 주세요");
         return;
       }
       madeCat = {
@@ -242,7 +247,7 @@ const Percakapan = () => {
       // 만드는 사이에 이 화면을 떠났으면 저장만 해 두고 끝냅니다. 지금 보고 있는 화면(게임·퀴즈·사전 등)에서
       // 끌고 나오지 않습니다. 만든 회화집은 회화집 폴더에 들어 있습니다.
       if (!aliveRef.current) {
-        toast("만들던 회화집이 준비되었습니다. 회화집에서 볼 수 있습니다");
+        toast("만들던 대화가 준비되었습니다. 회화집에서 볼 수 있습니다");
         return;
       }
       // 시트를 닫는 setState 없이 곧바로 이동합니다 (WebView 에서 setState 여러 개 +
@@ -256,14 +261,19 @@ const Percakapan = () => {
       // 한도 초과(QUOTA_PERCAKAPAN_MAKE 등): 토스트는 aiProxy 가 이미 띄웁니다. 시트 안에 오늘은 더 못 만든다는 안내를 둡니다.
       // Plus 필요(QUOTA_PLUS_REQUIRED): aiProxy 가 "Plus 보기" 알림을 띄웠으므로 여기서는 아무것도 하지 않습니다.
       if (code === "QUOTA_PLUS_REQUIRED") { /* 겹쳐 띄우지 않음 */ }
-      else if (code.indexOf("QUOTA") === 0) { if (aliveRef.current) setQuotaHit(true); }
+      else if (code.indexOf("QUOTA") === 0) {
+        if (aliveRef.current) {
+          setQuotaNote(lastQuotaNotice());
+          setQuotaHit(true);
+        }
+      }
       // 공개판은 키 설정이 없으므로 aiErrors 가 사용자용 문장으로 바꿉니다(관리자판은 기존 문구).
       else if (code === "NO_API_KEY" || code === "SESSION_EXPIRED") aiErrorToast(code, "설정에서 Gemini API 키를 넣어 주세요", true);
       else if (code === "INVALID_API_KEY" || code === "NOT_AVAILABLE") aiErrorToast(code, "Gemini API 키가 맞지 않습니다", true);
-      else if (code === "RATE_LIMIT") toast.error("요청이 많습니다. 잠시 뒤에 다시 하세요");
+      else if (code === "RATE_LIMIT") toast.error("요청이 많습니다. 잠시 뒤 다시 시도하세요");
       else if (code === "TIMEOUT") toast.error("시간이 너무 오래 걸려 멈췄습니다");
       else if (code === "NETWORK_FAILED") toast.error("인터넷 연결을 확인해 주세요");
-      else toast.error("회화집을 만들지 못했습니다");
+      else toast.error("대화를 만들지 못했습니다");
     }
   };
 
@@ -274,8 +284,8 @@ const Percakapan = () => {
       .then((r) => {
         setRestoring(false);
         setRestoreOpen(false);
-        if (r.addedScenes > 0) toast.success("회화집 " + r.addedScenes + "개를 불러왔습니다");
-        else toast("새로 불러올 회화집이 없습니다");
+        if (r.addedScenes > 0) toast.success("대화 " + r.addedScenes + "개를 불러왔습니다");
+        else toast("새로 불러올 대화가 없습니다");
         refresh();
       })
       .catch((e: any) => {
@@ -324,7 +334,7 @@ const Percakapan = () => {
         >
           <ArrowLeft size={20} />
         </button>
-        {/* 제목은 자르지 않습니다(QA Q09). 자리가 모자라면 "회화집 만들기" 알약이 아이콘만 남은 동그라미로 줄어듭니다. */}
+        {/* 제목은 자르지 않습니다(QA Q09). 자리가 모자라면 "대화 만들기" 알약이 아이콘만 남은 동그라미로 줄어듭니다. */}
         <h1
           ref={headTitleRef}
           className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]"
@@ -336,7 +346,7 @@ const Percakapan = () => {
           ref={makePillRef}
           type="button"
           onClick={openMake}
-          aria-label="회화집 만들기"
+          aria-label="대화 만들기"
           className={
             "-mr-1 h-9 rounded-full flex items-center font-gothic text-[0.8125rem] font-semibold active:opacity-80 " +
             (makeCompact ? "w-9 shrink-0 justify-center" : "min-w-9 overflow-hidden pl-[11px] pr-[13px] gap-[5px]")
@@ -344,14 +354,14 @@ const Percakapan = () => {
           style={{ background: C.tealBg, color: C.teal }}
         >
           {plan.plus ? <Plus size={15} strokeWidth={2.4} className="shrink-0" /> : <Lock size={13} strokeWidth={2.2} className="shrink-0" />}
-          {makeCompact ? null : <span ref={makeLabelRef} className="whitespace-nowrap">회화집 만들기</span>}
+          {makeCompact ? null : <span ref={makeLabelRef} className="whitespace-nowrap">대화 만들기</span>}
         </button>
       </header>
 
       <div className="px-4 pt-4 pb-6 flex flex-col gap-2.5">
         <div className="flex items-center mx-1">
           <p className="flex-1 font-gothic text-[0.875rem] font-bold tracking-[0.02em]" style={{ color: "#3B4245" }}>
-            회화집 {cats.length}개
+            주제 {cats.length}개
           </p>
           {!isStoreApp() ? (
             <button
@@ -368,7 +378,7 @@ const Percakapan = () => {
         {cats.length > 0 ? (
           <div className="overflow-hidden" style={CARD_STYLE}>
             {cats.map((c, i) => {
-              const locked = !plan.plus && (c.custom ? c.count : c.count - builtinScenesOf(c.id).length) <= 0;
+              const locked = !plan.plus && (c.custom || c.mineOnly ? c.count : c.count - builtinScenesOf(c.id).length) <= 0;
               return (
                 <button
                   key={c.id}
@@ -403,7 +413,7 @@ const Percakapan = () => {
           </div>
         ) : (
           <div className="px-4 py-10 text-center" style={CARD_STYLE}>
-            <p className="text-[0.9375rem]" style={{ color: C.txt }}>회화집이 없습니다</p>
+            <p className="text-[0.9375rem]" style={{ color: C.txt }}>대화가 없습니다</p>
             <p className="mt-1 font-word text-[0.75rem]" style={{ color: C.sub }}>Belum ada percakapan</p>
           </div>
         )}
@@ -414,7 +424,7 @@ const Percakapan = () => {
         open={makeOpen}
         onClose={closeMake}
         closeLocked={creating}
-        title="회화집 만들기"
+        title="대화 만들기"
         desc="상황을 적으면 두 사람의 대화를 만듭니다"
         icon={<MessagesSquare size={20} strokeWidth={1.8} />}
         tileBg="#E4EEF6"
@@ -425,19 +435,20 @@ const Percakapan = () => {
               {creating ? (
                 <><Loader2 size={17} className="animate-spin" /> 만드는 중...</>
               ) : (
-                <><Plus size={17} strokeWidth={2.4} /> 회화집 만들기</>
+                <><Plus size={17} strokeWidth={2.4} /> 대화 만들기</>
               )}
             </FormPrimaryButton>
-            <p className="mt-2 text-center font-gothic text-[0.75rem]" style={{ color: quotaHit ? C.sub : C.mute }}>
+            <p className="mt-2 text-center break-keep font-gothic text-[0.75rem]" style={{ color: quotaHit ? C.sub : C.mute }}>
+              {/* 한도에 걸렸으면 서버가 알려 준 그 문장(오늘/이번 달) 하나만 씁니다 — 알림과 같은 말 */}
               {quotaHit
-                ? "오늘 만들 수 있는 회화집을 모두 만들었습니다 · 내일 다시 만들 수 있습니다"
+                ? (quotaNote || "오늘 만들 수 있는 대화를 모두 만들었습니다. 내일 다시 만들어 보세요.")
                 : "만드는 데 20초쯤 걸립니다"}
             </p>
           </>
         }
       >
               <div>
-                {labelEl("회화집 이름")}
+                {labelEl("대화 이름")}
                 <div className={fieldClass} style={{ minHeight: 44 }}>
                   <input
                     value={name}
@@ -452,7 +463,7 @@ const Percakapan = () => {
               </div>
 
               <div>
-                {labelEl("카테고리")}
+                {labelEl("주제")}
                 <div className={"relative " + fieldClass} style={{ minHeight: 44 }}>
                   <span className="text-[1rem] leading-none shrink-0" aria-hidden="true">
                     {catId === NEW_CAT ? "💬" : selectedCat ? selectedCat.emoji : ""}
@@ -468,7 +479,7 @@ const Percakapan = () => {
                         {c.title}
                       </option>
                     ))}
-                    <option value={NEW_CAT}>+ 새 카테고리</option>
+                    <option value={NEW_CAT}>+ 새 주제</option>
                   </select>
                   <ChevronDown
                     size={18}
@@ -485,7 +496,7 @@ const Percakapan = () => {
                     <input
                       value={newCatKo}
                       onChange={(e) => setNewCatKo(e.target.value)}
-                      placeholder="새 카테고리 이름 (한국어)"
+                      placeholder="새 주제 이름 (한국어)"
                       className="flex-1 min-w-0 bg-transparent outline-none text-[0.875rem] py-2"
                       style={{ color: C.txt }}
                     />
@@ -494,7 +505,7 @@ const Percakapan = () => {
                     <input
                       value={newCatId}
                       onChange={(e) => setNewCatId(e.target.value)}
-                      placeholder="새 카테고리 이름 (인도네시아어)"
+                      placeholder="새 주제 이름 (인도네시아어)"
                       className="flex-1 min-w-0 bg-transparent outline-none font-word text-[0.875rem] py-2"
                       style={{ color: C.txt }}
                       autoCapitalize="none"
@@ -541,7 +552,7 @@ const Percakapan = () => {
             className="fixed z-50 left-1/2 -translate-x-1/2 top-[22%] w-[min(92vw,22rem)] rounded-2xl bg-card border border-border/60 shadow-2xl shadow-black/40 px-5 py-5"
           >
             <p className="text-[0.9375rem] leading-relaxed text-card-foreground">
-              개인 회화집 {restoreCount}개를 찾았습니다. 불러오시겠습니까?
+              내가 만든 대화 {restoreCount}개를 찾았습니다. 불러오시겠습니까?
             </p>
             <div className="mt-5 flex gap-2">
               <button
