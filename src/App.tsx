@@ -15,6 +15,7 @@ import MemberAdmin from "./pages/MemberAdmin";
 import { refreshMembershipOnStart } from "@/lib/access";
 import { autoSyncBibleOnStart } from "@/lib/bibleAutoSync";
 import { autoBackupOnStart } from "@/lib/transfer";
+import { SAVE_FAILED_EVENT } from "@/lib/store";
 import { toast } from "sonner";
 import Prayer from "./pages/Prayer";
 import Sermons from "./pages/Sermons";
@@ -88,6 +89,26 @@ memberChecked
     }
   })
   .catch(() => {});
+
+// 단어장 저장이 실패하면(저장 공간 가득 등) store.ts 가 이 신호를 보냅니다. 화면은 된 것처럼 보이는데
+// 다음에 켜면 사라지는 일을 막으려고 한 번 알립니다(30초 안에 거듭 오면 한 번만. 출시 전 점검 D-04).
+let saveFailShownAt = 0;
+try {
+  window.addEventListener(SAVE_FAILED_EVENT, () => {
+    const now = Date.now();
+    if (now - saveFailShownAt < 30000) return;
+    saveFailShownAt = now;
+    toast("저장하지 못했습니다. 폰의 저장 공간이 부족한지 확인해 주세요", { duration: 8000 });
+  });
+} catch (e) {}
+
+// 이야기·회화집·훈장은 IndexedDB 에 있어, 폰 저장 공간이 모자라면 시스템이 지울 수 있습니다.
+// 지우지 않는 저장소로 해 달라고 한 번 요청합니다(받아들여질지는 기기가 정함. 출시 전 점검 D-15).
+try {
+  if (navigator.storage && typeof navigator.storage.persist === "function") {
+    navigator.storage.persist().catch(() => {});
+  }
+} catch (e) {}
 
 const App = () => (
   // 화면 오류가 앱 전체를 흰 화면으로 만들지 않게 맨 바깥에서 받습니다(2026-11-14, C-03).
