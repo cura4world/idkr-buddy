@@ -60,6 +60,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import HiddenInPublic from "@/components/HiddenInPublic";
 import { installStoreTtsShim } from "@/lib/storeTtsShim";
 import PreviewPanel from "@/components/PreviewPanel";
+import LocalWipeDialog from "@/components/LocalWipeDialog";
 import { isPreview } from "@/lib/preview";
 
 const queryClient = new QueryClient();
@@ -171,6 +172,8 @@ const App = () => (
         <BottomTabs />
         </LoginGate>
         </WebGate>
+        {/* 계정 삭제 직후 "이 폰의 단어장도 지울까요?" — 삭제하면 로그인 화면으로 바뀌므로 LoginGate 바깥에 둡니다 (D-10) */}
+        <LocalWipeDialog />
         {showPreviewPanel ? <PreviewPanel /> : null}
       </BrowserRouter>
     </TooltipProvider>
