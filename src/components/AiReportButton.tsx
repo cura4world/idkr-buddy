@@ -15,12 +15,15 @@ interface Props {
   input: string;  // 사용자가 찾은 말·고른 주제
   output: string; // AI 가 만든 내용(앞부분이면 충분)
   className?: string;
+  // 여는 단추의 글자. 기본은 "풀이가 이상합니다". 이야기 카드 뒷면만 "내용이 이상합니다"로 씁니다(2026-11-14 결정).
+  // 화면 글자일 뿐이고, 서버로 보내는 신고 종류(feature)·사유 값은 그대로입니다.
+  label?: string;
 }
 
 // 말투 규칙(11/10): "~해요" 대신 "~입니다". 시안(사전 안 4)의 버튼 문구 "풀이가 이상합니다"와 맞춥니다.
 const REASONS = ["뜻·번역이 틀립니다", "부적절한 내용입니다", "기타"];
 
-const AiReportButton = ({ feature, input, output, className }: Props) => {
+const AiReportButton = ({ feature, input, output, className, label = "풀이가 이상합니다" }: Props) => {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -69,7 +72,7 @@ const AiReportButton = ({ feature, input, output, className }: Props) => {
           className="h-8 flex items-center gap-1.5 text-xs font-gothic text-muted-foreground"
         >
           <Flag size={13} />
-          풀이가 이상합니다
+          {label}
         </button>
       </div>
       {open ? (
