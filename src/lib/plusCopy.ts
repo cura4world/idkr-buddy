@@ -9,25 +9,31 @@ export const PLUS_TITLE_BRAND = "Kata kata"; // 제목 앞부분 (Lora)
 export const PLUS_TITLE_MARK = "Plus";       // 제목 뒷부분 (황금갈색)
 
 /** 제목 아래 한 줄 소개. 시안처럼 두 줄로 끊어 보입니다. */
-export const PLUS_LEAD_LINES: string[] = ["단어장 폴더부터 게임, 회화집, 지도까지", "모든 기능이 열립니다"];
+export const PLUS_LEAD_LINES: string[] = ["기본 단어장부터 게임, 회화집, 지도까지", "모든 기능이 열립니다"];
 
 export type PlusPerkIcon = "book" | "game" | "speaker" | "chat" | "map";
 
 export interface PlusPerk {
   icon: PlusPerkIcon;
   title: string;
-  /** 제목 옆 회색 덧말 (예: "(3,000단어)") */
+  /** 제목 옆 회색 덧말 (예: "(3,005단어)") */
   note?: string;
   sub: string;
 }
 
+/** 단어 수 덧말 — 홈 "단어장" 줄의 "3,005단어"와 같은 수를 같은 모양으로 보입니다(출시 전 점검 C-12). */
+export function wordCountNote(n: number): string {
+  return "(" + n.toLocaleString("ko-KR") + "단어)";
+}
+
 export const PLUS_PERKS: PlusPerk[] = [
-  { icon: "book", title: "기본 단어장 34권", note: "(3,000단어)", sub: "주제별 단어를 카드와 퀴즈로 외우기" },
+  // 덧말의 단어 수는 구독 화면이 실제 수를 세어 바꿔 넣습니다(Plus.tsx). 여기 값은 세지 못했을 때만 보입니다.
+  { icon: "book", title: "기본 단어장 34권", note: wordCountNote(3005), sub: "주제별 단어를 카드와 퀴즈로 외우기" },
   { icon: "game", title: "단어 게임 6가지", sub: "게임으로 단어 실력 쌓기" },
   // 한 달 상한(60편)도 함께 적습니다 — "하루 5편"만 보고 매일 5편을 받으면 12일째에 막힙니다(B-10).
-  { icon: "speaker", title: "인도네시아 음성으로 이야기 듣기", sub: "새 이야기 하루 5편 · 한 달 60편까지" },
-  { icon: "chat", title: "회화 공부와 만들기", sub: "86개 상황과 새로운 상황 만들기" },
-  { icon: "map", title: "인도네시아 이해 · 지도", sub: "섬과 도시마다 읽을거리와 단어공부" },
+  { icon: "speaker", title: "인도네시아어 음성으로 이야기 듣기", sub: "새 이야기 하루 5편 · 한 달 60편까지" },
+  { icon: "chat", title: "회화집 공부와 대화 만들기", sub: "대화 86개와 새 대화 만들기" },
+  { icon: "map", title: "인도네시아 이해 · 지도", sub: "섬과 도시마다 읽을거리와 단어 공부" },
 ];
 
 // ── 요금제 카드 ──────────────────────────────────────────────
@@ -108,7 +114,7 @@ export const LINK_PRICE_RETRY = "다시 불러오기";
 /** 결제는 끝났는데 서버 확인이 아직인 동안 (다시 결제하라고 하지 않습니다) */
 export const NOTE_VERIFYING_LINES: string[] = [
   "결제는 완료되었습니다. 확인 중입니다.",
-  "확인되면 Plus 가 바로 열립니다. 다시 결제하지 않으셔도 됩니다.",
+  "확인되면 Plus가 바로 열립니다. 다시 결제하지 않으셔도 됩니다.",
 ];
 export const CTA_VERIFYING = "결제 확인 중";
 
@@ -122,7 +128,7 @@ export const NOTE_AI_VOICE = "읽기 음성은 AI가 만든 인도네시아어 �
 
 // ── 아래 링크 ────────────────────────────────────────────────
 
-export const LINK_RESTORE = "구매 복원";
+export const LINK_RESTORE = "구독 복원";
 export const LINK_TERMS = "이용약관";
 export const LINK_PRIVACY = "개인정보처리방침";
 
@@ -144,16 +150,16 @@ export function stateUntilText(dateText: string, trial: boolean, autoRenew = tru
 }
 
 /** 체험 가능할 때 구독 화면에 덧붙이는 한 줄 — 체험 한도는 Plus 의 절반입니다(서버 TRIAL_HALF_KINDS, B-10). */
-export const NOTE_TRIAL_HALF = "체험 중에는 이야기·회화 만들기·듣기 횟수가 절반입니다.";
+export const NOTE_TRIAL_HALF = "체험 중에는 이야기 불러오기·대화 만들기·듣기 횟수가 절반입니다.";
 
 // ── 알림 ─────────────────────────────────────────────────────
 
-export const TOAST_STARTED = "Plus 가 시작되었습니다. 고맙습니다";
+export const TOAST_STARTED = "Plus가 시작되었습니다. 고맙습니다";
 export const TOAST_TRIAL_STARTED = "무료 체험이 시작되었습니다. 모든 기능이 열렸습니다";
-export const TOAST_PENDING = "결제가 확인되면 Plus 가 켜집니다";
+export const TOAST_PENDING = "결제가 확인되면 Plus가 켜집니다";
 /** 결제는 끝났는데 서버 확인이 실패 — 자동으로 다시 확인합니다(billing.ts). */
 export const TOAST_VERIFYING = "결제는 완료되었습니다. 확인 중입니다.";
-export const TOAST_VERIFIED = "결제가 확인되었습니다. Plus 가 시작되었습니다";
+export const TOAST_VERIFIED = "결제가 확인되었습니다. Plus가 시작되었습니다";
 export const TOAST_VERIFIED_TRIAL = "결제가 확인되었습니다. 무료 체험이 시작되었습니다";
 /** 이 기기의 구독이 다른 앱 계정에 묶여 있을 때 (서버 403 ACCOUNT_MISMATCH · 409 PURCHASE_OWNED_BY_OTHER) */
 export const TOAST_OTHER_ACCOUNT = "이 구독은 다른 Google 계정으로 로그인했을 때 산 것입니다. 그 계정으로 로그인해 주세요";
@@ -170,9 +176,9 @@ export function toastFailed(code: string): string {
   // 영어 오류 코드는 미리보기 빌드에서만 붙입니다(출시 전 점검 E-08)
   let preview = false;
   try { preview = import.meta.env.VITE_PREVIEW === "1"; } catch (e) {}
-  return "구독을 마치지 못했습니다. 잠시 뒤 다시 시도해 주세요" + (preview ? " (" + code + ")" : "");
+  return "구독을 마치지 못했습니다. 잠시 뒤 다시 시도하세요" + (preview ? " (" + code + ")" : "");
 }
-export const TOAST_RESTORED = "구독을 다시 연결했습니다";
+export const TOAST_RESTORED = "구독을 복원했습니다";
 export const TOAST_RESTORE_NONE = "이 Google 계정으로 산 구독을 찾지 못했습니다";
 export const TOAST_NO_BILLING = "구독은 Google Play에서 받은 앱에서만 할 수 있습니다";
 export const TOAST_NO_OFFERS = "요금제를 불러오지 못했습니다. 인터넷을 확인하고 다시 열어 주세요";
