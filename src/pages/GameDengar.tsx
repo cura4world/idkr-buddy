@@ -389,7 +389,7 @@ const GameDengar = () => {
                   <IconSpeaker size={30} />
                 </button>
                 <p className="mt-[22px] font-gothic text-[12px]" style={{ color: G.sub }}>
-                  {sound === "loading" ? "소리를 불러오는 중입니다" : "눌러서 다시 듣기"}
+                  {sound === "loading" ? "소리를 불러오는 중..." : "눌러서 다시 듣기"}
                 </p>
                 <button
                   type="button"
