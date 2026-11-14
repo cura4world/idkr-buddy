@@ -110,6 +110,8 @@ export function bibleComUrl(bookId: string, chapter: number): string {
 }
 
 const RAW_BASE = "https://raw.githubusercontent.com/tobiasagyasta/alkitab-api/main/lib";
+// 책 한 권(JSON) 받기의 마감. 시편처럼 큰 책도 있어 넉넉히 잡습니다.
+const BIBLE_FETCH_TIMEOUT_MS = 30000;
 
 // 앱 실행 중에만 유지되는 책 단위 캐시 (본문은 영구 저장하지 않음)
 const bookCache = new Map<string, Record<string, BibleVerse[]>>();
@@ -121,14 +123,32 @@ export async function fetchChapter(bookId: string, chapter: number): Promise<Bib
 
   let chapters = bookCache.get(bookId);
   if (!chapters) {
-    let res: Response;
+    // 응답이 안 오면 "불러오는 중"이 끝나지 않으므로 마감을 겁니다(본문을 다 읽을 때까지. 출시 전 점검 C-16).
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      try {
+        controller.abort();
+      } catch {
+        // 무시
+      }
+    }, BIBLE_FETCH_TIMEOUT_MS);
+    let data: any;
     try {
-      res = await fetch(RAW_BASE + "/" + book.folder + "/" + book.id + ".json");
-    } catch {
-      throw new Error("BIBLE_FETCH_FAILED");
+      let res: Response;
+      try {
+        res = await fetch(RAW_BASE + "/" + book.folder + "/" + book.id + ".json", { signal: controller.signal });
+      } catch {
+        throw new Error("BIBLE_FETCH_FAILED");
+      }
+      if (!res.ok) throw new Error("BIBLE_FETCH_FAILED");
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("BIBLE_FETCH_FAILED");
+      }
+    } finally {
+      clearTimeout(timer);
     }
-    if (!res.ok) throw new Error("BIBLE_FETCH_FAILED");
-    const data = await res.json();
     chapters = (data && data.chapters) || {};
     bookCache.set(bookId, chapters);
   }
