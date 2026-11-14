@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Bookmark } from "lucide-react";
 import { goBackOr } from "@/lib/nav";
+import { usePlan } from "@/lib/plan";
+import { isStoreApp } from "@/lib/platform";
 import {
   SavedPhrase,
   loadSavedList,
@@ -23,11 +25,16 @@ const fmtDate = (t: number) => {
 const SavedPhrases = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [list, setList] = useState<SavedPhrase[]>(() => loadSavedList());
+  // 공개판(스토어 앱)의 무료·Plus 에게는 성경 말씀 문장을 보이지 않습니다(출시 전 점검 E-10).
+  // 지우지는 않고 가리기만 합니다 — 관리자·Special Member 로 들어오면 다시 보입니다.
+  const { staff } = usePlan();
+  const hideAyat = isStoreApp() && !staff;
+  const visible = (all: SavedPhrase[]) => (hideAyat ? all.filter((p) => p.kind !== "alkitab") : all);
+  const [list, setList] = useState<SavedPhrase[]>(() => visible(loadSavedList()));
 
   const unsave = (id: string) => {
     removeSavedPhrase(id);
-    setList(loadSavedList());
+    setList(visible(loadSavedList()));
   };
 
   return (
