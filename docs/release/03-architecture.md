@@ -78,11 +78,20 @@
 | `POST /ai/gemini/{model}:generateContent` | Bearer + `x-kata-kind` (+ 긴 읽기는 `x-kata-unit`) | Gemini 요청 본문 | Gemini 응답 그대로 / 429 `QUOTA_<KIND>` `{kind, period, limit, plan}` / 403 `PLUS_REQUIRED` `{kind, plan}` |
 | `POST /billing/verify` | Bearer | `{productId, purchaseToken}` | `{valid, plan}` |
 | `POST /report` | Bearer | `{feature, input, output, reason}` | `{ok}` |
-| `GET /admin/reports` | `x-admin-key` | `?limit=` | `{items}` |
-| `POST /admin/special` | `x-admin-key` | `{email \| uid, action:"grant"\|"revoke", tier?:"special"\|"admin", until?:ms(0=무기한), note?}` | `{ok, uid, pending, plan}` |
+| `GET /admin/reports` | `x-admin-key` | `?limit=` `&cursor=`(앞 응답의 `nextCursor`) | `{items, nextCursor}` |
+| `POST /admin/special` | `x-admin-key` | `{email \| uid, action:"grant"\|"revoke", tier?:"special"\|"admin"\|"review", until?:ms(0=무기한), note?}` | `{ok, uid, pending, plan}` |
 | `GET /admin/special` | `x-admin-key` | `?email=` 또는 `?uid=` | `{uid, pending, plan}` |
+| `POST /admin/delete` | `x-admin-key` | `{email \| uid}` — 앱을 쓸 수 없는 사람의 삭제 요청(이메일 문의)을 대신 처리 | `{deleted, uid, hadSubscription}` / 404 `USER_NOT_FOUND` |
 
-`plan` = `{tier, until, trial?, productId?}` — `tier` 는 `free`·`trial`·`plus`·`special`·`admin`. 체험이면 `trial: true`.
+`plan` = `{tier, until, trial?, productId?, autoRenew?}` — `tier` 는 `free`·`trial`·`plus`·`review`·`special`·`admin`. 체험이면 `trial: true`.
+`autoRenew` 는 Play 구독(`trial`·`plus`)에만 있고, 사용자가 Play 에서 해지를 예약했으면 `false` 입니다(앱이 "자동 갱신" 대신 "…까지 이용"으로 보여 줌).
+
+**심사용 등급 `review` (2026-11-14)**: Play 심사자에게 주는 등급입니다. 한도·기능이 `plus` 와 똑같고(`getLimits` 가 plus 표를 그대로 씀),
+staff 전용 화면(신앙 메뉴·관리자 화면)은 열지 않습니다. `special`·`admin` 과 같은 길(`/admin/special`, `ent.staff`)로 주고 거둡니다.
+앱은 `review` 를 Plus 로 다루고(`plan.ts` `getTier`), 내 정보·구독 화면에 "심사용 계정"이라고만 표시합니다(`isReviewAccount`).
+
+**AI 일시 중지 `AI_PAUSED` (2026-11-14)**: Worker 변수. `all` 이면 모든 등급, `free` 면 무료 등급의 `/ai/*` 요청에 503 `SERVICE_PAUSED` 를 줍니다
+(한도를 잡기 전에 거절하므로 횟수는 깎이지 않음). 비우면 평소대로. 전체 하루 상한은 아직 없습니다 — 계정별 한도만 있습니다.
 
 ### 기능별 한도 (S41, 2026-11-11 — 정본: 결정 문서 "무료와 Plus", 사본: `08-polish-stories.md`)
 
@@ -125,6 +134,11 @@ Play `subscriptionsv2` 의 `lineItems[].offerPhase.freeTrial` 이 있으면 체�
 제안 ID·태그에 `trial` 이 들어 있고 `startTime` 에서 8일이 안 됐을 때만 체험으로 봅니다(체험 뒤에도 offerId 는 남으므로).
 Play 콘솔에서 체험 제안 ID 에 `trial` 을 넣어 두면(예: `trial-7d`) 대비책도 맞습니다.
 
+**체험 기록 `trial:<uid>` (2026-11-14)**: 체험으로 판정된 구매 토큰의 해시를 계정별로 적어 둡니다(`{first, firstToken, tokens[], last}`, 400일).
+한 계정에서 체험 토큰이 둘 이상이면 `ent.trialRepeat` 에 그 수를 남깁니다 — 지금은 **기록만** 하고 막지는 않습니다
+("체험은 계정마다 한 번"은 Play 의 제안 자격 설정에 맡김. 반복이 실제로 보이면 그때 서버에서 막을 근거가 됩니다).
+Play 응답에 계정 표식(`obfuscatedExternalAccountId`)이 없는 구매는 `ent.unbound = true` 로 표시합니다(앱 밖에서 산 구매를 가려내는 용도, 기록만).
+
 ### 구독 상태를 Play 에 다시 묻는 때 (2026-11-14, 출시 전 점검 B-01·B-02·B-04)
 
 실시간 개발자 알림(RTDN)을 쓰지 않으므로, 서버가 요청을 처리할 때(`getPlan`) 필요하면 Play 에 다시 묻습니다.
@@ -142,7 +156,9 @@ Play 콘솔에서 체험 제안 ID 에 `trial` 을 넣어 두면(예: `trial-7d`
 - 끝난 옛 구매(만료·환불된 토큰)를 검증해도, 지금 이용 중인 다른 구매를 무료로 덮어쓰지 않습니다.
 - 앱은 화면이 다시 보일 때(최소 10분 간격) `/me` 로 등급을 새로 받고, 결제가 끝났는데 검증이 실패한 구매는 "확인 중"으로 두고 성공할 때까지 다시 검증합니다(`src/lib/billing.ts`).
 
-### Special Member 정하기 (회원키 없이, 임시)
+### Special Member·심사용 계정 정하기 (회원키 없이, 임시)
+
+심사용 계정은 아래 명령의 본문에 `"tier":"review"` 를 더합니다(`05-arga-checklist.md` 7절).
 
 ```
 curl -X POST https://kata-public.cura4world.workers.dev/admin/special \
@@ -171,13 +187,14 @@ curl -X POST https://kata-public.cura4world.workers.dev/admin/special \
 | `use:<uid>:<YYYY-MM-DD>` | 하루 사용량 `{<kind>: n, report, units:{longread:{<unit>: 조각 수}}}` | 3일 |
 | `usem:<uid>:<YYYY-MM>` | 한 달 사용량 `{<kind>: n}` | 40일 |
 | `uset:<uid>` | 체험 기간 합계 `{longread: n}` | 400일 |
-| `ent:<uid>` | `{tier(free·trial·plus·special·admin), productId, purchaseToken, tokenHash, until, trial, state, checkedAt, triedAt?, freeSince?, ackPending?, staff?}` — `staff = {tier, until, note, at}` 는 관리자가 준 등급. `checkedAt` Play 가 마지막으로 답한 시각 · `triedAt` 물었지만 답을 못 받은 시각 · `freeSince` 무료로 내려간 시각 · `ackPending` 확인(acknowledge)이 아직 안 됨 | 계정 삭제까지 |
+| `ent:<uid>` | `{tier(free·trial·plus·review·special·admin), productId, purchaseToken, tokenHash, until, trial, state, checkedAt, triedAt?, freeSince?, ackPending?, unbound?, trialRepeat?, staff?}` — `staff = {tier, until, note, at}` 는 관리자가 준 등급(special·admin·review). `checkedAt` Play 가 마지막으로 답한 시각 · `triedAt` 물었지만 답을 못 받은 시각 · `freeSince` 무료로 내려간 시각 · `ackPending` 확인(acknowledge)이 아직 안 됨 | 계정 삭제까지 |
 | `ackfail:<sha256(purchaseToken)>` | 구매 확인(acknowledge) 실패 기록 `{uid, status, first, last, count}` — 확인되면 지움. 403 이 이어지면 서비스 계정의 "주문 및 구독 관리" 권한 누락 | 7일 |
 | `email:<sha256(소문자 이메일)>` | `uid` (관리자가 이메일로 등급을 줄 때 찾기표, 로그인 때 씀) | 계정 삭제까지 |
-| `spec:<sha256(소문자 이메일)>` | 로그인 전에 미리 준 등급 `{tier, until, note, at}` — 첫 로그인 때 `ent.staff` 로 옮김 | 붙거나 거둘 때까지 |
+| `spec:<sha256(소문자 이메일)>` | 로그인 전에 미리 준 등급 `{tier, until, note, at}` — 첫 로그인 때 `ent.staff` 로 옮김 | 붙거나 거둘 때까지, 길어도 400일 |
 | `ptok:<sha256(purchaseToken)>` | `uid` (한 구매를 여러 계정이 나눠 쓰지 못하게) | 400일 |
-| `report:<ts>-<rand>` | 신고 내용 (계정 삭제 시 uid 지움) | 180일 |
-| `ureports:<uid>` | 내 신고 키 목록 (삭제용) | 180일 |
+| `trial:<uid>` | 체험 기록 `{first, firstToken, tokens[], last}` (위 "체험 기록") | 400일 (계정 삭제 시 지움) |
+| `report:<ts>-<rand>` | 신고 내용 (계정 삭제 시 uid 지움 — 이때 보관 기간을 새로 시작하지 않고 남은 기간만 둠) | 접수부터 180일 |
+| `ureports:<uid>` | 내 신고 키 목록 (삭제용, 최근 5,000건) | 180일 |
 
 `uid` = `g_` + Google `sub`. `obfuscatedAccountId` = `sha256(uid)`의 앞 64자.
 
@@ -190,7 +207,8 @@ curl -X POST https://kata-public.cura4world.workers.dev/admin/special \
 | `PROXY_SECRET` | 비밀 | 기존 Cloud Run 비밀 (같은 값) |
 | `PLAY_PACKAGE` | 변수 | `app.naruve.katakata` |
 | `PLAY_SERVICE_ACCOUNT` | 비밀 | Play Developer API 서비스 계정 JSON |
-| `ADMIN_KEY` | 비밀 | 신고 조회·Special 주기(`/admin/*`) |
+| `ADMIN_KEY` | 비밀 | 신고 조회·등급 주기·계정 삭제 대행(`/admin/*`) |
+| `AI_PAUSED` | 변수 (선택, 평소에는 없음) | `all` / `free` — AI 요청 비상 중지(위 "AI 일시 중지") |
 | `LIMITS_JSON` | 변수 (선택) | 한도 덮어쓰기 — 적은 칸만 바뀜. `{"plus":{"story":{"day":6,"month":70}},"trial":{"longread":{"total":20}},"free":{"tts":0}}` (숫자 하나 = 하루 상한, `null` = 그 기간 제한 없음, `"locked":true` = 잠금). 예전 모양 `{"free":{"text":200}}` 도 그대로 받음 |
 
 ## 왜 이렇게 했나
