@@ -8,6 +8,7 @@
 
 import { geminiTarget, handleQuotaResponse, publicProxyError, AiKind } from "@/lib/aiProxy";
 import { getGeminiApiKey } from "@/lib/gemini";
+import { hasInvalidKeyReason } from "@/lib/geminiText";
 import { ttsPlayer } from "@/lib/tts";
 import { bibleAudioPlayer } from "@/lib/bibleAudio";
 import type { PercakapanScene, PercakapanSpeaker } from "@/data/percakapan";
@@ -24,6 +25,8 @@ const FEMALE_VOICE = "Kore";
 const DB_NAME = "kata-percakapan-audio";
 const STORE = "audio";
 const MAX_ITEMS = 2000;
+// 음성 요청 하나의 마감(본문을 다 받을 때까지). tts.ts 의 TTS_TIMEOUT_MS 와 같은 값입니다.
+const TTS_TIMEOUT_MS = 90000;
 
 // ── 화자 이름 ─────────────────────────────────────────────────
 // C 는 A 와 같은 이름을 씁니다 (Gemini 다화자는 2명이 상한).
@@ -83,6 +86,7 @@ async function saveCachedAudio(key: string, dataUrl: string): Promise<void> {
       tx.objectStore(STORE).put({ key, dataUrl, savedAt: Date.now() });
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve(); // 저장공간 초과는 abort 로 옵니다 — 받지 않으면 await 가 끝나지 않습니다
     });
     await evictIfNeeded();
   } catch (e) {}
@@ -113,6 +117,7 @@ async function evictIfNeeded(): Promise<void> {
       };
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve(); // 저장공간 초과는 abort 로 옵니다 — 받지 않으면 await 가 끝나지 않습니다
     });
   } catch (e) {}
 }
@@ -125,6 +130,7 @@ export async function clearPercakapanAudioCache(): Promise<void> {
       tx.objectStore(STORE).clear();
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve(); // 저장공간 초과는 abort 로 옵니다 — 받지 않으면 await 가 끝나지 않습니다
     });
   } catch (e) {}
 }
@@ -188,38 +194,64 @@ async function postTts(apiKey: string, body: any, attempt = 0, kind: AiKind = "s
   const target = geminiTarget(TTS_MODEL, apiKey, kind);
   if (!target) throw new Error("NO_API_KEY");
 
-  let res: Response;
+  // 응답이 안 오면 "준비 중"이 끝나지 않으므로 마감을 겁니다(tts.ts 와 같은 방식).
+  // 본문(res.json)을 다 읽을 때까지 유지합니다 — 큰 음성은 본문을 받는 데도 시간이 걸립니다.
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    try {
+      controller.abort();
+    } catch (e) {}
+  }, TTS_TIMEOUT_MS);
   try {
-    res = await fetch(target.url, {
-      method: "POST",
-      headers: target.headers,
-      body: JSON.stringify(body),
-    });
-  } catch (e) {
-    throw new Error("NETWORK_FAILED");
-  }
+    let res: Response;
+    try {
+      res = await fetch(target.url, {
+        method: "POST",
+        headers: target.headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      throw new Error(timedOut ? "TIMEOUT" : "NETWORK_FAILED");
+    }
 
-  // 하루 음성 한도를 넘으면 안내를 띄우고 재시도하지 않습니다.
-  if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA_TTS");
-  // 공개판 서버의 401(세션 만료 → 로그인 화면)·403(허용 안 됨)은 키 오류가 아닙니다.
-  const pubErr = publicProxyError(res, target);
-  if (pubErr) throw new Error(pubErr);
+    // 하루 음성 한도를 넘으면 안내를 띄우고 재시도하지 않습니다.
+    if (await handleQuotaResponse(res, target.viaProxy)) throw new Error("QUOTA_TTS");
+    // 공개판 서버의 401(세션 만료 → 로그인 화면)·403(허용 안 됨)은 키 오류가 아닙니다.
+    const pubErr = publicProxyError(res, target);
+    if (pubErr) throw new Error(pubErr);
 
-  if (!res.ok) {
-    // 500은 가끔 오디오 대신 텍스트 토큰을 반환하는 알려진 이슈 → 1회 재시도
-    if (res.status === 500 && attempt < 1) return postTts(apiKey, body, attempt + 1, kind);
-    if (res.status === 400 || res.status === 403) throw new Error("INVALID_API_KEY");
-    if (res.status === 429) throw new Error("RATE_LIMIT");
-    throw new Error("REQUEST_FAILED_" + res.status);
-  }
+    if (!res.ok) {
+      // 500은 가끔 오디오 대신 텍스트 토큰을 반환하는 알려진 이슈 → 1회 재시도
+      if (res.status === 500 && attempt < 1) return await postTts(apiKey, body, attempt + 1, kind);
+      if (res.status === 403) throw new Error("INVALID_API_KEY");
+      if (res.status === 400) {
+        // 400 을 통째로 키 오류로 보면 오진입니다(DECISIONS 5장). 구글이 상세 이유 API_KEY_INVALID 를
+        // 준 경우(내 키로 직접 부를 때)만 키 오류이고, 그 밖의 400 은 요청 형식 문제입니다.
+        if (!target.viaProxy && (await hasInvalidKeyReason(res))) throw new Error("INVALID_API_KEY");
+        throw new Error("BAD_REQUEST");
+      }
+      if (res.status === 429) throw new Error("RATE_LIMIT");
+      throw new Error("REQUEST_FAILED_" + res.status);
+    }
 
-  const data = await res.json();
-  const b64: string = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ?? "";
-  if (!b64) {
-    if (attempt < 1) return postTts(apiKey, body, attempt + 1, kind);
-    throw new Error("EMPTY_AUDIO");
+    let data: any;
+    try {
+      data = await res.json();
+    } catch (e) {
+      throw new Error(timedOut ? "TIMEOUT" : "NETWORK_FAILED");
+    }
+    const b64: string = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ?? "";
+    if (!b64) {
+      if (attempt < 1) return await postTts(apiKey, body, attempt + 1, kind);
+      throw new Error("EMPTY_AUDIO");
+    }
+    return pcmBase64ToWavDataUrl(b64);
+  } finally {
+    clearTimeout(timer);
   }
-  return pcmBase64ToWavDataUrl(b64);
 }
 
 // 대화 전체 — 다화자
@@ -400,6 +432,30 @@ class PercakapanAudioPlayer {
     } catch (e) {}
   }
 
+  // 캐시에 있으면 그것을, 없으면 만들어 캐시에 담고 돌려줍니다.
+  // 같은 소리를 만드는 중에 또 부르면(준비 중 취소 → 곧바로 다시 누름) 새로 요청하지 않고
+  // 먼저 보낸 요청을 함께 기다립니다 — 요청이 두 번 나가 한도가 두 칸 깎이지 않게 합니다.
+  private inflight = new Map<string, Promise<string>>();
+
+  private audioFor(key: string, make: () => Promise<string>): Promise<string> {
+    let job = this.inflight.get(key);
+    if (!job) {
+      job = (async () => {
+        const cached = await getCachedAudio(key);
+        if (cached) return cached;
+        const made = await make();
+        await saveCachedAudio(key, made);
+        return made;
+      })();
+      this.inflight.set(key, job);
+      const done = () => {
+        this.inflight.delete(key);
+      };
+      job.then(done, done);
+    }
+    return job;
+  }
+
   async playAll(scene: PercakapanScene): Promise<void> {
     if (!scene || !scene.lines || scene.lines.length === 0) return;
 
@@ -413,7 +469,12 @@ class PercakapanAudioPlayer {
         this.resume();
         return;
       }
-      if (this.snap.state === "loading") return;
+      // 준비 중에 다시 누르면 취소합니다(예전에는 아무 일도 없어, 응답이 안 오면 버튼이 계속 돌았습니다).
+      // 이미 보낸 요청은 그대로 끝나면 캐시에 담기므로, 다시 누르면 바로 나옵니다.
+      if (this.snap.state === "loading") {
+        this.stop();
+        return;
+      }
     }
 
     this.silenceOthers();
@@ -423,12 +484,7 @@ class PercakapanAudioPlayer {
 
     let url: string | null = null;
     try {
-      const key = allKey(scene);
-      url = await getCachedAudio(key);
-      if (!url) {
-        url = await generateSceneAudio(scene);
-        await saveCachedAudio(key, url);
-      }
+      url = await this.audioFor(allKey(scene), () => generateSceneAudio(scene));
     } catch (e) {
       if (myToken !== this.token) return;
       // 한도·Plus 안내는 aiProxy 가 이미 띄웠으므로 오류 알림(errorAt)을 겹쳐 띄우지 않습니다.
@@ -464,12 +520,7 @@ class PercakapanAudioPlayer {
 
     let url: string | null = null;
     try {
-      const key = lineKey(scene, index, speakerName);
-      url = await getCachedAudio(key);
-      if (!url) {
-        url = await generateLineAudio(line.id, speakerName);
-        await saveCachedAudio(key, url);
-      }
+      url = await this.audioFor(lineKey(scene, index, speakerName), () => generateLineAudio(line.id, speakerName));
     } catch (e) {
       if (myToken !== this.token) return;
       // 한도·Plus 안내는 aiProxy 가 이미 띄웠으므로 오류 알림(errorAt)을 겹쳐 띄우지 않습니다.
