@@ -341,7 +341,10 @@ const GameEja = () => {
 
   // 긴 단어는 칸을 줄여 한 줄에 넣습니다 (시안 34×46, 글자 22px)
   const cells = Math.max(1, slots.length);
-  const cellW = Math.max(18, Math.min(34, Math.floor((ROW_WIDTH - 4 * (cells - 1)) / cells)));
+  // 줄 폭은 실제 화면에 맞춥니다 — 390px 기준 상수만 쓰면 360px 화면에서 줄이 카드 안쪽 여백을 넘었습니다(출시 전 점검 U-11)
+  let rowW = ROW_WIDTH;
+  try { rowW = Math.min(ROW_WIDTH, window.innerWidth - 68); } catch (e) {}
+  const cellW = Math.max(18, Math.min(34, Math.floor((rowW - 4 * (cells - 1)) / cells)));
   const cellH = Math.round(cellW * (46 / 34));
   const cellFont = Math.max(15, Math.round(cellW * (22 / 34)));
 
