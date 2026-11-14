@@ -16,11 +16,13 @@ const UnderlineField = ({
   value,
   onChange,
   font,
+  readOnly,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   font: string;
+  readOnly?: boolean;
 }) => (
   <label className="block">
     <span className="block text-sm font-gothic font-bold uppercase tracking-[0.14em] text-muted-foreground">
@@ -29,6 +31,7 @@ const UnderlineField = ({
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      readOnly={!!readOnly}
       className={`w-full bg-transparent border-0 border-b border-border/60 rounded-none px-0 py-2 text-sm text-card-foreground outline-none focus:border-primary transition-colors ${font}`}
       autoCapitalize="none"
       autoCorrect="off"
@@ -95,6 +98,10 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
 
   if (!open || !word) return null;
 
+  // 기본 단어장의 단어(앱에 들어 있는 단어)는 읽기 전용입니다. 고치거나 지워도 앱이 새 버전을 받을 때마다
+  // 기본 단어가 통째로 다시 깔려, 고친 것이 사라지고 지운 것이 되살아났습니다(출시 전 점검 D-07).
+  const locked = !!word.isShared;
+
   const dirty =
     wordText.trim() !== (word.word || "").trim() ||
     meaning.trim() !== (word.meaning || "").trim() ||
@@ -104,7 +111,7 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSave) return;
+    if (locked || !canSave) return;
     updateWord(word.id, {
       word: wordText.trim(),
       meaning: meaning.trim(),
@@ -117,6 +124,7 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
 
   // 인라인 2단 확인: 처음 누르면 "정말 삭제?"로 바뀌고 3초 뒤 원복, 그 상태에서 다시 누르면 삭제
   const handleDeleteClick = () => {
+    if (locked) return;
     if (!confirmDelete) {
       setConfirmDelete(true);
       if (confirmTimer.current) clearTimeout(confirmTimer.current);
@@ -187,15 +195,20 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
 
           <form onSubmit={handleSubmit}>
             <div className="space-y-4">
-              <UnderlineField label="인도네시아어" value={wordText} onChange={setWordText} font="font-word" />
-              <UnderlineField label="한국어 뜻" value={meaning} onChange={setMeaning} font="font-body" />
+              <UnderlineField label="인도네시아어" value={wordText} onChange={setWordText} font="font-word" readOnly={locked} />
+              <UnderlineField label="한국어 뜻" value={meaning} onChange={setMeaning} font="font-body" readOnly={locked} />
             </div>
             <div className="mt-6 space-y-4">
-              <UnderlineField label="예문 (인도네시아어)" value={example} onChange={setExample} font="font-word" />
-              <UnderlineField label="예문 뜻 (한국어)" value={exampleMeaning} onChange={setExampleMeaning} font="font-body" />
+              <UnderlineField label="예문 (인도네시아어)" value={example} onChange={setExample} font="font-word" readOnly={locked} />
+              <UnderlineField label="예문 뜻 (한국어)" value={exampleMeaning} onChange={setExampleMeaning} font="font-body" readOnly={locked} />
             </div>
 
-            <div className="mt-7 flex items-center justify-between gap-3">
+            {locked ? (
+              <p className="mt-6 font-gothic text-xs leading-relaxed text-muted-foreground break-keep">
+                기본 단어장의 단어는 고치거나 지울 수 없습니다. 내 단어장에 담으면 고칠 수 있습니다.
+              </p>
+            ) : null}
+            <div className={"mt-7 items-center justify-between gap-3 " + (locked ? "hidden" : "flex")}>
               <button
                 type="button"
                 onClick={handleDeleteClick}
