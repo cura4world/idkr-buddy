@@ -294,14 +294,14 @@ export function describeSummary(s: BundleSummary): string {
   const parts: string[] = [];
   parts.push("단어 " + s.words + "개");
   if (s.categories > 0) parts.push("단어장 " + s.categories + "개");
-  if (s.saved > 0) parts.push("다시 외울 표시 " + s.saved + "개");
+  if (s.saved > 0) parts.push("다시 외울 단어 " + s.saved + "개");
   if (s.highlights > 0) parts.push("형광펜 " + s.highlights + "장");
   if (s.prayers > 0) parts.push("기도문 " + s.prayers + "개");
-  if (s.phrases > 0) parts.push("저장한 표현 " + s.phrases + "개");
+  if (s.phrases > 0) parts.push("저장한 문장 " + s.phrases + "개");
   if (s.ink > 0) parts.push("설교문 필기 " + s.ink + "편");
   if (s.medali > 0) parts.push("훈장 기록 " + s.medali + "건");
   if ((s.stories || 0) > 0) parts.push("이야기 " + s.stories + "편");
-  if ((s.scenes || 0) > 0) parts.push("만든 회화 " + s.scenes + "개");
+  if ((s.scenes || 0) > 0) parts.push("만든 대화 " + s.scenes + "개");
   return parts.join(" · ");
 }
 
