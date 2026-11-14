@@ -38,12 +38,12 @@ export interface PhraseKindInfo {
 
 // 배열 순서가 곧 옵션 시트에 보이는 순서입니다.
 const ALL_PHRASE_KINDS: PhraseKindInfo[] = [
-  { key: "peribahasa", ko: "생활 속담", id: "Peribahasa" },
+  { key: "peribahasa", ko: "속담", id: "Peribahasa" },
   { key: "ungkapan", ko: "관용구", id: "Ungkapan" },
   { key: "alkitab", ko: "성경 말씀", id: "Ayat Alkitab" },
   { key: "kosakataku", ko: "내 단어장", id: "Kosakataku" },
-  { key: "kosakata", ko: "단어장 폴더", id: "Kosakata" },
-  { key: "percakapan", ko: "회화집 폴더", id: "Percakapan" },
+  { key: "kosakata", ko: "기본 단어장", id: "Kosakata" },
+  { key: "percakapan", ko: "회화집", id: "Percakapan" },
 ];
 
 // 스토어 앱(공개판)에는 성경 말씀을 내지 않습니다. 옵션 시트와 저장된 선택 모두 이 목록으로 거릅니다.
