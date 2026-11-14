@@ -30,7 +30,7 @@ const NotFound = () => {
       <div className="px-4 pt-16 pb-10 text-center">
         <p className="font-word text-[2.5rem] font-semibold leading-none" style={{ color: "#104B60" }}>404</p>
         <p className="mt-4 font-gothic text-[0.9375rem]" style={{ color: "#1D1F1E" }}>페이지를 찾을 수 없습니다</p>
-        <p className="mt-1.5 font-gothic text-[0.8125rem]" style={{ color: "#646C72" }}>주소를 확인하거나 홈에서 다시 시작하세요.</p>
+        <p className="mt-1.5 font-gothic text-[0.8125rem]" style={{ color: "#646C72" }}>홈에서 다시 시작하세요.</p>
         <Link
           to="/"
           replace
