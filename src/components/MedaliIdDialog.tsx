@@ -77,9 +77,9 @@ export default function MedaliIdDialog({ open, onDone }: Props) {
   const hint = !trimmed
     ? ""
     : !formatOk
-      ? "한글·영문·숫자만, 6자 이내로 적어주세요."
+      ? "한글·영문·숫자만, 6자 이내로 적어 주세요."
       : isTaken
-        ? "이미 등록된 이름입니다. 내 다른 기기라면 그대로 시작하세요."
+        ? "이미 등록된 아이디입니다. 내 다른 기기라면 그대로 시작하세요."
         : "";
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -113,7 +113,7 @@ export default function MedaliIdDialog({ open, onDone }: Props) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="이름 정하기"
+        aria-label="아이디 정하기"
         className="kk-mi-panel fixed z-50 left-1/2 -translate-x-1/2 top-[18%] w-[min(92vw,22rem)] rounded-2xl bg-card border border-border/60 shadow-2xl shadow-black/40 overflow-hidden"
       >
         <div
@@ -121,10 +121,10 @@ export default function MedaliIdDialog({ open, onDone }: Props) {
           style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
         >
           <p className="font-body text-base font-semibold text-card-foreground">
-            앱에서 사용할 ID를 입력하세요
+            앱에서 사용할 아이디를 입력하세요
           </p>
           <p className="mt-1.5 font-gothic text-[0.75rem] leading-relaxed text-muted-foreground">
-            한글·영문·숫자 6자 이내로 적어 주세요. 아이디를 입력하면 상대방의 학습 점수를 확인할 수 있습니다.
+            한글·영문·숫자 6자 이내로 적어 주세요. 아이디를 입력하면 상대방의 공부 점수를 확인할 수 있습니다.
           </p>
 
           <form onSubmit={handleSubmit}>
@@ -139,7 +139,7 @@ export default function MedaliIdDialog({ open, onDone }: Props) {
               autoCapitalize="none"
               autoCorrect="off"
               autoComplete="off"
-              placeholder="ID"
+              placeholder="아이디"
               className="mt-4 mb-1 w-full rounded-xl border-2 border-primary/40 bg-muted px-4 py-3 text-center font-word text-[1.125rem] tracking-wide text-foreground outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-primary focus:bg-background"
             />
 
