@@ -353,7 +353,7 @@ const GameKata = () => {
               onClick={() => goBackOr(navigate, location.key, "/permainan")}
               className="mt-4 w-full"
             >
-              게임방으로
+              게임으로
             </SecondaryButton>
           </div>
         </div>
