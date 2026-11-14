@@ -252,6 +252,10 @@ function loadSeed(): Promise<Record<string, SeedEntry>> {
   return seedPromise;
 }
 
+// 내장 해설(src/data/phrase-seed.json)을 마지막으로 고친 날의 다음 날 0시(한국 시간).
+// 내장본을 다시 고치면 이 날짜도 올립니다(2026-11-14 출시 전 점검에서 4개 문장의 해설을 고침).
+const SEED_REVISED_AT = Date.UTC(2026, 10, 14, 15, 0, 0);
+
 /** 내장 문장이면 미리 만들어 둔 해설을 돌려줍니다. 없으면 null. */
 async function getSeededPhrase(sentence: string, ko: string): Promise<PhraseDetail | null> {
   const seed = await loadSeed();
@@ -291,7 +295,10 @@ export async function getPhraseDetail(
     const cached = await getCachedPhrase(sentence);
     // alkitab 구절인데 analysis 필드가 없는 구캐시는 다시 생성합니다.
     // 뜻풀이가 빈 채로 저장된 예전 캐시도 없는 것으로 보고 다시 만듭니다(C-24).
-    if (cached && asString(cached.meaning) !== "" && !(isAyat && cached.analysis === undefined)) return cached;
+    const usable = !!cached && asString(cached.meaning) !== "" && !(isAyat && cached.analysis === undefined);
+    // 내장 해설을 고친 날(SEED_REVISED_AT)보다 먼저 저장된 캐시는, 내장 문장에 한해 고친 내장본으로 바꿉니다.
+    // 그러지 않으면 그 문장을 이미 열어 본 폰에는 고치기 전 해설이 계속 남습니다.
+    if (usable && (isAyat || (cached!.createdAt || 0) >= SEED_REVISED_AT)) return cached!;
     if (!isAyat) {
       const seeded = await getSeededPhrase(sentence, ko);
       if (seeded) {
@@ -299,6 +306,7 @@ export async function getPhraseDetail(
         return seeded;
       }
     }
+    if (usable) return cached!; // 내장 문장이 아니면 예전 캐시 그대로
   }
 
   const raw = await callGeminiJSON(isAyat ? buildPromptAyat(sentence, ko) : buildPrompt(sentence, ko), { kind: aiKind });
