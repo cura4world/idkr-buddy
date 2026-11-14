@@ -7,7 +7,7 @@
   "display_override": ["standalone", "fullscreen"],
   "background_color": "#F3EFEA",
   "theme_color": "#F3EFEA",
-  "lang": "en",
+  "lang": "ko",
   "scope": "/idkr-buddy/",
   "orientation": "portrait",
   "icons": [
