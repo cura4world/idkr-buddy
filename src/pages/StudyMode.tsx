@@ -43,6 +43,8 @@ export default function StudyMode() {
   const swipeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 자동재생 실행 번호 (runAutoPlay)
   const autoRunRef = useRef(0);
+  // 방금 읽으려던 음성이 한도 초과로 만들어지지 않았는가 (speak 가 적고 runAutoPlay 가 읽습니다)
+  const quotaHitRef = useRef(false);
   // 이 화면에서 스피커를 한 번이라도 눌렀는가 — 누른 적이 있을 때만 뒤집은 카드의 뒷면 음성을 미리 만듭니다
   // (듣지 않는 카드까지 만들면 공개판 음성 한도를 씀)
   const usedSpeakerRef = useRef(false);
@@ -139,7 +141,10 @@ export default function StudyMode() {
         if (ok) return;
       }
       try { stopNative(); } catch (e) {}
-      await ttsPlayer.playOnce("say:" + clean, clean, lang === "ko" ? "male" : "female");
+      const ok = await ttsPlayer.playOnce("say:" + clean, clean, lang === "ko" ? "male" : "female");
+      // 한도 초과·Plus 필요로 음성을 만들지 못한 경우를 적어 둡니다 — 자동재생이 이것을 보고 멈춥니다(runAutoPlay).
+      // 안내 토스트는 aiProxy 가 이미 띄웠습니다.
+      if (!ok && ttsPlayer.lastPlayOnceError.indexOf("QUOTA") === 0) quotaHitRef.current = true;
       return;
     }
     return speakDevice(text, lang);
@@ -154,26 +159,44 @@ export default function StudyMode() {
   };
 
   // 관리자판·회원판(폰 내장 음성 AndroidTTS 가 있는 앱)의 예전 읽기 — 그대로 둡니다
+  // 음성 통로가 없거나(AndroidTTS·speechSynthesis 둘 다 없는 웹뷰) 부르다 던지면, 예전에는 Promise 가
+  // 끝나지 않아 자동재생이 그 카드에서 멈췄습니다. 실패하면 바로 끝난 것으로 칩니다(출시 전 점검 C-25).
   const speakDevice = (text: string, lang: "id" | "ko") => {
     return new Promise<void>((resolve) => {
-      const cleanText = text.replace(/~/g, "무엇무엇").replace(/\s*\/\s*/g, ", ");
-      if ((window as any).AndroidTTS) {
-        (window as any).AndroidTTS.speak(cleanText, lang === "ko" ? "ko-KR" : "id-ID");
-        setTimeout(() => resolve(), cleanText.length * 80 + 500);
-        return;
+      try {
+        const cleanText = text.replace(new RegExp("~", "g"), "무엇무엇").replace(new RegExp("\\s*/\\s*", "g"), ", ");
+        if ((window as any).AndroidTTS) {
+          (window as any).AndroidTTS.speak(cleanText, lang === "ko" ? "ko-KR" : "id-ID");
+          setTimeout(() => resolve(), cleanText.length * 80 + 500);
+          return;
+        }
+        if (typeof speechSynthesis === "undefined" || !speechSynthesis) {
+          resolve();
+          return;
+        }
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = lang === "ko" ? "ko-KR" : "id-ID";
+        utterance.rate = 0.9;
+        // 읽기 오류면 끝난 것으로 칩니다. 다만 멈춤(cancel)으로 끊긴 것은 예전처럼 그대로 둡니다.
+        const onSpeakError = (ev: any) => {
+          const code = ev && ev.error;
+          if (code === "canceled" || code === "interrupted") return;
+          resolve();
+        };
+        utterance.onend = () => resolve();
+        utterance.onerror = onSpeakError;
+        try { speechSynthesis?.cancel?.(); } catch(e) {}
+        const warmup = new SpeechSynthesisUtterance(" ");
+        warmup.volume = 0;
+        warmup.lang = utterance.lang;
+        warmup.onend = () => {
+          setTimeout(() => { try { speechSynthesis?.speak?.(utterance); } catch(e) { resolve(); } }, 100);
+        };
+        warmup.onerror = onSpeakError;
+        setTimeout(() => { try { speechSynthesis?.speak?.(warmup); } catch(e) { resolve(); } }, 150);
+      } catch (e) {
+        resolve();
       }
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = lang === "ko" ? "ko-KR" : "id-ID";
-      utterance.rate = 0.9;
-      utterance.onend = () => resolve();
-      try { speechSynthesis?.cancel?.(); } catch(e) {}
-      const warmup = new SpeechSynthesisUtterance(" ");
-      warmup.volume = 0;
-      warmup.lang = utterance.lang;
-      warmup.onend = () => {
-        setTimeout(() => { try { speechSynthesis?.speak?.(utterance); } catch(e) {} }, 100);
-      };
-      setTimeout(() => { try { speechSynthesis?.speak?.(warmup); } catch(e) {} }, 150);
     });
   };
 
@@ -289,6 +312,8 @@ export default function StudyMode() {
     { const backLang0: "id" | "ko" = lang === "id" ? "ko" : "id"; prefetchSpeak(lang === "id" ? playWords[index].meaning : playWords[index].word, backLang0); }
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(async () => { const frontText = lang === "id" ? playWords[index].word : playWords[index].meaning; await speak(frontText, lang); resolve(); }, 1000); });
     if (!alive()) return;
+    // 음성 한도를 넘었으면 자동재생을 멈춥니다. 계속 넘기면 카드마다 소리 없이 같은 한도 안내만 되풀이됩니다(출시 전 점검 C-17).
+    if (quotaHitRef.current) { quotaHitRef.current = false; stopAutoPlay(); return; }
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(() => { setIsFlipped(true); resolve(); }, 1500); });
     if (!alive()) return;
     // 다음 카드 앞면도 미리
@@ -296,6 +321,7 @@ export default function StudyMode() {
     // 뒷면은 다 읽을 때까지 기다린 뒤에야 다음 카드로 넘어갑니다
     await new Promise<void>((resolve) => { autoPlayRef.current = setTimeout(async () => { const backLang: "id" | "ko" = lang === "id" ? "ko" : "id"; const backText = lang === "id" ? playWords[index].meaning : playWords[index].word; await speak(backText, backLang); resolve(); }, 700); });
     if (!alive()) return;
+    if (quotaHitRef.current) { quotaHitRef.current = false; stopAutoPlay(); return; }
     autoPlayRef.current = setTimeout(() => { runAutoPlay(index + 1, playWords, lang, run); }, 1500);
   }, []);
 
@@ -313,6 +339,7 @@ export default function StudyMode() {
     if (sourceWords.length === 0) return;
     const playWords = random ? [...sourceWords].sort(() => Math.random() - 0.5) : [...sourceWords];
     autoRunRef.current += 1;
+    quotaHitRef.current = false; // 재생 전에 스피커를 눌러 남은 표시는 지웁니다
     autoRandomRef.current = random; isAutoPlayingRef.current = true;
     setSlideDir(1); setIsAutoRandom(random); setIsAutoPlaying(true); setCurrentIndex(0); setIsFlipped(false);
     setAutoCurrentWord(playWords[0]); requestWakeLock(); runAutoPlay(0, playWords, frontLang);
@@ -442,7 +469,9 @@ export default function StudyMode() {
               >
                 <Bookmark size={20} strokeWidth={1.8} fill={isMarked ? "currentColor" : "none"} />
               </button>
-              <p className={`m-0 text-center ${frontLang === "id" ? "font-word text-[1.78125rem] font-semibold leading-snug text-[#104B60]" : "font-gothic text-[1.21875rem] font-bold leading-relaxed text-[#1D1F1E]"}`}>
+              {/* 긴 낱말(mempertanggungjawabkan 등)이 카드·화면 밖으로 나가 잘리지 않게, 자리가 모자라면 낱말 안에서 꺾습니다(U-02).
+                  글자 크기는 줄이지 않습니다. overflow-wrap 은 임의값 클래스 대신 인라인 style 로 줍니다 */}
+              <p className={`m-0 max-w-full break-words text-center ${frontLang === "id" ? "font-word text-[1.78125rem] font-semibold leading-snug text-[#104B60]" : "font-gothic text-[1.21875rem] font-bold leading-relaxed text-[#1D1F1E]"}`} style={{ overflowWrap: "anywhere" }}>
                 {frontLang === "id" ? currentWord?.word : (currentWord ? displayMeaning(currentWord.meaning) : "")}
               </p>
               {frontLang === "id" && currentWord?.example && (
@@ -460,7 +489,7 @@ export default function StudyMode() {
               >
                 <Bookmark size={20} strokeWidth={1.8} fill={isMarked ? "currentColor" : "none"} />
               </button>
-              <p className={`mb-3 text-center ${frontLang === "id" ? "font-gothic text-[1.21875rem] font-bold text-[#1D1F1E]" : "font-word text-[1.78125rem] font-semibold leading-snug text-[#104B60]"}`}>
+              <p className={`mb-3 max-w-full break-words text-center ${frontLang === "id" ? "font-gothic text-[1.21875rem] font-bold text-[#1D1F1E]" : "font-word text-[1.78125rem] font-semibold leading-snug text-[#104B60]"}`} style={{ overflowWrap: "anywhere" }}>
                 {frontLang === "id" ? (currentWord ? displayMeaning(currentWord.meaning) : "") : currentWord?.word}
               </p>
               {frontLang === "id" && currentWord?.exampleMeaning && (
