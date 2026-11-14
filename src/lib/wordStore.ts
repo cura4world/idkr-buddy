@@ -44,7 +44,11 @@ export async function getLookupWord(word: string): Promise<LookupRecord | null> 
     return await new Promise((resolve) => {
       const tx = db.transaction(STORE, "readonly");
       const req = tx.objectStore(STORE).get(word.toLowerCase());
-      req.onsuccess = () => resolve((req.result as LookupRecord) || null);
+      req.onsuccess = () => {
+        const rec = (req.result as LookupRecord) || null;
+        // 뜻이 빈 채로 저장된 예전 기록은 없는 것으로 봅니다 — 그래야 다시 물어 봅니다(출시 전 점검 C-24).
+        resolve(rec && String(rec.meaning || "").trim() ? rec : null);
+      };
       req.onerror = () => resolve(null);
     });
   } catch {
@@ -56,6 +60,9 @@ export async function getLookupWord(word: string): Promise<LookupRecord | null> 
 // 이 함수는 API로 새 단어를 받아왔을 때만 불리므로(캐시 적중 경로에서는 호출 안 됨)
 // 여기서 한 번만 점수를 올리면 화면마다 고칠 필요가 없습니다.
 export async function saveLookupWord(word: string, meaning: string, info: string): Promise<void> {
+  // AI 가 뜻이 빈 답을 준 경우에는 저장하지 않습니다(점수도 없음). 저장하면 다음부터 빈 뜻만 보여 주고
+  // 다시 묻지 않게 됩니다(출시 전 점검 C-24).
+  if (!String(meaning || "").trim()) return;
   medaliEngine.addPoints("popup", 1).catch(() => {});  // 새 단어 팝업 +1 (조용히)
   try {
     const db = await openDB();
@@ -69,6 +76,7 @@ export async function saveLookupWord(word: string, meaning: string, info: string
       } as LookupRecord);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 저장 실패해도 화면 표시는 정상 동작
@@ -99,6 +107,7 @@ export async function clearLookupWords(): Promise<void> {
       tx.objectStore(STORE).clear();
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 무시
