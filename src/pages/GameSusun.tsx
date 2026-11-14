@@ -344,7 +344,7 @@ const GameSusun = () => {
           label={"걸린 시간 · " + result.total + "문장 중 " + result.score + "문장"}
           value={result.durationSec + "초"}
           best={result.bestBefore === 0 || result.durationSec < result.bestBefore}
-          bestText={result.bestBefore > 0 ? "최고 " + result.bestBefore + "초" : undefined}
+          bestText={result.bestBefore > 0 ? "가장 빠른 기록 " + result.bestBefore + "초" : undefined}
           gained={gained}
           floatOn={floatOn}
           starWords={result.starWords}
