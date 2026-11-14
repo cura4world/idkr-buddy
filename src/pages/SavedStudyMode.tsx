@@ -64,23 +64,42 @@ export default function SavedStudyMode() {
     refresh();
   };
 
+  // 음성 통로가 없거나(AndroidTTS·speechSynthesis 둘 다 없는 웹뷰) 부르다 던지면, 예전에는 Promise 가
+  // 끝나지 않아 자동재생이 그 카드에서 멈췄습니다. 실패하면 바로 끝난 것으로 칩니다(출시 전 점검 C-25).
   const speak = (text: string, lang: "id" | "ko") => {
     return new Promise<void>((resolve) => {
-      const cleanText = text.replace(/~/g, "무엇무엇").replace(/\s*\/\s*/g, ", ");
-      if ((window as any).AndroidTTS) {
-        (window as any).AndroidTTS.speak(cleanText, lang === "ko" ? "ko-KR" : "id-ID");
-        setTimeout(() => resolve(), cleanText.length * 80 + 500);
-        return;
+      try {
+        const cleanText = text.replace(new RegExp("~", "g"), "무엇무엇").replace(new RegExp("\\s*/\\s*", "g"), ", ");
+        if ((window as any).AndroidTTS) {
+          (window as any).AndroidTTS.speak(cleanText, lang === "ko" ? "ko-KR" : "id-ID");
+          setTimeout(() => resolve(), cleanText.length * 80 + 500);
+          return;
+        }
+        if (typeof speechSynthesis === "undefined" || !speechSynthesis) {
+          resolve();
+          return;
+        }
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = lang === "ko" ? "ko-KR" : "id-ID";
+        utterance.rate = 0.9;
+        // 읽기 오류면 끝난 것으로 칩니다. 다만 멈춤(cancel)으로 끊긴 것은 예전처럼 그대로 둡니다
+        // (끝난 것으로 치면 멈췄다가 곧바로 다시 재생할 때 옛 재생이 이어져 두 재생이 겹칩니다).
+        const onSpeakError = (ev: any) => {
+          const code = ev && ev.error;
+          if (code === "canceled" || code === "interrupted") return;
+          resolve();
+        };
+        utterance.onend = () => resolve();
+        utterance.onerror = onSpeakError;
+        try { speechSynthesis?.cancel?.(); } catch (e) {}
+        const warmup = new SpeechSynthesisUtterance(" ");
+        warmup.volume = 0; warmup.lang = utterance.lang;
+        warmup.onend = () => { setTimeout(() => { try { speechSynthesis?.speak?.(utterance); } catch (e) { resolve(); } }, 100); };
+        warmup.onerror = onSpeakError;
+        setTimeout(() => { try { speechSynthesis?.speak?.(warmup); } catch (e) { resolve(); } }, 150);
+      } catch (e) {
+        resolve();
       }
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = lang === "ko" ? "ko-KR" : "id-ID";
-      utterance.rate = 0.9;
-      utterance.onend = () => resolve();
-      try { speechSynthesis?.cancel?.(); } catch (e) {}
-      const warmup = new SpeechSynthesisUtterance(" ");
-      warmup.volume = 0; warmup.lang = utterance.lang;
-      warmup.onend = () => { setTimeout(() => { try { speechSynthesis?.speak?.(utterance); } catch (e) {} }, 100); };
-      setTimeout(() => { try { speechSynthesis?.speak?.(warmup); } catch (e) {} }, 150);
     });
   };
 
