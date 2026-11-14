@@ -122,7 +122,7 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
     onOpenChange(false);
   };
 
-  // 인라인 2단 확인: 처음 누르면 "정말 삭제?"로 바뀌고 3초 뒤 원복, 그 상태에서 다시 누르면 삭제
+  // 인라인 2단 확인: 처음 누르면 "한 번 더 누르면 삭제"로 바뀌고 3초 뒤 원복, 그 상태에서 다시 누르면 삭제
   const handleDeleteClick = () => {
     if (locked) return;
     if (!confirmDelete) {
@@ -215,7 +215,7 @@ export default function EditWordDialog({ open, onOpenChange, word, onUpdated }: 
                 className="flex items-center gap-1.5 text-sm font-gothic font-bold text-red-500/80 hover:text-red-500 transition-colors"
               >
                 <Trash2 size={14} />
-                {confirmDelete ? "정말 삭제?" : "삭제"}
+                {confirmDelete ? "한 번 더 누르면 삭제" : "삭제"}
               </button>
               <button
                 type="submit"
