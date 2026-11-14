@@ -486,7 +486,7 @@ const BibleRead = () => {
     try {
       const r = await pullMissingBibles(true);
       if (r.got.length > 0) toast("받았습니다 — " + r.got.join(" · "));
-      else if (r.missing.length > 0) toast(r.missing.join(" · ") + "은 서버에 아직 없습니다");
+      else if (r.missing.length > 0) toast("서버에 아직 없는 역본: " + r.missing.join(" · "));
       else if (r.failed.length > 0) toast("받지 못했습니다. 인터넷 연결을 확인해 주세요");
     } finally {
       setKoPulling(false);
@@ -1067,7 +1067,7 @@ const BibleRead = () => {
                         {koError[v] ? (
                           <div className="flex flex-col items-center gap-2.5">
                             <p className="text-sm text-gray-600 font-gothic">
-                              {koLabelOf(v)}을 아직 이 기기에 받지 않았습니다
+                              아직 이 기기에 받지 않은 역본: {koLabelOf(v)}
                             </p>
                             {canPullBible() ? (
                               <button
@@ -1113,7 +1113,7 @@ const BibleRead = () => {
         </div>
         <p className="text-center text-muted-foreground text-xs mt-3">
           {/* "단어를 탭하면 뜻" 안내는 2026-11-11 사용자 요청으로 앱 전체에서 뺐습니다 */}
-          {"블럭 지정 후 색을 고르면 형광펜"}
+          {"블록 지정 후 색을 고르면 형광펜"}
         </p>
 
         {/* 이전 장 / 다음 장 */}
