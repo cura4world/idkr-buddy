@@ -243,11 +243,17 @@ function dotDate(t: number): string {
   return d.getFullYear() + "." + p(d.getMonth() + 1) + "." + p(d.getDate());
 }
 
+/** 구독 날짜 — 구독 화면(Plus.tsx)과 같은 모양 "2026년 11월 20일" (출시 전 점검 A-55) */
+function koDate(t: number): string {
+  const d = new Date(t);
+  return d.getFullYear() + "년 " + (d.getMonth() + 1) + "월 " + d.getDate() + "일";
+}
+
 // ── 등급 배지 ────────────────────────────────────────────────────
 function tierBadge(t: Tier): { text: string; bg: string; fg: string } {
   if (t === "free") return { text: "무료", bg: "#F1F4F5", fg: MUTED };
   if (t === "plus") return { text: "Plus", bg: "#E3EEEC", fg: TEAL };
-  if (t === "trial") return { text: "Plus 체험", bg: "#E3EEEC", fg: TEAL };
+  if (t === "trial") return { text: "체험 중", bg: "#E3EEEC", fg: TEAL };
   return { text: TIER_LABEL[t], bg: "#FFF6DC", fg: "#8A6A12" };
 }
 
@@ -411,7 +417,7 @@ const MyInfo = () => {
     setMyMedaliId(v);
     setNick(v);
     setNickOpen(false);
-    toast("닉네임을 " + v + "(으)로 바꿨습니다");
+    toast("닉네임을 바꿨습니다: " + v);
     // 관리자판·회원판은 이 이름으로 기기끼리 점수를 맞춥니다(공개판은 회원키가 없어 요청하지 않음)
     syncMedali(true).catch(() => {});
   };
@@ -441,8 +447,8 @@ const MyInfo = () => {
       const r = await deleteAccount();
       toast(
         r.hadSubscription
-          ? "계정을 지웠습니다. 구독 결제는 Google Play 에서 따로 해지해 주세요"
-          : "계정을 지웠습니다",
+          ? "계정을 삭제했습니다. 구독 결제는 Google Play에서 따로 해지해 주세요"
+          : "계정을 삭제했습니다",
         { duration: 8000 },
       );
     } catch (e) {
@@ -450,10 +456,10 @@ const MyInfo = () => {
       const code = e instanceof Error ? e.message : "";
       toast(
         code === "SESSION_EXPIRED" || code === "NO_SESSION"
-          ? "로그인이 끝나 지우지 못했습니다. 다시 로그인한 뒤 눌러 주세요"
+          ? "로그인이 풀려 계정을 삭제하지 못했습니다. 다시 로그인한 뒤 눌러 주세요"
           : code === "NETWORK_FAILED"
-            ? "지우지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요"
-            : "지우지 못했습니다. 잠시 뒤 다시 눌러 주세요",
+            ? "계정을 삭제하지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요"
+            : "계정을 삭제하지 못했습니다. 잠시 뒤 다시 시도하세요",
         { duration: 6000 },
       );
       setBusy(false);
@@ -462,7 +468,7 @@ const MyInfo = () => {
 
   const openManage = () => {
     if (!billingAvailable()) {
-      toast("구독 관리는 Google Play 에서 받은 앱에서 열립니다");
+      toast("구독 관리는 Google Play에서 받은 앱에서 열립니다");
       return;
     }
     manageSubscription();
@@ -546,7 +552,7 @@ const MyInfo = () => {
           ? "연간 구독 시 월 " + pricing.yearlyPerMonth
           : pricing.yearlyPrice ? "연간 구독 시 연 " + pricing.yearlyPrice : "언제든 해지할 수 있습니다",
       ]
-    : ["단어장·게임·회화·지도까지", "모든 기능이 열립니다"];
+    : ["단어장·게임·회화집·지도까지", "모든 기능이 열립니다"];
   const tail = memberKeyTail(session);
   const hm = splitHM(view.totalMs);
 
@@ -613,7 +619,7 @@ const MyInfo = () => {
             <Row
               icon={I_DOC}
               label="회원 등급"
-              value={review ? "Plus · 심사용 계정" : tier === "trial" ? "Plus · 무료 체험 중" : "Plus" + (period ? " · " + period : "")}
+              value={review ? "Plus · 심사용 계정" : tier === "trial" ? "Plus 무료 체험 중" : "Plus" + (period ? " · " + period : "")}
               onClick={() => navigate(PAYWALL_PATH)}
               last={review}
             />
@@ -624,8 +630,8 @@ const MyInfo = () => {
                 label="구독 관리"
                 value={until > Date.now()
                   ? (session && session.plan.autoRenew === false
-                      ? dotDate(until) + "까지 이용"
-                      : (tier === "trial" ? "첫 결제 " : "다음 결제 ") + dotDate(until))
+                      ? koDate(until) + "까지 이용"
+                      : (tier === "trial" ? "첫 결제 " : "다음 결제 ") + koDate(until))
                   : undefined}
                 onClick={openManage}
                 last
@@ -657,8 +663,8 @@ const MyInfo = () => {
           </Card>
         )}
 
-        {/* ── 학습 기록 ── */}
-        <SectionTitle>학습 기록</SectionTitle>
+        {/* ── 공부 기록 ── */}
+        <SectionTitle>공부 기록</SectionTitle>
         <Card style={{ padding: "16px 16px 14px" }}>
           <div className="flex items-center justify-between">
             <span className="font-gothic" style={{ fontSize: rem(12), fontWeight: 600, color: MUTED }}>공부 시간</span>
@@ -754,7 +760,7 @@ const MyInfo = () => {
                 <span className="font-gothic" style={{ fontSize: rem(11), fontWeight: 500, color: MUTED }}> 점</span>
               </p>
               <p className="font-gothic" style={{ margin: "4px 0 0", fontSize: rem(10.5), lineHeight: 1.5, letterSpacing: "-0.02em", color: "#8A6A5A", wordBreak: "keep-all" }}>
-                학습을 통해 쌓이는 이번 주 점수,<br />매주 월요일 갱신
+                공부하며 쌓이는 이번 주 점수,<br />매주 월요일 갱신
               </p>
             </button>
             <button
@@ -934,7 +940,7 @@ const MyInfo = () => {
             ))}
           </div>
           <p className="font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
-            이야기·회화의 "전체 듣기"에 쓰이는 목소리입니다. 이 기기에만 적용됩니다.
+            이야기처럼 글을 읽어 주는 목소리입니다. 회화집은 남녀 두 목소리로 읽습니다. 이 기기에만 적용됩니다.
           </p>
         </DialogContent>
       </Dialog>
@@ -946,8 +952,8 @@ const MyInfo = () => {
             <DialogTitle className="font-body text-gray-900">백업·새 폰으로 옮기기</DialogTitle>
           </DialogHeader>
           <p className="font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
-            학습 기록은 이 폰에만 저장됩니다. 앱을 지우거나 폰을 바꾸면 사라지므로 백업 파일을 저장해 두세요.
-            내 단어장·직접 넣은 단어·불러온 이야기·만든 회화집·설정이 담깁니다. 새 폰에서 이 화면의
+            공부 기록은 이 폰에만 저장됩니다. 앱을 지우거나 폰을 바꾸면 사라지므로 백업 파일을 저장해 두세요.
+            내 단어장·직접 넣은 단어·불러온 이야기·만든 대화·설정이 담깁니다. 새 폰에서 이 화면의
             "백업 파일 불러오기"로 그 파일을 고르면 지금 있는 것과 합쳐집니다.
           </p>
           <p className="font-gothic text-[0.6875rem] font-semibold" style={{ color: INK }}>
@@ -986,7 +992,7 @@ const MyInfo = () => {
               {!publicLike
                 ? "이 폰에 받아 둔 음성 파일이 지워집니다. 다음에 들으면 새로 받아 옵니다."
                 : tier === "free"
-                  ? "이 폰에 받아 둔 음성 파일이 지워집니다. Plus 에서 받은 이야기·회화 음성은 무료 등급에서 다시 받을 수 없습니다."
+                  ? "이 폰에 받아 둔 음성 파일이 지워집니다. Plus에서 받은 이야기·회화집 음성은 무료 등급에서 다시 받을 수 없습니다."
                   : "이 폰에 받아 둔 음성 파일이 지워집니다. 다시 들으면 새로 받아 오며, 그만큼 듣기 횟수를 다시 씁니다."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1001,10 +1007,10 @@ const MyInfo = () => {
       <AlertDialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
         <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-body text-[0.9375rem] text-gray-900">계정을 지우시겠습니까?</AlertDialogTitle>
+            <AlertDialogTitle className="font-body text-[0.9375rem] text-gray-900">계정을 삭제하시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription className="font-gothic text-[0.6875rem] leading-relaxed">
-              서버의 계정·사용 기록·구독 연결이 지워지고 되돌릴 수 없습니다. 이 폰의 단어장은 그대로 남습니다.
-              구독 중이라면 결제는 Google Play 에서 따로 해지해야 합니다.
+              서버의 계정·사용 기록·구독 연결이 삭제되고 되돌릴 수 없습니다. 이 폰의 단어장은 그대로 남습니다.
+              구독 중이라면 결제는 Google Play에서 따로 해지해야 합니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
