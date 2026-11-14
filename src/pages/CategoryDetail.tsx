@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import { useParams, useNavigate, useLocation, Navigate } from "react-router-dom";
-import { getCategories, getWordsByCategory, Word, Category, reorderWords, deleteWord, deleteCategory, archiveMyWordbook, nextArchiveName, moveWordsToCategory } from "@/lib/store";
+import { getCategories, getWordsByCategory, Word, Category, reorderWords, deleteWord, getWords, saveWords, deleteCategory, archiveMyWordbook, nextArchiveName, moveWordsToCategory } from "@/lib/store";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
 import AddWordDialog from "@/components/AddWordDialog";
 import EditWordDialog from "@/components/EditWordDialog";
@@ -873,13 +873,33 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   const deleteNow = (word: Word) => {
     if (!editable) return;
     const ids = deleteTargetIds(word);
+    // 되돌리기용으로, 지우기 전의 자리(전체 목록에서의 순서)와 단어를 적어 둡니다(출시 전 점검 D-19)
+    const before = getWords();
+    const removed: { at: number; word: Word }[] = [];
+    before.forEach((w, i) => { if (ids.includes(w.id)) removed.push({ at: i, word: w }); });
     ids.forEach((wid) => deleteWord(wid));
     setSelectedIds((prev) => prev.filter((x) => !ids.includes(x)));
     if (lastSelectedId.current && ids.includes(lastSelectedId.current)) {
       lastSelectedId.current = null;
     }
     setOpenId(null);
-    toast(ids.length > 1 ? ids.length + "개의 단어를 삭제했습니다" : "단어를 삭제했습니다");
+    toast(ids.length > 1 ? ids.length + "개의 단어를 삭제했습니다" : "단어를 삭제했습니다", {
+      duration: 6000,
+      action: {
+        label: "되돌리기",
+        onClick: () => {
+          // 그 사이 바뀐 것을 덮어쓰지 않게, 지금 목록에 지운 단어만 제자리에 다시 끼웁니다
+          const now = getWords();
+          const have = new Set(now.map((w) => w.id));
+          removed.forEach((r) => {
+            if (have.has(r.word.id)) return;
+            now.splice(Math.min(r.at, now.length), 0, r.word);
+          });
+          if (saveWords(now)) toast("단어를 되돌렸습니다");
+          refresh();
+        },
+      },
+    });
     refresh();
   };
 
@@ -1034,7 +1054,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
                       </span>
                       <span className="flex-1 min-w-0 flex flex-col" style={{ gap: 2 }}>
                         <span className="truncate font-body text-[0.9375rem]" style={{ color: "#1D1F1E" }}>{m.title}</span>
-                        <span className="font-gothic text-[0.75rem]" style={{ color: "#646C72" }}>{m.sub}</span>
+                        <span className="font-gothic text-[0.75rem] break-keep" style={{ color: "#646C72" }}>{m.sub}</span>
                       </span>
                     </button>
                   ))}
