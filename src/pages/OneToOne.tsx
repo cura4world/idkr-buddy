@@ -547,7 +547,7 @@ const OneToOne = () => {
             <ArrowLeft size={20} />
           </button>
           {/* 2026-11-12: 다른 화면 헤더 규칙(고딕 대문자 · 자간 0.08em)에 맞춤 */}
-          <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">One to One</h1>
+          <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">PEMURIDAN</h1>
           <span className="ml-auto shrink-0 flex items-center gap-1">
             <button
               type="button"
