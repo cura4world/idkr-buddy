@@ -15,7 +15,7 @@
 | 5 | 지도·인도네시아 이해 — 새로 쓰거나 고친 예문 | 8문장 |
 | 6 | 회화집 — 읽는 소리(TTS) 표기가 의심스러워 남긴 것 | 14건 |
 | 7 | 홈 소제목 — 새로 지은 짧은 문구 | 3줄 |
-| 8 | **5차(2026-11-14)** — 11/13 검수 브랜치 병합으로 앱에 들어간 줄(회화 1줄, 단어장 72줄)과, 앞 절의 물음 가운데 달라진 것 | 73줄 |
+| 8 | **5차(2026-11-14)** — 11/13 검수 브랜치 병합으로 앱에 들어간 줄(회화 1줄, 단어장 74줄 — 6차에 2줄 더함)과, 앞 절의 물음 가운데 달라진 것 | 75줄 |
 
 > **5차 병합 표시**: 1절의 회화 35행과 4절의 표제어 19개는 병합 뒤에도 **그대로 앱에 있습니다**(검수 브랜치가 같은 줄을 다르게 고친 곳은 3차 문장을 두었습니다).
 > 3절의 물음 가운데 9·10·12·13·14·16번은 병합으로 문장이나 뜻이 바뀌었습니다 — 바뀐 내용은 맨 아래 8-3 에 적었습니다. 나머지 물음(1~8·11·15번)은 그대로입니다.
@@ -183,7 +183,7 @@
 ## 8. 5차(2026-11-14) — 11/13 검수 브랜치 병합으로 앱에 들어간 줄
 
 11/13 의 Claude 검수 브랜치 두 개(단어장·회화집)를 `release/public` 에 병합했습니다. 아래는 그 병합으로 **인도네시아어가 바뀐 줄**입니다 — 모두 AI 가 고친 것이라 원어민 확인 대상입니다.
-같은 칸을 3·4차에서 이미 고친 곳은 3·4차 값을 두었으므로(위 1~4절의 내용 그대로) 여기에 없습니다. 한국어 뜻만 바뀐 줄(단어장 47줄, 회화 5줄)은 싣지 않았습니다.
+같은 칸을 3·4차에서 이미 고친 곳은 3·4차 값을 두었으므로(위 1~4절의 내용 그대로) 여기에 없습니다(단어장 35:3 · 35:46 두 줄만 6차에 검수 값으로 바꿔 8-2 에 더했습니다). 한국어 뜻만 바뀐 줄(단어장 47줄, 회화 5줄)은 싣지 않았습니다.
 검수의 근거와 "확인 필요(고치지 않음)" 목록은 `data/REVIEW-2026-11-13.md`(단어장, 원어민 확인 권장 54건) · `src/data/percakapan/REVIEW-2026-11-13.md`(회화집, 확인 필요 6건)에 있습니다.
 
 ### 8-1. 회화집 (인도네시아어가 바뀐 줄 1개)
@@ -195,9 +195,10 @@
 검수 브랜치가 고친 다른 두 줄(헤어지며 인사하기 9번째 줄, 초대받아 집에서 식사하기 10번째 줄)은 3차에서 이미 고친 줄이라 3차 문장을 두었습니다 — 1절의 B-5·B-4. 검수 쪽 문장은 `Naik Grab, tadi udah aku pesan.` / `Enak banget! Bumbunya meresap, ya.` 였습니다(어순·쉼표만 다름). 어느 쪽이 나은지 함께 물어 주세요.
 한국어만 바뀐 줄: 식당에서 자리 잡기("천천히 보세요") · 오토바이 점검하기 첫 줄("아저씨, …") · 하숙방 구하기("입주하려면 …") · 소그룹에서 나누기("마음은 아직 부글부글해요").
 
-### 8-2. 단어장 (표제어나 예문의 인도네시아어가 바뀐 줄 72개)
+### 8-2. 단어장 (표제어나 예문의 인도네시아어가 바뀐 줄 74개)
 
 괄호 없는 숫자는 단어장 번호:줄 번호입니다. 표제어가 바뀐 줄은 **굵게** 표시했습니다.
+"(6차)"라고 적은 두 줄(35:3 · 35:46)은 5차 병합 때는 3차 문장을 두었다가, Arga 의 결정으로 6차에 검수 브랜치 문장으로 바꾼 것입니다 — "이전" 칸은 3차 문장입니다.
 
 | 위치 | 이전 (표제어 — 예문) | 이후 (표제어 — 예문) |
 |---|---|---|
@@ -243,11 +244,13 @@
 | 34:21 | `tradisional` — Tari tradisional itu sangat indah untuk ditonton. | `tradisional` — Rumah tradisional itu terbuat dari kayu dan bambu. |
 | 34:27 | `lagu kebangsaan` — Semua berdiri saat lagu kebangsaan dinyanyikan. | `lagu kebangsaan` — Lagu kebangsaan Indonesia adalah Indonesia Raya. |
 | 34:48 | `gotong royong` — Warga desa membersihkan sungai secara gotong royong. | `gotong royong` — Saat ada hajatan, para tetangga membantu secara gotong royong. |
+| 35:3 (6차) | `Yesus` — Yesus adalah jalan, kebenaran, dan hidup. | `Yesus` — Yesus memberi makan lima ribu orang. |
 | 35:5 | `Roh Kudus` — Roh Kudus memimpin kita kepada kebenaran. | `Roh Kudus` — Roh Kudus turun ke atas Yesus seperti burung merpati. |
 | 35:24 | `gembala` — Tuhan adalah gembala yang baik bagi domba-domba-Nya. | `gembala` — Gembala itu mencari dombanya yang hilang. |
 | 35:34 | `kebenaran` — Yesus berkata Akulah jalan kebenaran dan hidup. | `kebenaran` — Yesus berkata: Akulah jalan dan kebenaran dan hidup. |
 | 35:35 | `kesetiaan` — Kesetiaan Allah tidak pernah goyah. | `kesetiaan` — Tuhan menghargai kesetiaan kita dalam perkara kecil. |
 | 35:44 | `terang` — Yesus adalah terang dunia. | `terang` — Pada hari pertama Allah menciptakan terang. |
+| 35:46 (6차) | `buah Roh` — Buah Roh adalah kasih, sukacita, dan damai sejahtera. | `buah Roh` — Buah Roh antara lain kasih, sukacita, dan damai sejahtera. |
 | 35:61 | `pokok anggur` — Yesus berkata Akulah pokok anggur dan kamu adalah ranting-Nya. | `pokok anggur` — Yesus berkata: Akulah pokok anggur dan kamulah ranting-rantingnya. |
 | **35:73** | `kotbah di bukit` — Kotbah di bukit berisi inti ajaran etika Kerajaan Allah. | `khotbah di bukit` — Khotbah di bukit berisi inti ajaran etika Kerajaan Allah. |
 | **35:75** | `mukjizat` — Mukjizat Yesus membuktikan bahwa Dia adalah Anak Allah. | `tanda` — Yesus membuat banyak tanda di depan mata murid-murid-Nya. |
