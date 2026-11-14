@@ -82,19 +82,19 @@ const TODAY_ROWS: TodayRow[] = [
     key: "reading",
     label: "읽기",
     cats: ["reading"],
-    help: "인니어 면에서 읽은 시간이 1분에 2점이고, 한국어 면을 열면 확정됩니다.",
+    help: "인도네시아어 면에서 읽은 시간이 1분에 2점이고, 한국어 면을 열면 확정됩니다.",
   },
   { key: "game", label: "게임", cats: ["game"], help: "게임 한 판을 끝내면 3점입니다." },
   { key: "quiz", label: "퀴즈", cats: ["quiz"], help: "단어장 퀴즈를 끝까지 풀면 5점입니다." },
-  { key: "percakapan", label: "회화", cats: ["percakapan"], help: "회화 전체 듣기를 끝까지 들으면 3점입니다." },
-  { key: "phrase", label: "오늘의 문장", cats: ["phrase"], help: "Bahasa Hari Ini 문장을 열어 보면 2점입니다." },
+  { key: "percakapan", label: "회화집", cats: ["percakapan"], help: "대화 한 편의 전체 듣기를 끝까지 들으면 3점입니다." },
+  { key: "phrase", label: "오늘의 문장", cats: ["phrase"], help: "오늘의 문장을 열어 보면 2점입니다." },
   {
     key: "words",
     label: "사전·단어",
     cats: ["dict", "popup", "save"],
     help: "처음 보는 단어를 찾거나 눌러보거나 담으면 1점씩입니다.",
   },
-  { key: "explore", label: "탐험", cats: ["explore"], help: "지도·인도네시아 이해를 2분 구경하면 1점입니다." },
+  { key: "explore", label: "지도·이해", cats: ["explore"], help: "지도·인도네시아 이해를 2분 구경하면 1점입니다." },
 ];
 
 const capOf = (cats: ApiCategory[]): number => cats.reduce((sum, c) => sum + (DAILY_CAPS[c] || 0), 0);
@@ -525,7 +525,7 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                   ))}
               </div>
               <p className="mt-1.5 pb-1 text-center text-[0.6875rem] leading-relaxed text-muted-foreground">
-                Api는 월요일에 다시 시작합니다. 일요일은 쉽니다.
+                불꽃은 월요일에 다시 시작합니다. 일요일은 쉽니다.
               </p>
             </div>
           ) : (
@@ -649,7 +649,7 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
 
               {recheckCount > 0 ? (
                 <p className="mt-3 pb-1 text-center text-[0.6875rem] leading-relaxed text-muted-foreground">
-                  재검증 대기 {recheckCount}개 — 게임에서 다시 나옵니다
+                  다시 확인할 단어 {recheckCount}개 — 게임에서 다시 나옵니다
                 </p>
               ) : null}
             </div>
