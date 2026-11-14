@@ -253,6 +253,7 @@ jobs:
           import android.util.Base64;
           import android.webkit.JavascriptInterface;
           import android.webkit.PermissionRequest;
+          import android.webkit.RenderProcessGoneDetail;
           import android.webkit.ValueCallback;
           import android.webkit.WebChromeClient;
           import android.webkit.WebResourceError;
@@ -324,6 +325,8 @@ jobs:
               private static final int MIC_REQUEST = 1002;
 
               private WebView webView;
+              // 웹 화면 프로세스가 마지막으로 죽은 시각 — 화면을 다시 만들어도 남도록 static
+              private static long lastRenderGoneAt = 0L;
               // 웹 화면을 불러오지 못했을 때(첫 실행이 오프라인 등) 웹뷰 기본 오류 페이지 대신 보여 주는 안내 (2026-11-14, C-01)
               private View offlineView;
               private boolean loadFailed = false;
@@ -923,6 +926,34 @@ jobs:
                       public void onPageFinished(WebView view, String url) {
                           if (!loadFailed) hideOffline();
                       }
+
+                      // 웹 화면 프로세스가 죽으면(메모리 부족 등), 이것을 처리하지 않을 때 앱 전체가 함께 꺼집니다.
+                      // 미리보기 빌드에는 있던 처리가 스토어 빌드에 없었습니다(출시 전 점검 C-05).
+                      // 죽은 웹뷰를 떼어 내고 화면(Activity)을 다시 만들어 앱 첫 화면을 다시 엽니다.
+                      // 10초 안에 거듭 죽으면 되풀이하지 않고 앱을 닫습니다.
+                      @Override
+                      public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                          long now = System.currentTimeMillis();
+                          boolean again = (now - lastRenderGoneAt) < 10000L;
+                          lastRenderGoneAt = now;
+                          try {
+                              if (webView != null) {
+                                  android.view.ViewParent parent = webView.getParent();
+                                  if (parent instanceof android.view.ViewGroup) {
+                                      ((android.view.ViewGroup) parent).removeView(webView);
+                                  }
+                                  webView.destroy();
+                                  webView = null;
+                              }
+                          } catch (Throwable ignored) {
+                          }
+                          try {
+                              if (again) finish();
+                              else recreate();
+                          } catch (Throwable ignored) {
+                          }
+                          return true;
+                      }
                   });
 
                   webView.setWebChromeClient(new WebChromeClient() {
@@ -996,9 +1027,8 @@ jobs:
                   bars.setAppearanceLightStatusBars(true);
                   bars.setAppearanceLightNavigationBars(true);
 
-                  if (savedInstanceState != null) {
-                      webView.restoreState(savedInstanceState);
-                  } else {
+                  // 되살릴 상태가 없으면(웹 화면이 죽어 다시 만든 경우 등) 첫 화면을 엽니다 — 그러지 않으면 빈 화면으로 남습니다.
+                  if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {
                       webView.loadUrl(APP_BASE);
                   }
               }
@@ -1145,3 +1175,5 @@ jobs:
           name: kata-kata-store-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          # 실제 패키지 이름의 디버그 서명 APK 라 오래 두지 않습니다(출시 전 점검 S-15)
+          retention-days: 3
