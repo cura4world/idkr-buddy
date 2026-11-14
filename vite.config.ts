@@ -41,7 +41,10 @@ function woff2Only(): Plugin {
 export default defineConfig(({ mode }) => ({
   base: '/idkr-buddy/',
   server: {
-    host: "::",
+    // 개발 서버는 이 PC 에서만 열립니다. 예전 값 "::" 는 같은 와이파이의 다른 기기에서도 접속됐고,
+    // vite 개발 서버의 알려진 취약점(파일 읽기 등)이 그대로 드러났습니다(2026-11-14 보안 재검토).
+    // 폰에서 개발 서버를 직접 봐야 할 때만 `npx vite --host` 로 잠깐 엽니다.
+    host: "localhost",
     port: 8080,
     hmr: {
       overlay: false,
