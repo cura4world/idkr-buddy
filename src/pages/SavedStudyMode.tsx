@@ -57,7 +57,7 @@ export default function SavedStudyMode() {
   const handleDelete = () => {
     if (!currentWord) return;
     removeSavedWord(currentWord.id);
-    toast("보관함에서 제거했습니다");
+    toast("다시 외울 단어에서 뺐습니다");
     const newWords = getSavedWords();
     if (newWords.length === 0) { navigate("/saved"); return; }
     if (currentIndex >= newWords.length) setCurrentIndex(newWords.length - 1);
@@ -148,7 +148,7 @@ export default function SavedStudyMode() {
       setIsAutoPlaying(false); setIsAutoRandom(false); setIsScreenLocked(false);
       setIsFlipped(false); setCurrentIndex(0); setAutoCurrentWord(undefined);
       releaseWakeLock();
-      toast("자동플레이가 완료되었습니다 🎉");
+      toast("자동 재생이 끝났습니다");
       return;
     }
     setIsFlipped(false); setIsBreathing(false); setCurrentIndex(index);
@@ -173,7 +173,7 @@ export default function SavedStudyMode() {
 
   const toggleLoop = () => {
     const next = !isLooping; isLoopingRef.current = next; setIsLooping(next);
-    toast(next ? "반복 재생 켜짐 🔁" : "반복 재생 꺼짐");
+    toast(next ? "반복 재생 켜짐" : "반복 재생 꺼짐");
   };
 
   useEffect(() => {
@@ -195,7 +195,7 @@ export default function SavedStudyMode() {
   if (words.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
-        <p className="text-muted-foreground">보관된 단어가 없습니다.</p>
+        <p className="text-muted-foreground">다시 외울 단어가 없습니다.</p>
         <button onClick={() => navigate("/saved")} className="mt-4 text-primary underline underline-offset-4">돌아가기</button>
       </div>
     );
