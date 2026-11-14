@@ -501,3 +501,63 @@ Arga 가 2026-11-14 에 정한 것이다. 번호 뒤 괄호는 `user-checklist.m
      **지시는 "PR 만 열고 병합·배포는 하지 말 것"이었으나 지키지 못했다.** 그 저장소의 `auto-merge.yml` 이 저장소 안 브랜치의 PR 을 열리는 즉시 squash 병합한다(2026-11-14 14:58 KST, 병합 주체 `github-actions`, 병합 커밋 `5324bf7`, 빌드 0.1.39). PR 을 여는 것이 곧 게시였는데, 그 저장소의 `CLAUDE.md` 를 열기 전에 읽지 않아 몰랐다.
      결과로 세 곳은 지금 같다 — `https://naruve.app/apps/kata-kata/{privacy,terms,delete}/` 를 받아 게시용 사본과 `cmp` 로 대조했다(세 개 모두 같음). 되돌리지는 않았다(내용은 결정대로이고, 되돌리는 PR 도 열자마자 게시된다). **Arga 가 8차(2026-11-14)에 "게시된 그대로 둔다"로 정했다.**
    - 심사 서류 초안(`docs/release/07-data-safety.md`·`06-store-listing.md`)의 "풀이가 이상합니다"는 정책 문서가 아니라 그대로 두었다.
+
+## 16. 출시 설정 2026-11-14 — 콘솔에 실제로 넣은 값
+
+Arga 가 2026-11-14 밤에 콘솔에서 끝낸 것을 사실 그대로 적는다(9차에 기록). 여기 있는 것은 모두 **공개돼도 되는 값**이다.
+비밀값(키 저장소·비밀번호·서비스 계정 JSON·서버 비밀값)은 저장소 밖에 있고 여기에 적지 않는다.
+할 일 순서는 `docs/release/05-arga-checklist.md`, 서버 배포는 `docs/release/08-cloudflare-deploy.md`.
+
+### 서명과 로그인
+
+- **업로드 키**: 저장소 밖에 만듦. 별칭 `upload`, PKCS12. SHA-1 `B8:26:C6:26:3B:71:49:B1:36:A6:63:2F:2D:E5:E9:B4:1E:DE:88:4B`.
+- **GitHub**: Secrets `STORE_KEYSTORE_BASE64`·`STORE_KEYSTORE_PASSWORD`·`STORE_KEY_ALIAS`(`upload`)·`STORE_KEY_PASSWORD`, Variable `STORE_WEB_CLIENT_ID`.
+- **Google Cloud 프로젝트** `Kata-kata` (`gen-lang-client-0453772321`):
+  - OAuth 동의 화면 — 외부, 앱 이름 Kata kata, **프로덕션 게시**, 홈 `https://naruve.app/`, 방침 `https://naruve.app/apps/kata-kata/privacy/`, 약관 `https://naruve.app/apps/kata-kata/terms/`, 승인 도메인 `naruve.app`. **로고는 넣지 않았다** — 로고를 넣으면 Google 의 브랜드 인증 심사가 붙는다.
+  - 웹 클라이언트 ID `228056729729-kalemfhdg394bgo2mft16g5asnin21gd.apps.googleusercontent.com`. 앱(GitHub 변수 `STORE_WEB_CLIENT_ID`)과 서버(`GOOGLE_WEB_CLIENT_ID`)가 **같은 값**이어야 로그인이 된다 — 서버는 ID 토큰의 `aud` 를 이 값과 대조한다.
+  - Android 클라이언트 4개(`app.naruve.katakata`) — 업로드 키 1 + Play 앱 서명 키 3:
+    `99:AC:89:84:57:4F:C4:1B:21:25:91:2B:37:AB:F2:FC:7E:72:5A:F0`(현재) · `E8:41:15:E1:CF:CC:16:74:9F:F5:4F:35:F2:92:77:BF:62:3A:8F:B7` · `EF:7B:A3:0D:B3:FC:67:E9:51:25:84:4A:23:B6:99:98:DA:8D:F3:EE`.
+  - Google Play Android Developer API 사용 설정.
+  - 서비스 계정 `kata-play-billing@gen-lang-client-0453772321.iam.gserviceaccount.com` → Play Console 초대, 앱 권한 **앱 정보 보기 + 재무 데이터 보기 + 주문 및 구독 관리**.
+    ("주문 및 구독 관리"가 빠지면 구매 확인만 실패해 사흘 뒤 자동 환불된다 — 15장.)
+
+### Play Console
+
+- 개발자 계정 Naruve Studio(`9140545952027668113`, 조직). 앱 "Kata kata: 인도네시아어 사전·단어장", `app.naruve.katakata`, 기본 언어 한국어, 무료, 앱 ID `4972371469520427632`.
+- Build Store AAB 실행 #9(versionCode 9, 1.0.9)를 서명 확인 뒤 **내부 테스트**로 출시. Play 앱 서명 사용.
+- 내부 테스터·라이선스 테스터: 이메일 목록 "Kata kata 내부 테스터"(2명).
+- 결제 프로필: 나루브스튜디오(간이과세), 카드 명세서 이름 `NARUVE STUDIO`, 고객지원 `support@naruve.app`. 판매자(Trader) 선언 완료.
+
+### 구독 상품 — 코드가 기대하는 이름과 맞춘 것
+
+| 콘솔 | 값 | 코드에서 쓰는 곳 |
+|---|---|---|
+| 상품 ID | `plus` (Kata kata Plus, 활성) | 앱 `PLUS_PRODUCT_ID`(`billing.ts`), 서버 `PRODUCT_IDS`(`wrangler.toml`, 기본값도 `plus`) |
+| 기본 요금제 | `monthly` — P1M, KRW 3,900 | 앱은 **이름이 아니라 결제 주기(P1M·P1Y)** 로 월간·연간을 고른다(`playOffers.ts`). 이름을 바꿔도 앱은 깨지지 않는다 |
+| | `yearly` — P1Y, KRW 34,800 (한국만 직접 지정) | 위와 같음. 월 환산 2,900원·할인 26% 는 앱이 이 값에서 계산 |
+| 체험 혜택 | `trial-7d-monthly`, `trial-7d-yearly` — 무료 7일, 둘 다 활성 | 앱은 가격 0 인 단계가 있으면 체험으로 본다(이름을 보지 않음). 서버는 Play 의 `offerPhase.freeTrial` 을 먼저 보고, 그 칸이 없을 때만 **이름에 `trial` + 시작 8일 안쪽**으로 본다 |
+| 체험 자격 | 신규 고객 확보 / 이 구독(plus)을 이용한 적 없음 | 화면의 "무료 체험은 계정마다 한 번"이 이 설정에 기댄다 |
+| 유예·보류 | 월간 유예 7일 + 계정 보류 53일 / 연간 유예 14일 + 보류 46일 | 서버는 유예(`IN_GRACE_PERIOD`)에는 Plus 유지, 보류(`ON_HOLD`)에는 무료 |
+| 판매 국가 | 175개국. 한국 밖은 Google 자동 환산(예: IDR 53,000 / 469,000 · USD 2.89 / 25.99 · JPY 520 / 4,580) | 원화가 아니면 앱은 Play 표기를 그대로 보여 주고 월 환산·할인율을 만들지 않는다(15장) |
+
+- **9차 대조 결과: 어긋난 곳 없음. 코드는 고치지 않았다.** 실제 이름(`trial-7d-monthly`·`trial-7d-yearly`, 요금제마다 체험 제안과 기본 제안이 함께 오는 모양)으로 서버 테스트 1개·앱 테스트 2개를 더했다.
+- **콘솔의 이름을 바꿀 때 지킬 것**: 상품 ID 를 바꾸면 `PRODUCT_IDS` 와 `PLUS_PRODUCT_ID` 를 함께. 체험 혜택 ID 에는 `trial` 을 남긴다. 체험 기간을 7일보다 길게 하면 서버의 `TRIAL_DAYS` 도 함께(대비책의 날짜 기준).
+- 알아 둘 것(고치지 않음): `MyInfo.tsx` 의 "연간 구독 / 월간 구독" 표시는 서버가 요금제 이름을 알려 줄 때만 나오는데, 서버는 지금 그 값을 보내지 않는다 — 그래서 내 정보에 구독 주기는 보이지 않는다. 오류는 아니고 빠져 있는 기능이다. 넣을지는 미정.
+
+### 한국 개발자 추가 정보를 비워 둔 이유
+
+- Play Console 의 한국 개발자 추가 정보(사업자번호·통신판매업 신고번호)는 **비워 두었다.** 간이과세자는 통신판매업 신고가 면제이고, 공정위 조회 결과도 미신고다.
+- 신고가 필요해지면 **2027년 1월에** 한다 — 연말에 신고하면 등록면허세를 두 해 치 내게 된다. 알림을 예약해 두었다.
+- 약관의 "사업자 정보"에는 통신판매업 신고번호 줄이 없다(면제 사유도 적지 않았다). 넣을지는 아직 정하지 않았다 — `docs/review/user-checklist.md` 의 P-16.
+
+### 서버 설정 파일에 채운 값 (9차)
+
+- `workers/kata-public/wrangler.toml`: `GOOGLE_WEB_CLIENT_ID`(위 값), `PLAY_PACKAGE`, `PRODUCT_IDS`, **`AI_DAILY_BUDGET` = `{"all":3000,"tts":1000}`**(4차에서 권한 시작값).
+- KV `id` 는 아직 없는 값이라 자리표시자 `REPLACE_WITH_PUBLIC_KV_ID` 를 넣었다. **빈칸 대신 자리표시자를 둔 이유**: 채우지 않고 배포하면 실패해서 바로 드러나게 하려는 것이다.
+- `wrangler deploy --dry-run` 은 로그인 없이 통과했다(바인딩 7개가 읽힘). 실제 배포·로그인·비밀값 입력은 하지 않았다.
+
+### 아직 그대로인 것
+
+- 스토어 앱은 `https://cura4world.github.io/idkr-buddy/` 를 불러온다. `release/public` 을 `main` 에 병합하기 전까지 내부 테스트 앱에는 **옛 화면**이 보인다(정상).
+- 서버(`kata-public`)는 아직 배포되지 않았다. 배포 전에는 로그인·AI·결제 검증이 모두 되지 않는다.
+- 보안 게이트 공식 판정은 그대로다(통과 아님). 출시 가능이라고 하지 않는다.
