@@ -114,6 +114,17 @@ npm run build
 3. `src/test/sharedIdMigration.test.ts` 를 새 표에 맞춰 고치고 통과시킨다.
 4. `Wordbooks.tsx` 의 `GROUPS` 와 `wordbookAccess.ts` 의 범위를 맞춘다.
 
+### 표제어 표기만 고칠 때 (단어장 이름·번호는 그대로)
+
+단어 ID 에 표제어가 들어 있어(`shared_` + 단어장 ID + `_` + 표제어) 표기를 고쳐도 ID 가 바뀐다.
+
+1. `sharedIdMigration.ts` 의 `HEADWORD_RENAMES_V3`(단어장 ID·옛 표제어·새 표제어)와 `LEGACY_WORD_RENAMES` 에 같은 쌍을 넣는다.
+   이미 v3 이전이 돈 기기가 있으면(= 그 빌드가 배포된 뒤라면) 표를 새로 만들고 표시 키를 `v4` 로 올린다.
+2. 그림이 있으면 `src/data/illust/*.json` 의 키 이름도 새 표제어로 바꾼다.
+3. 고유명사로 대문자를 유지해야 하면 `src/lib/wordCase.ts` 의 `PROPER` 에 넣는다.
+4. 오늘의 단어 퍼즐 정답(`src/data/kataHariIniWords.ts`)은 동결 목록이라 **표기가 달라도 고치지 않는다**(뜻 칸만 고칠 수 있음).
+5. `src/test/sharedIdMigration.test.ts` 가 "새 글자만 있고 옛 글자는 없는지"를 CSV 와 대조한다.
+
 ## 6. 진행 이력
 
 - 0단계 — CSV 파서를 RFC4180 방식으로 교체, `check-wordlist.js` 추가
@@ -125,6 +136,9 @@ npm run build
   - 기존 공개 29권 2,517단어를 한 줄씩 검토해 172개 단어(253칸)를 고침 — KBBI 철자, 잘못된 뜻, 비문·사실 오류 예문, 어색한 번역, 중복 예문. 내역은 `data/REVIEW-2026-11.md`
   - 옛 ID → 새 ID 이전을 앱 시작 때 한 번 실행 (`sharedIdMigration.ts`, 표시 키 `kata-shared-ids-v2`)
   - 공개판에서 성경과 신앙은 staff 등급만 보이게 함
+- **출시 전 점검 반영 (2026-11-14)** — 검수 보고서의 뜻·철자 지적 148행을 **서로 다른 출처 두 곳 이상**(KBBI, 위키낱말사전, 인니–영 사전. 성경 용어는 TB 표기)으로 다시 확인해
+  확실한 47건만 고침(CSV 51행, 표제어 19개 포함). 확인되지 않은 67건은 그대로 두고 목록으로 남김 — `docs/review/content-wordlist-2026-11-14.md`.
+  단어 수는 3,555 그대로. 표제어 19개의 ID 이전은 `sharedIdMigration.ts`(표시 키 `kata-shared-ids-v3`).
 
 ### 앞으로 단어를 더할 때
 
