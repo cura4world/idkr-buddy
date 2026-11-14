@@ -30,10 +30,6 @@ const PercakapanCategory = () => {
   const catId = params.id || "";
   const plan = usePlan();
 
-  // 교회와 신앙은 관리자·Special Member 에게만 — 주소로 바로 들어와도 폴더 목록으로 돌려보냅니다.
-  useEffect(() => {
-    if (catId && !isCategoryVisible(catId)) navigate("/percakapan", { replace: true });
-  }, [catId, plan.tier, navigate]);
 
   const [cat, setCat] = useState<PercakapanCategory | null>(null);
   const [scenes, setScenes] = useState<PercakapanScene[]>([]);
@@ -56,6 +52,16 @@ const PercakapanCategory = () => {
       .then((list) => { setScenes(list); setLoaded(true); })
       .catch(() => { setScenes([]); setLoaded(true); });
   };
+
+  // 교회와 신앙은 관리자·Special Member 에게만 — 주소로 바로 들어와도 폴더 목록으로 돌려보냅니다.
+  // 다만 그 폴더에 직접 만든 대화가 있으면 그 대화만 보이는 채로 엽니다(출시 전 점검 D-21 — 등급이 바뀌어도
+  // 내가 만든 것은 사라지지 않게). 가려진 폴더의 기본 장면은 listScenes 가 이미 뺍니다. setState 없이 이동만 합니다.
+  useEffect(() => {
+    if (!catId || isCategoryVisible(catId)) return;
+    if (!loaded) return;
+    if (scenes.some((s) => s.custom)) return;
+    navigate("/percakapan", { replace: true });
+  }, [catId, plan.tier, loaded, scenes, navigate]);
 
   // 공개판 무료가 주소로 바로 들어온 경우(QA Q11): 목록 화면과 같이 구독 화면으로 보냅니다.
   // 직접 만든 회화집이 든 폴더는 그대로 열립니다(구독 취소 뒤에도 내 회화 글은 계속 — 결정 문서).
@@ -144,7 +150,7 @@ const PercakapanCategory = () => {
       .catch(() => toast.error("이름을 바꾸지 못했습니다"));
   };
 
-  // 인라인 2단 확인: 처음 누르면 "정말 삭제"로 바뀌고 3초 뒤 원복
+  // 인라인 2단 확인: 처음 누르면 "한 번 더 누르면 삭제"로 바뀌고 3초 뒤 원복
   const handleDeleteClick = () => {
     if (!menuScene) return;
     if (!confirmDelete) {
@@ -162,7 +168,7 @@ const PercakapanCategory = () => {
       .then(() => {
         closeMenu();
         refresh();
-        toast("회화집을 삭제했습니다");
+        toast("대화를 삭제했습니다");
       })
       .catch(() => toast.error("삭제하지 못했습니다"));
   };
@@ -246,7 +252,7 @@ const PercakapanCategory = () => {
           </div>
         ) : (
           <div className="px-4 py-10 text-center" style={CARD_STYLE}>
-            <p className="text-[0.9375rem] text-foreground">아직 회화집이 없습니다</p>
+            <p className="text-[0.9375rem] text-foreground">아직 대화가 없습니다</p>
             <p className="mt-1 font-word text-[0.75rem] text-muted-foreground">Belum ada percakapan</p>
           </div>
         )}
@@ -259,7 +265,7 @@ const PercakapanCategory = () => {
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="회화집 관리"
+            aria-label="대화 관리"
             className="fixed z-50 left-1/2 -translate-x-1/2 top-[26%] w-[min(88vw,20rem)] rounded-2xl bg-card border border-border/60 shadow-2xl shadow-black/40 overflow-hidden"
           >
             <div className="flex items-start justify-between gap-2 px-4 pt-3.5">
@@ -309,14 +315,14 @@ const PercakapanCategory = () => {
                   onClick={() => setRenaming(true)}
                   className="w-full border-b border-border px-4 py-3.5 text-left text-[0.875rem] font-gothic text-foreground active:bg-muted/60"
                 >
-                  이름 수정
+                  이름 바꾸기
                 </button>
                 <button
                   type="button"
                   onClick={handleDeleteClick}
                   className="w-full px-4 py-3.5 text-left text-[0.875rem] font-gothic text-red-500/90 active:bg-muted/60"
                 >
-                  {confirmDelete ? "정말 삭제" : "삭제"}
+                  {confirmDelete ? "한 번 더 누르면 삭제" : "삭제"}
                 </button>
               </div>
             )}
