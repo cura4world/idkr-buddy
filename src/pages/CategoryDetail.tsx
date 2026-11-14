@@ -407,7 +407,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
     setSelectedIds([]);
     lastSelectedId.current = null;
     refresh();
-    toast(name + " 단어장으로 " + count + "개를 보관했습니다");
+    toast(name + " 단어장으로 " + count + "개를 묶었습니다");
   };
 
   // 옮길 수 있는 곳 — 내 단어장과 보관 단어장들 (공용 단어장과 지금 화면은 뺍니다).
@@ -428,9 +428,10 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
     if (moved === 0) {
       toast("모두 이미 대상 단어장에 있는 단어입니다");
     } else if (skipped > 0) {
-      toast(target.name + "(으)로 " + moved + "개를 옮겼습니다 (이미 있는 단어 " + skipped + "개 제외)");
+      // 받침에 따라 달라지는 조사("(으)로")가 화면에 그대로 보이지 않게 문장 모양을 바꿨습니다(출시 전 점검 A-25)
+      toast(moved + "개를 옮겼습니다 → " + target.name + " (이미 있는 단어 " + skipped + "개 제외)");
     } else {
-      toast(target.name + "(으)로 " + moved + "개를 옮겼습니다");
+      toast(moved + "개를 옮겼습니다 → " + target.name);
     }
   };
 
@@ -883,7 +884,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
       lastSelectedId.current = null;
     }
     setOpenId(null);
-    toast(ids.length > 1 ? ids.length + "개의 단어를 삭제했습니다" : "단어를 삭제했습니다", {
+    toast(ids.length > 1 ? "단어 " + ids.length + "개를 삭제했습니다" : "단어를 삭제했습니다", {
       duration: 6000,
       action: {
         label: "되돌리기",
@@ -906,7 +907,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   if (!category) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background font-body">
-        카테고리를 찾을 수 없습니다.
+        단어장을 찾을 수 없습니다.
       </div>
     );
   }
@@ -959,7 +960,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   // 추가하는 일(단어 추가·단어장 만들기·CSV 가져오기)은 머리의 + 버튼이 여는 "추가하기" 메뉴에 모았습니다.
   const menuItems: { label: string; onClick: () => void; danger?: boolean }[] = isArchived
     ? [
-        { label: "이름 변경", onClick: () => setRenameOpen(true) },
+        { label: "이름 바꾸기", onClick: () => setRenameOpen(true) },
         { label: "단어장 삭제", onClick: () => setDeleteCatOpen(true), danger: true },
       ]
     : [];
@@ -1161,7 +1162,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
             <path d="M3 7h18v13H3zM2 3h20v4H2zM10 12h4" />
           </svg>
           <p className="flex-1 min-w-0 m-0 font-gothic text-[0.78125rem] leading-snug text-[#5C4410]">
-            단어가 {nudgeCount}개를 넘었습니다.<br />한 권으로 묶어 보관하기
+            단어가 {nudgeCount}개를 넘었습니다.<br />한 권으로 묶어 보세요
           </p>
           <button
             type="button"
@@ -1450,7 +1451,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
             <p className="font-body text-[0.8125rem] leading-relaxed text-muted-foreground">
               지금 내 단어장의 단어 {words.length}개를 새 단어장으로 옮깁니다. 내 단어장은 비워집니다.
             </p>
-            <Button type="submit" className="w-full" disabled={!archiveName.trim()}>보관하기</Button>
+            <Button type="submit" className="w-full" disabled={!archiveName.trim()}>묶기</Button>
           </form>
         </DialogContent>
       </Dialog>
