@@ -193,29 +193,11 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Banjarmasin": {
     "region": "kalimantan",
-    "photos": [
-      {
-        "file": "Japanese attack on Borneo, 1941-1942.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Japanese_attack_on_Borneo%2C_1941-1942.jpg/500px-Japanese_attack_on_Borneo%2C_1941-1942.jpg",
-        "author": "J.J. Nortier",
-        "license": "CC BY-SA 4.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
-        "page": "https://commons.wikimedia.org/wiki/File:Japanese_attack_on_Borneo,_1941-1942.jpg"
-      }
-    ]
+    "photos": []
   },
   "Banten Lama": {
     "region": "jawa",
-    "photos": [
-      {
-        "file": "The old missigit of Bantam.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/The_old_missigit_of_Bantam.jpg/500px-The_old_missigit_of_Bantam.jpg",
-        "author": "Charles William Meredith van de Velde / Paul Lauters",
-        "license": "Public domain",
-        "licenseUrl": "",
-        "page": "https://commons.wikimedia.org/wiki/File:The_old_missigit_of_Bantam.jpg"
-      }
-    ]
+    "photos": []
   },
   "Banyuwangi": {
     "region": "jawa",
@@ -291,42 +273,15 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Bima": {
     "region": "bali-nusa",
-    "photos": [
-      {
-        "file": "Sultan Muhammad Salahuddin bersama Tentara BKR Bima depan Istana ASI Mbojo.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Sultan_Muhammad_Salahuddin_bersama_Tentara_BKR_Bima_depan_Istana_ASI_Mbojo.jpg/500px-Sultan_Muhammad_Salahuddin_bersama_Tentara_BKR_Bima_depan_Istana_ASI_Mbojo.jpg",
-        "author": "Museum Samparaja Bima",
-        "license": "CC0",
-        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-        "page": "https://commons.wikimedia.org/wiki/File:Sultan_Muhammad_Salahuddin_bersama_Tentara_BKR_Bima_depan_Istana_ASI_Mbojo.jpg"
-      }
-    ]
+    "photos": []
   },
   "Binjai": {
     "region": "sumatera",
-    "photos": [
-      {
-        "file": "Amir Hamzah Wali Kota Binjai.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Amir_Hamzah_Wali_Kota_Binjai.jpg/500px-Amir_Hamzah_Wali_Kota_Binjai.jpg",
-        "author": "F-L-I-X-A-R",
-        "license": "CC BY-SA 4.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
-        "page": "https://commons.wikimedia.org/wiki/File:Amir_Hamzah_Wali_Kota_Binjai.jpg"
-      }
-    ]
+    "photos": []
   },
   "Bogor": {
     "region": "jawa",
-    "photos": [
-      {
-        "file": "Resident Offce Resident Office Buitenzorg.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Resident_Offce_Resident_Office_Buitenzorg.jpg/500px-Resident_Offce_Resident_Office_Buitenzorg.jpg",
-        "author": "Taufik Hasunna Archive Documentation",
-        "license": "Public domain",
-        "licenseUrl": "",
-        "page": "https://commons.wikimedia.org/wiki/File:Resident_Offce_Resident_Office_Buitenzorg.jpg"
-      }
-    ]
+    "photos": []
   },
   "Bone": {
     "region": "sulawesi",
@@ -801,14 +756,6 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
         "license": "CC BY-SA 3.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
         "page": "https://commons.wikimedia.org/wiki/File:Candi_Surowono_1.jpg"
-      },
-      {
-        "file": "Wali Kota Kediri Samsul Ashar.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Wali_Kota_Kediri_Samsul_Ashar.jpg/500px-Wali_Kota_Kediri_Samsul_Ashar.jpg",
-        "author": "Government of Kediri City, East Java, Indonesia",
-        "license": "Public domain",
-        "licenseUrl": "",
-        "page": "https://commons.wikimedia.org/wiki/File:Wali_Kota_Kediri_Samsul_Ashar.jpg"
       }
     ]
   },
@@ -835,24 +782,7 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Kepulauan Banda": {
     "region": "maluku",
-    "photos": [
-      {
-        "file": "Banda Neira 1724.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Banda_Neira_1724.jpg/500px-Banda_Neira_1724.jpg",
-        "author": "(작가 표시 없음)",
-        "license": "Public domain",
-        "licenseUrl": "",
-        "page": "https://commons.wikimedia.org/wiki/File:Banda_Neira_1724.jpg"
-      },
-      {
-        "file": "Fort Belgica 1824.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Fort_Belgica_1824.jpg/500px-Fort_Belgica_1824.jpg",
-        "author": "Q.M.R. Ver Huell",
-        "license": "Public domain",
-        "licenseUrl": "",
-        "page": "https://commons.wikimedia.org/wiki/File:Fort_Belgica_1824.jpg"
-      }
-    ]
+    "photos": []
   },
   "Kepulauan Derawan": {
     "region": "kalimantan",
@@ -902,16 +832,7 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Krakatau": {
     "region": "jawa",
-    "photos": [
-      {
-        "file": "John Webber Plate XVI The Fan Palm in the Island of Cracatoa.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/John_Webber_Plate_XVI_The_Fan_Palm_in_the_Island_of_Cracatoa.jpg/500px-John_Webber_Plate_XVI_The_Fan_Palm_in_the_Island_of_Cracatoa.jpg",
-        "author": "John Webber (1751-1793)",
-        "license": "Public domain",
-        "licenseUrl": "",
-        "page": "https://commons.wikimedia.org/wiki/File:John_Webber_Plate_XVI_The_Fan_Palm_in_the_Island_of_Cracatoa.jpg"
-      }
-    ]
+    "photos": []
   },
   "Kudus": {
     "region": "jawa",
@@ -1079,14 +1000,6 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
         "license": "Public domain",
         "licenseUrl": "",
         "page": "https://commons.wikimedia.org/wiki/File:Mangiwang_Mamuju_Tengah.jpg"
-      },
-      {
-        "file": "Bupati Mamuju Sitti Sutinah Suhardi.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Bupati_Mamuju_Sitti_Sutinah_Suhardi.jpg/500px-Bupati_Mamuju_Sitti_Sutinah_Suhardi.jpg",
-        "author": "Government of Mamuju regency, West Sulawesi, Indonesia",
-        "license": "Public domain",
-        "licenseUrl": "",
-        "page": "https://commons.wikimedia.org/wiki/File:Bupati_Mamuju_Sitti_Sutinah_Suhardi.jpg"
       }
     ]
   },
@@ -1113,14 +1026,6 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
         "license": "CC BY-SA 4.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
         "page": "https://commons.wikimedia.org/wiki/File:Manokwari_City_Mall.jpg"
-      },
-      {
-        "file": "Esau Sesa.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/Esau_Sesa.jpg/500px-Esau_Sesa.jpg",
-        "author": "Pemkab Manokwari",
-        "license": "Public domain",
-        "licenseUrl": "",
-        "page": "https://commons.wikimedia.org/wiki/File:Esau_Sesa.jpg"
       }
     ]
   },
@@ -1263,14 +1168,6 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   "Palembang": {
     "region": "sumatera",
     "photos": [
-      {
-        "file": "Bird's eye view of Palembang.JPG",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Bird%27s_eye_view_of_Palembang.JPG/500px-Bird%27s_eye_view_of_Palembang.JPG",
-        "author": "Unknown author Unknown author",
-        "license": "Public domain",
-        "licenseUrl": "",
-        "page": "https://commons.wikimedia.org/wiki/File:Bird%27s_eye_view_of_Palembang.JPG"
-      },
       {
         "file": "COLLECTIE TROPENMUSEUM De rivier de Musi bij Palembang TMnr 5426-8.jpg",
         "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/COLLECTIE_TROPENMUSEUM_De_rivier_de_Musi_bij_Palembang_TMnr_5426-8.jpg/500px-COLLECTIE_TROPENMUSEUM_De_rivier_de_Musi_bij_Palembang_TMnr_5426-8.jpg",
@@ -1494,37 +1391,12 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
         "license": "CC BY-SA 3.0",
         "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
         "page": "https://commons.wikimedia.org/wiki/File:Mother_Temple_of_Besakih.jpg"
-      },
-      {
-        "file": "Presiden Jokowi Didampingi Gubernur Koster di Pura Besakih untuk peresmian.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Presiden_Jokowi_Didampingi_Gubernur_Koster_di_Pura_Besakih_untuk_peresmian.jpg/500px-Presiden_Jokowi_Didampingi_Gubernur_Koster_di_Pura_Besakih_untuk_peresmian.jpg",
-        "author": "Bali Post",
-        "license": "CC0",
-        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-        "page": "https://commons.wikimedia.org/wiki/File:Presiden_Jokowi_Didampingi_Gubernur_Koster_di_Pura_Besakih_untuk_peresmian.jpg"
       }
     ]
   },
   "Purwokerto": {
     "region": "jawa",
-    "photos": [
-      {
-        "file": "Alun - Alun Purwokerto 1947. (Berwarna).jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Alun_-_Alun_Purwokerto_1947._%28Berwarna%29.jpg/500px-Alun_-_Alun_Purwokerto_1947._%28Berwarna%29.jpg",
-        "author": "Photografer : Hugo Wilmar. Colouring by= Van Coolwijk,D.",
-        "license": "CC BY-SA 4.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
-        "page": "https://commons.wikimedia.org/wiki/File:Alun_-_Alun_Purwokerto_1947._(Berwarna).jpg"
-      },
-      {
-        "file": "Alun - Alun di Purwokerto, 1931.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Alun_-_Alun_di_Purwokerto%2C_1931.jpg/500px-Alun_-_Alun_di_Purwokerto%2C_1931.jpg",
-        "author": "Photografer : Dr. W.G.N. (Wicher Gosen Nicolaas) van der Sleen.",
-        "license": "CC BY-SA 4.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
-        "page": "https://commons.wikimedia.org/wiki/File:Alun_-_Alun_di_Purwokerto,_1931.jpg"
-      }
-    ]
+    "photos": []
   },
   "Putussibau": {
     "region": "kalimantan",
@@ -1796,28 +1668,11 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Tanjungpinang": {
     "region": "sumatera",
-    "photos": [
-      {
-        "file": "Muhammad Arif, MP of Tanjungpinang (2004-2021).jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Muhammad_Arif%2C_MP_of_Tanjungpinang_%282004-2021%29.jpg/500px-Muhammad_Arif%2C_MP_of_Tanjungpinang_%282004-2021%29.jpg",
-        "author": "City Parliament of Tanjung Pinang, Government of Republic of Indonesia",
-        "license": "Public domain",
-        "licenseUrl": "",
-        "page": "https://commons.wikimedia.org/wiki/File:Muhammad_Arif,_MP_of_Tanjungpinang_(2004-2021).jpg"
-      }
-    ]
+    "photos": []
   },
   "Tarakan": {
     "region": "kalimantan",
     "photos": [
-      {
-        "file": "Tarakan landing (AWM 090812).jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Tarakan_landing_%28AWM_090812%29.jpg/500px-Tarakan_landing_%28AWM_090812%29.jpg",
-        "author": "not stated",
-        "license": "Public domain",
-        "licenseUrl": "",
-        "page": "https://commons.wikimedia.org/wiki/File:Tarakan_landing_(AWM_090812).jpg"
-      },
       {
         "file": "COLLECTIE TROPENMUSEUM Afscheepsteiger Tarakan 14 TMnr 10010382.jpg",
         "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/COLLECTIE_TROPENMUSEUM_Afscheepsteiger_Tarakan_14_TMnr_10010382.jpg/500px-COLLECTIE_TROPENMUSEUM_Afscheepsteiger_Tarakan_14_TMnr_10010382.jpg",
