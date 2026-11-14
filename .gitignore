@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# 화면 회귀 테스트(Playwright) — 테스트용 빌드와 결과물
+.e2e-dist/
+test-results/
+playwright-report/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
