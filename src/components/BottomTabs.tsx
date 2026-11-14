@@ -19,6 +19,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { isStoreApp } from "@/lib/platform";
 import { getSession, onSessionChange, PublicSession } from "@/lib/account";
 import { getMyMedaliId, isValidMedaliId } from "@/lib/medaliSync";
+import { getCategories } from "@/lib/store";
 
 export const TAB_HOME = "/";
 export const TAB_WORDS = "/saved";
@@ -59,6 +60,14 @@ function sectionOf(p: string): string {
   if (p.indexOf("/saved") === 0) return TAB_WORDS;
   if (p.indexOf("/permainan") === 0) return TAB_GAME;
   if (p === "/plus" || p.indexOf("/about") === 0) return TAB_ME;
+  // 보관한 단어장(/category/<id>)은 내 단어장 탭에서 들어온 화면입니다. 기본(공용) 단어장만 홈 아래입니다(출시 전 점검 U-12).
+  if (p.indexOf("/category/") === 0) {
+    try {
+      const id = decodeURIComponent(p.slice("/category/".length));
+      const cat = getCategories().find((c) => c.id === id);
+      if (cat && !cat.isShared) return TAB_WORDS;
+    } catch (e) {}
+  }
   return TAB_HOME;
 }
 
@@ -161,13 +170,36 @@ const BottomTabs = () => {
       const tag = el.tagName.toUpperCase();
       return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable === true;
     };
+    // 키보드만 내리고 포커스가 입력칸에 남으면 focusout 이 오지 않아 막대가 계속 안 보였습니다(출시 전 점검 U-14).
+    // 창 높이가 줄었다가(키보드 올라옴) 다시 커지면(키보드 내려감) 막대를 다시 보이고,
+    // 포커스가 남은 채 키보드가 다시 올라오면 다시 숨깁니다.
+    const vv = window.visualViewport || null;
+    const heightNow = () => (vv ? vv.height : window.innerHeight);
+    let fullH = heightNow();
+    let shrunk = false;
+    const KEYBOARD_MIN = 120; // 이만큼 넘게 줄면 키보드로 봅니다(px)
+    const onResize = () => {
+      const h = heightNow();
+      if (h > fullH) fullH = h;
+      if (h < fullH - KEYBOARD_MIN) {
+        shrunk = true;
+        if (isField(document.activeElement)) setTyping(true);
+      } else if (shrunk) {
+        shrunk = false;
+        setTyping(false);
+      }
+    };
     const onIn = (e: FocusEvent) => { if (isField(e.target)) setTyping(true); };
     const onOut = (e: FocusEvent) => { if (isField(e.target)) setTyping(false); };
     document.addEventListener("focusin", onIn);
     document.addEventListener("focusout", onOut);
+    if (vv) vv.addEventListener("resize", onResize);
+    else window.addEventListener("resize", onResize);
     return () => {
       document.removeEventListener("focusin", onIn);
       document.removeEventListener("focusout", onOut);
+      if (vv) vv.removeEventListener("resize", onResize);
+      else window.removeEventListener("resize", onResize);
     };
   }, [shown]);
 
