@@ -186,9 +186,13 @@ export async function lookupWord(word: string): Promise<DictResult> {
 
   const parsed = await callGeminiJSON(buildPrompt(trimmed), DICT_NEW);
 
+  // AI 가 뜻이 빈 JSON 을 주면 실패로 알립니다. 그대로 돌려주면 사전 화면이 빈 결과를 영구 캐시에 넣습니다(출시 전 점검 C-24).
+  const meaning = (parsed.meaning || "").toString().trim();
+  if (!meaning) throw new Error("EMPTY_RESPONSE");
+
   return {
     word: normalizeHeadword((parsed.word || trimmed).toString().trim()),
-    meaning: (parsed.meaning || "").toString().trim(),
+    meaning,
     meaningDetail: (parsed.meaningDetail || "").toString().trim(),
     examples: arr<DictExample>(parsed.examples).map((e) => ({
       id: (e?.id || "").toString().trim(),
@@ -272,9 +276,12 @@ export async function analyzeIdSentence(sentence: string): Promise<IdSentenceRes
     "- patterns\uB294 \uC774 \uBB38\uC7A5\uC5D0\uC11C \uBC30\uC6B8 \uB9CC\uD55C \uD575\uC2EC \uBB38\uD615 1~2\uAC1C\uC785\uB2C8\uB2E4. pattern\uC5D0\uB294 \uC778\uB3C4\uB124\uC2DC\uC544\uC5B4 \uBF08\uB300\uB97C +\uB85C \uC5F0\uACB0\uD574 \uC801\uACE0(\uC608: mendorong + \uC0AC\uB78C + untuk + \uB3D9\uC0AC), meaning\uC5D0\uB294 \uADF8 \uBB38\uD615\uC758 \uD55C\uAD6D\uC5B4 \uC758\uBBF8\uB97C \uC801\uC73C\uC138\uC694. \uBC30\uC6B8 \uBB38\uD615\uC774 \uC5C6\uC73C\uBA74 \uBE48 \uBC30\uC5F4 [].\n";
 
   const parsed = await callGeminiJSON(prompt, DICT_NEW);
+  // 번역이 비어 왔으면 실패로 알립니다(빈 결과가 캐시에 남지 않게 — C-24).
+  const translation = (parsed.translation || "").toString().trim();
+  if (!translation) throw new Error("EMPTY_RESPONSE");
   return {
     original: (parsed.original || trimmed).toString().trim(),
-    translation: (parsed.translation || "").toString().trim(),
+    translation,
     chunks: arr<SentenceChunk>(parsed.chunks).map((c) => ({
       id: (c?.id || "").toString().trim(),
       ko: (c?.ko || "").toString().trim(),
@@ -340,17 +347,20 @@ export async function lookupKoWord(word: string): Promise<KoWordResult> {
     "- pron은 한국인이 읽기 쉽게 한글로 근사 표기 (예: bicara → 비짜라).\n";
 
   const parsed = await callGeminiJSON(prompt, DICT_NEW);
+  const candidates = arr<KoWordCandidate>(parsed.candidates).map((c) => ({
+    id: (c?.id || "").toString().trim(),
+    pron: (c?.pron || "").toString().trim(),
+    meaning: (c?.meaning || "").toString().trim(),
+    nuance: (c?.nuance || "").toString().trim(),
+    situation: (c?.situation || "").toString().trim(),
+    example: (c?.example || "").toString().trim(),
+    exampleKo: (c?.exampleKo || "").toString().trim(),
+  })).filter((c) => c.id);
+  // 대응 단어가 하나도 없이 왔으면 실패로 알립니다(빈 결과가 캐시에 남지 않게 — C-24).
+  if (candidates.length === 0) throw new Error("EMPTY_RESPONSE");
   return {
     query: (parsed.query || trimmed).toString().trim(),
-    candidates: arr<KoWordCandidate>(parsed.candidates).map((c) => ({
-      id: (c?.id || "").toString().trim(),
-      pron: (c?.pron || "").toString().trim(),
-      meaning: (c?.meaning || "").toString().trim(),
-      nuance: (c?.nuance || "").toString().trim(),
-      situation: (c?.situation || "").toString().trim(),
-      example: (c?.example || "").toString().trim(),
-      exampleKo: (c?.exampleKo || "").toString().trim(),
-    })).filter((c) => c.id),
+    candidates,
   };
 }
 
@@ -395,10 +405,14 @@ export async function translateKoSentence(sentence: string): Promise<KoSentenceR
     pron: (v?.pron || "").toString().trim(),
     note: (v?.note || "").toString().trim(),
   });
+  const formal = variant(parsed.formal);
+  const casual = variant(parsed.casual);
+  // 번역문이 둘 다 비어 왔으면 실패로 알립니다(빈 결과가 캐시에 남지 않게 — C-24).
+  if (!formal.id && !casual.id) throw new Error("EMPTY_RESPONSE");
   return {
     query: (parsed.query || trimmed).toString().trim(),
-    formal: variant(parsed.formal),
-    casual: variant(parsed.casual),
+    formal,
+    casual,
     hardWords: arr<HardWord>(parsed.hardWords).map((h) => ({
       word: (h?.word || "").toString().trim(),
       meaning: (h?.meaning || "").toString().trim(),
