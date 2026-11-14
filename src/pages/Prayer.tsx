@@ -472,7 +472,7 @@ const Prayer = () => {
   }) => {
     if (generating) return;
     if (!hasClaudeApiKey()) {
-      toast("Claude API 키가 필요합니다. 설정에서 입력해주세요");
+      toast("Claude API 키가 필요합니다. 설정에서 입력해 주세요");
       setSettingsOpen(true);
       return;
     }
@@ -516,14 +516,14 @@ const Prayer = () => {
       if (genToken.current !== token) return;
       const code = (e && e.message) || "";
       if (code === "NO_API_KEY" || code === "INVALID_API_KEY") {
-        toast("Claude API 키를 설정에서 확인해주세요");
+        toast("Claude API 키를 설정에서 확인해 주세요");
         setSettingsOpen(true);
       } else if (code === "NO_CREDIT") {
-        toast("Claude 크레딧이 부족합니다. console.anthropic.com에서 충전해주세요");
+        toast("Claude 크레딧이 부족합니다. console.anthropic.com에서 충전해 주세요");
       } else if (code === "RATE_LIMIT" || code === "OVERLOADED") {
-        toast("지금 요청이 많습니다. 잠시 후 다시 시도하세요");
+        toast("요청이 많습니다. 잠시 뒤 다시 시도하세요");
       } else {
-        toast("기도문을 만들지 못했습니다. 다시 시도하세요");
+        toast("기도문을 만들지 못했습니다. 잠시 뒤 다시 시도하세요");
       }
     } finally {
       if (genToken.current === token) setGenerating(false);
@@ -557,7 +557,7 @@ const Prayer = () => {
     const edited = koDraft.trim();
     if (!edited) return;
     if (!hasClaudeApiKey()) {
-      toast("Claude API 키가 필요합니다. 설정에서 입력해주세요");
+      toast("Claude API 키가 필요합니다. 설정에서 입력해 주세요");
       setSettingsOpen(true);
       return;
     }
@@ -578,14 +578,14 @@ const Prayer = () => {
       if (genToken.current !== token) return;
       const code = (e && e.message) || "";
       if (code === "NO_API_KEY" || code === "INVALID_API_KEY") {
-        toast("Claude API 키를 설정에서 확인해주세요");
+        toast("Claude API 키를 설정에서 확인해 주세요");
         setSettingsOpen(true);
       } else if (code === "NO_CREDIT") {
-        toast("Claude 크레딧이 부족합니다. console.anthropic.com에서 충전해주세요");
+        toast("Claude 크레딧이 부족합니다. console.anthropic.com에서 충전해 주세요");
       } else if (code === "RATE_LIMIT" || code === "OVERLOADED") {
-        toast("지금 요청이 많습니다. 잠시 후 다시 시도하세요");
+        toast("요청이 많습니다. 잠시 뒤 다시 시도하세요");
       } else {
-        toast("고치지 못했습니다. 다시 시도하세요");
+        toast("고치지 못했습니다. 잠시 뒤 다시 시도하세요");
       }
     } finally {
       if (genToken.current === token) setRevising(false);
@@ -1022,7 +1022,7 @@ const Prayer = () => {
             {/* 상황 선택 */}
             {cat.id === "etc" ? (
               <>
-                <p className={Q_CLS} style={{ color: PUB.txt }}>어떤 상황인가요?</p>
+                <p className={Q_CLS} style={{ color: PUB.txt }}>상황을 적어 주세요</p>
                 <input
                   value={customText}
                   onChange={(e) => setCustomText(e.target.value)}
@@ -1033,7 +1033,7 @@ const Prayer = () => {
             ) : (
               <>
                 <p className={Q_CLS} style={{ color: PUB.txt }}>
-                  {cat.needsPhase ? "어떤 모임인가요?" : "어떤 자리인가요?"}
+                  {cat.needsPhase ? "모임을 고르세요" : "자리를 고르세요"}
                 </p>
                 <div className="flex flex-wrap gap-2 mb-5">
                   {cat.situations.map((s) => (
@@ -1056,7 +1056,7 @@ const Prayer = () => {
             {/* 모임: 시작/마침 */}
             {cat.needsPhase && (
               <>
-                <p className={Q_CLS} style={{ color: PUB.txt }}>시작 기도인가요, 마침 기도인가요?</p>
+                <p className={Q_CLS} style={{ color: PUB.txt }}>시작 기도와 마침 기도 중에서 고르세요</p>
                 <div className="flex flex-wrap gap-2 mb-5">
                   <button onClick={() => setPhase("open")} className={chip(phase === "open")}>모임 시작</button>
                   <button onClick={() => setPhase("close")} className={chip(phase === "close")}>모임 마침</button>
