@@ -142,8 +142,11 @@ export function claudeTarget(apiKey: string): AiTarget | null {
 
 type Period = "day" | "month" | "total";
 
-/** 한도 초과 안내 문장. 서버 응답의 error·period 로 고릅니다. */
-export function quotaText(code: string, period: string): string {
+/**
+ * 한도 초과 안내 문장. 서버 응답의 error·period 로 고릅니다.
+ * limit: 서버가 함께 준 그 기간의 한도 숫자(없으면 0). 오늘의 문장에서 "하루 한 번"이 맞는지 가릴 때만 봅니다.
+ */
+export function quotaText(code: string, period: string, limit = 0): string {
   const p: Period = period === "month" ? "month" : period === "total" ? "total" : "day";
   const when = p === "month" ? "이번 달" : "오늘";
   const next = p === "month" ? "다음 달에" : "내일";
@@ -151,17 +154,21 @@ export function quotaText(code: string, period: string): string {
     return when + " 불러올 수 있는 이야기를 모두 불러왔습니다. " + next + " 다시 불러오세요.";
   }
   if (code === "QUOTA_PERCAKAPAN_MAKE") {
-    return when + " 만들 수 있는 회화를 모두 만들었습니다. " + next + " 다시 만들어 보세요.";
+    return when + " 만들 수 있는 대화를 모두 만들었습니다. " + next + " 다시 만들어 보세요.";
   }
   if (code === "QUOTA_LONGREAD") {
-    if (p === "total") return "체험 기간에 들을 수 있는 이야기·회화 듣기를 모두 썼습니다. Plus 를 시작하면 계속 들을 수 있습니다.";
-    return when + " 들을 수 있는 이야기·회화 듣기를 모두 썼습니다. " + next + " 다시 들어 보세요.";
+    if (p === "total") return "체험 기간에 들을 수 있는 이야기·대화를 모두 들었습니다. Plus를 시작하면 계속 들을 수 있습니다.";
+    return when + " 들을 수 있는 이야기·대화를 모두 들었습니다. " + next + " 다시 들어 보세요.";
   }
   if (code === "QUOTA_DICT_NEW") {
     return when + " 새로 찾을 수 있는 말을 모두 찾았습니다. 이미 찾은 말은 계속 볼 수 있습니다. " + next + " 다시 찾아보세요.";
   }
-  if (code === "QUOTA_PHRASE") return "오늘의 새 문장은 하루 한 번 받을 수 있습니다. 내일 다시 열어 보세요.";
-  if (code === "QUOTA_WORD_AUDIO") return when + " 들을 수 있는 발음 듣기를 모두 썼습니다. " + next + " 다시 들어 보세요.";
+  if (code === "QUOTA_PHRASE") {
+    // 무료는 하루 1번. Plus 는 안전 상한(여러 번)이라 "하루 한 번"이 사실과 다릅니다(출시 전 점검 C-14).
+    if (limit > 1) return "오늘 받을 수 있는 새 문장을 모두 받았습니다. 내일 다시 열어 보세요.";
+    return "오늘의 새 문장은 하루 한 번 받을 수 있습니다. 내일 다시 열어 보세요.";
+  }
+  if (code === "QUOTA_WORD_AUDIO") return when + " 들을 수 있는 발음을 모두 들었습니다. " + next + " 다시 들어 보세요.";
   if (code === "QUOTA_SHARED_AUDIO" || code === "QUOTA_TTS") {
     return when + " 음성 듣기 한도를 넘었습니다. " + next + " 다시 들을 수 있습니다.";
   }
@@ -172,10 +179,10 @@ export function quotaText(code: string, period: string): string {
 
 /** Plus 전용 기능을 무료로 불렀을 때의 안내. */
 export function plusRequiredText(kind: string): string {
-  if (kind === "longread") return "내가 만든 이야기·회화 듣기는 Plus 에서 쓸 수 있습니다.";
-  if (kind === "percakapan-make") return "회화집 만들기는 Plus 에서 쓸 수 있습니다.";
-  if (kind === "shared-audio") return "회화·지도 읽기 듣기는 Plus 에서 쓸 수 있습니다.";
-  return "Plus 에서 쓸 수 있는 기능입니다.";
+  if (kind === "longread") return "불러온 이야기와 내가 만든 대화 듣기는 Plus에서 쓸 수 있습니다.";
+  if (kind === "percakapan-make") return "대화 만들기는 Plus에서 쓸 수 있습니다.";
+  if (kind === "shared-audio") return "회화집·지도 듣기는 Plus에서 쓸 수 있습니다.";
+  return "Plus에서 쓸 수 있는 기능입니다.";
 }
 
 // 화면이 직접 안내를 그리는 기능은 토스트를 띄우지 않습니다.
@@ -185,6 +192,11 @@ const SILENT_KINDS = ["dict-new", "phrase"];
 let lastQuotaToast = 0;
 let lastNotice = "";
 let lastCode = "";
+
+/** 방금(ms 안에) 한도·Plus 안내를 띄웠는가 — 같은 실패에 다른 안내를 겹쳐 띄우지 않으려고 봅니다(storeTtsShim). */
+export function quotaNoticeWithin(ms: number): boolean {
+  return lastQuotaToast > 0 && Date.now() - lastQuotaToast < ms;
+}
 
 /** 마지막으로 받은 한도·Plus 안내 문장 (화면이 직접 그릴 때 씀). */
 export function lastQuotaNotice(): string {
@@ -220,16 +232,18 @@ export async function handleQuotaResponse(res: Response, viaProxy: boolean): Pro
   let code = "";
   let kind = "";
   let period = "";
+  let limit = 0;
   try {
     const d = await res.clone().json();
     code = String((d && d.error) || "");
     kind = String((d && d.kind) || "");
     period = String((d && d.period) || "");
+    limit = d && typeof d.limit === "number" ? d.limit : 0;
   } catch (e) {}
   const plusRequired = res.status === 403 && code === "PLUS_REQUIRED";
   if (!plusRequired && (res.status !== 429 || code.indexOf("QUOTA_") !== 0)) return false;
 
-  lastNotice = plusRequired ? plusRequiredText(kind) : quotaText(code, period);
+  lastNotice = plusRequired ? plusRequiredText(kind) : quotaText(code, period, limit);
   lastCode = plusRequired ? "QUOTA_PLUS_REQUIRED" : code;
   if (SILENT_KINDS.indexOf(kind) >= 0) return true;
 
