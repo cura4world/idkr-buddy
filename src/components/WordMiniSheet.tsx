@@ -139,7 +139,7 @@ const WordMiniSheet = ({
             >
               {saved ? <Check size={15} strokeWidth={2.4} className="shrink-0" /> : <Plus size={15} strokeWidth={2.4} className="shrink-0" />}
               <span className="truncate">
-                {saved ? "저장됨" : saveTargetId ? saveTargetName + "에 담기" : "단어장을 먼저 만들어 주세요"}
+                {saved ? "담음" : saveTargetId ? saveTargetName + "에 담기" : "단어장을 먼저 만들어 주세요"}
               </span>
             </button>
             {/* 담긴 뒤에도 다른 단어장에는 담을 수 있어야 하므로 ⌄ 는 잠그지 않습니다 */}
