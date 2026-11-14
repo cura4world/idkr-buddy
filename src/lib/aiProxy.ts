@@ -275,5 +275,8 @@ export function publicProxyError(res: Response, target: AiTarget): string {
     return "SESSION_EXPIRED";
   }
   if (res.status === 403) return "NOT_AVAILABLE";
+  // 서버가 일부러 멈춘 것(긴급 중지 AI_PAUSED·전체 하루 상한)은 머리글 x-kata-paused 로 알려 줍니다.
+  // AI 쪽의 일시 오류(같은 503)와 달리 다른 모델로 다시 불러도 소용없으므로 바로 "지금은 사용할 수 없습니다"로 끝냅니다.
+  if (res.status === 503 && res.headers.get("x-kata-paused")) return "NOT_AVAILABLE";
   return "";
 }
