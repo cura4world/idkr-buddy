@@ -89,7 +89,7 @@ export const KALIMANTAN: MapContentTable = {
       {
         word: "meneliti",
         meaning: "연구하다, 조사하다",
-        example: "Dia meneliti orangutan selama puluhan tahun.",
+        example: "Dia meneliti orang utan selama puluhan tahun.",
         exampleKo: "그는 수십 년 동안 오랑우탄을 연구했습니다.",
       },
     ],
