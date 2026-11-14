@@ -285,20 +285,20 @@ const Dictionary = () => {
     // 공개판: 키·세션 오류는 사용자용 문장으로 (aiErrors). 관리자판은 아래 기존 문구.
     const pubText = publicAiErrorText(code);
     if (pubText) return pubText;
-    if (code === "NO_API_KEY") return "Gemini API 키가 필요합니다. 설정에서 키를 입력해주세요.";
-    if (code === "INVALID_API_KEY") return "API 키가 올바르지 않습니다. 설정에서 다시 확인해주세요.";
-    if (code === "RATE_LIMIT") return "요청이 많습니다. 잠시 후 다시 시도해주세요.";
-    if (code === "EMPTY_WORD") return "단어를 입력해주세요.";
-    if (code === "TIMEOUT") return "응답이 늦어 검색을 중단했습니다. 다시 시도해주세요.";
-    if (code === "NETWORK") return "네트워크 연결을 확인해주세요.";
+    if (code === "NO_API_KEY") return "Gemini API 키가 필요합니다. 설정에서 키를 입력해 주세요.";
+    if (code === "INVALID_API_KEY") return "API 키가 올바르지 않습니다. 설정에서 다시 확인해 주세요.";
+    if (code === "RATE_LIMIT") return "요청이 많습니다. 잠시 뒤 다시 시도하세요.";
+    if (code === "EMPTY_WORD") return "단어를 입력해 주세요.";
+    if (code === "TIMEOUT") return "응답이 늦어 검색을 멈췄습니다. 잠시 뒤 다시 시도하세요.";
+    if (code === "NETWORK") return "인터넷 연결을 확인해 주세요.";
     // 공개판(스토어 앱) 사용자에게는 AI 공급사 이름을 내보이지 않습니다(출시 전 점검 C-18).
     if (code === "SERVER_ERROR") {
       return isStoreApp()
-        ? "서버 오류입니다. 잠시 후 다시 시도하세요."
-        : "Gemini 서버 오류입니다. 잠시 후 다시 시도해주세요.";
+        ? "지금 사전을 불러오지 못했습니다. 잠시 뒤 다시 시도하세요."
+        : "Gemini 서버 오류입니다. 잠시 뒤 다시 시도하세요.";
     }
-    if (code === "BAD_REQUEST") return "요청 처리에 실패했습니다. 잠시 후 다시 시도해주세요.";
-    return "검색에 실패했습니다. 잠시 후 다시 시도해주세요.";
+    if (code === "BAD_REQUEST") return "찾지 못했습니다. 잠시 뒤 다시 시도하세요.";
+    return "검색하지 못했습니다. 잠시 뒤 다시 시도하세요.";
   };
 
   // 히스토리 칸 기록 — "push": 새 칸(뒤로가기로 지금 결과로 돌아옴) / "replace": 지금 칸에 적기 / "none": 안 건드림(뒤로가기로 되돌아온 경우)
@@ -676,7 +676,7 @@ const Dictionary = () => {
       rec.onerror = (ev: any) => {
         setListening(false);
         if (ev?.error === "not-allowed" || ev?.error === "service-not-allowed") {
-          toast("마이크 권한이 필요합니다. 설정에서 허용해 주세요");
+          toast("마이크 권한이 필요합니다. 폰 설정에서 허용해 주세요");
         } else if (ev?.error === "no-speech") {
           toast("음성이 들리지 않았습니다. 다시 말해 보세요");
         }
@@ -687,7 +687,7 @@ const Dictionary = () => {
       rec.start();
     } catch (e) {
       setListening(false);
-      toast("음성 검색을 시작할 수 없습니다");
+      toast("음성 검색을 시작하지 못했습니다");
     }
   };
 
@@ -715,7 +715,7 @@ const Dictionary = () => {
   const confirmDeleteHistory = () => {
     if (deleteTarget) {
       setHistory(removeHistory(deleteTarget));
-      toast("최근 검색에서 삭제되었습니다");
+      toast("검색 기록을 삭제했습니다");
     }
     setDeleteTarget(null);
   };
@@ -797,7 +797,7 @@ const Dictionary = () => {
           <AlertDialogHeader>
             <AlertDialogTitle className="font-body text-gray-900">검색 기록 삭제</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-600 break-words">
-              "{deleteTarget}" 을(를) 최근 검색에서 삭제하시겠습니까?
+              "{deleteTarget}" 검색 기록을 삭제하시겠습니까?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -830,7 +830,7 @@ const Dictionary = () => {
                 // 목록을 탭할 때 먼저 닫히지 않도록 잠깐 기다립니다.
                 histHideTimer.current = window.setTimeout(() => closeHistoryPanel(), 160);
               }}
-              placeholder="단어·문장 (인니어/한국어)"
+              placeholder="단어·문장 검색"
               className="flex-1 min-w-0 w-full bg-transparent outline-none font-body text-[0.9375rem] text-[#1D1F1E] placeholder:text-gray-400"
               autoCapitalize="none"
               autoCorrect="off"
@@ -902,9 +902,9 @@ const Dictionary = () => {
               </span>
             </div>
             <p className="text-white text-sm">
-              {voiceLang === "ko" ? "한국어" : "인도네시아어"}로 말해주세요...
+              {voiceLang === "ko" ? "한국어" : "인도네시아어"}로 말해 보세요
             </p>
-            <p className="text-white/60 text-xs">탭하면 중지</p>
+            <p className="text-white/60 text-xs">누르면 멈춤</p>
           </div>
         )}
 
@@ -912,7 +912,7 @@ const Dictionary = () => {
         {loading && (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Loader2 size={28} className="animate-spin mb-3" />
-            <p className="text-sm font-gothic">사전을 찾는 중입니다</p>
+            <p className="text-sm font-gothic">사전을 찾는 중...</p>
           </div>
         )}
 
@@ -929,7 +929,7 @@ const Dictionary = () => {
             <div className="pt-1 pb-4 text-muted-foreground">
               <p className="text-xs flex items-center justify-center gap-1">
                 <Search size={13} className="opacity-60 shrink-0" />
-                <span>인니어·한국어 단어나 문장을 검색해 보세요</span>
+                <span>인도네시아어·한국어 단어나 문장을 검색해 보세요</span>
               </p>
             </div>
             {history.length > 0 && (
@@ -1274,7 +1274,7 @@ const Dictionary = () => {
               {/* 회화 사용빈도 / 난이도 (작은 카드 두 칸) */}
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="rounded-2xl bg-card px-3.5 py-3">
-                  <p className="m-0 font-gothic text-[0.75rem] text-[#5B6469]">회화 사용빈도</p>
+                  <p className="m-0 font-gothic text-[0.75rem] text-[#5B6469]">회화 사용 빈도</p>
                   <p className="m-0 mt-1 font-gothic text-[0.84375rem] font-bold text-[#B4501F]">{FREQ_LABEL[freq]}</p>
                   <Bars n={freq} on="#EC7F51" />
                 </div>
@@ -1305,7 +1305,7 @@ const Dictionary = () => {
                   {saved ? <Check size={16} strokeWidth={2.2} className="shrink-0" /> : <Plus size={16} strokeWidth={2.2} className="shrink-0" />}
                   <span className="truncate">
                     {saved
-                      ? "저장됨"
+                      ? "담음"
                       : saveTargetId
                         ? saveTargetName + "에 담기"
                         : "단어장을 먼저 만들어 주세요"}
