@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams, Navigate } from "react-router-dom";
 import { ArrowLeft, Volume1, Loader2, RotateCcw, Bookmark } from "lucide-react";
 import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
@@ -23,7 +23,8 @@ import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
 import AiReportButton from "@/components/AiReportButton";
 import { publicAiErrorText } from "@/lib/aiErrors";
-import { isPreviewBuild } from "@/lib/plan";
+import { isPreviewBuild, usePlan } from "@/lib/plan";
+import { isStoreApp } from "@/lib/platform";
 
 /* 폰 네이티브 TTS 우선, 없으면 브라우저 음성 합성으로 폴백 */
 const speak = (text: string, lang: "id" | "ko") => {
@@ -646,4 +647,13 @@ const PhraseDetail = () => {
   );
 };
 
-export default PhraseDetail;
+// 공개판(스토어 앱)의 무료·Plus 에게는 성경 말씀 문장을 열지 않습니다 — 홈과 종류 고르기에서는 이미 빠져 있는데,
+// 주소의 k=alkitab(다른 판에서 되돌린 저장 문장 등)으로는 "성경 말씀" 꼬리표와 성경 해설이 열렸습니다(출시 전 점검 E-10).
+const PhraseDetailGate = () => {
+  const [sp] = useSearchParams();
+  const { staff } = usePlan();
+  if (isStoreApp() && !staff && (sp.get("k") || "").trim() === "alkitab") return <Navigate to="/" replace />;
+  return <PhraseDetail />;
+};
+
+export default PhraseDetailGate;
