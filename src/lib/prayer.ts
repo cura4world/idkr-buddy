@@ -81,7 +81,7 @@ export const PRAYER_CATEGORIES: PrayerCategory[] = [
   },
   {
     id: "etc",
-    label: "그외 기도",
+    label: "그 외 기도",
     emoji: "🙏",
     situations: [
       { id: "custom", label: "직접 입력", desc: "" },
