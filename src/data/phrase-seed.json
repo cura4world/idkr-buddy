@@ -82,6 +82,26 @@
         "phrase": "Berakit-rakit ke hulu, berenang-renang ke tepian.",
         "field": "note",
         "why": "'앞 구절만 쓰는 것이 일상적'이라는 단정은 근거가 약함"
+      },
+      {
+        "phrase": "Berakit-rakit ke hulu, berenang-renang ke tepian.",
+        "field": "note",
+        "why": "2026-11-14 출시 전 점검 — '~지만'이 두 번 겹쳐 문장이 깨져 있어 두 문장으로 나눔"
+      },
+      {
+        "phrase": "Di mana bumi dipijak, di situ langit dijunjung.",
+        "field": "meaning",
+        "why": "2026-11-14 출시 전 점검 — '로마에 가면 로마법을 따르라'는 한국 속담이 아니라 서양에서 온 말 → '한국에서도 쓰는'"
+      },
+      {
+        "phrase": "Diam itu emas.",
+        "field": "meaning",
+        "why": "2026-11-14 출시 전 점검 — '침묵은 금이다'는 한국 속담이 아니라 서양에서 온 말 → '한국에서도 쓰는'"
+      },
+      {
+        "phrase": "Kutu buku",
+        "field": "ko",
+        "why": "2026-11-14 출시 전 점검 — '공부만 파는 사람'은 다른 뜻. kutu buku 는 책 읽기를 즐기는 사람(meaning 과 맞춤). src/lib/peribahasa.ts 의 같은 줄도 함께 고침"
       }
     ]
   },
@@ -194,11 +214,11 @@
           "situasi": "저축이나 미래를 위해 절약하며 생활하는 가족에게 말할 때"
         }
       ],
-      "note": "원래 뒤에 'bersakit-sakit dahulu, bersenang-senang kemudian(먼저 아프고 나중에 즐겁다)'이라는 대구 구절이 이어지지만, 보통 앞뒤 두 줄을 함께 말하지만, 앞 구절만 말해도 뜻이 통합니다."
+      "note": "원래 뒤에 'bersakit-sakit dahulu, bersenang-senang kemudian(먼저 아프고 나중에 즐겁다)'이라는 대구 구절이 이어집니다. 보통 두 줄을 함께 말하지만, 앞 구절만 말해도 뜻이 통합니다."
     },
     "Di mana bumi dipijak, di situ langit dijunjung.": {
       "ko": "밟고 선 땅에서는 그곳의 하늘을 받듭니다. 그 고장의 법을 따르세요.",
-      "meaning": "한국 속담의 '로마에 가면 로마법을 따르라'와 같은 뜻으로, 자신이 머무는 곳의 법, 규칙, 관습을 존중하고 따라야 한다는 것을 의미합니다. 다른 지역으로 이사를 가거나 여행을 갔을 때 현지 문화와 예절에 맞추어 행동해야 함을 조언할 때 자주 쓰입니다.",
+      "meaning": "한국에서도 쓰는 '로마에 가면 로마법을 따르라'와 같은 뜻으로, 자신이 머무는 곳의 법, 규칙, 관습을 존중하고 따라야 한다는 것을 의미합니다. 다른 지역으로 이사를 가거나 여행을 갔을 때 현지 문화와 예절에 맞추어 행동해야 함을 조언할 때 자주 쓰입니다.",
       "examples": [
         {
           "id": "Waktu masuk ke pura di Bali, kita harus pakai sarung. Di mana bumi dipijak, di situ langit dijunjung.",
@@ -528,7 +548,7 @@
     },
     "Diam itu emas.": {
       "ko": "침묵은 금입니다.",
-      "meaning": "'침묵은 금이다'라는 한국 속담과 뜻이 완전히 같은 표현입니다. 괜히 말을 보태어 오해나 갈등을 키우기보다는, 조용히 말을 아끼는 것이 훨씬 더 현명하고 이득이 된다는 의미로 쓰입니다. 주로 다툼이 일어나기 쉬운 상황이나 불필요한 말실수를 피해야 할 때 조언하는 말로 사용합니다.",
+      "meaning": "한국에서도 쓰는 '침묵은 금이다'라는 말과 뜻이 같은 표현입니다. 괜히 말을 보태어 오해나 갈등을 키우기보다는, 조용히 말을 아끼는 것이 훨씬 더 현명하고 이득이 된다는 의미로 쓰입니다. 주로 다툼이 일어나기 쉬운 상황이나 불필요한 말실수를 피해야 할 때 조언하는 말로 사용합니다.",
       "examples": [
         {
           "id": "Daripada ikut ribut, ingat kata orang, diam itu emas.",
@@ -725,7 +745,7 @@
       "note": "일반적인 단어로는 'sombong(거만하다)'과 뜻이 같으며, 반대 표현으로는 '겸손하다'를 뜻하는 'rendah hati(직역: 낮은 마음)'를 씁니다."
     },
     "Kutu buku": {
-      "ko": "책벌레 → 공부만 파는 사람",
+      "ko": "책벌레 → 책을 아주 좋아하는 사람",
       "meaning": "'Kutu buku'는 직역하면 '책의 벌레'로, 한국어의 '책벌레'처럼 책 읽기를 매우 좋아하거나 공부에 몰두하는 사람을 가리킵니다. 평소에 늘 책을 손에서 놓지 않거나 도서관을 자주 찾는 사람을 친근하게 부를 때 자주 씁니다.",
       "examples": [
         {
