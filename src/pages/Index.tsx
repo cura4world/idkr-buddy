@@ -507,7 +507,7 @@ const Index = () => {
     if (purged.length === 0) return;
     const head = purged.slice(0, 3).join(", ");
     const more = purged.length > 3 ? " 외 " + (purged.length - 3) + "개" : "";
-    toast("뜻이 없던 단어를 정리했습니다: " + head + more);
+    toast("뜻을 불러오지 못한 채 담긴 단어를 지웠습니다: " + head + more + " (다시 담으면 됩니다)");
   }, []);
 
   // 판(관리자·회원·공개)에 따라 보이는 구역이 다릅니다.
@@ -1037,7 +1037,7 @@ const Index = () => {
                   onBlur={() => {
                     hideHistoryRef.current = window.setTimeout(() => closeSearchHistory(), 160);
                   }}
-                  placeholder="단어·문장 (인니어/한국어)"
+                  placeholder="단어·문장 검색"
                   aria-label="검색"
                   className="flex-1 min-w-0 w-full bg-transparent outline-none text-[#141819] placeholder:text-muted-foreground"
                   style={{ fontSize: hrem(14) }}
@@ -1183,7 +1183,7 @@ const Index = () => {
                 ))}
                 title="회화집"
                 sub="Percakapan"
-                meta={pubSceneCount ? pubSceneCount.toLocaleString("ko-KR") + "대화" : undefined}
+                meta={pubSceneCount ? "대화 " + pubSceneCount.toLocaleString("ko-KR") + "개" : undefined}
                 locked={!plus}
                 onClick={(e) => (plus ? navigate("/percakapan") : tapLocked(e, "회화집은 Plus 회원 기능입니다"))}
                 last
@@ -1348,7 +1348,7 @@ const Index = () => {
               <span className="flex-1 min-w-0 flex flex-col" style={{ gap: 2 }}>
                 <span style={{ fontSize: hrem(15) }}>Kata kata Plus</span>
                 <span className="font-gothic" style={{ fontSize: hrem(11.5), color: "#6E5612" }}>
-                  회화·게임·소리 읽기 모두 열기
+                  회화집·게임·듣기 모두 열기
                 </span>
               </span>
               <span
@@ -1475,7 +1475,7 @@ const Index = () => {
                 // 목록을 탭할 때 먼저 닫히지 않도록 잠깐 기다립니다.
                 hideHistoryRef.current = window.setTimeout(() => closeSearchHistory(), 160);
               }}
-              placeholder="단어·문장 (인니어/한국어)"
+              placeholder="단어·문장 검색"
               className="flex-1 min-w-0 w-full bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
               autoCapitalize="none"
               autoCorrect="off"
