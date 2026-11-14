@@ -7,7 +7,7 @@ import { getPhraseDetail, PhraseDetail as PhraseDetailData } from "@/lib/phrase"
 import { Phrase, PhraseKind, isPhraseSaved, toggleSavedPhrase } from "@/lib/peribahasa";
 import { quickLookupWord } from "@/lib/story";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
-import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT } from "@/lib/store";
+import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, lookupFailText } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import WordMiniSheet from "@/components/WordMiniSheet";
@@ -23,6 +23,7 @@ import { cleanPhrase, useSelectedPhrase } from "@/lib/phraseSelect";
 import PhraseFindBar from "@/components/PhraseFindBar";
 import AiReportButton from "@/components/AiReportButton";
 import { publicAiErrorText } from "@/lib/aiErrors";
+import { lastQuotaNotice } from "@/lib/aiProxy";
 import { isPreviewBuild, usePlan } from "@/lib/plan";
 import { isStoreApp } from "@/lib/platform";
 
@@ -55,8 +56,8 @@ const KIND_TAG: Record<string, string> = {
   ungkapan: "관용구",
   alkitab: "성경 말씀",
   kosakataku: "내 단어장",
-  kosakata: "단어장",
-  percakapan: "회화",
+  kosakata: "기본 단어장",
+  percakapan: "회화집",
 };
 
 // 한국어 설명 속 인니어(로마자) 낱말만 Lora 로 보여 줍니다 (사전과 같은 방식).
@@ -115,6 +116,8 @@ const PhraseDetail = () => {
   const [data, setData] = useState<PhraseDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // 지금 오류가 한도 안내인가 (그렇다면 "다시 시도" 버튼을 보이지 않습니다)
+  const [quotaError, setQuotaError] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   // 마음에 든 문장 저장 (단어장 플래시카드의 리본과 같은 방식)
@@ -231,6 +234,7 @@ const PhraseDetail = () => {
   const load = useCallback(async (force = false, koHint?: string) => {
     setLoading(true);
     setError("");
+    setQuotaError(false);
     try {
       const d = await getPhraseDetail(item.id, koHint !== undefined ? koHint : item.ko, force, kind);
       setData(d);
@@ -252,8 +256,13 @@ const PhraseDetail = () => {
       if (msg === "NO_API_KEY" || msg === "INVALID_API_KEY" || msg === "SESSION_EXPIRED" || msg === "NOT_AVAILABLE") {
         setError(publicAiErrorText(msg) || "API_KEY");
       }
-      else if (msg === "RATE_LIMIT") setError("잠시 뒤에 다시 시도해 주세요");
-      else if (msg.indexOf("QUOTA") === 0) setError("오늘 볼 수 있는 해설을 모두 보았습니다. 내일 다시 볼 수 있습니다");
+      else if (msg === "RATE_LIMIT") setError("요청이 많습니다. 잠시 뒤 다시 시도하세요");
+      else if (msg.indexOf("QUOTA") === 0) {
+        // 한도 안내는 aiProxy 가 기간(오늘/이번 달)에 맞춰 만든 그 문장 하나만 씁니다 — 알림과 카드가 다른 말을 하지 않게.
+        // 다시 눌러도 같은 답이므로 "다시 시도" 버튼도 보이지 않습니다.
+        setQuotaError(true);
+        setError(lastQuotaNotice() || "오늘 볼 수 있는 해설을 모두 보았습니다. 내일 다시 볼 수 있습니다.");
+      }
       // 미리보기 빌드에서는 실제 원인을 알 수 있게 오류 코드를 붙입니다(공개판 정식 앱 문구는 그대로).
       else setError("설명을 불러오지 못했습니다" + (isPreviewBuild() ? " (" + (msg || "UNKNOWN") + ")" : ""));
     } finally {
@@ -366,8 +375,9 @@ const PhraseDetail = () => {
         setPopupInfo(r.info);
         setPopupSentenceKo(r.sentenceKo);
       })
-      .catch(() => {
-        if (popupReqId.current === reqId) setPopupMeaning(LOOKUP_FAIL_TEXT);
+      .catch((err) => {
+        // 한도 초과면 "다시 눌러 주세요" 대신 한도 안내를 보입니다(다시 눌러도 같은 답)
+        if (popupReqId.current === reqId) setPopupMeaning(lookupFailText(err, lastQuotaNotice()));
       })
       .finally(() => {
         if (popupReqId.current === reqId) setPopupLoading(false);
@@ -485,7 +495,7 @@ const PhraseDetail = () => {
         {loading ? (
           <StateCard>
             <Loader2 size={22} className="mx-auto mb-2.5 animate-spin text-[#2C6D63]" />
-            <p className="m-0 font-gothic text-[0.875rem] text-muted-foreground">설명을 만드는 중입니다</p>
+            <p className="m-0 font-gothic text-[0.875rem] text-muted-foreground">설명을 만드는 중...</p>
           </StateCard>
         ) : error === "API_KEY" ? (
           <StateCard>
@@ -499,13 +509,15 @@ const PhraseDetail = () => {
           </StateCard>
         ) : error ? (
           <StateCard>
-            <p className="m-0 mb-4 font-gothic text-[0.875rem] leading-[1.6] text-foreground break-keep">{error}</p>
-            <button
-              onClick={() => load(false)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#2C6D63] px-5 py-2.5 font-gothic text-[0.875rem] font-semibold text-white"
-            >
-              <RotateCcw size={14} /> 다시 시도
-            </button>
+            <p className={"m-0 font-gothic text-[0.875rem] leading-[1.6] text-foreground break-keep" + (quotaError ? "" : " mb-4")}>{error}</p>
+            {quotaError ? null : (
+              <button
+                onClick={() => load(false)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#2C6D63] px-5 py-2.5 font-gothic text-[0.875rem] font-semibold text-white"
+              >
+                <RotateCcw size={14} /> 다시 시도
+              </button>
+            )}
           </StateCard>
         ) : data ? (() => {
           // 알아두기는 "어떤 뜻인가요"와 같은 말이면 숨깁니다(예전 캐시 대비). 비어 있어도 숨깁니다.
@@ -536,7 +548,7 @@ const PhraseDetail = () => {
               {isAyat ? (
                 data.analysis && data.analysis.length > 0 ? (
                   <section className="flex flex-col gap-3.5">
-                    <Label>문장분석</Label>
+                    <Label>문장 분석</Label>
                     {data.analysis.map((a, i) => (
                       <div key={i} className="flex min-w-0 items-start gap-2.5">
                         <span className="w-3.5 shrink-0 font-word text-[0.9375rem] italic leading-[1.5] text-[#B59B6A]">{i + 1}</span>
