@@ -1023,7 +1023,7 @@ const Index = () => {
           </div>
 
           {/* 검색 */}
-          <div ref={searchAreaRef} className="relative" style={{ marginTop: fitPx(16, 6) }}>
+          <div ref={searchAreaRef} className="relative" style={{ marginTop: fitPx(22, 12) }}>
             <div className="flex items-center min-w-0" style={{ gap: 8 }}>
               <div
                 className="flex-1 min-w-0 flex items-center bg-white"
@@ -1464,7 +1464,7 @@ const Index = () => {
         </div>
 
         {/* 검색 */}
-        <div ref={searchAreaRef} className="relative mt-4">
+        <div ref={searchAreaRef} className="relative mt-5">
           <div className="flex items-center gap-2 min-w-0">
           <div className="flex-1 min-w-0 h-[46px] flex items-center gap-2 rounded-full bg-card px-4">
             <Search size={18} className="shrink-0 text-muted-foreground" />
