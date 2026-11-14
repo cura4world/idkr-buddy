@@ -166,13 +166,13 @@ export const MAP_CULTURE: MapPlace[] = [
 
 export const MAP_ISLANDS: MapIslandLabel[] = [
   {"id":"Sumatra","ko":"수마트라","x":137.7,"y":187},
-  {"id":"Jawa","ko":"자바","x":341.2,"y":337.9},
-  {"id":"Kalimantan","ko":"칼리만탄","x":411.2,"y":172.1},
+  {"id":"Jawa","ko":"자바","x":318,"y":380},
+  {"id":"Kalimantan","ko":"칼리만탄","x":430,"y":148},
   {"id":"Sulawesi","ko":"술라웨시","x":565.9,"y":216.7},
   {"id":"Papua","ko":"파푸아","x":938.9,"y":265.5},
-  {"id":"Bali","ko":"발리","x":437.6,"y":365.8},
-  {"id":"Nusa Tenggara","ko":"누사 틍가라","x":557.4,"y":374.4},
-  {"id":"Maluku","ko":"말루쿠","x":720.6,"y":248.5}
+  {"id":"Bali","ko":"발리","x":436,"y":398},
+  {"id":"Nusa Tenggara","ko":"누사 틍가라","x":560,"y":326},
+  {"id":"Maluku","ko":"말루쿠","x":700,"y":200}
 ];
 
 export interface MapCountryShape { id: string; ko: string; d: string; }
@@ -180,7 +180,7 @@ export interface MapCountryLabel { id: string; ko: string; x: number; y: number;
 
 export const NEIGHBOR_LABELS: MapCountryLabel[] = [
   {"id":"Vietnam","ko":"베트남","x":249.6,"y":-185.1},
-  {"id":"Timor-Leste","ko":"동티모르","x":664.3,"y":364.3},
+  {"id":"Timor-Leste","ko":"동티모르","x":682,"y":364.3},
   {"id":"Thailand","ko":"태국","x":137.8,"y":-149.3},
   {"id":"Singapore","ko":"싱가포르","x":197.5,"y":147.6},
   {"id":"Philippines","ko":"필리핀","x":601.2,"y":-76.7},
