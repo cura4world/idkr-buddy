@@ -62,8 +62,21 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-/** 구글의 400 응답 본문(error.details)에 reason "API_KEY_INVALID" 가 있는가. 본문을 못 읽으면 false. */
-async function hasInvalidKeyReason(res: Response): Promise<boolean> {
+// 기기가 오프라인이라고 알려 주는가. 알 수 없는 환경(값이 없음)은 온라인으로 봅니다.
+// 웹뷰는 실제로 끊겨 있어도 true 를 주는 일이 있어, 이 값은 "false 면 확실히 끊김"으로만 씁니다.
+function isOffline(): boolean {
+  try {
+    return typeof navigator !== "undefined" && navigator.onLine === false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 구글의 400 응답 본문(error.details)에 reason "API_KEY_INVALID" 가 있는가. 본문을 못 읽으면 false.
+ * 회화 음성(percakapanAudio.ts)도 400 을 키 오류와 요청 형식 오류로 가를 때 이것을 씁니다.
+ */
+export async function hasInvalidKeyReason(res: Response): Promise<boolean> {
   try {
     const j = await res.clone().json();
     const details = j && j.error && Array.isArray(j.error.details) ? j.error.details : [];
@@ -162,6 +175,13 @@ export async function callGeminiText(
   // 공개판 서버가 한 번으로 셉니다(빈 응답·시간 초과가 한도를 여러 칸 깎지 않게 — 출시 전 점검 C-02).
   const req = newRequestId();
 
+  // 인터넷이 끊겨 있으면 부르지 않고 바로 알립니다(출시 전 점검 C-07: 예전에는 9번을 불러 보고 10~15초 뒤에야 알렸습니다).
+  if (isOffline()) throw new Error("NETWORK");
+
+  // 연결 실패(NETWORK)는 모델과 상관없는 문제라 모델을 바꿔 가며 다시 부르지 않습니다.
+  // 잠깐 끊긴 것일 수 있으니 같은 모델로 한 번만 더 불러 보고, 또 실패하면 그대로 알립니다.
+  let networkFails = 0;
+
   for (const model of TEXT_MODEL_CANDIDATES) {
     for (let i = 0; i < MAX_TRIES_PER_MODEL; i++) {
       if (Date.now() - startedAt > deadline) throw lastError;
@@ -178,7 +198,17 @@ export async function callGeminiText(
         // 쿼터·모델 종료면 같은 모델을 더 두드리지 말고 바로 다음 후보로.
         if (SWITCH_MODEL.has(code)) break;
 
-        if (i < MAX_TRIES_PER_MODEL - 1) await sleep(backoffDelay(i));
+        if (code === "NETWORK") {
+          networkFails++;
+          // 두 번째 연결 실패이거나, 이 모델의 마지막 시도였으면(다음은 모델을 바꾸는 차례) 여기서 끝냅니다.
+          if (networkFails >= 2 || i >= MAX_TRIES_PER_MODEL - 1) throw e;
+        }
+
+        if (i < MAX_TRIES_PER_MODEL - 1) {
+          await sleep(backoffDelay(i));
+          // 기다리는 사이에 끊겼으면 더 부르지 않습니다.
+          if (isOffline()) throw new Error("NETWORK");
+        }
       }
     }
   }
