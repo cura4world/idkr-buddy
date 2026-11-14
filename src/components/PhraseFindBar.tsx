@@ -17,7 +17,11 @@ interface Props {
 export default function PhraseFindBar({ phrase, onFind, hidden, widthClass }: Props) {
   if (!phrase || hidden) return null;
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-5 pt-6 pointer-events-none bg-gradient-to-t from-background via-background/90 to-transparent">
+    // 하단 탭 막대가 있는 화면에서는 막대 위에 뜹니다 — 예전에는 bottom 0 이라 탭 이름·아이콘을 가렸습니다(출시 전 점검 U-03)
+    <div
+      className="fixed left-0 right-0 z-40 px-4 pb-5 pt-6 pointer-events-none bg-gradient-to-t from-background via-background/90 to-transparent"
+      style={{ bottom: "var(--kata-tabbar-float, 0px)" }}
+    >
       <button
         onClick={onFind}
         className={
