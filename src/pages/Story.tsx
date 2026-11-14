@@ -774,6 +774,7 @@ const Story = () => {
                     feature="story"
                     input={current.title}
                     output={current.indonesian}
+                    label="내용이 이상합니다"
                     className="mt-4 pt-1.5 border-t border-[#EEF1F3]"
                   />
                 </div>
