@@ -12,6 +12,7 @@
 import { toast } from "sonner";
 import { MEMBER_BASE, memberHeaders } from "@/lib/member";
 import { PUBLIC_BASE, publicHeaders, expireSession } from "@/lib/account";
+import { isPlayStoreApp } from "@/lib/platform";
 
 /**
  * 어떤 기능의 호출인지. 공개판 서버는 이 이름(x-kata-kind)별로 하루·한 달 한도를 셉니다.
@@ -78,7 +79,10 @@ export function newRequestId(): string {
  *       (2026-11-14 출시 전 점검 C-02 — 실패한 호출이 한도를 여러 칸 깎던 문제).
  */
 export function geminiTarget(model: string, apiKey: string, kind: AiKind, unit?: string, req?: string): AiTarget | null {
-  const key = (apiKey || "").trim();
+  // 스토어 앱은 로그인 세션 길만 탑니다. 예전에는 저장소에 Gemini 키·회원키가 남아 있으면(관리자판 백업을
+  // 되돌린 경우 등) 그 길을 먼저 타, 계정별 한도·등급을 건너뛰었습니다(출시 전 점검 S-13).
+  const sessionOnly = isPlayStoreApp();
+  const key = sessionOnly ? "" : (apiKey || "").trim();
   if (key) {
     return {
       url: "https://generativelanguage.googleapis.com/v1beta/models/" + model +
@@ -87,7 +91,7 @@ export function geminiTarget(model: string, apiKey: string, kind: AiKind, unit?:
       viaProxy: false,
     };
   }
-  const mh = memberHeaders();
+  const mh = sessionOnly ? null : memberHeaders();
   if (mh) {
     return {
       url: MEMBER_BASE + "/ai/gemini/" + model + ":generateContent",
