@@ -215,7 +215,12 @@ src/
   components/ErrorBoundary.tsx 화면 오류 시 흰 화면 대신 "다시 열기" · lib/playOffers.ts Play 가격·체험 제안(가격을 보이는 곳은 모두 이것을 씀) ·
   components/FormSheet.tsx 입력 시트 공용 디자인(회화집 만들기·단어 추가·단어장 만들기·CSV·이름 변경·추가하기는 이것을 씀) ·
   components/CategoryIcon.tsx 단어장 아이콘을 그리는 한 곳 + lib/categoryIcon.ts 저장 형태 `Category.emoji` = 옛 이모지 또는 `icon:<lucide 이름>:<색키>`
-  (단어장 아이콘을 그릴 때 `{cat.emoji}` 를 직접 쓰지 말 것 — CategoryTile/CategoryGlyph 로)
+  (단어장 아이콘을 그릴 때 `{cat.emoji}` 를 직접 쓰지 말 것 — CategoryTile/CategoryGlyph 로) ·
+  lib/localWipe.ts + components/LocalWipeDialog.tsx 공개판 계정 삭제 직후 "이 폰의 단어장과 학습 기록도 지울까요?"(2026-11-14, D-10).
+  지울 저장 키·IndexedDB 목록은 localWipe.ts 한 곳에 있다 — **새 저장 키를 만들면 "학습 기록인가 설정인가"를 정해 그 목록에 넣거나 뺀다** ·
+  lib/sharedIdMigration.ts 기본 단어장의 표제어를 바꾸면 "다시 외울 표시"가 끊기지 않게 이전표에 올린다. 이미 돈 기기에서도 돌아야 하므로
+  기존 표(v3·v4)에 덧붙이지 말고 **표시 키를 새로 둔 판을 하나 더 만든다**(`HEADWORD_RENAMES_V4` 가 그 예) + `LEGACY_WORD_RENAMES` 에도 같은 쌍 ·
+  e2e/ + .github/workflows/e2e.yml 자동 화면 테스트(Playwright, `npm run test:e2e`). `release/public` push 때 Actions 에서도 돈다(미리보기 빌드와 별개, main 트리거 없음)
 data/categories/*.csv       공용 기본 단어장
 data/private/{폴더명}/*.csv  개인 단어장
 data/WORDLIST-PLAN.md       단어장 목표 개수·형식·분류 원칙
@@ -320,6 +325,9 @@ curl -s "https://api.github.com/repos/cura4world/idkr-buddy/actions/runs?per_pag
   커밋 메시지에 큰따옴표가 들어가면 메시지를 저장소 밖 파일(`$env:TEMP`)에 써서 `git commit -F <파일>` 로 한다.
   PowerShell 5.1 이 메시지 속 큰따옴표로 인자를 잘못 나눠 커밋이 실패했는데, 같은 줄의 push 는
   그대로 실행돼 앞 커밋만 먼저 올라간 전례가 있다(2026-10). 신규 파일 커밋이 빠진 채 올라가면 배포 빌드가 깨진다
+
+- **병합(`git merge`)이 진행 중일 때 `git stash` 를 치지 않는다.** 병합 상태(`MERGE_HEAD`)가 풀려 그대로 커밋하면 병합 커밋이 아니게 된다(2026-11-14, 다시 병합해 복구).
+  충돌은 스크립트나 Edit 도구로 풀고, 풀기 전 상태를 보고 싶으면 `git show <커밋>:<경로>` 로 본다
 
 ## 원인 찾기 (증상이 안 잡힐 때)
 
