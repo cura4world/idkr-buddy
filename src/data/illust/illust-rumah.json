@@ -625,7 +625,7 @@
    "t": -12,
    "art": "<rect x=\"34\" y=\"6\" width=\"52\" height=\"56\" fill=\"#FCE7B0\"/><circle cx=\"60\" cy=\"26\" r=\"6\" fill=\"#F4C542\"/><path d=\"M60 17.5l0 -3M65.95 20.05l2.1 -2.1M68.5 26l3 0M65.95 31.95l2.1 2.1M60 34.5l0 3M54.05 31.95l-2.1 2.1M51.5 26l-3 0M54.05 20.05l-2.1 -2.1\" stroke=\"#F5C26B\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M30 4h60\" stroke=\"#9A7350\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M30 6h24q-2 30 2 58H30z\" fill=\"#B9A7E0\"/><path d=\"M90 6H66q2 30-2 58h26z\" fill=\"#B9A7E0\"/><path d=\"M38 8v54M46 8v54M82 8v54M74 8v54\" stroke=\"#B98BE0\" stroke-width=\"1.2\" fill=\"none\" stroke-linecap=\"round\"/><g transform=\"translate(104 34) scale(0.65)\"><path d=\"M-7 12q-4 0-4-9M7 12q4 0 4-9\" stroke=\"#F3D2B5\" stroke-width=\"3.2\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M-3 25v10M3 25v10\" stroke=\"#4A5A6A\" stroke-width=\"3.4\" fill=\"none\" stroke-linecap=\"round\"/><rect x=\"-7\" y=\"8\" width=\"14\" height=\"18\" rx=\"6\" fill=\"#F0A070\"/><circle cx=\"0\" cy=\"0\" r=\"7\" fill=\"#F3D2B5\"/><path d=\"M-7 -1C-7 -10 7 -10 7 -1C3 -5 -3 -5 -7 -1Z\" fill=\"#5B4636\"/><path d=\"M-2.6 1h.1M2.6 1h.1\" stroke=\"#2E2A27\" stroke-width=\"2.3\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M-2.4 5q2.4-2 4.8 0\" stroke=\"#2E2A27\" stroke-width=\"1\" fill=\"none\" stroke-linecap=\"round\"/></g><path d=\"M14 22l6 4M12 32h8\" stroke=\"#F5C26B\" stroke-width=\"1.6\" fill=\"none\" stroke-linecap=\"round\"/>"
   },
-  "saklar": {
+  "sakelar": {
    "vb": "0 0 120 72",
    "h": 63,
    "r": 59,
