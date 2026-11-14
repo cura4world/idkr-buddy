@@ -73,8 +73,9 @@ export const HARI_RAYA: PercakapanScene[] = [
     roles: { A: "조문객", B: "유족" },
     voices: { A: "m", B: "f" },
     level: "중",
+    rev: 2,
     lines: [
-      { s: "A", id: "Bu Rina, saya turut berduka cita atas meninggalnya Bapak.", ko: "리나 씨, 아버님 일로 깊은 애도를 표합니다." },
+      { s: "A", id: "Bu Rina, saya turut berdukacita atas meninggalnya ayah Ibu.", ko: "리나 씨, 아버님 일로 깊은 애도를 표합니다." },
       { s: "B", id: "Terima kasih sudah datang, Pak.", ko: "와 주셔서 감사합니다." },
       { s: "A", id: "Saya kaget sekali dengar kabarnya. Sakit apa, Bu?", ko: "소식 듣고 정말 놀랐어요. 어디가 편찮으셨어요?" },
       { s: "B", id: "Jantung, Pak. Mendadak, tadi dini hari.", ko: "심장이요. 오늘 새벽에 갑자기 그렇게 되셨어요." },
