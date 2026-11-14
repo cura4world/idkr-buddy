@@ -149,8 +149,9 @@ async function call(path: string, method: string, body?: unknown, auth = true): 
   const timer = setTimeout(() => {
     try { controller.abort(); } catch (e) {}
   }, REQ_TIMEOUT_MS);
+  let res: Response;
   try {
-    return await fetch(PUBLIC_BASE + path, {
+    res = await fetch(PUBLIC_BASE + path, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -160,6 +161,19 @@ async function call(path: string, method: string, body?: unknown, auth = true): 
     throw new Error("NETWORK_FAILED");
   } finally {
     clearTimeout(timer);
+  }
+  // 서버가 세션을 받지 않으면(401) 어느 요청에서든 이 기기의 세션을 지워 로그인 화면으로 돌아가게 합니다.
+  // 예전에는 /me 에서만 그렇게 해, 계정 삭제·신고·구독 확인은 세션이 끝난 뒤 계속 실패했습니다(출시 전 점검 C-12).
+  if (auth && res.status === 401) expireSession();
+  return res;
+}
+
+/** 오류 코드를 문구 끝에 붙일지 — 미리보기 빌드에서만 보입니다(출시 전 점검 E-08). */
+function showErrorCode(): boolean {
+  try {
+    return import.meta.env.VITE_PREVIEW === "1";
+  } catch (e) {
+    return false;
   }
 }
 
@@ -312,6 +326,7 @@ export async function signOut(): Promise<void> {
 /** 계정 삭제. 서버의 계정·사용량·구독 연결을 지우고 이 기기에서도 로그아웃합니다. */
 export async function deleteAccount(): Promise<{ hadSubscription: boolean }> {
   const res = await call("/account/delete", "POST", {});
+  if (res.status === 401) throw new Error("SESSION_EXPIRED");
   if (!res.ok) throw new Error(await errorCode(res));
   const d = await res.json();
   try { authBridge()?.signOut?.(); } catch (e) {}
@@ -336,5 +351,5 @@ export function signInErrorText(code: string): string {
   if (code === "NO_ACCOUNT") return "이 폰에 Google 계정이 없습니다. 폰 설정에서 Google 계정을 추가해 주세요";
   if (code === "NO_BRIDGE") return "Play 스토어에서 받은 앱에서만 로그인할 수 있습니다";
   if (code === "NETWORK_FAILED" || code === "TIMEOUT") return "인터넷 연결을 확인하고 다시 눌러 주세요";
-  return "로그인하지 못했습니다. 잠시 뒤 다시 눌러 주세요 (" + code + ")";
+  return "로그인하지 못했습니다. 잠시 뒤 다시 눌러 주세요" + (showErrorCode() ? " (" + code + ")" : "");
 }
