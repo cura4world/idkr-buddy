@@ -391,7 +391,7 @@ const Devotion = () => {
   const handleGenerate = async () => {
     if (generating || !todayQt) return;
     if (!hasClaudeApiKey()) {
-      toast("Claude API 키가 필요합니다. 설정에서 입력해주세요");
+      toast("Claude API 키가 필요합니다. 설정에서 입력해 주세요");
       setSettingsOpen(true);
       return;
     }
@@ -405,14 +405,14 @@ const Devotion = () => {
     } catch (e: any) {
       const code = (e && e.message) || "";
       if (code === "NO_API_KEY" || code === "INVALID_API_KEY") {
-        toast("Claude API 키를 설정에서 확인해주세요");
+        toast("Claude API 키를 설정에서 확인해 주세요");
         setSettingsOpen(true);
       } else if (code === "NO_CREDIT") {
-        toast("Claude 크레딧이 부족합니다. console.anthropic.com에서 충전해주세요");
+        toast("Claude 크레딧이 부족합니다. console.anthropic.com에서 충전해 주세요");
       } else if (code === "RATE_LIMIT" || code === "OVERLOADED") {
-        toast("지금 요청이 많습니다. 잠시 후 다시 시도하세요");
+        toast("요청이 많습니다. 잠시 뒤 다시 시도하세요");
       } else {
-        toast("묵상을 만들지 못했습니다. 다시 시도하세요");
+        toast("묵상을 만들지 못했습니다. 잠시 뒤 다시 시도하세요");
       }
     } finally {
       setGenerating(false);
