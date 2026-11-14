@@ -33,7 +33,7 @@ const BibleAudioButton = ({ bookId, chapter, label = "듣기", className = "" }:
       setDuration(s.key === myKey ? s.duration : 0);
       if (s.errorAt && s.errorAt !== lastErrorAt.current) {
         lastErrorAt.current = s.errorAt;
-        toast.error("음성을 불러오지 못했어요");
+        toast.error("소리를 불러오지 못했습니다");
       }
     });
     return unsub;
