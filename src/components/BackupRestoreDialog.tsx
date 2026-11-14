@@ -1,5 +1,5 @@
 // src/components/BackupRestoreDialog.tsx
-// 백업 되돌리기 — 백업 파일(.json)을 고르거나, '복사'로 보관해 둔 글을 붙여넣어 이 기기에 합칩니다.
+// 백업 파일 불러오기 — 백업 파일(.json)을 고르거나, '복사'로 보관해 둔 글을 붙여넣어 이 기기에 합칩니다.
 // 덮어쓰지 않고 합치므로 같은 백업을 두 번 넣어도 단어가 두 번 생기지 않습니다.
 
 import { useState, useRef, useEffect } from "react";
@@ -47,7 +47,7 @@ export default function BackupRestoreDialog({ open, onOpenChange }: BackupRestor
   const showParsed = (b: PersonalBundle | null) => {
     if (!b) {
       setBundle(null);
-      setMsg("백업 내용을 알아보지 못했습니다. Kata kata 에서 저장·복사한 백업인지 확인해 주세요");
+      setMsg("백업 내용을 알아보지 못했습니다. Kata kata에서 저장·복사한 백업인지 확인해 주세요");
       return;
     }
     const s = summarize(b);
@@ -87,12 +87,12 @@ export default function BackupRestoreDialog({ open, onOpenChange }: BackupRestor
     setBusy(true);
     try {
       const r = await applyBundle(bundle);
-      toast("되돌렸습니다 — 새로 들어간 단어 " + r.words + "개" + (r.categories > 0 ? ", 단어장 " + r.categories + "개" : "") +
+      toast("불러왔습니다 — 새로 들어간 단어 " + r.words + "개" + (r.categories > 0 ? ", 단어장 " + r.categories + "개" : "") +
         ((r.skipped || 0) > 0 ? " (이미 있는 단어 " + r.skipped + "개는 넣지 않음)" : ""));
       setTimeout(() => { window.location.reload(); }, 1200);
     } catch (e) {
       const m = e instanceof Error ? e.message : "";
-      toast(m === "SAVE_FAILED" ? "저장하지 못했습니다. 폰의 저장 공간을 확인해 주세요" : "되돌리지 못했습니다");
+      toast(m === "SAVE_FAILED" ? "저장하지 못했습니다. 폰의 저장 공간을 확인해 주세요" : "불러오지 못했습니다. 파일을 다시 골라 주세요");
       setBusy(false);
     }
   };
@@ -101,7 +101,7 @@ export default function BackupRestoreDialog({ open, onOpenChange }: BackupRestor
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm mx-auto bg-card">
         <DialogHeader>
-          <DialogTitle className="font-body text-gray-900">백업 되돌리기</DialogTitle>
+          <DialogTitle className="font-body text-gray-900">백업 파일 불러오기</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <p className="text-xs leading-relaxed text-muted-foreground font-gothic">
@@ -138,7 +138,7 @@ export default function BackupRestoreDialog({ open, onOpenChange }: BackupRestor
           ) : null}
           {msg ? <p className="text-xs leading-relaxed text-red-500 font-gothic">{msg}</p> : null}
           <Button onClick={handleApply} className="w-full" disabled={!bundle || busy}>
-            {busy ? "되돌리는 중..." : "이 기기에 합치기"}
+            {busy ? "불러오는 중..." : "이 기기에 합치기"}
           </Button>
         </div>
       </DialogContent>
