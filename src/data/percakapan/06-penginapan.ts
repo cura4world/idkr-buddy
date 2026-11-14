@@ -59,7 +59,7 @@ export const PENGINAPAN: PercakapanScene[] = [
       { s: "B", id: "Satu juta delapan ratus, sudah termasuk listrik dan Wi-Fi. Kamar mandinya di dalam.", ko: "180만이고, 전기세랑 와이파이 포함이에요. 화장실은 방 안에 있어요." },
       { s: "A", id: "Ada jam malam nggak, Pak?", ko: "통금 시간이 있나요?" },
       { s: "B", id: "Pagar dikunci jam sebelas, tapi penghuni dapat kunci sendiri.", ko: "대문은 11시에 잠그는데, 입주자는 열쇠를 따로 받아요." },
-      { s: "A", id: "Kalau mau masuk, bayarnya gimana?", ko: "들어오려면 돈은 어떻게 내요?" },
+      { s: "A", id: "Kalau mau masuk, bayarnya gimana?", ko: "입주하려면 돈은 어떻게 내요?" },
       { s: "B", id: "Bayar sebulan di depan, ditambah deposit satu bulan.", ko: "한 달치 선불에 보증금 한 달치를 더 내요." },
       { s: "A", id: "Oke, saya pikir-pikir dulu, ya. Nanti saya kabari.", ko: "네, 좀 생각해 볼게요. 나중에 연락드릴게요." },
     ],

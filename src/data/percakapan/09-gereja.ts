@@ -122,7 +122,7 @@ export const GEREJA: PercakapanScene[] = [
       { s: "A", id: "Wah, pasti sakit hati banget.", ko: "정말 마음이 아프셨겠어요." },
       { s: "B", id: "Iya, aku sempat pengen balas.", ko: "네, 갚아주고 싶은 마음도 들었어요." },
       { s: "A", id: "Terus, kamu ambil keputusan apa?", ko: "그래서 어떻게 하기로 하셨어요?" },
-      { s: "B", id: "Aku diam aja, tapi hatiku masih panas.", ko: "그냥 가만히 있었는데, 마음은 아직 뜨거워요." },
+      { s: "B", id: "Aku diam aja, tapi hatiku masih panas.", ko: "그냥 가만히 있었는데, 마음은 아직 부글부글해요." },
       { s: "A", id: "Justru itu perjuangan yang nyata.", ko: "그게 바로 진짜 싸움이죠." },
       { s: "B", id: "Ayat minggu ini pas banget sih.", ko: "이번 주 말씀이 딱 맞더라고요." },
       { s: "A", id: "Yang mana?", ko: "어느 말씀이요?" },
