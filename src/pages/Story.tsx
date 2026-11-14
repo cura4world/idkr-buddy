@@ -9,7 +9,7 @@ import { generateStory, quickLookupWord, StoryDifficulty } from "@/lib/story";
 import { normalizeHeadword } from "@/lib/dictionary";
 import { saveStory, listStories, StoryRecord } from "@/lib/storyStore";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
-import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT } from "@/lib/store";
+import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, lookupFailText } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import WordMiniSheet from "@/components/WordMiniSheet";
@@ -27,11 +27,14 @@ import PhraseFindBar from "@/components/PhraseFindBar";
 import AiReportButton from "@/components/AiReportButton";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { aiErrorToast } from "@/lib/aiErrors";
+import { lastQuotaNotice } from "@/lib/aiProxy";
 import { isBackCloseEntry } from "@/hooks/useBackClose";
 
 const DIFF_KEY = "story-difficulty";
 // 서버가 "오늘 한도를 다 썼다"고 알려 준 날 (한국 시간 기준 "YYYY-MM-DD")
 const QUOTA_DAY_KEY = "story-quota-day";
+// 그때 서버가 알려 준 안내 문장(오늘/이번 달 구분이 들어 있음) — 버튼 아래에 그 문장을 그대로 씁니다(출시 전 점검 A-07)
+const QUOTA_NOTE_KEY = "story-quota-note";
 
 // 단어 시트 표제어 판단 (QA Q13): 대문자로 시작하는 단어, 쌍점으로 끝난 앞 단어, 따옴표로 여는 단어(대사 첫머리)
 const CAPITALIZED = new RegExp("^[A-Z][a-z]");
@@ -127,6 +130,9 @@ const Story = () => {
   const [flipped, setFlipped] = useState(false);
   const [quotaDay, setQuotaDay] = useState<string>(() => {
     try { return localStorage.getItem(QUOTA_DAY_KEY) || ""; } catch (e) { return ""; }
+  });
+  const [quotaNote, setQuotaNote] = useState<string>(() => {
+    try { return localStorage.getItem(QUOTA_NOTE_KEY) || ""; } catch (e) { return ""; }
   });
 
   // ---------- 읽기 점수 (보이지 않는 타이머) ----------
@@ -432,13 +438,19 @@ const Story = () => {
       else if (code.indexOf("QUOTA") === 0) {
         // 서버가 오늘 한도를 다 썼다고 알려 왔습니다. 오늘은 버튼을 막고 버튼 아래에 안내를 둡니다.
         // (토스트는 aiProxy 가 이미 한 번 띄우므로 여기서는 더 띄우지 않습니다)
-        try { localStorage.setItem(QUOTA_DAY_KEY, today); } catch (err) {}
+        // 안내는 서버가 알려 준 기간(오늘/이번 달)에 맞춘 그 문장을 그대로 씁니다 — 한 달 한도인데 "내일 다시"라고 하지 않게.
+        const note = lastQuotaNotice();
+        try {
+          localStorage.setItem(QUOTA_DAY_KEY, today);
+          localStorage.setItem(QUOTA_NOTE_KEY, note);
+        } catch (err) {}
         setQuotaDay(today);
-      } else if (code === "RATE_LIMIT") toast("요청이 많습니다. 잠시 후 다시 시도하세요");
+        setQuotaNote(note);
+      } else if (code === "RATE_LIMIT") toast("요청이 많습니다. 잠시 뒤 다시 시도하세요");
       else if (code === "NO_API_KEY" || code === "INVALID_API_KEY" || code === "SESSION_EXPIRED" || code === "NOT_AVAILABLE") {
         aiErrorToast(code, "API 키를 설정에서 확인하세요");
       }
-      else toast("이야기를 불러오지 못했습니다. 다시 시도하세요");
+      else toast("이야기를 불러오지 못했습니다. 잠시 뒤 다시 시도하세요");
     } finally {
       if (aliveRef.current) setGenerating(false);
     }
@@ -528,8 +540,9 @@ const Story = () => {
         setPopupInfo(r.info);
         setPopupSentenceKo(r.sentenceKo);
       })
-      .catch(() => {
-        if (popupReqId.current === reqId) setPopupMeaning(LOOKUP_FAIL_TEXT);
+      .catch((err) => {
+        // 한도 초과면 "다시 눌러 주세요" 대신 한도 안내를 보입니다(다시 눌러도 같은 답)
+        if (popupReqId.current === reqId) setPopupMeaning(lookupFailText(err, lastQuotaNotice()));
       })
       .finally(() => {
         if (popupReqId.current === reqId) setPopupLoading(false);
@@ -706,7 +719,7 @@ const Story = () => {
                       boxShadow: "0 2px 8px rgba(16,40,50,0.08)",
                     }}
                   >
-                    소리 읽기는 Plus 회원 기능입니다
+                    듣기는 Plus 회원 기능입니다
                   </button>
                 ) : null}
               </div>
@@ -855,10 +868,13 @@ const Story = () => {
             )}
           </button>
           {blocked ? (
-            <p className="mt-2.5 text-center font-gothic text-[0.71875rem]" style={{ color: C.sub }}>
-              {freeUsed
-                ? "오늘의 이야기를 불러왔습니다 · 내일 새 이야기가 열립니다"
-                : "오늘 불러올 수 있는 이야기를 모두 불러왔습니다 · 내일 다시 열립니다"}
+            <p className="mt-2.5 text-center break-keep font-gothic text-[0.71875rem]" style={{ color: C.sub }}>
+              {/* 서버가 한도를 알려 온 날에는 그 문장(오늘/이번 달) 하나만 씁니다 — 알림과 버튼 아래 안내가 같은 말이 되게 */}
+              {quotaToday && quotaNote
+                ? quotaNote
+                : freeUsed
+                  ? "오늘의 이야기를 불러왔습니다 · 내일 새 이야기가 열립니다"
+                  : "오늘 불러올 수 있는 이야기를 모두 불러왔습니다 · 내일 다시 열립니다"}
             </p>
           ) : null}
         </div>
@@ -867,7 +883,7 @@ const Story = () => {
         {!plan.plus ? (
           <PlusLockBox
             title="인도네시아어 발음으로 이야기 듣기"
-            lines={["Plus는 이야기를 음성으로 듣고,", "하루에 여러 편 불러오기가 가능합니다"]}
+            lines={["Plus에서는 이야기를 음성으로 듣고,", "하루에 여러 편을 불러올 수 있습니다"]}
             onClick={goPaywall}
           />
         ) : null}
