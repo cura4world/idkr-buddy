@@ -332,6 +332,8 @@ curl -s "https://api.github.com/repos/cura4world/idkr-buddy/actions/runs?per_pag
 
 - **병합(`git merge`)이 진행 중일 때 `git stash` 를 치지 않는다.** 병합 상태(`MERGE_HEAD`)가 풀려 그대로 커밋하면 병합 커밋이 아니게 된다(2026-11-14, 다시 병합해 복구).
   충돌은 스크립트나 Edit 도구로 풀고, 풀기 전 상태를 보고 싶으면 `git show <커밋>:<경로>` 로 본다
+- **PR 의 브랜치를 그 PR 의 base 브랜치에 로컬로 병합해 push 하면, GitHub 가 그 PR 을 저절로 "Merged" 로 바꾼다**(병합 단추를 누르지 않아도).
+  되돌릴 수 없다. "PR 상태는 그대로 두라"는 조건이 함께 있으면 **push 전에** 먼저 알린다(2026-11-14, 검수 PR #1·#2)
 - **하위 작업자(subagent)를 여러 개 동시에 돌릴 때는 git 명령(`add`·`commit`·`stash`·`checkout`)을 맡기지 않는다.** 작업자는 편집만 하고,
   고칠 파일을 서로 겹치지 않게 나눠 주며, 커밋은 주 세션이 검증 뒤 파일별로 한다. 여럿이 같은 때 git 을 치면 `index.lock` 이 부딪혀
   한 줄로 이어 둔 커밋의 뒷부분이 조용히 빠진다(2026-11-14 3차 — 7개 중 4개가 빠져 다시 실행). 작업자가 Edit 도구로 고친 파일은 CRLF 가
