@@ -36,6 +36,9 @@ const CAT_STORE = "cats";
 // 회화집 생성용 호출 타임아웃
 const GEN_TIMEOUT_MS = 30000;
 
+// 백업 서버(받기·올리기) 호출 타임아웃
+const BACKUP_TIMEOUT_MS = 20000;
+
 // ---------- 설정 (localStorage, 기기별) ----------
 
 export function getPercakapanBase(): string {
@@ -128,6 +131,7 @@ export async function saveCustomScene(s: PercakapanScene): Promise<void> {
       tx.objectStore(SCENE_STORE).put(s);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch (e) {
     // 저장 못 해도 이번 화면에서 보는 데는 지장이 없습니다
@@ -142,6 +146,7 @@ export async function deleteCustomScene(id: string): Promise<void> {
       tx.objectStore(SCENE_STORE).delete(id);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch (e) {
     // 무시
@@ -170,6 +175,7 @@ export async function saveCustomCat(c: PercakapanCategory): Promise<void> {
       tx.objectStore(CAT_STORE).put(c);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch (e) {}
 }
@@ -182,6 +188,7 @@ export async function deleteCustomCat(id: string): Promise<void> {
       tx.objectStore(CAT_STORE).delete(id);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch (e) {}
 }
@@ -204,23 +211,30 @@ export function isCategoryVisible(catId: string): boolean {
  * 기본 카테고리 중 장면이 하나도 없는 것과, 이 등급에 안 보이는 것(staffOnly)은 숨깁니다.
  * 사용자 카테고리는 장면이 0개여도 남깁니다 — 방금 만들어 놓고 채우는 중일 수 있어서입니다.
  */
-export async function listCategories(): Promise<Array<PercakapanCategory & { count: number }>> {
+export async function listCategories(): Promise<Array<PercakapanCategory & { count: number; mineOnly?: boolean }>> {
   const customScenes = await getCustomScenes();
   const customCats = await getCustomCats();
 
-  const countOf = (catId: string) => {
-    let n = builtinScenesOf(catId).length;
+  const mineCountOf = (catId: string) => {
+    let n = 0;
     for (let i = 0; i < customScenes.length; i++) {
       if (customScenes[i].cat === catId) n++;
     }
     return n;
   };
+  const countOf = (catId: string) => builtinScenesOf(catId).length + mineCountOf(catId);
 
-  const out: Array<PercakapanCategory & { count: number }> = [];
+  const out: Array<PercakapanCategory & { count: number; mineOnly?: boolean }> = [];
 
   for (let i = 0; i < BUILTIN_CATEGORIES.length; i++) {
     const c = BUILTIN_CATEGORIES[i];
-    if (!isCategoryVisible(c.id)) continue;
+    if (!isCategoryVisible(c.id)) {
+      // 이 등급에 안 보이는 폴더(교회와 신앙)라도 직접 만든 회화가 들어 있으면 그 회화만 센 채로 남깁니다
+      // (출시 전 점검 D-21 — Special Member 기한이 끝나도 내가 만든 회화는 사라지지 않게). mineOnly 로 표시합니다.
+      const mine = mineCountOf(c.id);
+      if (mine > 0) out.push({ ...c, count: mine, mineOnly: true });
+      continue;
+    }
     const count = countOf(c.id);
     if (count === 0) continue;
     out.push({ ...c, count });
@@ -237,7 +251,11 @@ export async function listCategories(): Promise<Array<PercakapanCategory & { cou
 
 /** 카테고리 하나 찾기 (사용자 것이 우선) */
 export async function findCategory(catId: string): Promise<PercakapanCategory | null> {
-  if (!isCategoryVisible(catId)) return null;
+  if (!isCategoryVisible(catId)) {
+    // 가려진 폴더라도 직접 만든 회화가 들어 있으면 폴더 정보는 돌려줍니다(D-21). 기본 장면은 listScenes 가 뺍니다.
+    const mine = await getCustomScenes();
+    if (!mine.some((s) => s.cat === catId)) return null;
+  }
   const builtin = findBuiltinCategory(catId);
   if (builtin) return builtin;
   const customCats = await getCustomCats();
@@ -249,8 +267,8 @@ export async function findCategory(catId: string): Promise<PercakapanCategory | 
 
 /** 기본 장면이 먼저, 사용자 장면은 만든 순서대로 뒤에 붙습니다. */
 export async function listScenes(catId: string): Promise<PercakapanScene[]> {
-  if (!isCategoryVisible(catId)) return [];
-  const builtin = builtinScenesOf(catId);
+  // 이 등급에 안 보이는 폴더(교회와 신앙)는 기본 장면만 가립니다. 직접 만든 장면은 그대로 보입니다(D-21).
+  const builtin = isCategoryVisible(catId) ? builtinScenesOf(catId) : [];
   const customScenes = await getCustomScenes();
   const mine = customScenes
     .filter((s) => s.cat === catId)
@@ -268,7 +286,9 @@ export async function findScene(id: string): Promise<PercakapanScene | null> {
       break;
     }
   }
-  if (!found) found = findBuiltinScene(id);
+  // 사용자 장면(IndexedDB 에서 찾은 것)은 폴더 가림을 받지 않습니다(D-21). 가림은 기본 장면에만 겁니다.
+  if (found) return found;
+  found = findBuiltinScene(id);
   if (found && !isCategoryVisible(found.cat)) return null;
   return found;
 }
@@ -287,20 +307,32 @@ export async function fetchBackup(): Promise<BackupPayload> {
   const auth = pickServerAuth(getPercakapanBase(), getPercakapanKey());
   if (!auth) throw new Error("NO_CONFIG");
 
-  let res: Response;
-  try {
-    res = await fetch(auth.base + "/percakapan", { headers: auth.headers });
-  } catch (e) {
-    throw new Error("FETCH_FAILED");
-  }
-  if (res.status === 401 || res.status === 403 || res.status === 409) throw new Error("UNAUTHORIZED");
-  if (!res.ok) throw new Error("FETCH_FAILED");
+  // 응답이 안 오면 "불러오는 중"이 끝나지 않으므로 마감을 겁니다(본문을 다 읽을 때까지).
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    try {
+      controller.abort();
+    } catch (e) {}
+  }, BACKUP_TIMEOUT_MS);
 
   let data: any;
   try {
-    data = await res.json();
-  } catch (e) {
-    throw new Error("FETCH_FAILED");
+    let res: Response;
+    try {
+      res = await fetch(auth.base + "/percakapan", { headers: auth.headers, signal: controller.signal });
+    } catch (e) {
+      throw new Error("FETCH_FAILED");
+    }
+    if (res.status === 401 || res.status === 403 || res.status === 409) throw new Error("UNAUTHORIZED");
+    if (!res.ok) throw new Error("FETCH_FAILED");
+
+    try {
+      data = await res.json();
+    } catch (e) {
+      throw new Error("FETCH_FAILED");
+    }
+  } finally {
+    clearTimeout(timer);
   }
 
   return {
@@ -327,37 +359,50 @@ export async function pushBackup(
   const scenes = await getCustomScenes();
   const cats = await getCustomCats();
 
-  let res: Response;
-  try {
-    res = await fetch(base + "/percakapan" + (force ? "?force=1" : ""), {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", "x-kata-key": key },
-      body: JSON.stringify({ cats, scenes }),
-    });
-  } catch (e) {
-    throw new Error("FETCH_FAILED");
-  }
-
-  if (res.status === 401) throw new Error("UNAUTHORIZED");
-
-  if (res.status === 409) {
-    let existing = 0;
+  // 응답이 안 오면 "올리는 중"이 끝나지 않으므로 마감을 겁니다(본문을 다 읽을 때까지).
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
     try {
-      const d = await res.json();
-      existing = Number((d && d.existingScenes) || 0);
+      controller.abort();
     } catch (e) {}
-    const err: any = new Error("WOULD_ERASE");
-    err.erased = true;
-    err.existing = existing;
-    throw err;
-  }
-
-  if (!res.ok) throw new Error("FETCH_FAILED");
+  }, BACKUP_TIMEOUT_MS);
 
   let data: any = null;
   try {
-    data = await res.json();
-  } catch (e) {}
+    let res: Response;
+    try {
+      res = await fetch(base + "/percakapan" + (force ? "?force=1" : ""), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-kata-key": key },
+        body: JSON.stringify({ cats, scenes }),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      throw new Error("FETCH_FAILED");
+    }
+
+    if (res.status === 401) throw new Error("UNAUTHORIZED");
+
+    if (res.status === 409) {
+      let existing = 0;
+      try {
+        const d = await res.json();
+        existing = Number((d && d.existingScenes) || 0);
+      } catch (e) {}
+      const err: any = new Error("WOULD_ERASE");
+      err.erased = true;
+      err.existing = existing;
+      throw err;
+    }
+
+    if (!res.ok) throw new Error("FETCH_FAILED");
+
+    try {
+      data = await res.json();
+    } catch (e) {}
+  } finally {
+    clearTimeout(timer);
+  }
 
   return {
     cats: cats.length,
@@ -484,7 +529,8 @@ async function callGenerate(prompt: string): Promise<string> {
     const code = (e && e.message) || "";
     // Percakapan.tsx 가 쓰는 기존 코드 이름으로 되돌려 줍니다.
     if (code === "NETWORK") throw new Error("NETWORK_FAILED");
-    if (code === "BAD_REQUEST") throw new Error("INVALID_API_KEY");
+    // BAD_REQUEST(요청 형식 문제인 400)는 키 오류로 바꾸지 않습니다 — "키가 맞지 않습니다"로 잘못 안내하던 것.
+    // 키가 틀린 400(API_KEY_INVALID)은 geminiText 가 이미 INVALID_API_KEY 로 가려 줍니다.
     throw e;
   }
 }
