@@ -14,6 +14,7 @@
 | 4 | 단어장 — 표제어 표기를 바꾼 낱말 | 19개 |
 | 5 | 지도·인도네시아 이해 — 새로 쓰거나 고친 예문 | 8문장 |
 | 6 | 회화집 — 읽는 소리(TTS) 표기가 의심스러워 남긴 것 | 14건 |
+| 7 | 홈 소제목 — 새로 지은 짧은 문구 | 3줄 |
 
 ## 1. 기본 회화집 — 이번에 바꾼 줄 전부
 
@@ -163,4 +164,14 @@
 | TTS-16 | `15-kantor.ts:56`·`101`, `13-uang.ts:17`·`21`·`36`·`56`, `08-kesehatan.ts:68`·`104`, `14-hari-raya.ts:41`, `12-masalah.ts:36`·`77`, `02-perkenalan.ts:19`, `04-belanja.ts:83`, `11-telepon.ts:37` | `KTP` `NPWP` `BPJS` `THR` `PLN` `BCA` `ATM` `LCD` `USG` `SMA` `PIN` `VIP` | 낱자 읽기 | 바꿀 표기 없음 |
 | TTS-17 | `11-telepon.ts:40`, `04-belanja.ts:35`, `08-kesehatan.ts:50` 등 | `Lee`, `ukuran L`, `Vitamin C dan zinc`, 붙임표 꼴(`AC-nya` `LCD-nya` `SIM-nya` `THR-nya` `Wi-Fi-nya` `PIN-nya` `link-nya` `username-nya` `boarding pass-nya`) | 읽기가 흔들릴 수 있음 | 바꿀 표기 없음. (`di-backup` 은 B-11 로 문장째 없어짐) |
 | TTS-18 | 전체 | `Rp` 0건, 퍼센트·도(°)·슬래시 0건 | – | 문제 없음(확인만) |
+
+## 7. 홈 소제목 — 새로 지은 짧은 문구 (2026-11-14)
+
+앱 첫 화면의 구역 이름입니다. 한국어는 옆에 작게 붙는 뜻입니다. 친근하고 부드러운 느낌을 원합니다 — 딱딱하거나 어색하면 표시해 주세요.
+
+| 번호 | 인도네시아어 | 한국어(옆에 작게) | 구역 | 물음 |
+|---|---|---|---|---|
+| H-1 | `Ayo belajar!` | 공부해 볼까요 | 학습 (단어장·회화집·게임 등) | `Yuk, belajar!` 가 더 친근한가? |
+| H-2 | `Kenali Indonesia` | 알아 갈까요 | 문화 (인도네시아 이해·지도) | 명령형이 딱딱하게 들리는가? 대안 `Mengenal Indonesia` |
+| H-3 | `Firman hari ini` | 오늘의 말씀 | 신앙 (설교문·묵상·성경·기도, 관리자·Special Member 만) | 설교문·성경·기도까지 묶는 이름으로 자연스러운가? |
 
