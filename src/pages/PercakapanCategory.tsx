@@ -221,8 +221,9 @@ const PercakapanCategory = () => {
                 </span>
                 <div className="flex-1 min-w-0">
                   {/* 회화 장면 제목은 2026-11-11 사용자 요청으로 굵게 */}
+                  {/* 제목은 두 줄까지 보입니다 — 한 줄에서 자르면 글자를 키웠을 때 장면을 구분할 수 없었습니다(출시 전 점검 U-04) */}
                   <p className="flex items-center gap-1.5 text-[0.875rem] font-bold leading-tight" style={{ color: "#1D1F1E" }}>
-                    <span className="min-w-0 truncate">{s.title}</span>
+                    <span className="min-w-0 line-clamp-2 break-keep">{s.title}</span>
                     {s.custom ? (
                       <span className="shrink-0 h-[5px] w-[5px] rounded-full bg-muted-foreground/45" />
                     ) : null}
