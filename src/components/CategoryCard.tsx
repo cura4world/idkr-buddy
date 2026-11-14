@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Category, getWordsByCategory } from "@/lib/store";
+import { Category, getWordCount } from "@/lib/store";
 import { bookNumberText, bookTitle } from "@/lib/wordbookGroups";
 import { CategoryTile } from "@/components/CategoryIcon";
 
@@ -21,7 +21,7 @@ interface CategoryCardProps {
 
 export default function CategoryCard({ category, variant = "folder", tile = "#EEF1F3", last }: CategoryCardProps) {
   const navigate = useNavigate();
-  const count = getWordsByCategory(category.id).length;
+  const count = getWordCount(category.id);
   const rowBorder = last ? "" : " border-b border-[#EEF1F3]";
 
   if (variant === "archived") {
