@@ -86,7 +86,65 @@ export const LEGACY_WORD_RENAMES: Record<string, string> = {
   "materai": "meterai",
   "legalisir": "legalisasi",
   "plat nomor": "pelat nomor",
+  // 2026-11-14 출시 전 점검(5-2·5-3)에서 고친 표기 — 아래 HEADWORD_RENAMES_V3 와 같은 쌍입니다
+  "turut berduka cita": "turut berdukacita",
+  "mempercayai": "memercayai",
+  "mempercayakan": "memercayakan",
+  "saklar": "sakelar",
+  "resleting": "ritsleting",
+  "stroke": "strok",
+  "orangutan": "orang utan",
+  "kecoa": "kecoak",
+  "cicak": "cecak",
+  "klenteng": "kelenteng",
+  "injil": "Injil",
+  "Noach": "Nuh",
+  "Nikodem": "Nikodemus",
+  "Yordania": "Yordan",
+  "antiKristus": "antikristus",
+  "anthropologi teologi": "antropologi teologis",
+  "buku kehidupan": "kitab kehidupan",
+  "millenium": "milenium",
+  "imanuel": "Imanuel",
 };
+
+// ── 2026-11-14: 표제어 표기만 고친 단어 (단어장 번호는 그대로) ─────────────────
+// 단어 ID 에 표제어가 들어 있어, 표기를 고치면 ID 가 바뀝니다. 지금 번호 체계(v2)의 ID 로 저장된
+// "다시 외울 표시"가 따라가도록 한 번 옮깁니다. v2 이전은 이미 돈 기기에서 다시 돌지 않으므로 표시 키를 따로 둡니다.
+export const SHARED_ID_RENAME_KEY = "kata-shared-ids-v3";
+
+/** [단어장 ID, 옛 표제어, 새 표제어] */
+export const HEADWORD_RENAMES_V3: [string, string, string][] = [
+  ["shared_01_인사·기본_표현", "turut berduka cita", "turut berdukacita"],
+  ["shared_10_접사_가족", "mempercayai", "memercayai"],
+  ["shared_10_접사_가족", "mempercayakan", "memercayakan"],
+  ["shared_18_집·생활용품", "saklar", "sakelar"],
+  ["shared_19_옷·외모", "resleting", "ritsleting"],
+  ["shared_24_의료·병원", "stroke", "strok"],
+  ["shared_28_동물", "orangutan", "orang utan"],
+  ["shared_28_동물", "kecoa", "kecoak"],
+  ["shared_28_동물", "cicak", "cecak"],
+  ["shared_32_장소·여행", "klenteng", "kelenteng"],
+  ["shared_35_성경_핵심어", "injil", "Injil"],
+  ["shared_36_성경_인물·지명", "Noach", "Nuh"],
+  ["shared_36_성경_인물·지명", "Nikodem", "Nikodemus"],
+  ["shared_36_성경_인물·지명", "Yordania", "Yordan"],
+  ["shared_38_교리·신학", "antiKristus", "antikristus"],
+  ["shared_38_교리·신학", "anthropologi teologi", "antropologi teologis"],
+  ["shared_38_교리·신학", "buku kehidupan", "kitab kehidupan"],
+  ["shared_38_교리·신학", "millenium", "milenium"],
+  ["shared_41_설교_표현", "imanuel", "Imanuel"],
+];
+
+const RENAMED_WORD_IDS: Record<string, string> = {};
+for (const r of HEADWORD_RENAMES_V3) {
+  RENAMED_WORD_IDS["shared_" + r[0] + "_" + r[1]] = "shared_" + r[0] + "_" + r[2];
+}
+
+/** 표기를 고친 공용 단어의 옛 ID 면 새 ID 를, 아니면 그대로 돌려줍니다. */
+export function upgradeRenamedWordId(id: string): string {
+  return (typeof id === "string" && RENAMED_WORD_IDS[id]) || id;
+}
 
 /**
  * 처음 설치 때 깔리는 예시 단어 8개(store.ts defaultWords)의 대문자 표제어 → 소문자.
@@ -168,7 +226,8 @@ function splitLegacyWordId(id: string): { cat: string; word: string } | null {
  */
 export function upgradeLegacyWordId(id: string, resolver: LegacyWordResolver): string {
   const parts = splitLegacyWordId(id);
-  if (!parts) return id;
+  // 지금 번호 체계의 ID 라도, 그 뒤 표기를 고친 단어면 새 ID 로 (예전 백업을 되돌릴 때)
+  if (!parts) return upgradeRenamedWordId(id);
   const newCat = LEGACY_SHARED_CATEGORY_IDS[parts.cat];
   const word = LEGACY_WORD_RENAMES[parts.word] || parts.word;
   const direct = "shared_" + newCat + "_" + word;
@@ -281,4 +340,30 @@ export function migrateSharedIdsOnce(store: KeyValueStore, seed: SeedLike | null
     // 저장소가 막혀 있으면 다음 실행에 다시 시도합니다 (표시를 남기지 않음)
   }
   return result;
+}
+
+/**
+ * 한 번만 돕니다(2026-11-14). 표기를 고친 표제어 19개의 "다시 외울 표시"를 새 ID 로 옮깁니다.
+ * 공용 단어 자체는 시드 동기화가 새 표기로 다시 깔므로 손대지 않습니다. 옮긴 표시 수를 돌려줍니다.
+ */
+export function migrateRenamedHeadwordsOnce(store: KeyValueStore): number {
+  let moved = 0;
+  try {
+    if (store.getItem(SHARED_ID_RENAME_KEY) === "1") return 0;
+    const saved = parseArray(store.getItem(SAVED_KEY));
+    if (saved) {
+      const out: string[] = [];
+      for (const s of saved) {
+        if (typeof s !== "string" || !s) continue;
+        const id = upgradeRenamedWordId(s);
+        if (id !== s) moved++;
+        if (out.indexOf(id) === -1) out.push(id);
+      }
+      if (moved > 0) store.setItem(SAVED_KEY, JSON.stringify(out));
+    }
+    store.setItem(SHARED_ID_RENAME_KEY, "1");
+  } catch (e) {
+    // 다음 실행에 다시 시도합니다
+  }
+  return moved;
 }
