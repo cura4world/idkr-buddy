@@ -386,7 +386,7 @@
    "t": -11,
    "art": "<g transform=\"translate(50 34) scale(1.4)\"><path d=\"M-8-10l-9 5 3 6 6-2V14h20V-1l6 2 3-6-9-5-3 3h-6z\" fill=\"#FFFFFF\"/><path d=\"M-4-10l4 5 4-5z\" fill=\"#E9F2F5\"/></g><circle cx=\"50\" cy=\"26\" r=\"2.2\" fill=\"#9CCBDA\"/><circle cx=\"50\" cy=\"34\" r=\"2.2\" fill=\"#9CCBDA\"/><circle cx=\"50\" cy=\"50\" r=\"2.2\" fill=\"#9CCBDA\"/><circle cx=\"50\" cy=\"42\" r=\"1\" fill=\"#B7C3C9\"/><path d=\"M50 42l3 4\" stroke=\"#B7C3C9\" stroke-width=\"0.8\" fill=\"none\" stroke-linecap=\"round\"/><circle cx=\"90\" cy=\"56\" r=\"4\" fill=\"#9CCBDA\"/><circle cx=\"89\" cy=\"55\" r=\"0.8\" fill=\"#FFFFFF\"/><circle cx=\"91\" cy=\"57\" r=\"0.8\" fill=\"#FFFFFF\"/><path d=\"M60 44q14 0 24 8\" stroke=\"#B7C3C9\" stroke-width=\"1.2\" fill=\"none\" stroke-dasharray=\"2 4\" stroke-linecap=\"round\"/><g transform=\"translate(102 30) scale(0.9)\"><path d=\"M0-7v8M0 5v.4\" stroke=\"#F0A070\" stroke-width=\"2.4\" fill=\"none\" stroke-linecap=\"round\"/></g>"
   },
-  "resleting": {
+  "ritsleting": {
    "vb": "0 0 120 72",
    "h": 65,
    "r": 80,
