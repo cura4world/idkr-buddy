@@ -123,6 +123,7 @@ async function saveCachedAudio(key: string, dataUrl: string): Promise<void> {
       tx.objectStore(STORE).put({ key, dataUrl, savedAt: Date.now() });
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
     await evictIfNeeded();
   } catch {}
@@ -153,6 +154,7 @@ async function evictIfNeeded(): Promise<void> {
       };
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {}
 }
@@ -165,6 +167,7 @@ export async function clearTtsCache(): Promise<void> {
       tx.objectStore(STORE).clear();
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {}
 }
@@ -210,6 +213,7 @@ async function saveSermonAudio(key: string, dataUrl: string): Promise<void> {
       tx.objectStore(STORE).put({ key, dataUrl, savedAt: Date.now() });
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {}
 }
@@ -222,6 +226,7 @@ export async function clearSermonAudioCache(): Promise<void> {
       tx.objectStore(STORE).clear();
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {}
 }
@@ -258,6 +263,7 @@ export async function deleteSermonAudioFor(sermonId: string): Promise<number> {
       };
       tx.oncomplete = () => resolve(n);
       tx.onerror = () => resolve(n);
+      tx.onabort = () => resolve(n);
     });
   } catch { return 0; }
 }
@@ -645,6 +651,13 @@ class TtsPlayer {
   }
   private inflight = new Map<string, Promise<string>>();
 
+  /**
+   * 추가 전용(2026-11-14): 마지막 playOnce 가 음성 만들기에 실패했을 때의 오류 코드. 실패가 없었으면 "".
+   * 카드 자동재생(StudyMode)이 한도 초과("QUOTA…")면 다음 카드로 넘어가지 않고 멈추려고 읽습니다.
+   * playOnce 의 반환 형식(boolean)은 그대로입니다.
+   */
+  lastPlayOnceError = "";
+
   /** 미리 만들어 캐시에 넣어 둡니다(재생하지 않음). 실패해도 조용히 넘어갑니다. */
   async prefetch(key: string, text: string, voice?: TtsVoiceId): Promise<void> {
     const t = String(text || "").trim();
@@ -662,12 +675,14 @@ class TtsPlayer {
     if (!t) return false;
     this.stop();
     const myToken = ++this.token;
+    this.lastPlayOnceError = "";
     this.emit({ state: "loading", key, usedFallback: false });
     const voiceName = voiceNameOf(voice || getTtsVoice());
     let urls: string[] | null = null;
     try {
       urls = await this.urlsFor(key, t, voiceName, () => myToken !== this.token);
     } catch (e) {
+      this.lastPlayOnceError = String((e as any) && (e as any).message ? (e as any).message : "FAILED");
       if (myToken === this.token) this.emit({ state: "idle" });
       return false;
     }
