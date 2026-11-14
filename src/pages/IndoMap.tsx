@@ -34,6 +34,7 @@ import { fetchPlaceInfo, MapPlaceInfo } from "@/lib/map";
 import { getPlacePhotos } from "@/lib/mapPhotos";
 import type { MapContentEntry, MapWord } from "@/lib/mapContent";
 import { hasGeminiApiKey } from "@/lib/gemini";
+import { lastQuotaNotice } from "@/lib/aiProxy";
 import { isStoreApp } from "@/lib/platform";
 import { usePlan } from "@/lib/plan";
 import { addWord, addWordIfAbsent, hasWordInCategory, ensureMapWordbook, MAP_WORDBOOK_ID, getWordsByCategory, deleteWord } from "@/lib/store";
@@ -70,7 +71,7 @@ const TYPE_LABEL: Record<PinType, string> = {
   city: "도시",
   spot: "관광지",
   faith: "종교·역사",
-  culture: "민족·문화",
+  culture: "종족·문화",
 };
 // 시트의 종류 칩 — 지도 점 색을 옅게 누른 차분한 색
 const TYPE_CHIP: Record<PinType, { bg: string; fg: string }> = {
@@ -242,6 +243,8 @@ const IndoMap = () => {
   // 이 시트의 단어가 이미 단어장에 담겨 있는지 (단어 → true)
   const [savedWords, setSavedWords] = useState<Record<string, boolean>>({});
   const [infoState, setInfoState] = useState<"idle" | "loading" | "error">("idle");
+  // 설명을 못 받은 까닭이 한도 초과면 그 안내 문장(오늘/이번 달). 이때는 "다시 시도"를 보이지 않습니다(다시 눌러도 같은 답).
+  const [infoQuota, setInfoQuota] = useState("");
   const [lightbox, setLightbox] = useState<string | null>(null);
   // 처음에는 도시만 켜 둡니다. 나머지는 범례 버튼으로 켭니다.
   // state(버튼 색)와 ref(렌더 루프)는 반드시 같은 값으로 짝을 맞춰야 합니다.
@@ -594,6 +597,7 @@ const IndoMap = () => {
     }
     const reqId = ++reqIdRef.current;
     setInfoState("loading");
+    setInfoQuota("");
 
     void (async () => {
       const e = await takeContent(pin.id);
@@ -621,8 +625,16 @@ const IndoMap = () => {
             setInfoState("idle");
           }
         })
-        .catch(() => {
-          if (reqIdRef.current === reqId) setInfoState("error");
+        .catch((err) => {
+          if (reqIdRef.current !== reqId) return;
+          // 한도 초과(QUOTA…)·Plus 필요는 aiProxy 가 만든 그 안내 문장을 그대로 씁니다.
+          const code = err instanceof Error ? err.message : "";
+          setInfoQuota(
+            code.indexOf("QUOTA") === 0
+              ? lastQuotaNotice() || "오늘 볼 수 있는 설명을 모두 보았습니다. 내일 다시 볼 수 있습니다."
+              : "",
+          );
+          setInfoState("error");
         });
     })();
   };
@@ -821,7 +833,7 @@ const IndoMap = () => {
     { on: showCities, color: "#f97316", label: "도시", toggle: toggleCities },
     { on: showSpots, color: "#fbbf24", label: "관광지", toggle: toggleSpots },
     { on: showFaith, color: "#38bdf8", label: "종교·역사", toggle: toggleFaith },
-    { on: showCulture, color: "#c084fc", label: "민족·문화", toggle: toggleCulture },
+    { on: showCulture, color: "#c084fc", label: "종족·문화", toggle: toggleCulture },
   ];
 
   return (
@@ -1076,7 +1088,7 @@ const IndoMap = () => {
               <div className="mt-3.5">
                 {infoState === "loading" && (
                   <div className="py-6 text-center font-gothic text-[0.875rem] text-[#9AA1A6]">
-                    설명을 불러오는 중입니다…
+                    설명을 불러오는 중...
                   </div>
                 )}
                 {infoState === "error" && (
@@ -1084,9 +1096,9 @@ const IndoMap = () => {
                     <p className="font-gothic text-[0.875rem] text-[#646C72] break-keep">
                       {!publicEdition && !hasGeminiApiKey()
                         ? "설정에서 Gemini API 키를 입력하면 설명을 볼 수 있습니다."
-                        : "설명을 불러오지 못했습니다. 잠시 뒤 다시 시도하세요."}
+                        : infoQuota || "설명을 불러오지 못했습니다. 잠시 뒤 다시 시도하세요."}
                     </p>
-                    {publicEdition || hasGeminiApiKey() ? (
+                    {!infoQuota && (publicEdition || hasGeminiApiKey()) ? (
                       <button
                         onClick={() => openSheet(selected)}
                         className="mt-2.5 h-9 px-4 rounded-full bg-[#E3EEEC] text-[#2C6D63] font-gothic text-[0.8125rem] font-semibold active:opacity-80"
