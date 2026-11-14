@@ -57,12 +57,12 @@ const AccountSection = ({ onGo }: Props) => {
       const r = await deleteAccount();
       toast(
         r.hadSubscription
-          ? "계정을 지웠습니다. 구독 결제는 Google Play 에서 따로 해지해 주세요"
-          : "계정을 지웠습니다",
+          ? "계정을 삭제했습니다. 구독 결제는 Google Play에서 따로 해지해 주세요"
+          : "계정을 삭제했습니다",
         { duration: 8000 },
       );
     } catch (e) {
-      toast("지우지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요");
+      toast("계정을 삭제하지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요");
       setBusy(false);
       setDeleteConfirm(false);
     }
@@ -116,12 +116,12 @@ const AccountSection = ({ onGo }: Props) => {
           onClick={handleDelete}
         >
           <Trash2 className="w-4 h-4 mr-1.5" />
-          {deleteConfirm ? "한 번 더 누르면 계정과 서버 기록을 지웁니다" : "계정 삭제"}
+          {deleteConfirm ? "한 번 더 누르면 계정과 서버 기록을 삭제합니다" : "계정 삭제"}
         </Button>
         {deleteConfirm ? (
           <p className="mt-1.5 text-xs leading-relaxed font-gothic text-red-600">
-            서버의 계정·사용 기록·구독 연결이 지워지고 되돌릴 수 없습니다. 이 폰의 단어장은 그대로 남습니다.
-            구독 중이라면 결제는 Google Play 에서 따로 해지해야 합니다.
+            서버의 계정·사용 기록·구독 연결이 삭제되고 되돌릴 수 없습니다. 이 폰의 단어장은 그대로 남습니다.
+            구독 중이라면 결제는 Google Play에서 따로 해지해야 합니다.
           </p>
         ) : null}
       </div>
