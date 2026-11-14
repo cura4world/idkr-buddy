@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
     <link rel="apple-touch-icon" href="/icon-192x192.png" />
     <meta name="theme-color" content="#F1F3F5" />
-    <meta name="description" content="Kata kata - 인도네시아어-한국어 단어 플래시카드">
+    <meta name="description" content="Kata kata - 인도네시아어 사전·단어장">
     <!-- 이 주소는 앱(스토어 앱·관리자판)이 불러 쓰는 곳이라 검색에 올리지 않습니다(2026-11-14).
          GitHub Pages 는 /idkr-buddy/robots.txt 를 검색 로봇이 읽지 않으므로(사이트 맨 위 주소의 것만 읽음) 여기에도 적습니다. -->
     <meta name="robots" content="noindex, nofollow" />
@@ -16,19 +16,58 @@
     <meta name="apple-mobile-web-app-title" content="Kata kata" />
     <title>Kata kata - 인도네시아어 단어장</title>
 
-    
-    
+
+
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Kata kata - 인도네시아어 단어장">
   <meta name="twitter:title" content="Kata kata - 인도네시아어 단어장">
-  <meta property="og:description" content="Kata kata - 인도네시아어-한국어 단어 플래시카드">
-  <meta name="twitter:description" content="Kata kata - 인도네시아어-한국어 단어 플래시카드">
-  <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/e95c4f9b-5c93-491c-a422-924c6d8e7cc7?Expires=1773118262&amp;GoogleAccessId=go-api-on-aws%40gpt-engineer-390607.iam.gserviceaccount.com&amp;Signature=C3n%2BRyW37w0Yq6TTEY%2Bi8ymHMKqxKXHVmyt3HxUuQ9qprHjvoRXCjlrg%2FLoQXGd%2BKHiwTIg00Fc58kbcoG0hrfxakZyltTKhUTzSFbveZeGTr274Pd0HCCplJimefzKF0XD%2FhYk6FTIDlVO6PHp4BMqiHzEs8GmEx4PlCj0GmoAQd0raw%2Fj0UTlMTtHZAO1D5q2SvrD4S3ur20ievPxRM5dLtNab%2BOgKsrLsSA2FyOZZBnQHAHy45buOalMwaHI57elDSNtQFTXmsKEXJvIxuH6ttbUiMgjhIjGxvh1Rq1bnR8ZyViPU%2B5BUkNljsbZLbTh2jYjxKJFyTOBN5kHEHg%3D%3D">
-  <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/e95c4f9b-5c93-491c-a422-924c6d8e7cc7?Expires=1773118262&amp;GoogleAccessId=go-api-on-aws%40gpt-engineer-390607.iam.gserviceaccount.com&amp;Signature=C3n%2BRyW37w0Yq6TTEY%2Bi8ymHMKqxKXHVmyt3HxUuQ9qprHjvoRXCjlrg%2FLoQXGd%2BKHiwTIg00Fc58kbcoG0hrfxakZyltTKhUTzSFbveZeGTr274Pd0HCCplJimefzKF0XD%2FhYk6FTIDlVO6PHp4BMqiHzEs8GmEx4PlCj0GmoAQd0raw%2Fj0UTlMTtHZAO1D5q2SvrD4S3ur20ievPxRM5dLtNab%2BOgKsrLsSA2FyOZZBnQHAHy45buOalMwaHI57elDSNtQFTXmsKEXJvIxuH6ttbUiMgjhIjGxvh1Rq1bnR8ZyViPU%2B5BUkNljsbZLbTh2jYjxKJFyTOBN5kHEHg%3D%3D">
-  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:description" content="Kata kata - 인도네시아어 사전·단어장">
+  <meta name="twitter:description" content="Kata kata - 인도네시아어 사전·단어장">
+  <meta name="twitter:card" content="summary">
 </head>
   <body>
-    <div id="root"></div>
+    <!-- 앱 번들을 받아 실행할 때까지 보이는 자리(출시 전 점검 C-14). React 가 화면을 그리면 통째로 바뀝니다.
+         바탕색은 앱 배경(src/index.css 의 background, theme-color 와 같은 #F1F3F5)에 맞췄습니다. -->
+    <div id="root">
+      <div id="kata-boot" style="min-height:100vh;box-sizing:border-box;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#F1F3F5;color:#646C72;font-family:sans-serif;font-size:15px;line-height:1.6;text-align:center;">
+        <div style="font-size:20px;font-weight:600;color:#2C6D63;letter-spacing:0.02em;">Kata kata</div>
+        <div id="kata-boot-msg" style="margin-top:10px;">불러오는 중...</div>
+        <button id="kata-boot-retry" type="button" style="display:none;margin-top:18px;height:44px;padding:0 22px;border:0;border-radius:22px;background:#2C6D63;color:#FFFFFF;font-size:15px;font-weight:600;">다시 시도</button>
+      </div>
+    </div>
+    <script>
+      // 앱 번들을 받지 못했거나 너무 오래 걸릴 때 "다시 시도" 단추를 보입니다.
+      // React 가 이미 화면을 그렸으면(#kata-boot 가 사라졌으면) 아무것도 하지 않습니다.
+      (function () {
+        function show(text) {
+          var boot = document.getElementById("kata-boot");
+          if (!boot) return;
+          var msg = document.getElementById("kata-boot-msg");
+          var btn = document.getElementById("kata-boot-retry");
+          if (msg) msg.textContent = text;
+          if (btn) btn.style.display = "inline-block";
+        }
+        var retry = document.getElementById("kata-boot-retry");
+        if (retry) {
+          retry.addEventListener("click", function () {
+            try { window.location.reload(); } catch (e) {}
+          });
+        }
+        // 번들(모듈 스크립트)을 받다가 끊긴 경우. script 의 error 는 window 로 올라오지 않아 캡처 단계에서 받습니다.
+        var failed = false;
+        window.addEventListener("error", function (e) {
+          var t = e && e.target;
+          if (t && t.tagName === "SCRIPT" && t.type === "module") {
+            failed = true;
+            show("앱을 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 시도하세요.");
+          }
+        }, true);
+        // 끊긴 것은 아니지만 20초가 지나도 화면이 뜨지 않은 경우(느린 통신).
+        setTimeout(function () {
+          if (!failed) show("불러오는 데 시간이 걸리고 있습니다. 조금 더 기다리거나 다시 시도하세요.");
+        }, 20000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
