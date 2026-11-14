@@ -5,7 +5,7 @@
 // 개발자용 문구가 나가면 안 됩니다. 화면은 기존 문구를 adminText 로 넘기고, 공개판이면 아래 문장이 대신 나갑니다.
 // 관리자판·회원판은 adminText 그대로입니다.
 //
-//   세션 만료(401 → SESSION_EXPIRED) · 세션 없음(NO_API_KEY)  → "로그인이 끝났습니다. 다시 로그인하세요."
+//   세션 만료(401 → SESSION_EXPIRED) · 세션 없음(NO_API_KEY)  → "로그인이 풀렸습니다. 다시 로그인하세요."
 //   그 밖의 거절(403 → NOT_AVAILABLE) · 키 오류(INVALID_API_KEY) → "지금은 사용할 수 없습니다. 잠시 뒤 다시 시도하세요."
 //   Plus 필요(403 PLUS_REQUIRED)·한도(429 QUOTA_*)는 aiProxy 가 따로 안내합니다(여기서 다루지 않음).
 
