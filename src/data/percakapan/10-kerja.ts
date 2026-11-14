@@ -14,7 +14,7 @@ export const KERJA: PercakapanScene[] = [
       { s: "A", id: "Mbak Lia, minggu ini kita perlu rapat soal proyek baru.", ko: "리아 씨, 이번 주에 새 프로젝트 회의를 해야 해요." },
       { s: "B", id: "Baik, Pak. Bapak bisanya hari apa?", ko: "네. 무슨 요일이 괜찮으세요?" },
       { s: "A", id: "Rabu atau Kamis pagi.", ko: "수요일이나 목요일 오전이요." },
-      { s: "B", id: "Rabu pagi Pak Hendra ada kunjungan ke pabrik.", ko: "수요일 오전엔 헨드라 부장님이 공장 방문이 있으세요." },
+      { s: "B", id: "Rabu pagi Pak Hendra ada kunjungan ke pabrik.", ko: "수요일 오전엔 헨드라 님이 공장 방문이 있으세요." },
       { s: "A", id: "Kalau begitu Kamis jam sembilan saja.", ko: "그럼 목요일 9시로 하죠." },
       { s: "B", id: "Siap. Di ruang rapat lantai tiga, Pak?", ko: "알겠습니다. 3층 회의실에서 할까요?" },
       { s: "A", id: "Iya. Tolong siapkan data penjualan bulan lalu juga.", ko: "네. 지난달 판매 자료도 준비해 주세요." },
