@@ -14,6 +14,10 @@
 //   POST /admin/special                     Special Member·관리자·심사용(review) 등급 주기/거두기 (x-admin-key)
 //   GET  /admin/special?email=|uid=         그 계정의 등급 확인 (x-admin-key)
 //   POST /admin/delete                      이메일로 삭제를 요청한 계정 지우기 (x-admin-key)
+//   GET  /admin/budget                      오늘의 AI 호출 수와 하루 상한 설정 확인 (x-admin-key)
+//
+// 사용량 카운터는 Durable Object(바인딩 USAGE_DO, 클래스 UsageCounter)가 있으면 거기에, 없으면 KV 에 셉니다.
+// 전체 하루 상한은 변수 AI_DAILY_BUDGET, 신고 알림은 비밀값 TELEGRAM_BOT_TOKEN·TELEGRAM_CHAT_ID (모두 비워 두면 꺼짐).
 //
 // 설정(비밀값·변수)은 docs/release/03-architecture.md 의 표를 봅니다.
 // 이 파일에는 정규식 리터럴을 쓰지 않습니다(저장소 규칙). new RegExp 만 씁니다.
@@ -156,6 +160,8 @@ function corsHeaders(request) {
     "access-control-allow-methods": "GET, POST, OPTIONS",
     "access-control-allow-headers": "authorization, content-type, x-kata-kind, x-kata-unit, x-kata-req, x-admin-key",
     "access-control-max-age": "86400",
+    // 앱이 "서버가 일부러 멈춘 것"(AI_PAUSED·하루 상한)과 AI 쪽 일시 오류(503)를 구분하려고 읽는 머리글
+    "access-control-expose-headers": "x-kata-paused",
     vary: "origin",
   };
   if (APP_ORIGINS.indexOf(origin) >= 0) h["access-control-allow-origin"] = origin;
@@ -339,8 +345,30 @@ function productIds(env) {
 async function readJsonBody(request, maxBytes) {
   const declared = Number(request.headers.get("content-length") || 0);
   if (declared > maxBytes) throw new HttpError(413, "BODY_TOO_LARGE");
-  const text = await request.text();
-  if (new TextEncoder().encode(text).length > maxBytes) throw new HttpError(413, "BODY_TOO_LARGE");
+  // content-length 가 없거나 거짓이어도 상한까지만 읽고 끊습니다(큰 본문을 통째로 메모리에 올리지 않게).
+  let text = "";
+  if (request.body && typeof request.body.getReader === "function") {
+    const reader = request.body.getReader();
+    const chunks = [];
+    let total = 0;
+    for (;;) {
+      const step = await reader.read();
+      if (step.done) break;
+      total += step.value.byteLength;
+      if (total > maxBytes) {
+        try { await reader.cancel(); } catch (e) {}
+        throw new HttpError(413, "BODY_TOO_LARGE");
+      }
+      chunks.push(step.value);
+    }
+    const all = new Uint8Array(total);
+    let at = 0;
+    for (const c of chunks) { all.set(c, at); at += c.byteLength; }
+    text = new TextDecoder().decode(all);
+  } else {
+    text = await request.text();
+    if (new TextEncoder().encode(text).length > maxBytes) throw new HttpError(413, "BODY_TOO_LARGE");
+  }
   if (!text) return {};
   try { return JSON.parse(text); } catch (e) { throw new HttpError(400, "BAD_JSON"); }
 }
@@ -405,7 +433,10 @@ async function verifyGoogleIdToken(env, idToken, nonce) {
   }
   if (typeof payload.exp !== "number" || payload.exp < now - 60) throw new HttpError(401, "TOKEN_EXPIRED");
   if (!payload.sub) throw new HttpError(401, "BAD_TOKEN");
-  if (payload.email_verified === false) throw new HttpError(401, "EMAIL_NOT_VERIFIED");
+  // 이메일은 관리자가 미리 준 등급(spec:)을 붙이는 열쇠라, 구글이 "확인됨"이라고 밝힌 것만 받습니다.
+  // (예전에는 false 일 때만 거절해, 이 칸이 아예 없는 토큰의 이메일도 믿었습니다 — 2026-11-14 보안 재검토)
+  const verified = payload.email_verified === true || payload.email_verified === "true";
+  if (payload.email && !verified) throw new HttpError(401, "EMAIL_NOT_VERIFIED");
   if (nonce && payload.nonce !== nonce) throw new HttpError(401, "BAD_NONCE");
   return payload;
 }
@@ -568,7 +599,7 @@ function totalKey(uid) { return "uset:" + uid; }
 
 async function readUsage(env, uid) {
   const now = Date.now();
-  const u = (await kvGetJson(env, dayKey(uid, now))) || {};
+  const u = (await readCounters(env, uid, false)).d;
   return { day: kstDay(now), text: u.text || 0, tts: u.tts || 0, report: u.report || 0 };
 }
 
@@ -577,32 +608,124 @@ async function safePut(env, key, value, ttl) {
   try { await kvPutJson(env, key, value, ttl); } catch (e) {}
 }
 
-// 하루 칸만 더함 (신고 수)
-async function addUsage(env, uid, kind, delta) {
-  try {
-    const key = dayKey(uid, Date.now());
-    const u = (await kvGetJson(env, key)) || {};
-    u[kind] = Math.max(0, (u[kind] || 0) + (delta === undefined ? 1 : delta));
-    await kvPutJson(env, key, u, DAY_TTL_SEC);
-  } catch (e) {}
-}
-
 function quotaError(kind, period, limit, tier) {
   return new HttpError(429, "QUOTA_" + kind.toUpperCase().split("-").join("_"), { kind, period, limit, plan: tier });
 }
 
+// ── 카운터 저장소: KV(기본) 또는 Durable Object ──────────────
+//
+// 세는 규칙(reserveCore·refundCore·budget*Core)은 하나이고, 어디에 적느냐만 다릅니다.
+//   KV            바인딩 USAGE_DO 가 없을 때. 읽고-고쳐-쓰기가 한 덩어리가 아니라서, 같은 순간에 쏜 요청 여러 개가
+//                 모두 "아직 한도 전"으로 읽고 통과할 수 있습니다(출시 전 점검 3-6 S8: 20개 동시에 모두 통과).
+//   Durable Object 계정마다 객체 하나(u:<uid>)가 요청을 한 줄로 세워 처리하므로 동시 요청에도 정확합니다(S-22).
+//                 전체 하루 상한은 객체 "budget" 하나가 셉니다(S-21).
+// Durable Object 를 부르다 실패하면(설정 오류·일시 장애) 그 요청은 KV 방식으로 처리합니다 — 서비스가 멈추지 않게.
+
+// strict: 쓰기가 실패하면 던집니다. 칸을 "잡을 때"는 strict 로 — 적지 못했는데 AI 를 부르면 세지 않은 호출이 나가기 때문입니다
+// (KV 무료 요금제는 하루 쓰기 횟수에 한도가 있고, 그 한도에 닿으면 쓰기가 실패합니다. 예전에는 이 실패를 삼켜
+//  그날 남은 시간 동안 한도가 세어지지 않았습니다 — 2026-11-14 보안 재검토). 돌려줄 때는 실패해도 넘어갑니다.
+function kvStore(env, strict) {
+  return {
+    get: (key) => kvGetJson(env, key),
+    put: (key, value, ttl) => (strict ? kvPutJson(env, key, value, ttl) : safePut(env, key, value, ttl)),
+  };
+}
+
+// 카운터를 적지 못했을 때의 응답 — 앱에는 "지금은 사용할 수 없습니다"로 보입니다(AI_PAUSED 와 같은 길).
+function storeFailed() {
+  try { console.error("[kata-public] USAGE_STORE_FAILED — 카운터를 적지 못해 AI 호출을 막음 (KV 쓰기 한도?)"); } catch (e) {}
+  return new HttpError(503, "SERVICE_PAUSED", { reason: "store" });
+}
+
+function usageStub(env, name) {
+  if (!env.USAGE_DO) return null;
+  try { return env.USAGE_DO.get(env.USAGE_DO.idFromName(name)); } catch (e) { return null; }
+}
+
+// 객체에 일을 맡깁니다. 한도 초과 같은 "정상적인 거절"은 HttpError 로 다시 던지고, 그 밖의 실패는 일반 오류로 던집니다.
+async function doCall(stub, payload) {
+  const res = await stub.fetch("https://usage.internal/op", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (data && data.err) throw new HttpError(data.err.status, data.err.code, data.err.extra);
+  if (!res.ok || !data) throw new Error("USAGE_DO_FAILED");
+  return data.out;
+}
+
+let doFailLoggedAt = 0;
+function logDoFailure(e) {
+  if (Date.now() - doFailLoggedAt < 60000) return; // 장애 중에 로그가 넘치지 않게 1분에 한 줄
+  doFailLoggedAt = Date.now();
+  try { console.error("[kata-public] USAGE_DO_FAILED — KV 방식으로 처리 (" + String((e && e.message) || e).slice(0, 80) + ")"); } catch (e2) {}
+}
+
+/** 하루·한 달·체험 합계 칸을 읽습니다. */
+async function readCounters(env, uid, wantTotal) {
+  const now = Date.now();
+  const keys = { dKey: dayKey(uid, now), mKey: monthKey(uid, now), tKey: wantTotal ? totalKey(uid) : null };
+  const stub = usageStub(env, "u:" + uid);
+  if (stub) {
+    try { return await doCall(stub, { op: "read", keys }); } catch (e) { logDoFailure(e); }
+  }
+  return readCore(kvStore(env), keys);
+}
+
+async function readCore(store, keys) {
+  return {
+    d: (await store.get(keys.dKey)) || {},
+    m: (await store.get(keys.mKey)) || {},
+    t: keys.tKey ? (await store.get(keys.tKey)) || {} : {},
+  };
+}
+
 /**
- * AI 를 부르기 전에 한 칸을 먼저 잡습니다(동시에 여러 개를 쏘아 한도를 넘기는 것을 줄임).
- * 실패하면 refundUse 로 돌려줍니다. KV 는 원자적이지 않아 짧은 순간의 동시 요청까지 완벽히
- * 막지는 못합니다 — 사용자가 늘면 Durable Object 카운터로 바꿉니다(docs/release/05 참고).
+ * AI 를 부르기 전에 한 칸을 먼저 잡습니다. 실패하면 refundUse 로 돌려줍니다.
  * 잠긴 기능이면 403 PLUS_REQUIRED, 한도를 넘었으면 429 QUOTA_<KIND> {kind, period, limit}.
  */
 async function reserveUse(env, uid, tier, kind, unit, req) {
   const lim = limitsFor(env, tier)[kind] || {};
+  const p = { uid, tier, kind, unit, req, lim, now: Date.now() };
+  const stub = usageStub(env, "u:" + uid);
+  if (stub) {
+    try {
+      const r = await doCall(stub, { op: "reserve", p });
+      r.via = "do";
+      return r;
+    } catch (e) {
+      if (e instanceof HttpError) throw e;
+      logDoFailure(e);
+    }
+  }
+  try {
+    return await reserveCore(kvStore(env, true), p);
+  } catch (e) {
+    if (e instanceof HttpError) throw e;
+    throw storeFailed();
+  }
+}
+
+/** 부른 결과가 실패면 잡아 둔 칸을 돌려줍니다(잡은 곳과 같은 저장소에). */
+async function refundUse(env, r) {
+  if (!r) return;
+  if (r.via === "do") {
+    const stub = usageStub(env, "u:" + r.uid);
+    if (stub) {
+      try { await doCall(stub, { op: "refund", r }); } catch (e) { logDoFailure(e); }
+    }
+    return;
+  }
+  await refundCore(kvStore(env), r);
+}
+
+async function reserveCore(store, p) {
+  const uid = p.uid, tier = p.tier, kind = p.kind, unit = p.unit, req = p.req, now = p.now;
+  const lim = p.lim || {};
   if (lim.locked) throw new HttpError(403, "PLUS_REQUIRED", { kind, plan: tier });
-  const now = Date.now();
   const dKey = dayKey(uid, now);
-  const d = (await kvGetJson(env, dKey)) || {};
+  const d = (await store.get(dKey)) || {};
 
   // 같은 누름의 재시도 — 이미 셌으므로 한도를 다시 보지 않습니다.
   if (req && !unit) {
@@ -611,7 +734,7 @@ async function reserveUse(env, uid, tier, kind, unit, req) {
     if (hit && now - (hit.at || 0) < REQ_WINDOW_MS && (hit.n || 0) < MAX_REQ_CALLS) {
       hit.n = (hit.n || 0) + 1;
       d.reqs = reqs;
-      await safePut(env, dKey, d, DAY_TTL_SEC);
+      await store.put(dKey, d, DAY_TTL_SEC);
       return { uid, kind, unit: "", counted: false, dKey, req };
     }
   }
@@ -625,16 +748,16 @@ async function reserveUse(env, uid, tier, kind, unit, req) {
       mine[unit] += 1;
       units[kind] = mine;
       d.units = units;
-      await safePut(env, dKey, d, DAY_TTL_SEC);
+      await store.put(dKey, d, DAY_TTL_SEC);
       return { uid, kind, unit, counted: false, dKey };
     }
   }
 
   const mKey = monthKey(uid, now);
-  const m = (await kvGetJson(env, mKey)) || {};
+  const m = (await store.get(mKey)) || {};
   const useTotal = tier === "trial" && typeof lim.total === "number";
   const tKey = totalKey(uid);
-  const t = useTotal ? (await kvGetJson(env, tKey)) || {} : null;
+  const t = useTotal ? (await store.get(tKey)) || {} : null;
 
   if (typeof lim.day === "number" && (d[kind] || 0) >= lim.day) throw quotaError(kind, "day", lim.day, tier);
   if (typeof lim.month === "number" && (m[kind] || 0) >= lim.month) throw quotaError(kind, "month", lim.month, tier);
@@ -654,49 +777,47 @@ async function reserveUse(env, uid, tier, kind, unit, req) {
     reqs.push({ id: req.id, kind, hash: req.hash, at: now, n: 1 });
     d.reqs = reqs.slice(-MAX_REQS_KEPT);
   }
-  await safePut(env, dKey, d, DAY_TTL_SEC);
-  await safePut(env, mKey, m, MONTH_TTL_SEC);
+  await store.put(dKey, d, DAY_TTL_SEC);
+  await store.put(mKey, m, MONTH_TTL_SEC);
   if (t) {
     t[kind] = (t[kind] || 0) + 1;
-    await safePut(env, tKey, t, TRIAL_TOTAL_TTL_SEC);
+    if (!t.at) t.at = now; // 처음 적은 때 — Durable Object 에서 400일 뒤 지우는 기준
+    await store.put(tKey, t, TRIAL_TOTAL_TTL_SEC);
   }
   return { uid, kind, unit, counted: true, dKey, mKey, tKey: t ? tKey : null, req: req && !unit ? req : null };
 }
 
-/** 부른 결과가 실패면 잡아 둔 칸을 돌려줍니다. */
-async function refundUse(env, r) {
+async function refundCore(store, r) {
   if (!r) return;
   try {
-    const d = (await kvGetJson(env, r.dKey)) || {};
+    const d = (await store.get(r.dKey)) || {};
     const units = d.units && typeof d.units === "object" ? d.units : null;
     const mine = units && units[r.kind] && typeof units[r.kind] === "object" ? units[r.kind] : null;
     if (!r.counted) {
       if (mine && mine[r.unit] > 1) mine[r.unit] -= 1;
-      await safePut(env, r.dKey, d, DAY_TTL_SEC);
+      await store.put(r.dKey, d, DAY_TTL_SEC);
       return;
     }
     d[r.kind] = Math.max(0, (d[r.kind] || 0) - 1);
     // 이 누름은 아직 성공한 적이 없으므로 기록을 지웁니다 — 다음 재시도가 새로 한 칸을 잡습니다.
     if (r.req && Array.isArray(d.reqs)) d.reqs = d.reqs.filter((x) => !(x && x.id === r.req.id && x.kind === r.kind));
     if (r.unit && mine) delete mine[r.unit];
-    await safePut(env, r.dKey, d, DAY_TTL_SEC);
-    const m = (await kvGetJson(env, r.mKey)) || {};
+    await store.put(r.dKey, d, DAY_TTL_SEC);
+    const m = (await store.get(r.mKey)) || {};
     m[r.kind] = Math.max(0, (m[r.kind] || 0) - 1);
-    await safePut(env, r.mKey, m, MONTH_TTL_SEC);
+    await store.put(r.mKey, m, MONTH_TTL_SEC);
     if (r.tKey) {
-      const t = (await kvGetJson(env, r.tKey)) || {};
+      const t = (await store.get(r.tKey)) || {};
       t[r.kind] = Math.max(0, (t[r.kind] || 0) - 1);
-      await safePut(env, r.tKey, t, TRIAL_TOTAL_TTL_SEC);
+      await store.put(r.tKey, t, TRIAL_TOTAL_TTL_SEC);
     }
   } catch (e) {}
 }
 
 /** /me 에 싣는 기능별 사용량·한도·남은 수 (null = 제한 없음). */
 async function featureUsage(env, uid, tier) {
-  const now = Date.now();
-  const d = (await kvGetJson(env, dayKey(uid, now))) || {};
-  const m = (await kvGetJson(env, monthKey(uid, now))) || {};
-  const t = tier === "trial" ? (await kvGetJson(env, totalKey(uid))) || {} : {};
+  const c = await readCounters(env, uid, tier === "trial");
+  const d = c.d, m = c.m, t = c.t;
   const lims = limitsFor(env, tier);
   const out = {};
   Object.keys(KINDS).concat(["report"]).forEach((kind) => {
@@ -718,6 +839,220 @@ async function featureUsage(env, uid, tier) {
     out[kind] = { locked: !!lim.locked, hidden: !!lim.hidden, used, limit, left };
   });
   return out;
+}
+
+// ── 전체 하루 상한 (S-21) ────────────────────────────────────
+//
+// 변수 AI_DAILY_BUDGET — 하루(한국 날짜)에 이 서버가 AI 쪽으로 보내는 호출 수의 상한. 계정별 한도와 별개로,
+// 가입이 몰리거나 누가 계정을 여러 개 만들어 써도 하루 비용이 정해 둔 선을 넘지 않게 하는 마지막 안전장치입니다.
+//   ""                         상한 없음(예전과 같음)
+//   "5000"                     글·소리 합쳐 하루 5,000번
+//   {"all":5000,"tts":2000}    합계 5,000번, 그중 소리는 2,000번까지 ("text" 도 따로 둘 수 있음)
+// 세는 단위는 "AI 쪽으로 실제로 나간 호출"입니다(재시도·긴 읽기의 조각도 한 번씩). 실패한 호출은 돌려줍니다.
+// 상한에 닿으면 무료·체험·Plus·심사용의 AI 호출을 503 SERVICE_PAUSED {reason:"budget"} 로 막습니다(AI_PAUSED 와 같은 응답).
+// Special Member·관리자는 막지 않습니다(운영자가 상황을 확인할 수 있게). 세기는 합니다.
+// 값을 잘못 적으면(숫자도 JSON 도 아님) 상한 0 으로 봅니다 — 잘못 적은 줄 모르고 상한 없이 도는 것보다 바로 드러나는 편이 안전합니다.
+// 넣은 뒤 GET /admin/budget 으로 서버가 읽은 값을 확인하세요.
+
+const BUDGET_MODES = ["all", "text", "tts"];
+
+function parseBudget(env) {
+  const raw = String(env.AI_DAILY_BUDGET == null ? "" : env.AI_DAILY_BUDGET).trim();
+  if (!raw) return null;
+  let o = null;
+  if (raw.charAt(0) === "{") {
+    try { o = JSON.parse(raw); } catch (e) { o = null; }
+  } else if (isFinite(Number(raw))) {
+    o = { all: Number(raw) };
+  }
+  const caps = {};
+  if (o && typeof o === "object") {
+    BUDGET_MODES.forEach((k) => {
+      if (o[k] === undefined || o[k] === null || o[k] === "") return;
+      const n = Number(o[k]);
+      if (isFinite(n) && n >= 0) caps[k] = Math.floor(n);
+    });
+  }
+  if (Object.keys(caps).length === 0) return { all: 0, invalid: true };
+  return caps;
+}
+
+function budgetKey(nowMs) { return "budget:" + kstDay(nowMs); }
+
+// p = { key, mode("text"|"tts"), caps(null = 상한 없음), enforce } → { ok, cap?, first?, key, mode }
+async function budgetTakeCore(store, p) {
+  const b = (await store.get(p.key)) || {};
+  const caps = p.caps || {};
+  let hit = "";
+  if (typeof caps.all === "number" && (b.all || 0) >= caps.all) hit = "all";
+  else if (typeof caps[p.mode] === "number" && (b[p.mode] || 0) >= caps[p.mode]) hit = p.mode;
+  if (hit && p.enforce) {
+    // 오늘 처음 상한에 닿은 순간만 first — 운영자 알림을 하루 한 번만 보내려고 표시해 둡니다.
+    const first = !b.hitAt;
+    if (first) {
+      b.hitAt = p.now;
+      b.hitCap = hit;
+      await store.put(p.key, b, DAY_TTL_SEC);
+    }
+    return { ok: false, cap: hit, first };
+  }
+  b.all = (b.all || 0) + 1;
+  b[p.mode] = (b[p.mode] || 0) + 1;
+  await store.put(p.key, b, DAY_TTL_SEC);
+  return { ok: true, key: p.key, mode: p.mode };
+}
+
+async function budgetRefundCore(store, t) {
+  const b = (await store.get(t.key)) || {};
+  b.all = Math.max(0, (b.all || 0) - 1);
+  b[t.mode] = Math.max(0, (b[t.mode] || 0) - 1);
+  await store.put(t.key, b, DAY_TTL_SEC);
+  return true;
+}
+
+/**
+ * AI 를 부르기 직전에 전체 하루 칸을 하나 잡습니다. 상한에 닿았으면 503.
+ * Durable Object 가 있으면 늘 세고(오늘 몇 번 나갔는지 볼 수 있게), KV 뿐이면 상한을 정해 둔 때만 셉니다
+ * (KV 는 쓰기 횟수에 하루 한도가 있어 쓸데없이 늘리지 않으려고). KV 로 셀 때는 동시 요청에서 조금 넘칠 수 있습니다.
+ */
+async function takeBudget(env, tier, mode, ctx) {
+  const caps = parseBudget(env);
+  const stub = usageStub(env, "budget");
+  if (!caps && !stub) return null;
+  const now = Date.now();
+  const p = { key: budgetKey(now), mode, caps, enforce: tier !== "special" && tier !== "admin", now };
+  let out = null;
+  let via = "kv";
+  if (stub) {
+    try { out = await doCall(stub, { op: "budget-take", p }); via = "do"; } catch (e) { logDoFailure(e); }
+  }
+  if (!out) {
+    if (!caps) return null;
+    try { out = await budgetTakeCore(kvStore(env, true), p); } catch (e) { throw storeFailed(); }
+  }
+  if (!out.ok) {
+    if (out.first) {
+      try { console.error("[kata-public] AI_BUDGET_REACHED cap=" + out.cap + " day=" + kstDay(now)); } catch (e) {}
+      await defer(ctx, tgSend(env, "[Kata kata] 오늘 AI 하루 상한에 닿았습니다 (" + (out.cap === "all" ? "전체" : out.cap === "tts" ? "소리" : "글") +
+        " " + String(caps && caps[out.cap]) + "번). 내일(한국 시각 0시)까지 AI 기능이 멈춥니다. 풀려면 AI_DAILY_BUDGET 값을 올리세요."));
+    }
+    throw new HttpError(503, "SERVICE_PAUSED", { reason: "budget" });
+  }
+  out.via = via;
+  return out;
+}
+
+async function refundBudget(env, t) {
+  if (!t) return;
+  try {
+    if (t.via === "do") {
+      const stub = usageStub(env, "budget");
+      if (stub) await doCall(stub, { op: "budget-refund", t });
+      return;
+    }
+    await budgetRefundCore(kvStore(env), t);
+  } catch (e) {}
+}
+
+async function readBudget(env) {
+  const key = budgetKey(Date.now());
+  const stub = usageStub(env, "budget");
+  if (stub) {
+    try { return (await doCall(stub, { op: "budget-read", key })) || {}; } catch (e) { logDoFailure(e); }
+  }
+  return (await kvGetJson(env, key)) || {};
+}
+
+// ── 텔레그램 알림 (P-19) ─────────────────────────────────────
+//
+// 비밀값 TELEGRAM_BOT_TOKEN · TELEGRAM_CHAT_ID 가 둘 다 있을 때만 보냅니다. 없으면 아무것도 하지 않습니다.
+// 알림은 덤입니다 — 보내다 실패해도(텔레그램 장애·잘못된 토큰) 신고 저장과 응답에는 영향을 주지 않습니다.
+// 묶음: 알림을 한 번 보내면 그 뒤 한 시간 동안 들어온 신고는 세기만 하고, 한 시간이 지난 뒤 한꺼번에 알립니다
+//       (다음 신고가 들어올 때, 또는 Cron 이 켜져 있으면 매시간 scheduled 가). 하루에 많아야 스물몇 통입니다.
+// 알림에는 기능 이름·시각·글 앞부분 몇 글자만 담습니다. 계정·이메일은 담지 않고, 이메일·긴 숫자 모양은 가립니다.
+
+const TG_TIMEOUT_MS = 8000;
+const TG_WINDOW_MS = 60 * 60 * 1000;
+const TG_STATE_KEY = "tg:reports";
+const TG_STATE_TTL_SEC = 7 * 24 * 3600;
+const TG_PREVIEW_CHARS = 30;
+const TG_EMAIL_RE = new RegExp("[^\\s@]+@[^\\s@]+", "g");
+const TG_DIGITS_RE = new RegExp("[0-9][0-9\\- ]{5,}[0-9]", "g");
+const TG_SPACES_RE = new RegExp("\\s+", "g");
+
+function tgConfigured(env) {
+  return !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID);
+}
+
+async function tgSend(env, text) {
+  if (!tgConfigured(env)) return false;
+  try {
+    const res = await tfetch("https://api.telegram.org/bot" + env.TELEGRAM_BOT_TOKEN + "/sendMessage", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: String(env.TELEGRAM_CHAT_ID), text: String(text).slice(0, 1000), disable_web_page_preview: true }),
+    }, TG_TIMEOUT_MS);
+    return !!res.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+// 응답을 늦추지 않게 뒤에서 마저 하도록 맡깁니다(ctx.waitUntil). ctx 가 없으면(테스트) 끝날 때까지 기다립니다.
+async function defer(ctx, promise) {
+  const safe = Promise.resolve(promise).catch(() => {});
+  if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(safe);
+  else await safe;
+}
+
+function tgPreview(rep) {
+  const src = String(rep.reason || rep.output || rep.input || "");
+  const flat = src.replace(TG_EMAIL_RE, "(메일)").replace(TG_DIGITS_RE, "(숫자)").replace(TG_SPACES_RE, " ").trim();
+  return flat.length > TG_PREVIEW_CHARS ? flat.slice(0, TG_PREVIEW_CHARS) + "…" : flat;
+}
+
+function kstStamp(ms) {
+  return new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 16).replace("T", " ") + " (한국 시각)";
+}
+
+/** 새 신고 하나를 알립니다(또는 묶음에 더합니다). 절대 던지지 않습니다. */
+async function notifyReport(env, rep) {
+  if (!tgConfigured(env)) return;
+  try {
+    const now = Date.now();
+    const st = (await kvGetJson(env, TG_STATE_KEY)) || {};
+    const pending = st.pending || 0;
+    if (st.sentAt && now - st.sentAt < TG_WINDOW_MS) {
+      await kvPutJson(env, TG_STATE_KEY, { sentAt: st.sentAt, pending: pending + 1 }, TG_STATE_TTL_SEC);
+      return;
+    }
+    const lines = [
+      "[Kata kata] 새 신고" + (pending > 0 ? " " + (pending + 1) + "건 (그사이 " + pending + "건 포함)" : " 1건"),
+      "기능: " + (rep.feature || "-"),
+      "시각: " + kstStamp(rep.at || now),
+    ];
+    const pv = tgPreview(rep);
+    if (pv) lines.push("앞부분: " + pv);
+    lines.push("전체 보기: GET /admin/reports");
+    const ok = await tgSend(env, lines.join("\n"));
+    // 못 보냈으면 묶음에 남겨 두고, 다음 신고 때 다시 시도합니다.
+    await kvPutJson(env, TG_STATE_KEY, ok ? { sentAt: now, pending: 0 } : { sentAt: st.sentAt || 0, pending: pending + 1 }, TG_STATE_TTL_SEC);
+  } catch (e) {}
+}
+
+/** 한 시간이 지난 묶음이 남아 있으면 한꺼번에 알립니다(Cron 이 부름). */
+async function flushReportNotice(env) {
+  if (!tgConfigured(env)) return false;
+  try {
+    const now = Date.now();
+    const st = (await kvGetJson(env, TG_STATE_KEY)) || {};
+    if (!st.pending || (st.sentAt && now - st.sentAt < TG_WINDOW_MS)) return false;
+    const ok = await tgSend(env, "[Kata kata] 지난 알림 뒤로 신고 " + st.pending + "건이 더 들어왔습니다.\n전체 보기: GET /admin/reports");
+    if (ok) await kvPutJson(env, TG_STATE_KEY, { sentAt: now, pending: 0 }, TG_STATE_TTL_SEC);
+    return ok;
+  } catch (e) {
+    return false;
+  }
 }
 
 // ── Play 구독 검증 ───────────────────────────────────────────
@@ -1045,6 +1380,9 @@ async function deleteAccountData(env, uid, user, sessHash) {
     } while (cursor);
   }
   await env.PUBLIC_KV.delete("uset:" + uid);
+  // Durable Object 에 센 사용량도 지웁니다(바인딩이 있을 때). 실패하면 삭제 전체를 실패로 돌려 사용자가 다시 시도하게 합니다.
+  const usageObj = usageStub(env, "u:" + uid);
+  if (usageObj) await doCall(usageObj, { op: "wipe" });
   await env.PUBLIC_KV.delete("trial:" + uid);
   // 이메일 찾기표와(이 계정을 가리킬 때만) 관리자가 미리 준 등급(이메일로 묶인 것)도 지웁니다.
   if (user && normEmail(user.email)) {
@@ -1119,7 +1457,7 @@ function sanitizeAiBody(kind, body, maxCharsOverride) {
   return { contents, generationConfig: outGc };
 }
 
-async function handleAi(request, env, model) {
+async function handleAi(request, env, model, ctx) {
   const a = await requireAuth(request, env);
   const kind = (request.headers.get("x-kata-kind") || "text").trim().toLowerCase();
   const spec = Object.prototype.hasOwnProperty.call(KINDS, kind) ? KINDS[kind] : null;
@@ -1143,10 +1481,22 @@ async function handleAi(request, env, model) {
   const plan = await getPlan(env, a.uid);
   // 긴급 차단 스위치(Worker 변수 AI_PAUSED): 비용이 갑자기 치솟을 때 배포 없이 변수 하나로 AI 호출을 멈춥니다(S-21).
   //   "all"  모든 등급의 AI 호출을 멈춤 · "free" 무료 등급만 멈춤 · 비우면 평소대로
-  // 계정별 한도만으로는 가입이 몰릴 때 전체 비용을 막을 수 없어 둔 손잡이입니다(전체 하루 상한은 Durable Object 로 옮길 때 함께).
+  // 계정별 한도만으로는 가입이 몰릴 때 전체 비용을 막을 수 없어 둔 손잡이입니다. 자동으로 막는 전체 하루 상한은 AI_DAILY_BUDGET(takeBudget).
   const paused = String(env.AI_PAUSED || "").trim().toLowerCase();
   if (paused === "all" || (paused === "free" && plan.tier === "free")) throw new HttpError(503, "SERVICE_PAUSED");
   const reservation = await reserveUse(env, a.uid, plan.tier, kind, unit, req);
+  // 전체 하루 상한 — 계정 한도를 통과한 호출만 셉니다. 상한에 닿았으면 방금 잡은 계정 칸을 돌려주고 503.
+  let budget = null;
+  try {
+    budget = await takeBudget(env, plan.tier, spec.mode, ctx);
+  } catch (e) {
+    await refundUse(env, reservation);
+    throw e;
+  }
+  const refundAll = async () => {
+    await refundUse(env, reservation);
+    await refundBudget(env, budget);
+  };
   let res;
   try {
     res = await tfetch(env.AI_PROXY_URL, {
@@ -1159,7 +1509,7 @@ async function handleAi(request, env, model) {
       body: JSON.stringify(body),
     }, AI_TIMEOUT_MS);
   } catch (e) {
-    await refundUse(env, reservation);
+    await refundAll();
     throw e;
   }
   const headers = corsHeaders(request);
@@ -1167,9 +1517,10 @@ async function handleAi(request, env, model) {
   headers["cache-control"] = "no-store";
   // 실패 응답은 상태 그대로 돌려줘야 앱의 폴백(3.8 → 3.1)이 동작합니다. 잡아 둔 칸은 돌려줍니다.
   if (!res.ok) {
-    await refundUse(env, reservation);
+    await refundAll();
     return new Response(res.body, { status: res.status, headers });
   }
+  // 여기부터는 AI 쪽이 답을 만든 것이라(비용이 든 것으로 봄) 전체 하루 칸은 돌려주지 않습니다. 계정 칸만 돌려줍니다.
   // 200 이어도 내용이 비어 있으면(글·소리 없음) 쓴 것으로 치지 않습니다 — 앱은 이것을 실패로 보고 다시 부릅니다(C-02).
   let raw;
   try {
@@ -1220,31 +1571,38 @@ function clip(v, n) {
   return String(v == null ? "" : v).slice(0, n);
 }
 
-async function handleReport(request, env) {
+async function handleReport(request, env, ctx) {
   const a = await requireAuth(request, env);
   const body = await readJsonBody(request, 16 * 1024);
   const plan = await getPlan(env, a.uid);
-  const usage = await readUsage(env, a.uid);
-  const rlim = limitsFor(env, plan.tier).report || {};
-  if (typeof rlim.day === "number" && usage.report >= rlim.day) return json(request, { error: "QUOTA_REPORT" }, 429);
+  // 하루 신고 수도 AI 한도와 같은 카운터로 먼저 한 칸 잡습니다(동시에 여러 개를 보내 상한을 넘기지 못하게).
+  // 넘으면 429 QUOTA_REPORT. 저장이 실패하면 칸을 돌려줍니다.
+  const reservation = await reserveUse(env, a.uid, plan.tier, "report", "", null);
   const rand = randomToken().slice(0, 8);
   // KV 목록은 키 사전순이라, 시각을 거꾸로 센 값을 앞에 두어 최신 신고가 먼저 나오게 합니다.
   const rev = String(9999999999999 - Date.now()).padStart(13, "0");
   const key = "report:" + rev + "-" + rand;
-  await kvPutJson(env, key, {
+  const rep = {
     at: Date.now(),
     uid: a.uid,
     feature: clip(body.feature, 20),
     input: clip(body.input, 500),
     output: clip(body.output, 2000),
     reason: clip(body.reason, 200),
-  }, REPORT_TTL_SEC);
+  };
+  try {
+    await kvPutJson(env, key, rep, REPORT_TTL_SEC);
+  } catch (e) {
+    await refundUse(env, reservation);
+    throw e;
+  }
   // 내 신고 키 목록 — 계정을 지울 때 연결을 끊는 데 씁니다. 예전에는 마지막 200개만 기억해, 그보다 오래된
   // 신고는 삭제 뒤에도 계정 연결이 남았습니다(P-08). 180일 동안 보낼 수 있는 수보다 넉넉히 둡니다.
   const mine = (await kvGetJson(env, "ureports:" + a.uid)) || [];
   mine.push(key);
   await kvPutJson(env, "ureports:" + a.uid, mine.slice(-MAX_REPORTS_TRACKED), REPORT_TTL_SEC);
-  await addUsage(env, a.uid, "report");
+  // 운영자 알림(설정돼 있을 때만). 신고는 이미 저장됐고, 알림이 실패해도 응답은 그대로 성공입니다.
+  await defer(ctx, notifyReport(env, rep));
   return json(request, { ok: true });
 }
 
@@ -1342,7 +1700,26 @@ async function handleAdminReports(request, env, url) {
   return json(request, { items, nextCursor: page.list_complete ? null : page.cursor || null });
 }
 
-async function route(request, env) {
+/** GET /admin/budget  (x-admin-key) → 오늘 AI 쪽으로 나간 호출 수와, 서버가 읽은 하루 상한 설정. */
+async function handleAdminBudget(request, env) {
+  requireAdmin(request, env);
+  const caps = parseBudget(env);
+  const b = await readBudget(env);
+  return json(request, {
+    day: kstDay(Date.now()),
+    counter: env.USAGE_DO ? "durable-object" : "kv",
+    // caps: null = 상한 없음. invalid: true = AI_DAILY_BUDGET 를 읽지 못해 0 으로 보고 있음(값을 고치세요).
+    caps: caps ? { all: caps.all == null ? null : caps.all, text: caps.text == null ? null : caps.text, tts: caps.tts == null ? null : caps.tts } : null,
+    invalid: !!(caps && caps.invalid),
+    used: { all: b.all || 0, text: b.text || 0, tts: b.tts || 0 },
+    // KV 방식에서는 상한을 정해 둔 날만 셉니다. 상한 없이 KV 로 돌 때는 0 으로 보입니다.
+    reachedAt: b.hitAt || null,
+    paused: String(env.AI_PAUSED || "").trim().toLowerCase() || null,
+    telegram: tgConfigured(env),
+  });
+}
+
+async function route(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
@@ -1355,28 +1732,146 @@ async function route(request, env) {
   if (method === "POST" && path === "/auth/signout") return handleSignout(request, env);
   if (method === "POST" && path === "/account/delete") return handleDelete(request, env);
   if (method === "POST" && path === "/billing/verify") return handleBillingVerify(request, env);
-  if (method === "POST" && path === "/report") return handleReport(request, env);
+  if (method === "POST" && path === "/report") return handleReport(request, env, ctx);
+  if (method === "GET" && path === "/admin/budget") return handleAdminBudget(request, env);
   if (method === "GET" && path === "/admin/reports") return handleAdminReports(request, env, url);
   if (method === "POST" && path === "/admin/special") return handleAdminSpecial(request, env);
   if (method === "GET" && path === "/admin/special") return handleAdminSpecialGet(request, env, url);
   if (method === "POST" && path === "/admin/delete") return handleAdminDelete(request, env);
 
   const m = method === "POST" ? path.match(AI_PATH_RE) : null;
-  if (m) return handleAi(request, env, m[1]);
+  if (m) return handleAi(request, env, m[1], ctx);
 
   return json(request, { error: "NOT_FOUND" }, 404);
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
-      return await route(request, env);
+      return await route(request, env, ctx);
     } catch (e) {
-      if (e instanceof HttpError) return json(request, Object.assign({ error: e.code }, e.extra || {}), e.status);
+      if (e instanceof HttpError) {
+        const res = json(request, Object.assign({ error: e.code }, e.extra || {}), e.status);
+        // 서버가 일부러 멈춘 것(AI_PAUSED·하루 상한)임을 앱이 알 수 있게 — 앱은 이때 다른 모델로 다시 부르지 않습니다.
+        if (e.code === "SERVICE_PAUSED") res.headers.set("x-kata-paused", "1");
+        return res;
+      }
       return json(request, { error: "SERVER_ERROR" }, 500);
     }
   },
+  // Cron Trigger(선택, wrangler.toml 의 [triggers]) — 한 시간 넘게 묵은 신고 알림 묶음을 보냅니다.
+  async scheduled(event, env, ctx) {
+    await defer(ctx, flushReportNotice(env));
+  },
 };
+
+// ── Durable Object: 사용량 카운터 ────────────────────────────
+//
+// 계정마다 하나(이름 "u:<uid>"), 전체 하루 상한용 하나(이름 "budget"). 객체 하나는 한 번에 한 요청만 처리합니다 —
+// 저장소 읽기·쓰기 사이에 다른 요청이 끼어들지 않게 줄(queue)을 세웁니다(런타임의 입력 관문에 더해 한 번 더).
+// 그래서 "읽고 → 한도와 비교하고 → 더해 쓰기"가 한 덩어리로 끝나, 동시에 쏜 요청도 정확히 한도까지만 통과합니다.
+// 저장 형식은 KV 때와 같은 키·같은 모양입니다(use:<uid>:<날짜> · usem:<uid>:<달> · uset:<uid> · budget:<날짜>).
+// 이 저장소에는 수명(TTL)이 없어, 날짜가 바뀌면 지난 칸을 직접 지웁니다(pruneOld).
+
+function doJson(data, status) {
+  return new Response(JSON.stringify(data), { status: status || 200, headers: { "content-type": "application/json" } });
+}
+
+function doStore(storage) {
+  return {
+    get: async (key) => {
+      const v = await storage.get(key);
+      return v === undefined ? null : v;
+    },
+    put: async (key, value) => { await storage.put(key, value); },
+  };
+}
+
+export class UsageCounter {
+  constructor(state) {
+    this.storage = state.storage;
+    this.queue = Promise.resolve();
+    this.prunedDay = "";
+  }
+
+  fetch(request) {
+    const run = this.queue.then(() => this.handle(request));
+    this.queue = run.then(() => {}, () => {});
+    return run;
+  }
+
+  async handle(request) {
+    let msg;
+    try { msg = await request.json(); } catch (e) { return doJson({ err: { status: 400, code: "BAD_REQUEST" } }); }
+    const store = doStore(this.storage);
+    try {
+      let out = null;
+      if (msg.op === "reserve") {
+        await this.pruneOld(msg.p.now);
+        out = await reserveCore(store, msg.p);
+      } else if (msg.op === "refund") {
+        await refundCore(store, msg.r);
+        out = true;
+      } else if (msg.op === "read") {
+        out = await readCore(store, msg.keys);
+      } else if (msg.op === "wipe") {
+        await this.storage.deleteAll();
+        out = true;
+      } else if (msg.op === "budget-take") {
+        await this.pruneOld(msg.p.now);
+        out = await budgetTakeCore(store, msg.p);
+      } else if (msg.op === "budget-refund") {
+        out = await budgetRefundCore(store, msg.t);
+      } else if (msg.op === "budget-read") {
+        out = await store.get(msg.key);
+      } else {
+        return doJson({ err: { status: 400, code: "BAD_REQUEST" } });
+      }
+      return doJson({ out });
+    } catch (e) {
+      // 한도 초과·잠금은 정상적인 거절이라 그대로 전합니다. 그 밖의 오류는 500 — Worker 가 KV 방식으로 처리합니다.
+      if (e instanceof HttpError) return doJson({ err: { status: e.status, code: e.code, extra: e.extra } });
+      return doJson({ fail: true }, 500);
+    }
+  }
+
+  // 지난 칸 지우기 — KV 때의 수명과 같게 맞춥니다(개인정보처리방침: 날짜별 3일, 월별 최대 40일, 체험 합계 최대 400일).
+  //   하루 칸(use:·budget:)  그 날짜에서 사흘이 지나면
+  //   한 달 칸(usem:)        다음 달 10일이 지나면
+  //   체험 합계(uset:)       처음 적은 때부터 400일이 지나면
+  // 날짜가 바뀐 뒤 첫 요청에서 한 번, 그리고 요청이 없어도 알람이 하루에 한 번 돌립니다(쓰지 않는 계정의 칸도 지워지게).
+  async pruneOld(nowMs) {
+    const today = kstDay(nowMs);
+    if (this.prunedDay === today) return;
+    this.prunedDay = today;
+    try {
+      await this.sweep(nowMs);
+      if ((await this.storage.getAlarm()) == null) await this.storage.setAlarm(nowMs + 24 * 3600 * 1000);
+    } catch (e) {}
+  }
+
+  async sweep(nowMs) {
+    const keepDay = kstDay(nowMs - 2 * 24 * 3600 * 1000);
+    const keepMonth = kstMonth(nowMs - 10 * 24 * 3600 * 1000);
+    const all = await this.storage.list();
+    const dead = [];
+    all.forEach((v, key) => {
+      if (key.indexOf("usem:") === 0) { if (key.slice(-7) < keepMonth) dead.push(key); }
+      else if (key.indexOf("use:") === 0 || key.indexOf("budget:") === 0) { if (key.slice(-10) < keepDay) dead.push(key); }
+      else if (key.indexOf("uset:") === 0) { if (v && v.at && nowMs - v.at > TRIAL_TOTAL_TTL_SEC * 1000) dead.push(key); }
+    });
+    for (const key of dead) await this.storage.delete(key);
+    return all.size - dead.length; // 남은 칸 수
+  }
+
+  async alarm() {
+    try {
+      const now = Date.now();
+      const left = await this.sweep(now);
+      if (left > 0) await this.storage.setAlarm(now + 24 * 3600 * 1000);
+    } catch (e) {}
+  }
+}
 
 // 테스트에서 캐시를 비우기 위한 내부 함수 (운영에서는 쓰지 않음)
 export function __resetCachesForTest() {
