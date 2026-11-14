@@ -17,7 +17,8 @@ import { percakapanAudioPlayer } from "@/lib/percakapanAudio";
 import type { PcAudioSnapshot } from "@/lib/percakapanAudio";
 import { quickLookupWord } from "@/lib/story";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
-import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT } from "@/lib/store";
+import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, lookupFailText } from "@/lib/store";
+import { lastQuotaNotice } from "@/lib/aiProxy";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import WordMiniSheet from "@/components/WordMiniSheet";
@@ -227,7 +228,7 @@ const PercakapanRead = () => {
   useEffect(() => {
     if (!snap.errorAt || snap.errorAt === lastErr) return;
     setLastErr(snap.errorAt);
-    toast.error("음성을 불러오지 못했습니다");
+    toast.error("소리를 불러오지 못했습니다");
   }, [snap.errorAt, lastErr]);
 
   // ---------- 회화 완주 점수 ----------
@@ -374,8 +375,9 @@ const PercakapanRead = () => {
         setPopupInfo(r.info);
         setPopupSentenceKo(r.sentenceKo);
       })
-      .catch(() => {
-        if (popupReqId.current === reqId) setPopupMeaning(LOOKUP_FAIL_TEXT);
+      .catch((err) => {
+        // 한도 초과면 "다시 눌러 주세요" 대신 한도 안내를 보입니다(다시 눌러도 같은 답)
+        if (popupReqId.current === reqId) setPopupMeaning(lookupFailText(err, lastQuotaNotice()));
       })
       .finally(() => {
         if (popupReqId.current === reqId) setPopupLoading(false);
@@ -517,9 +519,9 @@ const PercakapanRead = () => {
       <div className="px-4 pt-3 pb-6">
         {notFound ? (
           <div className="px-4 py-10 text-center" style={CARD_STYLE}>
-            <p className="text-[0.9375rem]" style={{ color: "#1D1F1E" }}>볼 수 없는 회화집입니다</p>
+            <p className="text-[0.9375rem]" style={{ color: "#1D1F1E" }}>볼 수 없는 대화입니다</p>
             <p className="mt-1 font-gothic text-[0.78125rem]" style={{ color: "#646C72" }}>
-              지워졌거나 이 계정에서는 열리지 않는 회화집입니다
+              지워졌거나 이 계정에서는 열리지 않는 대화입니다
             </p>
             <button
               type="button"
