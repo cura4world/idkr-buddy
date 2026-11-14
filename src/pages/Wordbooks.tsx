@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
-import { getCategories, getWordsByCategory, Category } from "@/lib/store";
+import { getCategories, getWordCount, Category } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import { ArrowLeft } from "lucide-react";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
@@ -46,7 +46,7 @@ const Wordbooks = () => {
 
   const bookCount = grouped.reduce((n, g) => n + g.items.length, 0);
   const wordCount = grouped.reduce(
-    (n, g) => n + g.items.reduce((m, c) => m + getWordsByCategory(c.id).length, 0),
+    (n, g) => n + g.items.reduce((m, c) => m + getWordCount(c.id), 0),
     0
   );
 
