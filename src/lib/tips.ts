@@ -32,6 +32,28 @@ export interface TipData {
 }
 
 // 팁 1개 생성. recentTitles로 최근 주제와 중복 방지.
+/** 글의 첫 "보이는 글자" 하나(이어 붙인 이모지·국기는 통째로). */
+function firstEmoji(s: string): string {
+  const FALLBACK = "🇮🇩";
+  if (!s) return FALLBACK;
+  try {
+    type Seg = new (locale?: string, opt?: { granularity: string }) => { segment(t: string): Iterable<{ segment: string }> };
+    const Segmenter = (Intl as unknown as { Segmenter?: Seg }).Segmenter;
+    if (Segmenter) {
+      const first = new Segmenter("ko", { granularity: "grapheme" }).segment(s)[Symbol.iterator]().next();
+      if (!first.done && first.value && first.value.segment) return first.value.segment;
+    }
+  } catch (e) {}
+  const cps = Array.from(s);
+  // 국기는 지역 표시 글자 두 개가 한 글자입니다
+  const isFlagHalf = (c: string) => {
+    const n = c.codePointAt(0) || 0;
+    return n >= 0x1f1e6 && n <= 0x1f1ff;
+  };
+  if (cps.length >= 2 && isFlagHalf(cps[0]) && isFlagHalf(cps[1])) return cps[0] + cps[1];
+  return cps[0] || FALLBACK;
+}
+
 export async function generateTip(recentTitles: string[] = []): Promise<TipData> {
   const hint = TOPIC_HINTS[Math.floor(Math.random() * TOPIC_HINTS.length)];
 
@@ -64,7 +86,8 @@ export async function generateTip(recentTitles: string[] = []): Promise<TipData>
 
   return {
     title,
-    emoji: (raw.emoji || "🇮🇩").toString().trim().slice(0, 4),
+    // 글자 단위로 첫 묶음만 씁니다 — slice(0, 4) 는 이어 붙인 이모지(가족·국기 등)를 중간에서 잘라 깨진 글자를 남겼습니다(출시 전 점검 D-20)
+    emoji: firstEmoji((raw.emoji || "🇮🇩").toString().trim()),
     body,
     indo: (raw.indo || "").toString().trim(),
     indoKo: (raw.indoKo || "").toString().trim(),
@@ -116,6 +139,7 @@ export async function saveTip(data: TipData): Promise<TipRecord> {
       tx.objectStore(STORE).put(rec);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 저장 실패해도 세션 내 사용은 가능
@@ -149,6 +173,7 @@ export async function deleteTip(id: string): Promise<void> {
       tx.objectStore(STORE).delete(id);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 무시
