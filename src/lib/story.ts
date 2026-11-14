@@ -118,8 +118,11 @@ export async function quickLookupWord(
     "- meaning은 문맥에 한정하지 말고, 그 단어가 가진 주요 뜻을 모두 적으세요. 어떤 뜻인지는 읽는 사람이 문맥으로 판단합니다.\n";
 
   const parsed = await callGeminiJSON(prompt);
+  const meaning = (parsed.meaning || "").toString().trim();
+  // 뜻이 빈 답은 실패로 봅니다 — 그대로 돌려주면 단어 팝업에 빈 뜻이 뜹니다(출시 전 점검 C-24)
+  if (!meaning) throw new Error("EMPTY_RESPONSE");
   return {
-    meaning: (parsed.meaning || "").toString().trim(),
+    meaning,
     info: (parsed.info || "").toString().trim(),
     sentenceKo: (parsed.sentenceKo || "").toString().trim(),
   };
