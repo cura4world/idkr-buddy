@@ -43,6 +43,28 @@ const SKIP = new Set([
   "Faroe.sumba.3.jpg",
   // 2026-11-14 K-01: CC BY 인데 저작자 불명(식민지 시대 군수 초상) — 저작자를 표시할 수 없어 쓰지 않음
   "Bupati Probolinggo Raden Toemenggoeng Djojonegoro.jpg",
+  // 2026-11-14 3차(출시 전 점검 5-6 #36~38): src/lib/mapPhotos.ts 에서 손으로 뺀 17장.
+  // 여기에 없으면 스크립트를 다시 돌릴 때 되살아납니다. 다시 돌린 뒤에는 그 자리에 다른 초상·옛 그림이
+  // 들어오지 않았는지 확인용 HTML 을 사람이 봐야 합니다.
+  //   옛 기록 그림(지금 모습이 아님)
+  "Japanese attack on Borneo, 1941-1942.jpg",
+  "The old missigit of Bantam.jpg",
+  "Sultan Muhammad Salahuddin bersama Tentara BKR Bima depan Istana ASI Mbojo.jpg",
+  "Resident Offce Resident Office Buitenzorg.jpg",
+  "Banda Neira 1724.jpg",
+  "Fort Belgica 1824.jpg",
+  "John Webber Plate XVI The Fan Palm in the Island of Cracatoa.jpg",
+  "Bird's eye view of Palembang.JPG",
+  "Alun - Alun Purwokerto 1947. (Berwarna).jpg",
+  "Alun - Alun di Purwokerto, 1931.jpg",
+  "Tarakan landing (AWM 090812).jpg",
+  //   인물 초상 · 라이선스가 의심스러운 것
+  "Amir Hamzah Wali Kota Binjai.jpg",
+  "Wali Kota Kediri Samsul Ashar.jpg",
+  "Bupati Mamuju Sitti Sutinah Suhardi.jpg",
+  "Esau Sesa.jpg",
+  "Muhammad Arif, MP of Tanjungpinang (2004-2021).jpg",
+  "Presiden Jokowi Didampingi Gubernur Koster di Pura Besakih untuk peresmian.jpg",
 ]);
 
 // 원본 페이지의 저작자 칸이 비었거나 주소뿐인 사진의 저작자 (2026-11-14 K-01 — 원본 설명 글과 Flickr 계정 이름에서 확인).
