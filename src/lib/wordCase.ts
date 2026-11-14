@@ -18,6 +18,7 @@ const PROPER = new Set([
   "allah", "tuhan", "yesus", "kristus", "roh", "alkitab", "injil",
   "israel", "yerusalem", "musa", "daud", "abraham", "petrus", "paulus",
   "maria", "yusuf", "nuh", "adam", "hawa",
+  "imanuel", "nikodemus", "yordan",
 ]);
 
 function isUpperLatin(ch: string): boolean {
