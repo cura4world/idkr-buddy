@@ -28,7 +28,7 @@ describe("백업 묶음 — 이야기·만든 회화집", () => {
     expect(s.scenes).toBe(1);
     const text = describeSummary(s);
     expect(text).toContain("이야기 2편");
-    expect(text).toContain("만든 회화 1개");
+    expect(text).toContain("만든 대화 1개");
   });
 
   it("이야기·회화가 없는 예전 묶음도 그대로 읽히고 요약에 그 말이 나오지 않는다", () => {
@@ -37,7 +37,7 @@ describe("백업 묶음 — 이야기·만든 회화집", () => {
     expect(parsed).not.toBeNull();
     const text = describeSummary(summarize(parsed as PersonalBundle));
     expect(text).not.toContain("이야기");
-    expect(text).not.toContain("만든 회화");
+    expect(text).not.toContain("만든 대화");
   });
 
   it("이야기가 든 묶음을 글로 바꿨다가 다시 읽어도 그대로", () => {
