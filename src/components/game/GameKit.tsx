@@ -65,7 +65,7 @@ export const GAME_META: Record<GameId, GameMeta> = {
     desc: "다섯 글자 단어를 여섯 번 안에 맞혀 보세요", bg: "#FFF6DC", fg: "#8A6A12", path: "/permainan/kata",
   },
   jodoh: {
-    title: "JODOHKAN", ko: "빠른 짝짓기", name: "Jodohkan",
+    title: "JODOHKAN", ko: "빠른 짝 맞추기", name: "Jodohkan",
     desc: "같은 뜻끼리 빠르게 연결해 보세요", bg: "#E6F0EC", fg: "#3F7F6E", path: "/permainan/jodoh",
   },
   ox: {
@@ -600,7 +600,7 @@ export const GameResult = ({ label, value, best, bestText, gained, floatOn, star
 
       <div className="mt-auto pt-3 flex gap-2.5">
         <SecondaryButton onClick={() => goBackOr(navigate, location.key, "/permainan")} className="flex-1">
-          게임방으로
+          게임으로
         </SecondaryButton>
         <PrimaryButton onClick={onAgain} className="flex-1">
           한 판 더
