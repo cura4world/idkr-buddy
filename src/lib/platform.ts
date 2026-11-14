@@ -35,6 +35,14 @@ export function isStoreApp(): boolean {
   return storeBridge() !== null || previewBuild();
 }
 
+/**
+ * Play 에서 받은 실제 스토어 앱인가(미리보기 빌드는 아님). 미리보기는 패널에 넣은 내 키로 AI 를 직접 부르므로
+ * "스토어 앱은 로그인 세션으로만 AI 를 부른다"는 규칙(aiProxy.ts, 출시 전 점검 S-13)에서 빠집니다.
+ */
+export function isPlayStoreApp(): boolean {
+  return storeBridge() !== null && !previewBuild();
+}
+
 /** 스토어 앱 버전 ("1.0.N"). 스토어 앱이 아니면 빈 문자열. */
 export function storeAppVersion(): string {
   const b = storeBridge();
