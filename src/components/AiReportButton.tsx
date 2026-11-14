@@ -36,28 +36,42 @@ const AiReportButton = ({ feature, input, output, className }: Props) => {
       setOpen(false);
       toast("알려 주셔서 고맙습니다. 살펴보고 고치겠습니다");
     } catch (e) {
-      toast("보내지 못했습니다. 잠시 뒤 다시 눌러 주세요");
+      // 하루 신고 한도에 걸린 것과 통신 실패를 나눠 알립니다(출시 전 점검 P-25)
+      const code = e instanceof Error ? e.message : "";
+      toast(
+        code === "QUOTA_REPORT"
+          ? "오늘은 더 보낼 수 없습니다. 내일 다시 보내 주세요"
+          : code === "NETWORK_FAILED"
+            ? "보내지 못했습니다. 인터넷 연결을 확인해 주세요"
+            : "보내지 못했습니다. 잠시 뒤 다시 눌러 주세요",
+      );
     }
     setBusy(false);
   };
 
+  // AI 가 만든 내용임을 결과 끝에 밝힙니다(Play 의 AI 생성 콘텐츠 정책. 출시 전 점검 P-24).
+  const AI_NOTE = "AI 가 만든 내용입니다";
+
   if (sent) {
     return (
-      <p className={"text-xs font-gothic text-muted-foreground " + (className || "")}>신고를 보냈습니다</p>
+      <p className={"text-xs font-gothic text-muted-foreground " + (className || "")}>{AI_NOTE} · 신고를 보냈습니다</p>
     );
   }
 
   return (
     <div className={className || ""}>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        className="h-8 flex items-center gap-1.5 text-xs font-gothic text-muted-foreground"
-      >
-        <Flag size={13} />
-        풀이가 이상합니다
-      </button>
+      <div className="flex flex-wrap items-center gap-x-3">
+        <span className="text-xs font-gothic text-muted-foreground">{AI_NOTE}</span>
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          className="h-8 flex items-center gap-1.5 text-xs font-gothic text-muted-foreground"
+        >
+          <Flag size={13} />
+          풀이가 이상합니다
+        </button>
+      </div>
       {open ? (
         <div className="mt-1 flex flex-wrap gap-2">
           {REASONS.map((r) => (
