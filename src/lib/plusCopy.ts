@@ -167,7 +167,10 @@ export function isOtherAccountCode(code: string): boolean {
 /** 결제 창에서 구매가 끝나지 않았을 때(Play 오류). 결제가 끝난 뒤의 확인 실패에는 쓰지 않습니다. */
 export function toastFailed(code: string): string {
   if (isOtherAccountCode(code)) return TOAST_OTHER_ACCOUNT;
-  return "구독을 마치지 못했습니다. 잠시 뒤 다시 시도해 주세요 (" + code + ")";
+  // 영어 오류 코드는 미리보기 빌드에서만 붙입니다(출시 전 점검 E-08)
+  let preview = false;
+  try { preview = import.meta.env.VITE_PREVIEW === "1"; } catch (e) {}
+  return "구독을 마치지 못했습니다. 잠시 뒤 다시 시도해 주세요" + (preview ? " (" + code + ")" : "");
 }
 export const TOAST_RESTORED = "구독을 다시 연결했습니다";
 export const TOAST_RESTORE_NONE = "이 Google 계정으로 산 구독을 찾지 못했습니다";
