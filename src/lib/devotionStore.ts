@@ -95,6 +95,7 @@ export async function saveDevotion(
       tx.objectStore(STORE).put(rec);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 저장 실패해도 세션 내 사용은 가능
@@ -145,6 +146,7 @@ export async function deleteDevotion(id: string): Promise<void> {
       tx.objectStore(STORE).delete(id);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 무시
