@@ -103,7 +103,7 @@ export default function StudyMode() {
     if (!currentWord) return;
     const nowMarked = toggleSavedWord(currentWord.id);
     setSavedIds(getSavedWordIds());
-    toast(nowMarked ? "다시 외울 단어로 표시했습니다" : "표시를 해제했습니다");
+    toast(nowMarked ? "다시 외울 단어로 리본을 달았습니다" : "리본을 뗐습니다");
   };
 
   // 아래 동그라미 리본 버튼: 표시된 단어만 보기 <-> 전체 보기
@@ -112,18 +112,18 @@ export default function StudyMode() {
       setReviewFilter(false);
       setCurrentIndex(0);
       setIsFlipped(false);
-      toast("전체 단어를 표시합니다");
+      toast("전체 단어를 봅니다");
       return;
     }
     const marked = words.filter((w) => savedIds.includes(w.id));
     if (marked.length === 0) {
-      toast("표시된 단어가 없습니다");
+      toast("리본 단 단어가 없습니다");
       return;
     }
     setReviewFilter(true);
     setCurrentIndex(0);
     setIsFlipped(false);
-    toast("표시된 단어 " + marked.length + "개만 학습합니다");
+    toast("리본 단 단어 " + marked.length + "개만 봅니다");
   };
 
   // 읽기 — 다 읽은 뒤에 끝나는 Promise (자동재생이 이것을 기다렸다가 카드를 넘깁니다)
@@ -237,7 +237,7 @@ export default function StudyMode() {
       setReviewFilter(false);
       setCurrentIndex(0);
       setIsFlipped(false);
-      toast("표시된 단어가 없어 전체 단어를 표시합니다");
+      toast("리본 단 단어가 없어 전체 단어를 봅니다");
     }
   }, [reviewFilter, displayWords.length, words.length]);
 
@@ -299,7 +299,7 @@ export default function StudyMode() {
       setIsAutoPlaying(false); setIsAutoRandom(false); setIsScreenLocked(false);
       setIsFlipped(false); setCurrentIndex(0); setAutoCurrentWord(undefined);
       releaseWakeLock();
-      toast("자동플레이가 완료되었습니다 🎉");
+      toast("자동 재생이 끝났습니다");
       return;
     }
     setIsFlipped(false); setIsBreathing(false); setCurrentIndex(index);
@@ -347,7 +347,7 @@ export default function StudyMode() {
 
   const toggleLoop = () => {
     const next = !isLooping; isLoopingRef.current = next; setIsLooping(next);
-    toast(next ? "반복 재생 켜짐 🔁" : "반복 재생 꺼짐");
+    toast(next ? "반복 재생 켜짐" : "반복 재생 꺼짐");
   };
 
   useEffect(() => {
@@ -414,7 +414,7 @@ export default function StudyMode() {
   if (!category || words.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
-        <p className="text-muted-foreground">학습할 단어가 없습니다.</p>
+        <p className="text-muted-foreground">카드로 외울 단어가 없습니다.</p>
         <button onClick={handleBack} className="mt-4 text-primary underline underline-offset-4">돌아가기</button>
       </div>
     );
@@ -432,7 +432,7 @@ export default function StudyMode() {
         </div>
       )}
       <div className="h-14 shrink-0 flex items-center justify-between px-4">
-        <button onClick={handleBack} className="w-10 h-10 -ml-2 flex items-center justify-center text-foreground" aria-label="\uB4A4\uB85C">
+        <button onClick={handleBack} className="w-10 h-10 -ml-2 flex items-center justify-center text-foreground" aria-label={"\uB4A4\uB85C"}>
           <ArrowLeft size={20} />
         </button>
         <span className="font-word text-[0.90625rem] text-[#1D1F1E]">
@@ -440,7 +440,7 @@ export default function StudyMode() {
           {isAutoPlaying && <span className="ml-2 text-[#2C6D63] animate-pulse">{"\u25B6"}</span>}
         </span>
         {isAutoPlaying ? (
-          <button onClick={() => setIsScreenLocked(true)} className="w-8 h-10 flex items-center justify-center text-foreground" aria-label="\uD654\uBA74 \uC7A0\uAE08"><Lock size={20} /></button>
+          <button onClick={() => setIsScreenLocked(true)} className="w-8 h-10 flex items-center justify-center text-foreground" aria-label={"\uD654\uBA74 \uC7A0\uAE08"}><Lock size={20} /></button>
         ) : (
           <span className="w-8" />
         )}
@@ -464,7 +464,7 @@ export default function StudyMode() {
             <div className={`${FACE} transition-shadow duration-1000 ${isBreathing ? "animate-breathe" : ""}`}>
               <button
                 onClick={(e) => { e.stopPropagation(); handleToggleMark(); }}
-                aria-label="\uB2E4\uC2DC \uC678\uC6B8 \uB2E8\uC5B4"
+                aria-label={"\uB2E4\uC2DC \uC678\uC6B8 \uB2E8\uC5B4"}
                 className={`absolute top-2.5 right-2.5 w-10 h-10 flex items-center justify-center transition-colors ${isMarked ? "text-[#D4A72C]" : "text-[#C2C7CB]"}`}
               >
                 <Bookmark size={20} strokeWidth={1.8} fill={isMarked ? "currentColor" : "none"} />
@@ -484,7 +484,7 @@ export default function StudyMode() {
             <div className={`${FACE} rotate-y-180`}>
               <button
                 onClick={(e) => { e.stopPropagation(); handleToggleMark(); }}
-                aria-label="\uB2E4\uC2DC \uC678\uC6B8 \uB2E8\uC5B4"
+                aria-label={"\uB2E4\uC2DC \uC678\uC6B8 \uB2E8\uC5B4"}
                 className={`absolute top-2.5 right-2.5 w-10 h-10 flex items-center justify-center transition-colors ${isMarked ? "text-[#D4A72C]" : "text-[#C2C7CB]"}`}
               >
                 <Bookmark size={20} strokeWidth={1.8} fill={isMarked ? "currentColor" : "none"} />
