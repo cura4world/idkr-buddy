@@ -17,6 +17,7 @@ import {
   PublicSession,
 } from "@/lib/account";
 import { manageSubscription } from "@/lib/billing";
+import { askLocalWipe } from "@/lib/localWipe";
 import { DELETE_ACCOUNT_URL, PRIVACY_URL, TERMS_URL } from "@/lib/platform";
 
 interface Props {
@@ -61,6 +62,8 @@ const AccountSection = ({ onGo }: Props) => {
           : "계정을 삭제했습니다",
         { duration: 8000 },
       );
+      // 삭제가 끝난 직후에만 "이 폰의 단어장과 학습 기록도 지울까요?"를 묻습니다(D-10)
+      askLocalWipe();
     } catch (e) {
       toast("계정을 삭제하지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요");
       setBusy(false);
@@ -120,7 +123,8 @@ const AccountSection = ({ onGo }: Props) => {
         </Button>
         {deleteConfirm ? (
           <p className="mt-1.5 text-xs leading-relaxed font-gothic text-red-600">
-            서버의 계정·사용 기록·구독 연결이 삭제되고 되돌릴 수 없습니다. 이 폰의 단어장은 그대로 남습니다.
+            서버의 계정·사용 기록·구독 연결이 삭제되고 되돌릴 수 없습니다. 이 폰의 단어장을 지울지는 삭제한 뒤에 묻습니다.
+            단어장도 지울 생각이면 먼저 내 정보의 "백업 파일 저장"으로 백업해 두세요.
             구독 중이라면 결제는 Google Play에서 따로 해지해야 합니다.
           </p>
         ) : null}
