@@ -61,7 +61,9 @@ export default function IconColorPicker({ value, onChange }: Props) {
         <FormLabel>아이콘</FormLabel>
         <div
           className="grid grid-cols-6 gap-2 overflow-y-auto rounded-[14px] border-[1.5px] border-[#E3E8EB] p-2"
-          style={{ maxHeight: 176 }}
+          // 높이를 글자 크기 단위(rem)로 — 세 줄 반이 보여, 아래에 아이콘이 더 있다는 것이 드러납니다.
+          // 예전의 176px 고정은 글자를 키우면 정확히 세 줄에서 끊겨 나머지 17개가 없는 것처럼 보였습니다(출시 전 점검 U-10).
+          style={{ maxHeight: "11.75rem" }}
           role="listbox"
           aria-label="아이콘"
         >
