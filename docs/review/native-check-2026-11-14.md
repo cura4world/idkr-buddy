@@ -285,5 +285,5 @@
 - 3절 13번 — 표제어가 `omnipresen` 이 되었습니다(`Allah yang omnipresen hadir di mana-mana sekaligus.`). `mahahadir` 와 어느 쪽을 쓰는지의 물음은 그대로입니다.
 - 3절 14번 — `kekekalan` 예문은 `Kekekalan Allah tidak dibatasi oleh waktu.`, `bersekutu` 예문은 `…bersama sesama orang percaya.`, `persekutuan` 예문은 `Persekutuan pemuda diadakan setiap Sabtu sore.` 로 바뀌었습니다(새 문장 확인).
 - 3절 16번 — `Saudara-saudara terkasih, mari kita membuka Alkitab kita.` 에는 쉼표가 들어갔습니다. `Yang kedua firman ini mengajak kita bersyukur.` 는 그대로입니다.
-- 3절 끝의 방침 물음(TB 의 `sorga`·`Iblis`) — 아직 정하지 않았습니다. `mukjizat` 줄은 새 낱말 `tanda`(표적)가 되어 `mujizat` 한 줄만 남았습니다.
+- 3절 끝의 방침 물음(TB 의 `sorga`·`Iblis`) — 7차(2026-11-14)에 "일반 단어장은 KBBI, 성경 단어장은 TB, 각자 따로"로 정해졌습니다. 다만 성경 단어장의 5줄(35:20·35:27·35:76·38:84·39:51)은 지금 `surga`·`iblis` 라 바꿀지 확인을 기다립니다(`DECISIONS.md` 15장 7차). `mukjizat` 줄은 새 낱말 `tanda`(표적)가 되어 `mujizat` 한 줄만 남았습니다.
 - 4절의 표제어 19개는 그대로이고, 이 병합으로 표제어 7개가 더 바뀌었습니다: `kotbah di bukit` → `khotbah di bukit`, `mukjizat` → `tanda`(낱말 교체), `berkat harun` → `berkat Harun`, `doxologi` → `doksologi`, `omnipresent` → `omnipresen`, `hamartologi` → `hamartiologi`, `otorisasi Alkitab` → `otoritas Alkitab`.
