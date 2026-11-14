@@ -327,7 +327,7 @@ const News = () => {
       return;
     }
     if (!hasGeminiApiKey()) {
-      toast("Gemini API 키가 필요합니다. 설정에서 입력해주세요");
+      toast("Gemini API 키가 필요합니다. 설정에서 입력해 주세요");
       return;
     }
     setGenerating(true);
@@ -339,8 +339,8 @@ const News = () => {
       window.scrollTo({ top: 0 });
     } catch (e: any) {
       const code = e?.message || "";
-      if (code === "RATE_LIMIT") toast("요청이 많습니다. 잠시 후 다시 시도해주세요");
-      else if (code === "NO_API_KEY" || code === "INVALID_API_KEY") toast("API 키를 설정에서 확인해주세요");
+      if (code === "RATE_LIMIT") toast("요청이 많습니다. 잠시 뒤 다시 시도하세요");
+      else if (code === "NO_API_KEY" || code === "INVALID_API_KEY") toast("API 키를 설정에서 확인해 주세요");
       else toast("뉴스 실패: " + (code ? code.slice(0, 120) : "알 수 없는 오류"));
     } finally {
       setGenerating(false);
