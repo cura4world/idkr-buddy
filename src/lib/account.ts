@@ -106,9 +106,9 @@ export function hasPublicSession(): boolean {
 }
 
 // ── 세션 만료 (서버가 401) ───────────────────────────────────
-// 로그인 화면(LoginGate)이 "로그인이 끝났습니다…" 안내를 한 번 보여 주도록 표시해 둡니다.
+// 로그인 화면(LoginGate)이 "로그인이 풀렸습니다…" 안내를 한 번 보여 주도록 표시해 둡니다.
 const EXPIRED_KEY = "kata-public-session-expired";
-export const SESSION_EXPIRED_TEXT = "로그인이 끝났습니다. 다시 로그인하세요.";
+export const SESSION_EXPIRED_TEXT = "로그인이 풀렸습니다. 다시 로그인하세요.";
 
 /** 서버가 세션을 받지 않을 때(401): 이 기기의 세션을 지워 로그인 화면으로 돌아가게 합니다. */
 export function expireSession(): void {
@@ -351,5 +351,5 @@ export function signInErrorText(code: string): string {
   if (code === "NO_ACCOUNT") return "이 폰에 Google 계정이 없습니다. 폰 설정에서 Google 계정을 추가해 주세요";
   if (code === "NO_BRIDGE") return "Play 스토어에서 받은 앱에서만 로그인할 수 있습니다";
   if (code === "NETWORK_FAILED" || code === "TIMEOUT") return "인터넷 연결을 확인하고 다시 눌러 주세요";
-  return "로그인하지 못했습니다. 잠시 뒤 다시 눌러 주세요" + (showErrorCode() ? " (" + code + ")" : "");
+  return "로그인하지 못했습니다. 잠시 뒤 다시 시도하세요" + (showErrorCode() ? " (" + code + ")" : "");
 }
