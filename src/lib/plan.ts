@@ -22,7 +22,7 @@ export const PAYWALL_PATH = "/plus";
 
 export const TIER_LABEL: Record<Tier, string> = {
   free: "무료",
-  trial: "Plus 체험 중",
+  trial: "Plus 무료 체험 중",
   plus: "Plus",
   special: "Special Member",
   admin: "관리자",
