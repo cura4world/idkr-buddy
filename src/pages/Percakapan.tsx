@@ -105,6 +105,16 @@ const Percakapan = () => {
 
   const askedRef = useRef(false);
 
+  // 이 화면이 아직 떠 있는가. 회화집을 만드는 10~60초 사이에 다른 화면으로 갔으면,
+  // 다 만들어진 뒤 저장만 하고 읽기 화면으로 끌고 가지 않습니다(출시 전 점검 C-10. 게임 화면들의 aliveRef 와 같은 방식).
+  const aliveRef = useRef(true);
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
+
   // 헤더 "PERCAKAPAN" 을 자르지 않도록 (QA Q09)
   const headTitleRef = useRef<HTMLHeadingElement>(null);
   const makePillRef = useRef<HTMLButtonElement>(null);
@@ -229,17 +239,24 @@ const Percakapan = () => {
       });
       if (madeCat) await saveCustomCat(madeCat);
       await saveCustomScene(scene);
+      // 만드는 사이에 이 화면을 떠났으면 저장만 해 두고 끝냅니다. 지금 보고 있는 화면(게임·퀴즈·사전 등)에서
+      // 끌고 나오지 않습니다. 만든 회화집은 회화집 폴더에 들어 있습니다.
+      if (!aliveRef.current) {
+        toast("만들던 회화집이 준비되었습니다. 회화집에서 볼 수 있습니다");
+        return;
+      }
       // 시트를 닫는 setState 없이 곧바로 이동합니다 (WebView 에서 setState 여러 개 +
       // navigate 를 같이 부르면 화면이 죽는 일이 있었습니다).
       // 시트가 쌓아 둔 히스토리 칸은 새 화면으로 바꿔 끼웁니다 — 읽기 화면에서 한 번 뒤로 = 회화집 목록.
       navigate("/percakapan/" + scene.id, { replace: makeBack.onTop() });
     } catch (e: any) {
-      setCreating(false);
+      // 떠난 화면에는 setState 를 하지 않습니다(아래 안내 토스트는 어느 화면에서든 뜹니다).
+      if (aliveRef.current) setCreating(false);
       const code = (e && e.message) || "";
       // 한도 초과(QUOTA_PERCAKAPAN_MAKE 등): 토스트는 aiProxy 가 이미 띄웁니다. 시트 안에 오늘은 더 못 만든다는 안내를 둡니다.
       // Plus 필요(QUOTA_PLUS_REQUIRED): aiProxy 가 "Plus 보기" 알림을 띄웠으므로 여기서는 아무것도 하지 않습니다.
       if (code === "QUOTA_PLUS_REQUIRED") { /* 겹쳐 띄우지 않음 */ }
-      else if (code.indexOf("QUOTA") === 0) setQuotaHit(true);
+      else if (code.indexOf("QUOTA") === 0) { if (aliveRef.current) setQuotaHit(true); }
       // 공개판은 키 설정이 없으므로 aiErrors 가 사용자용 문장으로 바꿉니다(관리자판은 기존 문구).
       else if (code === "NO_API_KEY" || code === "SESSION_EXPIRED") aiErrorToast(code, "설정에서 Gemini API 키를 넣어 주세요", true);
       else if (code === "INVALID_API_KEY" || code === "NOT_AVAILABLE") aiErrorToast(code, "Gemini API 키가 맞지 않습니다", true);
