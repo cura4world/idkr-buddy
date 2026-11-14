@@ -10,6 +10,7 @@ export const BELANJA: PercakapanScene[] = [
     roles: { A: "손님", B: "채소 상인" },
     voices: { A: "f", B: "m" },
     level: "중",
+    rev: 2,
     lines: [
       { s: "A", id: "Pak, tomatnya sekilo berapa?", ko: "아저씨, 토마토 1킬로에 얼마예요?" },
       { s: "B", id: "Dua puluh ribu, Bu. Masih seger, baru datang tadi pagi.", ko: "2만이요. 오늘 아침에 들어와서 아주 싱싱해요." },
@@ -17,7 +18,7 @@ export const BELANJA: PercakapanScene[] = [
       { s: "B", id: "Belum bisa, Bu. Delapan belas ribu, deh.", ko: "그건 좀 어려워요. 1만 8천에 드릴게요." },
       { s: "A", id: "Ya udah, sekilo. Cabai rawitnya juga seperempat.", ko: "그럼 1킬로 주세요. 작은 고추(짜베 라윗)도 250그램이요." },
       { s: "B", id: "Siap. Ada lagi, Bu?", ko: "네. 더 필요하신 거 있어요?" },
-      { s: "A", id: "Bayamnya seikat berapa?", ko: "바얌(시금치 같은 채소) 한 단에 얼마예요?" },
+      { s: "A", id: "Bayamnya seikat berapa? Seikat juga, ya.", ko: "바얌(시금치 같은 채소) 한 단에 얼마예요? 한 단도 주세요." },
       { s: "B", id: "Lima ribu aja. Semuanya jadi tiga puluh delapan ribu.", ko: "5천이요. 다 해서 3만 8천이에요." },
       { s: "A", id: "Ini lima puluh ribu, ya.", ko: "여기 5만이요." },
       { s: "B", id: "Kembaliannya dua belas ribu. Makasih, Bu!", ko: "거스름돈 1만 2천이요. 감사합니다!" },
