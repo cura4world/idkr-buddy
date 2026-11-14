@@ -11,9 +11,40 @@
 import { ttsPlayer } from "@/lib/tts";
 import { isStoreApp } from "@/lib/platform";
 import { hasNativeTts, isWordLike, speakNative, stopNative } from "@/lib/nativeTts";
+import { quotaNoticeWithin } from "@/lib/aiProxy";
+import { toast } from "sonner";
 
 let speakingText = "";
 let inStop = false;
+let failShownAt = 0;
+
+/**
+ * tts.ts 가 Gemini 음성 만들기에 실패해 "폰 음성으로 대신 읽기"로 넘긴 호출인가.
+ * tts.ts 는 폴백 직전에 상태를 { playing, usedFallback: true } 로 바꾸므로 그것으로 알아봅니다(사용법은 읽기만).
+ */
+function isFallbackFromFailure(): boolean {
+  try {
+    const s = ttsPlayer.getState();
+    return s.state === "playing" && s.usedFallback === true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * 스토어 앱에는 대신 읽어 줄 폰 음성이 없습니다(이 객체가 곧 Gemini 음성). 예전에는 실패한 글 전체를
+ * 낱말 발음 이름으로 한 번 더 요청하고, 그것도 실패하면 아무 안내 없이 끝났습니다(출시 전 점검 C-08).
+ * 다시 요청하지 않고, 재생 상태를 되돌린 뒤 한 번 알립니다. 한도 안내가 방금 떴으면 겹쳐 띄우지 않습니다.
+ */
+function notifyFailed(): void {
+  setTimeout(() => {
+    try { ttsPlayer.stop(); } catch (e) {}
+  }, 0);
+  const now = Date.now();
+  if (now - failShownAt < 4000 || quotaNoticeWithin(4000)) return;
+  failShownAt = now;
+  try { toast("음성을 불러오지 못했습니다. 잠시 뒤 다시 시도하세요"); } catch (e) {}
+}
 
 function speakGemini(t: string): void {
   // ttsPlayer 가 실패 후 폴백으로 같은 글을 다시 넘긴 경우 → 무시 (무한 반복 방지)
@@ -31,6 +62,11 @@ const shim = {
   speak(text: string, langCode?: string): void {
     const t = String(text || "").trim();
     if (!t) return;
+    // 음성 만들기가 실패해 넘어온 호출이면 다시 Gemini 로 보내지 않습니다(C-08)
+    if (isFallbackFromFailure()) {
+      notifyFailed();
+      return;
+    }
     // 2026-11-11 사용자 요청: 인도네시아어 "낱말"만 폰 내장 음성(예전 관리자판 목소리, 누르면 바로).
     // 문장·예문·한국어는 그대로 Gemini 음성. 폰 음성을 못 쓰면(통로 없음·음성 없음) Gemini 로 대신합니다.
     if (langCode !== "ko-KR" && isWordLike(t) && hasNativeTts()) {
