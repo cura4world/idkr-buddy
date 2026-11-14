@@ -3,6 +3,7 @@ import { medaliEngine } from "@/lib/medali";
 import { isStoreApp } from "@/lib/platform";
 import {
   migrateSharedIdsOnce,
+  migrateRenamedHeadwordsOnce,
   makeLegacyWordResolver,
   upgradeLegacyCategoryId,
   upgradeLegacyWordId,
@@ -290,6 +291,10 @@ function sortMyWordbookNewestFirstOnce() {
 // 시드 동기화보다 먼저 돌아야 옛 단어장이 "시드에서 사라진 단어장"으로 지워지지 않습니다.
 try {
   migrateSharedIdsOnce(localStorage, seedData as SeedLike);
+} catch (e) {}
+// 2026-11-14 검수에서 표기를 고친 표제어 19개의 "다시 외울 표시"를 새 ID 로 (한 번만)
+try {
+  migrateRenamedHeadwordsOnce(localStorage);
 } catch (e) {}
 
 // 공개판에 이미 깔린 예시 단어장(미리보기 APK 로 먼저 써 본 기기)을 한 번만 걷어냅니다.
