@@ -31,6 +31,7 @@ export const SEHARI_HARI: PercakapanScene[] = [
     roles: { A: "손님", B: "세탁소 직원" },
     voices: { A: "f", B: "m" },
     level: "중",
+    rev: 2,
     lines: [
       { s: "A", id: "Mas, mau laundry kiloan.", ko: "킬로 단위로 빨래 맡기려고요." },
       { s: "B", id: "Siap, Kak. Saya timbang dulu, ya... empat kilo.", ko: "네. 먼저 무게 잴게요... 4킬로네요." },
@@ -40,7 +41,7 @@ export const SEHARI_HARI: PercakapanScene[] = [
       { s: "B", id: "Lusa sore. Kalau mau kilat, besok, tapi tambah lima ribu sekilo.", ko: "모레 오후요. 급하시면 내일 되는데 1킬로에 5천 추가예요." },
       { s: "A", id: "Yang biasa aja. Tolong yang putih dipisah, ya.", ko: "보통으로 할게요. 흰 옷은 따로 빨아 주세요." },
       { s: "B", id: "Beres. Ada yang luntur nggak?", ko: "알겠어요. 물 빠지는 옷 있어요?" },
-      { s: "A", id: "Kaos merah itu agak luntur.", ko: "저 빨간 티셔츠가 좀 물이 빠져요." },
+      { s: "A", id: "Kaus merah itu agak luntur.", ko: "저 빨간 티셔츠가 좀 물이 빠져요." },
       { s: "B", id: "Oke, saya pisahkan. Ini notanya, Kak.", ko: "네, 따로 할게요. 여기 접수증이요." },
     ],
   },
@@ -94,6 +95,7 @@ export const SEHARI_HARI: PercakapanScene[] = [
     roles: { A: "손님", B: "미용사" },
     voices: { A: "m", B: "f" },
     level: "중",
+    rev: 2,
     lines: [
       { s: "B", id: "Silakan duduk, Mas. Mau dipotong gimana?", ko: "앉으세요. 어떻게 잘라 드릴까요?" },
       { s: "A", id: "Dirapikan aja, Mbak. Jangan terlalu pendek.", ko: "그냥 다듬어 주세요. 너무 짧지 않게요." },
@@ -101,7 +103,7 @@ export const SEHARI_HARI: PercakapanScene[] = [
       { s: "A", id: "Iya, atasnya potong sedikit aja.", ko: "네, 윗머리는 조금만 잘라 주세요." },
       { s: "B", id: "Mau sekalian keramas?", ko: "머리도 감겨 드릴까요?" },
       { s: "A", id: "Boleh. Totalnya berapa?", ko: "네. 다 해서 얼마예요?" },
-      { s: "B", id: "Potong lima puluh ribu, keramas lima belas ribu.", ko: "커트 5만, 샴푸 1만 5천이에요." },
+      { s: "B", id: "Potong lima puluh ribu, keramas lima belas ribu. Jadi enam puluh lima ribu.", ko: "커트 5만, 샴푸 1만 5천이에요. 그럼 6만 5천이에요." },
       { s: "A", id: "Oke. Pakai pomade juga, ya, biar rapi.", ko: "네. 깔끔하게 포마드도 발라 주세요." },
       { s: "B", id: "Siap. Gimana, sudah pas?", ko: "알겠어요. 어떠세요, 괜찮으세요?" },
       { s: "A", id: "Pas banget. Makasih, Mbak.", ko: "딱 좋아요. 고마워요." },
