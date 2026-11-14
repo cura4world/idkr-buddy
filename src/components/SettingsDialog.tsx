@@ -420,7 +420,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     setKoBusyVersion(null);
     setKoProgress("");
     if (got.length > 0) {
-      const extra = missing.length > 0 ? " (" + missing.join("·") + "은 서버에 없음)" : "";
+      const extra = missing.length > 0 ? " (서버에 없음: " + missing.join("·") + ")" : "";
       toast(got.join(" · ") + " 받았습니다" + extra);
     } else if (!hadRealError) {
       toast("서버에 올려둔 성경이 아직 없습니다");
@@ -432,7 +432,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
     clearKoMemoryCache(version);
     setKoMetaState((prev) => ({ ...prev, [version]: null }));
     const slotLabel = BIBLE_VERSIONS.find((v) => v.id === version)?.label || "";
-    toast(slotLabel + "을 비웠습니다");
+    toast("비웠습니다: " + slotLabel);
   };
 
   // 일대일 교재를 성경 서버에 올립니다(같은 주소·키). PC 등 원본 파일이 있는
@@ -485,7 +485,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const handleApplyMedaliId = () => {
     const v = (medaliId || "").trim();
     if (!isValidMedaliId(v)) {
-      toast("한글·영문·숫자 6자 이내로 적어주세요");
+      toast("한글·영문·숫자 6자 이내로 적어 주세요");
       return;
     }
     setMyMedaliId(v);
@@ -1084,8 +1084,8 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
           <div className="pt-3 border-t border-border/60">
             <Label className="font-body text-sm text-gray-900">Medali 아이디</Label>
             <p className="mt-1 text-xs text-muted-foreground font-gothic">
-              같은 아이디를 쓰는 내 기기들의 점수가 하나로 합쳐집니다. 폰·태블릿에 <b>똑같이</b> 적어주세요.
-              대소문자까지 같아야 하니, 아래 이름을 눌러 고르는 편이 안전합니다.
+              같은 아이디를 쓰는 내 기기들의 점수가 하나로 합쳐집니다. 폰·태블릿에 <b>똑같이</b> 적어 주세요.
+              대소문자까지 같아야 하니, 아래 아이디를 눌러 고르는 편이 안전합니다.
             </p>
             {medaliTaken.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
@@ -1152,7 +1152,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             <p className="mt-1 text-xs text-muted-foreground font-gothic">
               개역개정·우리말성경·NIV 파일을 한 번에 여러 개 골라 넣으면 이름으로 역본을
               알아서 판별해 이 기기에 담고, 아래 주소·키가 있으면 서버에도 곧바로 올립니다.
-              다른 기기에서는 "성경받기"만 누르면 됩니다.
+              다른 기기에서는 "성경 받기"만 누르면 됩니다.
             </p>
             <div className="mt-2 space-y-2">
               <Input
@@ -1225,7 +1225,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               onClick={handleKoPullAll}
             >
               <Download className="w-4 h-4 mr-1.5" />
-              성경받기
+              성경 받기
             </Button>
             {koBusy && koProgress ? (
               <p className="mt-1.5 text-xs font-gothic text-muted-foreground">{koProgress}</p>
@@ -1287,7 +1287,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             </div>
             <Button type="button" variant="outline" className="w-full mt-2 whitespace-normal h-auto py-2.5 leading-snug text-xs" onClick={() => setRestoreOpen(true)}>
               <RotateCcw className="w-4 h-4 mr-1.5" />
-              백업 되돌리기 (파일 또는 붙여넣기)
+              백업 불러오기 (파일 또는 붙여넣기)
             </Button>
             {isAdminUI ? (
             <>
@@ -1362,7 +1362,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
               </AlertDialogTitle>
               <AlertDialogDescription className="font-gothic text-xs leading-relaxed">
                 미리 받아둔 음성 파일이 지워집니다.
-                다음에 “전체 듣기”를 누르면 새로 받아옵니다.
+                다음에 "전체 듣기"를 누르면 새로 받아옵니다.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
