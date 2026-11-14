@@ -1,6 +1,7 @@
 # 06. 스토어 등록정보 초안 (한국어 기본 + 영어)
 
-작성: 2026-11-10 · 고침: 2026-11-14(출시 전 점검 P-01·P-02 — 무료와 Plus 를 나눠 적음, 게임 수·단추 이름·영어 앱 이름 바로잡음)
+작성: 2026-11-10 · 고침: 2026-11-14(출시 전 점검 P-01·P-02 — 무료와 Plus 를 나눠 적음, 게임 수·단추 이름·영어 앱 이름 바로잡음.
+같은 날 3차 — 앱에서 바꾼 낱말에 맞춤: 빠른 짝 맞추기, 대화 86개, 3,005단어, 한 달 60편, 조사 띄어쓰기)
 Play Console → 스토어 등록정보에 그대로 붙여 넣는 용도.
 
 **적을 때 지킬 것**
@@ -22,7 +23,7 @@ Kata kata: 인도네시아어 사전·단어장
 
 **자세한 설명** (최대 4,000자)
 ```
-Kata kata 는 인도네시아어를 배우는 한국어 사용자를 위한 사전·단어장 앱입니다.
+Kata kata는 인도네시아어를 배우는 한국어 사용자를 위한 사전·단어장 앱입니다.
 Google 계정으로 로그인해 사용합니다.
 
 [무료로 쓸 수 있는 것]
@@ -42,28 +43,28 @@ Google 계정으로 로그인해 사용합니다.
 ■ 오늘의 단어 퍼즐
 하루 한 문제, 글자를 맞혀 단어를 찾는 게임.
 
-[Kata kata Plus 에서 열리는 것]
+[Kata kata Plus에서 열리는 것]
 
-■ 기본 단어장 34권 (3,000단어)
+■ 기본 단어장 34권 (3,005단어)
 주제별 단어를 그림과 함께 카드와 퀴즈로 외웁니다.
 
 ■ 단어 게임 6가지
-빠른 짝짓기, 스피드 O/X, 듣고 고르기, 문장 조립, 철자 채우기, 단어 받기.
+빠른 짝 맞추기, 스피드 O/X, 듣고 고르기, 문장 조립, 철자 채우기, 단어 받기.
 
-■ 인도네시아 음성으로 이야기 듣기
-하루 5편까지 새 이야기를 불러오고, 본문을 소리로 듣습니다.
+■ 인도네시아어 음성으로 이야기 듣기
+새 이야기를 하루 5편, 한 달 60편까지 불러오고, 본문을 소리로 듣습니다.
 
-■ 회화 공부와 만들기
-86개 상황의 대화를 읽고 듣고, 원하는 상황의 대화를 새로 만듭니다.
+■ 회화집 공부와 대화 만들기
+대화 86개를 읽고 듣고, 원하는 상황의 대화를 새로 만듭니다.
 
 ■ 인도네시아 이해 · 지도
 개관·종족·종교·역사·생활 정보와, 섬과 도시마다 읽을거리가 있는 지도.
 
-Plus 는 월간·연간 구독이며 Google Play 에서 결제됩니다. 해지하기 전까지 자동으로 갱신되고, Google Play 에서 언제든 해지할 수 있습니다. 하루·한 달에 쓸 수 있는 횟수에는 상한이 있습니다.
+Plus는 월간·연간 구독이며 Google Play에서 결제됩니다. 해지하기 전까지 자동으로 갱신되고, Google Play에서 언제든 해지할 수 있습니다. 하루·한 달에 쓸 수 있는 횟수에는 상한이 있습니다.
 
-단어장과 학습 기록은 이 폰에 저장됩니다. 폰을 바꿀 때는 내 정보에서 백업 파일을 만들어 옮기세요.
+단어장과 공부 기록은 이 폰에 저장됩니다. 폰을 바꿀 때는 내 정보에서 백업 파일을 만들어 옮기세요.
 
-일부 풀이와 이야기, 회화는 AI(Google Gemini)가 만들어 틀린 부분이 있을 수 있습니다. 이상한 결과는 "풀이가 이상합니다"로 알려 주세요. 읽기 음성은 AI 가 만든 인도네시아어 음성입니다.
+일부 풀이와 이야기, 대화는 AI(Google Gemini)가 만들어 틀린 부분이 있을 수 있습니다. 이상한 결과는 "풀이가 이상합니다"로 알려 주세요. 읽기 음성은 AI가 만든 인도네시아어 음성입니다.
 
 문의: support@naruve.app
 ```
@@ -96,10 +97,10 @@ FREE
 • Daily word puzzle — one puzzle a day.
 
 KATA KATA PLUS (subscription)
-• 34 built-in wordbooks (3,000 words) with pictures, flashcards and quizzes.
+• 34 built-in wordbooks (3,005 words) with pictures, flashcards and quizzes.
 • 6 word games.
-• Listen to stories in an Indonesian voice; load up to 5 new stories a day.
-• Conversations — read and listen to dialogues for 86 situations, and create your own.
+• Listen to stories in an Indonesian voice; load up to 5 new stories a day and 60 a month.
+• Conversations — read and listen to 86 dialogues, and create your own.
 • Understanding Indonesia — overview, peoples, religions, history, tips, and a map with readings for islands and cities.
 
 Plus is a monthly or yearly subscription billed through Google Play. It renews automatically until you cancel; cancel anytime in Google Play. Daily and monthly usage limits apply.
