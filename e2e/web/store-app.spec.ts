@@ -96,6 +96,93 @@ test("세션 등급 special — 신앙·뉴스가 보이고 설교문은 없음"
   await expectHomeMenu(page, HOME_EXPECTED.special);
 });
 
+// ── 계정 삭제 뒤 "이 폰의 단어장과 학습 기록도 지울까요?" (2026-11-14, D-10) ─────────────
+// 서버는 끊겨 있으므로 계정 삭제·로그아웃 응답만 가짜로 돌려줍니다.
+const WIPE_TITLE = "이 폰에 있는 단어장과 학습 기록도 지울까요?";
+
+async function mockAccountServer(page: Page): Promise<void> {
+  const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*" };
+  await page.route("**/account/delete", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", headers: cors, body: JSON.stringify({ ok: true, hadSubscription: false }) }),
+  );
+  await page.route("**/auth/signout", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", headers: cors, body: JSON.stringify({ ok: true }) }),
+  );
+}
+
+// 이 폰에 쌓인 것처럼 넣어 둡니다(화면이 열린 뒤에 넣어, 새로 고쳐도 다시 들어가지 않게)
+async function putLocalData(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const words = JSON.parse(window.localStorage.getItem("kata-words") || "[]");
+    words.unshift({ id: "mine-e2e", word: "kata-e2e", meaning: "시험 낱말", categoryId: "my-wordbook" });
+    window.localStorage.setItem("kata-words", JSON.stringify(words));
+    window.localStorage.setItem("dict-search-history", JSON.stringify(["makan"]));
+    window.localStorage.setItem("phrase-saved", JSON.stringify([{ id: "p1" }]));
+    window.localStorage.setItem("tts-voice", "e2e-voice");
+    window.localStorage.setItem("geminiApiKey", "e2e-not-a-real-key");
+  });
+}
+
+async function readLocalData(page: Page) {
+  return page.evaluate(() => {
+    const words = JSON.parse(window.localStorage.getItem("kata-words") || "[]") as { id?: string }[];
+    return {
+      mine: words.some((w) => w && w.id === "mine-e2e"),
+      history: window.localStorage.getItem("dict-search-history"),
+      phrases: window.localStorage.getItem("phrase-saved"),
+      voice: window.localStorage.getItem("tts-voice"),
+      key: window.localStorage.getItem("geminiApiKey"),
+    };
+  });
+}
+
+async function deleteAccountFromMyInfo(page: Page): Promise<void> {
+  await asStoreApp(page, { tier: "free", until: 0 });
+  await mockAccountServer(page);
+  await openApp(page, "me");
+  await putLocalData(page);
+  await page.getByRole("button", { name: "계정 삭제" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "계정 삭제" }).click();
+  await expect(page.getByRole("alertdialog").getByText(WIPE_TITLE)).toBeVisible();
+}
+
+test("계정 삭제 뒤 — 단어장도 지울지 묻고, 기본은 남겨두기", async ({ page }) => {
+  await deleteAccountFromMyInfo(page);
+  await page.getByRole("alertdialog").getByRole("button", { name: "남겨두기" }).click();
+  await expect(page.getByText(WIPE_TITLE)).toHaveCount(0);
+  const d = await readLocalData(page);
+  expect(d.mine, "직접 넣은 단어가 남아 있음").toBe(true);
+  expect(d.history).not.toBeNull();
+  expect(d.phrases).not.toBeNull();
+});
+
+test("계정 삭제 뒤 — 모두 지우기: 단어장·기록은 지우고 설정·키는 남김", async ({ page }) => {
+  await deleteAccountFromMyInfo(page);
+  await Promise.all([
+    page.waitForEvent("load"),
+    page.getByRole("alertdialog").getByRole("button", { name: "모두 지우기" }).click(),
+  ]);
+  await page.locator("#root > *").first().waitFor({ state: "attached" });
+  const d = await readLocalData(page);
+  expect(d.mine, "직접 넣은 단어가 지워짐").toBe(false);
+  expect(d.history).toBeNull();
+  expect(d.phrases).toBeNull();
+  expect(d.voice, "목소리 설정은 그대로").toBe("e2e-voice");
+  expect(d.key, "키는 그대로").toBe("e2e-not-a-real-key");
+});
+
+test("로그아웃 — 지울지 묻지 않고 남는다고만 알림", async ({ page }) => {
+  await asStoreApp(page, { tier: "free", until: 0 });
+  await mockAccountServer(page);
+  await openApp(page, "me");
+  await putLocalData(page);
+  await page.getByRole("button", { name: "로그아웃" }).click();
+  await expect(page.getByText("로그아웃했습니다. 이 폰의 단어장과 기록은 그대로 남습니다")).toBeVisible();
+  await expect(page.getByText(WIPE_TITLE)).toHaveCount(0);
+  const d = await readLocalData(page);
+  expect(d.mine).toBe(true);
+});
+
 test("실제 스토어 앱 경로 — Play 가격을 못 받으면 고정 금액을 보이지 않음", async ({ page }) => {
   // CLAUDE.md: 화면의 금액은 Play 값만. 대체값(plusCopy FALLBACK_*)은 미리보기 빌드에서만 보입니다.
   await asStoreApp(page, { tier: "free", until: 0 });
