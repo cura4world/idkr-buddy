@@ -8,6 +8,10 @@ import {
   upgradeLegacyCategoryId,
   LEGACY_SHARED_CATEGORY_IDS,
   LEGACY_WORD_RENAMES,
+  HEADWORD_RENAMES_V3,
+  SHARED_ID_RENAME_KEY,
+  migrateRenamedHeadwordsOnce,
+  upgradeRenamedWordId,
   SHARED_ID_MIGRATION_KEY,
   type KeyValueStore,
   type SeedLike,
@@ -220,5 +224,49 @@ describe("이전 표가 실제 CSV 와 맞는다", () => {
       expect(heads.has(newW), newW).toBe(true);
       expect(heads.has(oldW), oldW).toBe(false);
     }
+  });
+
+  it("2026-11-14 에 표기를 고친 19개는 그 단어장 파일에 새 글자로만 있다", () => {
+    expect(HEADWORD_RENAMES_V3).toHaveLength(19);
+    for (const [cat, oldW, newW] of HEADWORD_RENAMES_V3) {
+      const file = files.find((f) => idOf(f) === cat);
+      expect(file, cat).toBeTruthy();
+      const heads = fs.readFileSync(path.join(dir, file as string), "utf-8").split("\n").map((l) => l.split(",")[0]);
+      expect(heads.indexOf(newW) >= 0, newW).toBe(true);
+      expect(heads.indexOf(oldW) >= 0, oldW).toBe(false);
+      expect(LEGACY_WORD_RENAMES[oldW]).toBe(newW);
+    }
+  });
+});
+
+describe("표기를 고친 표제어의 다시 외울 표시 옮기기 (2026-11-14)", () => {
+  const OLD = "shared_shared_28_동물_orangutan";
+  const NEW = "shared_shared_28_동물_orang utan";
+
+  it("옛 ID 의 표시를 새 ID 로 옮기고, 다른 표시는 그대로 둔다", () => {
+    const store = fakeStore({ "kata-saved": JSON.stringify(["mine-1", OLD, "shared_shared_28_동물_kucing"]) });
+    expect(migrateRenamedHeadwordsOnce(store)).toBe(1);
+    expect(JSON.parse(store.data["kata-saved"])).toEqual(["mine-1", NEW, "shared_shared_28_동물_kucing"]);
+    expect(store.data[SHARED_ID_RENAME_KEY]).toBe("1");
+  });
+
+  it("한 번만 돈다. 옛것과 새것이 함께 있으면 하나만 남긴다", () => {
+    const store = fakeStore({ "kata-saved": JSON.stringify([NEW, OLD]) });
+    expect(migrateRenamedHeadwordsOnce(store)).toBe(1);
+    expect(JSON.parse(store.data["kata-saved"])).toEqual([NEW]);
+    store.data["kata-saved"] = JSON.stringify([OLD]);
+    expect(migrateRenamedHeadwordsOnce(store)).toBe(0);
+    expect(JSON.parse(store.data["kata-saved"])).toEqual([OLD]);
+  });
+
+  it("처음 설치한 기기에서는 표시만 남긴다. 예전 백업의 ID 도 새 ID 로 읽는다", () => {
+    const store = fakeStore();
+    expect(migrateRenamedHeadwordsOnce(store)).toBe(0);
+    expect(store.data["kata-saved"]).toBeUndefined();
+    expect(store.data[SHARED_ID_RENAME_KEY]).toBe("1");
+    expect(upgradeRenamedWordId(OLD)).toBe(NEW);
+    expect(upgradeRenamedWordId("mine-1")).toBe("mine-1");
+    // 지금 번호 체계의 ID 는 번호 이전 함수를 거쳐도 표기만 바뀝니다
+    expect(upgradeLegacyWordId(OLD, makeLegacyWordResolver(null))).toBe(NEW);
   });
 });
