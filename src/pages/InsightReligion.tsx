@@ -304,7 +304,8 @@ const InsightReligion = () => {
       </div>
 
       <p className="mt-4 text-[0.6875rem] font-gothic text-muted-foreground px-1">
-        ※ 비율은 2023~2024년 인도네시아 종교부 통계 기준입니다.
+        ※ 비율은 2024년 6월 말 기준 내무부 주민등록 통계(인도네시아 종교부 공개 자료 「Jumlah Penduduk
+        Menurut Agama」)입니다.
       </p>
     </div>
   );
