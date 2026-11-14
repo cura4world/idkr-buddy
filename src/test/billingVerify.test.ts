@@ -285,6 +285,54 @@ describe("가격·체험 표시는 Play 값만", () => {
     expect(p.trialAny).toBe("7일");
   });
 
+  // 2026-11-14 Play Console 에 실제로 만든 값: 기본 요금제 monthly(P1M)·yearly(P1Y), 체험 제안 trial-7d-monthly·trial-7d-yearly.
+  // 체험 자격이 있는 계정에는 Play 가 요금제마다 "체험 제안"과 "제안 없는 기본 요금제" 두 줄을 함께 줍니다(순서는 정해져 있지 않음).
+  it("콘솔 실제 값: 요금제마다 체험 제안을 고르고, 구매에는 그 제안의 토큰을 쓴다", async () => {
+    installBridge({
+      query: () => emit({
+        type: "products",
+        products: [
+          { productId: "plus", basePlanId: "monthly", offerId: "", offerToken: "m-base", formattedPrice: "₩3,900", billingPeriod: "P1M", freeTrialPeriod: "" },
+          { productId: "plus", basePlanId: "monthly", offerId: "trial-7d-monthly", offerToken: "m-trial", formattedPrice: "₩3,900", billingPeriod: "P1M", freeTrialPeriod: "P7D" },
+          { productId: "plus", basePlanId: "yearly", offerId: "trial-7d-yearly", offerToken: "y-trial", formattedPrice: "₩34,800", billingPeriod: "P1Y", freeTrialPeriod: "P7D" },
+          { productId: "plus", basePlanId: "yearly", offerId: "", offerToken: "y-base", formattedPrice: "₩34,800", billingPeriod: "P1Y", freeTrialPeriod: "" },
+        ],
+      }),
+    });
+    const po = await loadPricing();
+    po.loadOffers();
+    await vi.advanceTimersByTimeAsync(0);
+    const p = po.getPlusPricing();
+    expect(p.state).toBe("ready");
+    expect(p.monthlyPrice).toBe("3,900원");
+    expect(p.yearlyPrice).toBe("34,800원");
+    expect(p.yearlyPerMonth).toBe("2,900원");
+    expect(p.trialMonthly).toBe("7일");
+    expect(p.trialYearly).toBe("7일");
+    expect(p.monthlyOffer && p.monthlyOffer.offerToken).toBe("m-trial");
+    expect(p.yearlyOffer && p.yearlyOffer.offerToken).toBe("y-trial");
+  });
+
+  // 체험을 이미 쓴 계정에는 Play 가 체험 제안을 주지 않습니다(자격: 이 구독을 이용한 적 없음).
+  it("콘솔 실제 값: 체험 제안이 오지 않으면 기본 요금제 토큰으로, 체험 문구 없이", async () => {
+    installBridge({
+      query: () => emit({
+        type: "products",
+        products: [
+          { productId: "plus", basePlanId: "monthly", offerId: "", offerToken: "m-base", formattedPrice: "₩3,900", billingPeriod: "P1M", freeTrialPeriod: "" },
+          { productId: "plus", basePlanId: "yearly", offerId: "", offerToken: "y-base", formattedPrice: "₩34,800", billingPeriod: "P1Y", freeTrialPeriod: "" },
+        ],
+      }),
+    });
+    const po = await loadPricing();
+    po.loadOffers();
+    await vi.advanceTimersByTimeAsync(0);
+    const p = po.getPlusPricing();
+    expect(p.trialAny).toBe("");
+    expect(p.monthlyOffer && p.monthlyOffer.offerToken).toBe("m-base");
+    expect(p.yearlyOffer && p.yearlyOffer.offerToken).toBe("y-base");
+  });
+
   it("Play 연 가격이 다르면 월 환산도 그 값으로 계산된다 / 체험 제안이 없으면 체험 문구 없음", async () => {
     installBridge({
       query: () => emit({
