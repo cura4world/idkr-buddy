@@ -8,6 +8,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
 import { goBackOr } from "@/lib/nav";
+import { usePlan } from "@/lib/plan";
 import { MAP_CITIES, MAP_CULTURE, MAP_FAITH, MAP_SPOTS } from "@/lib/mapData";
 import { MAP_PHOTOS, MAP_REGION_LABEL, MAP_REGION_ORDER, MapPhoto, MapRegion, getPlacePhotos } from "@/lib/mapPhotos";
 
@@ -39,18 +40,22 @@ interface Group {
   places: { id: string; ko: string; photos: MapPhoto[] }[];
 }
 
-function buildGroups(): Group[] {
+function buildGroups(staff: boolean): Group[] {
   const ko: Record<string, string> = {};
+  // 선교 역사 핀(staff)은 지도에서 관리자·Special Member 에게만 보입니다(IndoMap.tsx pinShown).
+  // 지도에서 볼 수 없는 사진의 출처가 나오지 않게 여기서도 같은 기준으로 가립니다(2026-11-14 출시 전 점검).
+  const hidden: Record<string, boolean> = {};
   [MAP_CITIES, MAP_SPOTS, MAP_FAITH, MAP_CULTURE].forEach((list) =>
     list.forEach((p) => {
       ko[p.id] = p.ko;
+      if (p.staff && !staff) hidden[p.id] = true;
     })
   );
   return MAP_REGION_ORDER.map((region) => ({
     region,
     places: Object.keys(MAP_PHOTOS)
       // 지도 시트에 실제로 보이는 사진만 출처에 적습니다(기록 사진 제외, 지점마다 최대 2장).
-      .filter((id) => MAP_PHOTOS[id].region === region && getPlacePhotos(id).length > 0)
+      .filter((id) => !hidden[id] && MAP_PHOTOS[id].region === region && getPlacePhotos(id).length > 0)
       .map((id) => ({ id, ko: ko[id] || id, photos: getPlacePhotos(id) }))
       .sort((a, b) => a.ko.localeCompare(b.ko, "ko")),
   })).filter((g) => g.places.length > 0);
@@ -63,7 +68,8 @@ const CARD_STYLE = { boxShadow: "0 1px 3px rgba(16,40,50,0.06)" };
 const PhotoCredits = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const groups = buildGroups();
+  const { staff } = usePlan();
+  const groups = buildGroups(staff);
   const total = groups.reduce((n, g) => n + g.places.reduce((m, p) => m + p.photos.length, 0), 0);
 
   return (
@@ -130,7 +136,7 @@ const PhotoCredits = () => {
                           ph.license
                         )}
                         {" · "}
-                        <a href={ph.page} className="text-[#2C6D63] underline underline-offset-2">
+                        <a href={ph.page} className="text-[#2C6D63] underline underline-offset-2 whitespace-nowrap">
                           원본
                         </a>
                       </p>
