@@ -522,3 +522,20 @@ test/ — backupCreations.test.ts
 | B-04 | 서버 테스트 이름에 `S3` 가 든 것 | 2개 통과(확인 실패해도 권한 먼저 저장 / 통신 오류에도 저장) | pass 2 · fail 0 — **맞음** |
 
 10건 모두 기대와 같았습니다. 이 확인은 **코드와 문서에 고친 것이 들어 있는지**를 본 것이고, 폰에서의 실제 동작은 `user-checklist.md` 의 (가)·(나)가 확인합니다.
+
+## 최종 검증 (마지막 코드 변경 뒤에 실행)
+
+| 무엇 | 결과 |
+|---|---|
+| `npm run build` | 통과 |
+| `npx vitest run` | 18개 파일 131개 통과 |
+| `node --test workers/kata-public/test.mjs` | 34개 통과 |
+| `npx tsc --noEmit -p tsconfig.app.json` | 오류 0 |
+| `node scripts/csv-to-seed.js` · `node scripts/check-wordlist.js` | 41 categories, 3555 words · 중복 0건, 형식오류 0건 |
+| 미리보기 빌드(Actions) | 실행 #65 `success`, 산출물 `kata-kata-preview-apk`(0.9.65-preview) |
+| 스토어 빌드(Actions, 1부 push 때) | 실행 #8 `success` — 네이티브 변경이 컴파일됨 |
+| 지도 사진 워크플로 | 돌지 않음(마지막 실행은 2차 때 취소한 #6) |
+| 게시된 정책 페이지 3개 | 200, 정본과 바이트 단위로 같음 |
+| 미리보기 개발 서버(360px) | 홈·구독 화면·게임·회화집·주제 목록·내 정보에 바뀐 글자가 나오고 콘솔 오류 없음 |
+
+폰(실기기)에서는 아무것도 확인하지 못했습니다. `user-checklist.md` 의 (가)·(나)가 그 확인입니다.
