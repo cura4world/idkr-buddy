@@ -104,7 +104,7 @@ export default function CSVImportDialog({ open, onOpenChange, onImported, catego
           {fileName || "파일 고르기"}
         </span>
         <span className="font-gothic text-[0.75rem]" style={{ color: FORM_C.sub }}>
-          형식: 단어, 뜻, 예문, 예문 뜻, 카테고리(선택)
+          형식: 단어, 뜻, 예문, 예문 뜻, 단어장 이름(선택)
         </span>
       </button>
       {/* 2026-11-13 사용자 요청: 단어 추가·단어장 만들기 시트와 시트 윗끝이 비슷한 높이에 오도록, 붙여 넣는 칸을 9줄로 키움
