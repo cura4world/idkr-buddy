@@ -284,6 +284,17 @@ const Story = () => {
     setPopupSaved(hasWordInCategory(saveTargetId, popupWord));
   }, [popupWord, saveTargetId]);
 
+  // 이 화면이 아직 떠 있는가. 이야기를 만드는 10~60초 사이에 다른 화면으로 갔으면,
+  // 다 만들어진 뒤 저장만 하고 카드를 열지 않습니다 — openCard 가 지금 있는 다른 화면에 히스토리 칸을
+  // 하나 쌓아 뒤로가기가 한 번 헛돌았습니다(출시 전 점검 C-10. 게임 화면들의 aliveRef 와 같은 방식).
+  const aliveRef = useRef(true);
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
+
   // 카드 화면을 열었는지 (히스토리를 한 칸 쌓았는지)
   const cardStateRef = useRef(false);
 
@@ -406,6 +417,12 @@ const Story = () => {
       const recent = stories.slice(0, 10).map((s) => s.titleKo || s.title);
       const data = await generateStory(difficulty, recent);
       const rec = await saveStory(data);
+      // 만드는 사이에 이 화면을 떠났으면 저장만 해 두고 끝냅니다(카드 열기·히스토리 쌓기 없음).
+      // 이야기는 저장되어 있어 다음에 이야기 화면을 열면 목록 맨 위에 있습니다.
+      if (!aliveRef.current) {
+        toast("불러오던 이야기가 준비되었습니다. 이야기에서 볼 수 있습니다");
+        return;
+      }
       setStories((prev) => [rec, ...prev]);
       openCard(rec);
     } catch (e: any) {
@@ -423,7 +440,7 @@ const Story = () => {
       }
       else toast("이야기를 불러오지 못했습니다. 다시 시도하세요");
     } finally {
-      setGenerating(false);
+      if (aliveRef.current) setGenerating(false);
     }
   };
 
@@ -808,8 +825,10 @@ const Story = () => {
             </span>
             {/* 2026-11-12: 하/중/상을 제목 오른쪽으로 옮기면서 안내 문구를 짧게 바꿔 한 줄로 다시 넣었습니다.
                 S21(360px) 폭에서 한 줄에 들어가도록 글자 10px·자간 살짝 좁힘, 넘치면 줄바꿈 대신 말줄임 */}
+            {/* 제목은 자르지 않습니다(U-05): 글자를 키워 자리가 모자라면 낱말 사이에서 두 줄로 꺾입니다("오늘의 / 이야기").
+                글자 크기는 그대로이고, 말줄임은 아래 안내 문구에만 둡니다 */}
             <span className="flex-1 min-w-0">
-              <span className="block truncate text-[0.96875rem] font-semibold" style={{ color: C.txt }}>오늘의 이야기</span>
+              <span className="block break-keep text-[0.96875rem] font-semibold" style={{ color: C.txt }}>오늘의 이야기</span>
               <span className="block mt-[4px] truncate font-gothic text-[0.65625rem] tracking-[-0.02em]" style={{ color: C.sub }}>
                 난이도를 고르고 불러오세요
               </span>
