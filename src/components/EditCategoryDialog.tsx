@@ -41,7 +41,7 @@ export default function EditCategoryDialog({ open, onOpenChange, onUpdated, cate
     <FormSheet
       open={open}
       onClose={() => onOpenChange(false)}
-      title="이름 변경"
+      title="이름 바꾸기"
       desc="이름과 아이콘을 바꾸세요"
       icon={<Pencil size={20} strokeWidth={1.8} />}
       tileBg="#E2E6F3"
