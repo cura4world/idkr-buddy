@@ -56,7 +56,7 @@ export const KANTOR: PercakapanScene[] = [
       { s: "A", id: "Mbak, KTP saya hilang. Mau bikin yang baru.", ko: "제 KTP(신분증)를 잃어버려서 새로 만들려고요." },
       { s: "B", id: "Sudah ada surat kehilangan dari polisi, Pak?", ko: "경찰서 분실 신고 확인서 있으세요?" },
       { s: "A", id: "Sudah, ini suratnya.", ko: "네, 여기 있어요." },
-      { s: "B", id: "Bawa kartu keluarga juga?", ko: "가족관계등록부(KK)도 가져오셨어요?" },
+      { s: "B", id: "Bawa kartu keluarga juga?", ko: "가족 카드(KK)도 가져오셨어요?" },
       { s: "A", id: "Bawa, yang asli dan fotokopinya.", ko: "원본이랑 사본 다 가져왔어요." },
       { s: "B", id: "Baik. Datanya sudah ada, jadi tinggal dicetak ulang.", ko: "네. 정보가 이미 등록돼 있어서 다시 인쇄만 하면 돼요." },
       { s: "A", id: "Bisa jadi hari ini?", ko: "오늘 나와요?" },
