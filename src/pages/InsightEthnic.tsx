@@ -1,6 +1,7 @@
 // src/pages/InsightEthnic.tsx
 // 인도네시아 종족 — 고정 콘텐츠 (300개 이상 종족, 주요 종족의 분포와 특징)
-// 비율은 2010년 인구센서스(BPS) 기준이며, 인도네시아 종족 통계에서 가장 널리 인용되는 수치입니다.
+// 비율은 2010년 인구조사(BPS) 표 2 의 값을 소수 첫째 자리로 적은 것입니다
+// (자바 40.22 · 말레이 2.27 · 다약 1.27 은 2026-11-14 에 표 값으로 맞춤 — 예전 값 40.1 · 3.7 · 1.4 는 연구자 재분류 값).
 
 import { useState, useEffect, useRef, ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -43,7 +44,7 @@ const ETHNICS: Ethnic[] = [
   {
     name: "자바족",
     id: "Suku Jawa",
-    pct: "약 40.1%",
+    pct: "약 40.2%",
     bar: 40,
     color: "bg-teal-600",
     region: "중부·동부 자바",
@@ -63,18 +64,6 @@ const ETHNICS: Ethnic[] = [
     desc: [
       "약 4천만 명으로 두 번째로 큰 종족입니다. 서부 자바의 고원 지대에 살며, 반둥이 문화 중심지입니다.",
       "거의 전부가 독실한 수니 무슬림입니다. 신선한 채소 쌈(lalapan) 중심의 순다 요리로 잘 알려져 있습니다.",
-    ],
-  },
-  {
-    name: "말레이족",
-    id: "Suku Melayu",
-    pct: "약 3.7%",
-    bar: 4,
-    color: "bg-sky-500",
-    region: "수마트라 동부 해안·리아우",
-    desc: [
-      "인도네시아어(바하사 인도네시아)의 뿌리가 된 말레이어를 쓰는 종족입니다. 수마트라 동해안과 리아우 제도에 흩어져 살며, 말레이시아·싱가포르의 말레이인과 같은 뿌리입니다.",
-      "이슬람과 항구 무역 문화가 정체성의 핵심입니다.",
     ],
   },
   {
@@ -139,6 +128,19 @@ const ETHNICS: Ethnic[] = [
     ],
   },
   {
+    // 2010년 인구조사 표 값(2.27%)으로 고치면서 크기 순서에 맞게 부기스족 아래로 옮겼습니다
+    name: "말레이족",
+    id: "Suku Melayu",
+    pct: "약 2.3%",
+    bar: 2,
+    color: "bg-sky-500",
+    region: "수마트라 동부 해안·리아우",
+    desc: [
+      "인도네시아어(바하사 인도네시아)의 뿌리가 된 말레이어를 쓰는 종족입니다. 수마트라 동해안과 리아우 제도에 흩어져 살며, 말레이시아·싱가포르의 말레이인과 같은 뿌리입니다.",
+      "이슬람과 항구 무역 문화가 정체성의 핵심입니다.",
+    ],
+  },
+  {
     name: "발리족",
     id: "Suku Bali",
     pct: "약 1.7%",
@@ -153,8 +155,8 @@ const ETHNICS: Ethnic[] = [
   {
     name: "다약족",
     id: "Suku Dayak",
-    pct: "약 1.4%",
-    bar: 2,
+    pct: "약 1.3%",
+    bar: 1,
     color: "bg-lime-600",
     region: "칼리만탄 (보르네오 내륙)",
     desc: [
@@ -278,8 +280,7 @@ const InsightEthnic = () => {
       </div>
 
       <p className="mt-4 text-[0.6875rem] font-gothic text-muted-foreground px-1">
-        ※ 비율은 2010년 인도네시아 통계청(BPS) 인구센서스 기준이며, 종족 통계에서 가장 널리
-        인용되는 수치입니다.
+        ※ 2010년 인구조사(BPS) 기준
       </p>
     </div>
   );
