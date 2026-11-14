@@ -36,6 +36,7 @@ import { getEdition, EDITION_LABEL } from "@/lib/access";
 import { getMemberProfile } from "@/lib/member";
 import { getFontStep, getStepCount, stepFont } from "@/lib/fontScale";
 import { getTtsVoice, setTtsVoice, TTS_VOICES, TtsVoiceId, clearTtsCache } from "@/lib/tts";
+import { clearPercakapanAudioCache } from "@/lib/percakapanAudio";
 import { getMyMedaliId, setMyMedaliId, isValidMedaliId, loadPeerCache, syncMedali } from "@/lib/medaliSync";
 import { medaliEngine, loadMedaliCache, listMyRawLogs, loadOthers, mergeDay, dateKey, DailyLog } from "@/lib/medali";
 
@@ -419,6 +420,8 @@ const MyInfo = () => {
 
   const handleClearTts = async () => {
     await clearTtsCache();
+    // 회화 음성은 따로 저장돼 있어 함께 비웁니다 — 예전에는 사용자가 비울 길이 없었습니다(출시 전 점검 C-11)
+    await clearPercakapanAudioCache();
     toast("저장된 읽기 음성을 비웠습니다");
   };
 
@@ -426,6 +429,8 @@ const MyInfo = () => {
     if (busy) return;
     setBusy(true);
     await signOut();
+    // 로그아웃은 이 폰의 단어장·기록을 지우지 않습니다. 그 사실을 알립니다(출시 전 점검 D-10)
+    toast("로그아웃했습니다. 이 폰의 단어장과 기록은 그대로 남습니다", { duration: 5000 });
     setBusy(false);
   };
 
@@ -441,7 +446,16 @@ const MyInfo = () => {
         { duration: 8000 },
       );
     } catch (e) {
-      toast("지우지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요");
+      // 실패 이유별로 안내합니다 — 세션이 끝난 경우에는 인터넷이 아니라 다시 로그인이 필요합니다(출시 전 점검 C-12)
+      const code = e instanceof Error ? e.message : "";
+      toast(
+        code === "SESSION_EXPIRED" || code === "NO_SESSION"
+          ? "로그인이 끝나 지우지 못했습니다. 다시 로그인한 뒤 눌러 주세요"
+          : code === "NETWORK_FAILED"
+            ? "지우지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요"
+            : "지우지 못했습니다. 잠시 뒤 다시 눌러 주세요",
+        { duration: 6000 },
+      );
       setBusy(false);
     }
   };
@@ -739,7 +753,7 @@ const MyInfo = () => {
                 {medal.week}
                 <span className="font-gothic" style={{ fontSize: rem(11), fontWeight: 500, color: MUTED }}> 점</span>
               </p>
-              <p className="font-gothic" style={{ margin: "4px 0 0", fontSize: rem(10.5), lineHeight: 1.5, letterSpacing: "-0.02em", color: "#8A6A5A", whiteSpace: "nowrap" }}>
+              <p className="font-gothic" style={{ margin: "4px 0 0", fontSize: rem(10.5), lineHeight: 1.5, letterSpacing: "-0.02em", color: "#8A6A5A", wordBreak: "keep-all" }}>
                 학습을 통해 쌓이는 이번 주 점수,<br />매주 월요일 갱신
               </p>
             </button>
@@ -759,7 +773,7 @@ const MyInfo = () => {
                 {medal.stars}
                 <span className="font-gothic" style={{ fontSize: rem(11), fontWeight: 500, color: MUTED }}> 단어</span>
               </p>
-              <p className="font-gothic" style={{ margin: "4px 0 0", fontSize: rem(10.5), lineHeight: 1.5, letterSpacing: "-0.02em", color: "#8A7A55", whiteSpace: "nowrap" }}>
+              <p className="font-gothic" style={{ margin: "4px 0 0", fontSize: rem(10.5), lineHeight: 1.5, letterSpacing: "-0.02em", color: "#8A7A55", wordBreak: "keep-all" }}>
                 여러 번 맞혀 확실히 외운<br />단어 수, 계속 누적
               </p>
             </button>
@@ -968,7 +982,12 @@ const MyInfo = () => {
           <AlertDialogHeader>
             <AlertDialogTitle className="font-body text-[0.9375rem] text-gray-900">저장된 읽기 음성을 비우시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription className="font-gothic text-[0.6875rem] leading-relaxed">
-              이 폰에 받아 둔 음성 파일이 지워집니다. 다음에 들으면 새로 받아 옵니다.
+              {/* 등급에 맞게 알립니다 — 무료는 Plus 음성을 다시 받을 수 없고, Plus 는 한도를 다시 씁니다(출시 전 점검 D-13) */}
+              {!publicLike
+                ? "이 폰에 받아 둔 음성 파일이 지워집니다. 다음에 들으면 새로 받아 옵니다."
+                : tier === "free"
+                  ? "이 폰에 받아 둔 음성 파일이 지워집니다. Plus 에서 받은 이야기·회화 음성은 무료 등급에서 다시 받을 수 없습니다."
+                  : "이 폰에 받아 둔 음성 파일이 지워집니다. 다시 들으면 새로 받아 오며, 그만큼 듣기 횟수를 다시 씁니다."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
