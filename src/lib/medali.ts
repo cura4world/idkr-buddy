@@ -163,6 +163,7 @@ function putOne(store: string, value: unknown): Promise<void> {
         tx.objectStore(store).put(value);
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
+        tx.onabort = () => resolve();
       })
   );
 }
@@ -741,6 +742,7 @@ async function evictRounds(): Promise<void> {
       };
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 정리 실패는 무해
