@@ -79,6 +79,7 @@ async function savePhrase(detail: PhraseDetail): Promise<void> {
       tx.objectStore(STORE).put(detail);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
     await trimOldest();
   } catch (e) {
@@ -109,6 +110,7 @@ async function trimOldest(): Promise<void> {
         cur.continue();
       };
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch (e) {
     /* 무시 */
@@ -208,15 +210,20 @@ export async function generateNewPhrase(
   if (id === "") throw new Error("EMPTY_RESPONSE");
   const ko = asString(raw.ko);
 
-  await savePhrase({
-    sentence: id,
-    ko,
-    meaning: asString(raw.meaning),
-    words: [],
-    examples: parseExamples(raw.examples),
-    note: asString(raw.note),
-    createdAt: Date.now(),
-  });
+  // 해설(뜻풀이)이 비어 왔으면 캐시에 넣지 않습니다 — 넣으면 상세 화면이 빈 해설을 계속 보여 줍니다(C-24).
+  // 문장 자체는 쓸 수 있으므로 돌려주고, 해설은 상세 화면을 열 때 getPhraseDetail 이 새로 만듭니다.
+  const meaning = asString(raw.meaning);
+  if (meaning !== "") {
+    await savePhrase({
+      sentence: id,
+      ko,
+      meaning,
+      words: [],
+      examples: parseExamples(raw.examples),
+      note: asString(raw.note),
+      createdAt: Date.now(),
+    });
+  }
 
   return { id, ko };
 }
@@ -283,7 +290,8 @@ export async function getPhraseDetail(
   if (!force) {
     const cached = await getCachedPhrase(sentence);
     // alkitab 구절인데 analysis 필드가 없는 구캐시는 다시 생성합니다.
-    if (cached && !(isAyat && cached.analysis === undefined)) return cached;
+    // 뜻풀이가 빈 채로 저장된 예전 캐시도 없는 것으로 보고 다시 만듭니다(C-24).
+    if (cached && asString(cached.meaning) !== "" && !(isAyat && cached.analysis === undefined)) return cached;
     if (!isAyat) {
       const seeded = await getSeededPhrase(sentence, ko);
       if (seeded) {
@@ -307,10 +315,14 @@ export async function getPhraseDetail(
         .filter((a) => a.part !== "")
     : [];
 
+  // AI 가 뜻풀이가 빈 JSON 을 주면 저장하지 않고 실패로 알립니다(C-24). 화면은 "다시 시도"를 보입니다.
+  const meaning = asString(raw.meaning);
+  if (meaning === "") throw new Error("EMPTY_RESPONSE");
+
   const detail: PhraseDetail = {
     sentence,
     ko,
-    meaning: asString(raw.meaning),
+    meaning,
     words,
     examples: parseExamples(raw.examples),
     ...(isAyat ? { analysis } : {}),
