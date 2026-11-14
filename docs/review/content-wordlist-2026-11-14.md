@@ -9,13 +9,14 @@
 
 | 구분 | 항목 수 |
 |---|---|
-| 1. 고친 것 | **47** (CSV 51행 + 그림 키 10개) |
-| 2. 고치지 않은 것(보류) | **67** (오류 표 21 + 판단 필요 46) |
+| 1. 고친 것 | **49** (CSV 53행 + 그림 키 10개) — 재확인(2차)에서 2건·CSV 2행 더함 |
+| 2. 고치지 않은 것(보류) | **65** (오류 표 19 + 판단 필요 46) — 재확인(2차)에서 오류 표 2건이 1번으로 옮겨 감 |
 | 3. 이미 고침 / 해당 없음 | **34** (이미 고침 3 + 기계 검사 표 28 + 판단 필요 중 조치 대상 아님 3) |
 | 합계 | **148** = 오류 표 71행(01~11 15, 12~23 23, 24~34 17, 5-3 표본 13, 표본 밖 3) + 판단 필요 49개(16+12+21) + 기계 검사 표 28행(동음이의 11, 기독교 어휘 17) |
 
 - 바뀐 파일: `data/categories/` 27개, `src/data/illust/` 7개 = 34개, `git diff --numstat` 합계 **+61 / −61** (CSV 51줄 + 그림 키 10줄, 기대값과 일치).
 - 단어 수: `Seed generated: 41 categories, 3555 words.` (변화 없음)
+- **재확인(2차, 2026-11-14)**: 2-1 표의 보류 21행을 사전으로 다시 확인했습니다(판단 필요 46건은 손대지 않음). 고침 2건(5-2 24~34 ④·⑤ — `25 행정·법률.csv` 35·36행, `git diff --numstat` +2 / −2), 계속 보류 19건. 그 가운데 표제어 변경이 걸린 것은 5건(`optimis`·`pesimis`·`cengkeh`·`vihara`·`omnipresent`)이며 ID 이전(v4)이 필요해 고치지 않았습니다. KBBI 공식판은 비로그인 하루 조회 한도에 걸려 `sesama`·`barangkali`·`mujizat`·`mukjizat`·`rotan`·`bibit` 은 다시 열지 못했습니다(`bibit` 은 kbbi.web.id 로 대신 확인). 작업 뒤 `check-wordlist.js`: 중복 0 / 동음이의어 20 / 형식오류 0.
 
 ### 확인에 쓴 출처와 기준
 
@@ -36,7 +37,7 @@
 
 ---
 
-## 1. 고친 것 (47)
+## 1. 고친 것 (49)
 
 | 보고서 항목 | 파일 | 행 | 단어 | 이전 | 이후 | 근거 출처 1 | 근거 출처 2 |
 |---|---|---|---|---|---|---|---|
@@ -87,6 +88,8 @@
 | 5-3 표본 ⑬ | 39 기도·찬양 | 70 | Dalam nama Tuhan Yesus (뜻·예문뜻) | `예수님의 이름으로` / `예수님의 이름으로 기도합니다. 아멘.` | `주 예수님의 이름으로` / `주 예수님의 이름으로 기도합니다. 아멘.` | TB-sabda https://alkitab.sabda.org/verse.php?book=Kol&chapter=3&verse=17 — "dalam nama Tuhan Yesus" ↔ 개역한글 https://www.bible.com/bible/88/COL.3.17.KRV "주 예수의 이름으로" | TB-bible.com https://www.bible.com/bible/306/COL.3.17.TB / sederet https://www.sederet.com/id-en/Tuhan — "god; lord" |
 | 5-3 표본 밖 ① | 36 성경 인물·지명 | 16 | Noach (표제어·예문) | `Noach` / `Noach adalah orang yang benar di matanya Allah.` | `Nuh` / `Nuh adalah orang yang benar di mata Allah.` | TB-sabda https://alkitab.sabda.org/verse.php?book=Kej&chapter=6&verse=9 — "Nuh adalah seorang yang benar"; 6:8 "di mata TUHAN" | TB-bible.com https://www.bible.com/bible/306/GEN.6.9.TB · https://www.bible.com/bible/306/GEN.6.8.TB |
 | 5-3 표본 밖 ② | 36 성경 인물·지명 | 48 | Nikodem (표제어·예문) | `Nikodem` / `Nikodem datang kepada Yesus…` | `Nikodemus` / `Nikodemus datang kepada Yesus…` | TB-sabda https://alkitab.sabda.org/verse.php?book=Yoh&chapter=3&verse=1 — "seorang Farisi yang bernama Nikodemus" | TB-bible.com https://www.bible.com/bible/306/JHN.3.1.TB — 같은 본문 |
+| 5-2 24~34 ④ (재확인 2차) | 25 행정·법률 | 35, 36 | kartu keluarga, KK (뜻·예문뜻) | 35: `가족관계등록부` / `가족관계등록부 사본도 필요합니다.` · 36: `가족관계등록부 약칭 (Kartu Keluarga)` / `…아직 등록부에 오르지 않았다.` | 35: `가족 카드 (가족 구성원을 모두 적은 공문서)` / `가족 카드 사본도 필요합니다.` · 36: `가족 카드 약칭 (Kartu Keluarga)` / `…아직 가족 카드에 오르지 않았다.` | KBBI https://kbbi.kemendikdasmen.go.id/entri/kartu%20keluarga — "kartu yang harus dimiliki oleh setiap keluarga di suatu kelurahan yang memuat nama semua anggota keluarga dengan jenis kelamin, hubungan keluarga, umur, dan pekerjaan" | idwiki https://id.wikipedia.org/wiki/Kartu_Keluarga — "Kartu Identitas Keluarga yang memuat data tentang susunan, hubungan dan jumlah anggota keluarga. … wajib dimiliki oleh setiap keluarga" (가족 단위 문서. 반면 표준 https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=가족관계등록부 는 "개인의 성명과 생년월일 등 신분에 관한 사항…을 기록한 공문서", 1차의 한국어 위키백과도 "개인별로 작성"). 검수자 문구의 "한국의 주민등록등본에 가까움"은 두 출처로 확인하지 못해 넣지 않음 |
+| 5-2 24~34 ⑤ (재확인 2차) | 25 행정·법률 | 43 | surat nikah (예문뜻) | 35행 뜻 `가족관계등록부` ↔ 43행 예문뜻 `가족 카드를 만들려면…` (서로 다른 말) | 43행은 그대로(CSV 변경 0행). 위 ④ 로 35·36행이 `가족 카드`가 되어 세 줄이 같은 말로 맞음 | 위 ④ 와 같음 (KBBI `kartu keluarga`) | 위 ④ 와 같음 (idwiki `Kartu Keluarga`) |
 
 ### 표제어를 바꾼 19개 — 뒤따라야 할 일
 
@@ -124,33 +127,31 @@
 
 ---
 
-## 2. 고치지 않은 것 (보류) (67)
+## 2. 고치지 않은 것 (보류) (65)
 
-### 2-1. 오류 표 행 (21)
+### 2-1. 오류 표 행 (19) — 마지막 칸은 재확인(2차) 결과
 
-| 보고서 항목 | 파일 | 행 | 단어 | 검수자 제안 | 보류 이유 |
-|---|---|---|---|---|---|
-| 5-2 01~11 ⑦ | 05 ↔ 11 | 05:79 ↔ 11:43 | minggu ini ↔ sibuk | 한쪽 예문을 새로 씀 | 겹침 자체는 파일에서 확인됨(`Minggu ini saya sangat sibuk.` ↔ `Saya sangat sibuk minggu ini.`). 그러나 고치려면 새 예문을 지어야 하고, 새 문장은 출처로 확인할 대상이 아니라 원어민 확인이 필요 |
-| 5-2 01~11 ⑧ | 10 ↔ 16 | 10:13 ↔ 16:35 | merasa ↔ senang | 한쪽 예문을 새로 씀 | 위와 같음(새 예문 필요) |
-| 5-2 01~11 ⑨ | 03 전치사·접속사 | 29 | meskipun (예문뜻) | `내리지만` → `내렸지만` | 한국어 문장 안 시제 맞춤이라 사전·규범 출처 두 곳으로 확인할 사실이 없음. 제안 자체는 타당해 보이며, 승인만 있으면 한 낱말 교체로 끝남 |
-| 5-2 01~11 ⑩ | 08 행위·조작 | 94 | menempel | 표제어를 `menempelkan` 으로, 또는 뜻을 `붙다/달라붙다` 로 | **출처가 제안과 다름.** KBBI VI https://kbbi.kemendikdasmen.go.id/entri/menempel 은 자동사 뜻(melekat)과 함께 "v melekatkan sesuatu: dilarang ~ pengumuman di sini"(타동, 붙이다)도 실음. sederet 도 "attach; paste". 지금 뜻 `붙이다` 가 틀렸다고 할 수 없음. 제안도 두 갈래 |
-| 5-2 01~11 ⑫ | 04 수량·숫자·단위 | 87 | piring (뜻) | `한 그릇 (음식 수분류사)` → `접시/그릇 (음식 수분류사)` | piring = 접시(plate)는 KBBI·enwikt 로 확인됨. 그러나 제안 문구에는 "접시"가 들어 있어 `scripts/check-wordlist.js` 가 18:32 `piring = 접시` 와 **"뜻이 같은 중복"으로 잡게 됨**(뜻 포함 관계로 판정, 중복 0건이 통과 조건). `그릇 (음식 수분류사)` 로 하면 통과하지만 제안과 다른 문구라 임의로 정하지 않음 |
-| 5-2 01~11 ⑭ | 07 이동·존재 | 53 | mudik (예문뜻) | `명절이 다가오면` → `르바란이 다가오면` | Lebaran = 이슬람 명절(Idulfitri)임은 KBBI·enwikt 로 확인. 그러나 "명절"이 틀린 번역이라는 근거는 없음(번역 방침 문제). 같은 경우가 17:70, 19:35, 22:62, **34:31, 34:54(보고서에 없음)** 에도 있어 한 줄만 바꾸면 불일치가 그대로 남음 → 판단 필요 12~23 #9 와 함께 한 번에 정할 일 |
-| 5-2 01~11 ⑮ | 10 접사 가족 | 2 | mengajar (예문뜻) | 번역을 `그 여자분은…` 으로, 또는 예문을 `Guru itu mengajar…` 로 | 제안이 두 갈래. `Ibu` 를 여교사 호칭으로 쓰는 문맥이면 지금 번역도 가능 → 원어민 확인 |
-| 5-2 12~23 ④ | 16 감정·성격 | 66 | optimis | `optimistis` 로 | **출처가 서로 다름.** KBBI VI https://kbbi.kemendikdasmen.go.id/entri/optimis 는 명사("orang yang selalu berpengharapan baik")만, 형용사는 `optimistis`. 그러나 enwikt https://en.wiktionary.org/wiki/optimis 는 형용사 "optimistic"(동의어 optimistis)도 표시 없이 싣고, sederet https://www.sederet.com/id-en/optimis 도 첫 뜻이 "optimistic" |
-| 5-2 12~23 ⑤ | 16 감정·성격 | 67 | pesimis | `pesimistis` 로 | KBBI https://kbbi.kemendikdasmen.go.id/entri/pesimis (명사만)와 enwikt(명사만)는 제안과 맞지만 sederet 는 "pessimist; pessimistic" 둘 다. 무엇보다 바로 윗줄 `optimis` 와 짝이라 한쪽만 바꾸면 66·67행이 어긋남 → 두 줄을 함께 정해야 함 |
-| 5-2 12~23 ⑪ | 14 가족·호칭 | 21 | sesama (뜻) | `이웃/다른 사람들 (같은 처지의 사람)` | KBBI: "sama-sama (satu golongan)", sederet: "fellow; neighbor". 지금 뜻이 어색한 것은 맞으나 제안 문구("다른 사람들")도 사전 뜻과 딱 맞지 않아 문구 선택이 필요(의견 항목) |
-| 5-2 12~23 ⑭ | 13 빈도·양태 | 38 | sebetulnya (뜻·예문뜻) | `사실은/실은`, `실은 말씀드리고…` | KBBI https://kbbi.kemendikdasmen.go.id/entri/sebetulnya: "sebenarnya; sesungguhnya"(사실은). 그러나 sederet https://www.sederet.com/id-en/sebetulnya 는 "actually" 뒤에 **"frankly"** 도 가능한 뜻으로 실음 → "솔직히"가 틀렸다고 두 출처가 말하지 않음 |
-| 5-2 12~23 ⑰ | 13 빈도·양태 | 67 | barangkali (예문·예문뜻) | 예문 끝을 `?` 로, 또는 예문뜻을 평서문으로 | 평서문↔의문문 불일치는 사실. 제안이 두 갈래이고 어느 쪽이 자연스러운지는 원어민 판단(KBBI 뜻은 "mungkin") |
-| 5-2 12~23 ⑳ | 14 가족·호칭 | 77 | mengandung (예문뜻) | `그는` → `그녀는` | 출처로 확인할 사실이 아니라 표기 방침("그/그녀" 통일 기준). 판단 필요 12~23 #1 과 같은 문제 |
-| 5-2 24~34 ④ | 25 행정·법률 | 35, 36 | kartu keluarga, KK (뜻) | `가족 카드 (세대 구성원을 적은 문서, 한국의 주민등록등본에 가까움)` | 한국어 위키백과 https://ko.wikipedia.org/wiki/가족관계등록부 — "가족관계등록부는 개인별로 작성된다"는 확인(검수자 논거 한쪽). KK 쪽 정의는 KBBI `kartu` 항목에서 하위 표제어를 확인하지 못했고 idwiki `Kartu Keluarga` 본문도 읽지 못함 → 두 출처 미달. 또 뜻을 바꾸면 35·36행 예문뜻("가족관계등록부 사본", "등록부에 오르지 않았다")도 함께 바꿔야 해 제안 범위를 넘음 |
-| 5-2 24~34 ⑤ | 25 행정·법률 | 43 | surat nikah (예문뜻) | 35행 뜻과 같은 말로 통일 | 바로 위 ④ 에 달림. 지금 35행 뜻(가족관계등록부)에 맞추면 ④ 를 받아들일 때 다시 고쳐야 하고, 43행의 "가족 카드"는 ④ 의 제안과 같은 말임 → ④ 와 함께 한 번에 |
-| 5-2 24~34 ⑪ | 29 식물·농업 | 20 | rotan (뜻) | `등나무/등(籐)` → `라탄/등(籐)` | **출처가 제안과 다름.** 표준 https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=등나무 에 `등-나무2 (籐나무)` "야자나뭇과 등속 식물… 의자나 가구 따위를 만드는 데 쓴다"가 따로 실려 있어 지금 뜻이 맞음. `라탄` 은 표준국어대사전에 없고 우리말샘은 "규범 표기는 ‘래탠’" |
-| 5-2 24~34 ⑫ | 29 식물·농업 | 40 | cengkeh | `cengkih` 로 | 주 표제어가 `cengkih` 인 것은 맞음(KBBI 뜻풀이, idwiki 문서 제목·목록은 `cengkeh` 를 "Salah"로 적음, enwikt 는 alternative form). 그러나 **KBBI VI 공식판 https://kbbi.kemendikdasmen.go.id/entri/cengkeh 는 `cengkeh` 를 비표준 표시(`→`, "bentuk tidak baku")가 아니라 뜻풀이 "n cengkih" 를 가진 표제어로 실음.** 최신 KBBI 기준으로 비표준이라고 확정하지 못함(검수자도 "재확인 권장") |
-| 5-2 24~34 ⑬ | 29 식물·농업 | 53 | bibit (뜻·예문뜻) | 뜻 `모종/묘목`, 예문뜻 `볏모는 작은 모판에서 기른다.` | **출처가 제안과 다름.** 검수자는 "씨모는 남한 표준어가 아님(북한어)"이라 했으나 표준 https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=씨모 에 `씨-모` 「명사」『농업』 "씨에서 싹이 터서 난 모"로 실려 있음(우리말샘도 일반어). 예문뜻 "볍씨 모종"이 어색한 것은 따로 볼 만함(`볏모` 는 표준국어대사전 표제어) |
-| 5-2 24~34 ⑮ | 32 장소·여행 | 33 | vihara | `wihara` 로 | 주 표제어가 `wihara` 인 것은 맞음(KBBI 뜻풀이, idwiki 문서 제목 `Wihara`, enwikt). 그러나 KBBI VI https://kbbi.kemendikdasmen.go.id/entri/vihara 는 `vihara` 를 비표준 표시 없이 "n wihara" 로 싣고, idwiki 본문도 "Wihara atau vihara", 오류 목록에도 없음. **지금 표기가 틀렸다고 한 출처가 없음** |
-| 5-3 표본 ⑥ | 38 교리·신학 | 21 | omnipresent | `omnipresen` 으로 | 두 출처 미달. `omnipresen` 은 KBBI("Entri tidak ditemukan")·sederet·KamusSABDA·enwikt 어디에도 없고, idwiki 에서만 넘겨주기(`Omnipresen` → `Maha Hadir`)와 본문 4건으로 확인됨. TB 본문에도 없음(SABDA 검색 0건). GotQuestions 인니어판은 `Mahahadir` 를 씀. 영어 철자가 인니어가 아닌 것은 분명하나 무엇으로 바꿀지는 원어민·교단 확인 |
-| 5-3 표본 밖 ③ | 35 성경 핵심어 | 29 ↔ 75 | mujizat ↔ mukjizat | TB 표기 하나만 남김 | TB 가 `mujizat` 인 것은 확인(행 2:22 "mujizat-mujizat", sabda·bible.com 모두). 그러나 한 줄을 지우면 단어 수가 3,555 → 3,554 로 바뀌고(금지), 75행을 `mujizat` 로 고치면 같은 파일 안 표제어 중복이 됨. 75행을 다른 낱말로 바꾸는 것은 새 내용이라 결정 필요 |
+| 보고서 항목 | 파일 | 행 | 단어 | 검수자 제안 | 보류 이유 | 재확인(2차) 결과 · 찾아본 출처 |
+|---|---|---|---|---|---|---|
+| 5-2 01~11 ⑦ | 05 ↔ 11 | 05:79 ↔ 11:43 | minggu ini ↔ sibuk | 한쪽 예문을 새로 씀 | 겹침 자체는 파일에서 확인됨(`Minggu ini saya sangat sibuk.` ↔ `Saya sangat sibuk minggu ini.`). 그러나 고치려면 새 예문을 지어야 하고, 새 문장은 출처로 확인할 대상이 아니라 원어민 확인이 필요 | **계속 보류.** 사전으로 확인할 사실이 없음(새 예문을 지어야 함). 겹침은 05:79·11:43 에 그대로 있음 |
+| 5-2 01~11 ⑧ | 10 ↔ 16 | 10:13 ↔ 16:35 | merasa ↔ senang | 한쪽 예문을 새로 씀 | 위와 같음(새 예문 필요) | **계속 보류.** 위와 같음(10:13·16:35 에 그대로 있음) |
+| 5-2 01~11 ⑨ | 03 전치사·접속사 | 29 | meskipun (예문뜻) | `내리지만` → `내렸지만` | 한국어 문장 안 시제 맞춤이라 사전·규범 출처 두 곳으로 확인할 사실이 없음. 제안 자체는 타당해 보이며, 승인만 있으면 한 낱말 교체로 끝남 | **계속 보류.** 한국어 문장 안 시제 맞춤이라 사전 출처로 확인할 대상이 아님. 승인만 있으면 한 낱말 교체 |
+| 5-2 01~11 ⑩ | 08 행위·조작 | 94 | menempel | 표제어를 `menempelkan` 으로, 또는 뜻을 `붙다/달라붙다` 로 | **출처가 제안과 다름.** KBBI VI https://kbbi.kemendikdasmen.go.id/entri/menempel 은 자동사 뜻(melekat)과 함께 "v melekatkan sesuatu: dilarang ~ pengumuman di sini"(타동, 붙이다)도 실음. sederet 도 "attach; paste". 지금 뜻 `붙이다` 가 틀렸다고 할 수 없음. 제안도 두 갈래 | **계속 보류(지금 뜻이 맞음).** KBBI VI https://kbbi.kemendikdasmen.go.id/entri/menempel 재확인 — "v melekatkan sesuatu: dilarang ~ pengumuman di sini"; sederet https://www.sederet.com/id-en/menempel — "adhere; pasting; attach; paste". enwikt 에는 `menempel` 항목이 없음(404) |
+| 5-2 01~11 ⑫ | 04 수량·숫자·단위 | 87 | piring (뜻) | `한 그릇 (음식 수분류사)` → `접시/그릇 (음식 수분류사)` | piring = 접시(plate)는 KBBI·enwikt 로 확인됨. 그러나 제안 문구에는 "접시"가 들어 있어 `scripts/check-wordlist.js` 가 18:32 `piring = 접시` 와 **"뜻이 같은 중복"으로 잡게 됨**(뜻 포함 관계로 판정, 중복 0건이 통과 조건). `그릇 (음식 수분류사)` 로 하면 통과하지만 제안과 다른 문구라 임의로 정하지 않음 | **계속 보류.** 사실(piring = 접시)은 1차에 확인됨. 남은 것은 뜻 문구 선택이라 다시 찾을 출처가 없음. 지금 문구는 `check-wordlist.js` 에서 동음이의어로 통과 |
+| 5-2 01~11 ⑭ | 07 이동·존재 | 53 | mudik (예문뜻) | `명절이 다가오면` → `르바란이 다가오면` | Lebaran = 이슬람 명절(Idulfitri)임은 KBBI·enwikt 로 확인. 그러나 "명절"이 틀린 번역이라는 근거는 없음(번역 방침 문제). 같은 경우가 17:70, 19:35, 22:62, **34:31, 34:54(보고서에 없음)** 에도 있어 한 줄만 바꾸면 불일치가 그대로 남음 → 판단 필요 12~23 #9 와 함께 한 번에 정할 일 | **계속 보류.** 번역 방침(판단 12~23 #9 와 한 묶음)이라 사전 확인 대상이 아님 |
+| 5-2 01~11 ⑮ | 10 접사 가족 | 2 | mengajar (예문뜻) | 번역을 `그 여자분은…` 으로, 또는 예문을 `Guru itu mengajar…` 로 | 제안이 두 갈래. `Ibu` 를 여교사 호칭으로 쓰는 문맥이면 지금 번역도 가능 → 원어민 확인 | **계속 보류.** 제안이 두 갈래이고 원어민 확인 대상. 새로 찾은 출처 없음 |
+| 5-2 12~23 ④ | 16 감정·성격 | 66 | optimis | `optimistis` 로 | **출처가 서로 다름.** KBBI VI https://kbbi.kemendikdasmen.go.id/entri/optimis 는 명사("orang yang selalu berpengharapan baik")만, 형용사는 `optimistis`. 그러나 enwikt https://en.wiktionary.org/wiki/optimis 는 형용사 "optimistic"(동의어 optimistis)도 표시 없이 싣고, sederet https://www.sederet.com/id-en/optimis 도 첫 뜻이 "optimistic" | **계속 보류 · 표제어 변경 건.** KBBI VI https://kbbi.kemendikdasmen.go.id/entri/optimis (명사 뜻만) · https://kbbi.kemendikdasmen.go.id/entri/optimistis — "a bersifat optimis; penuh harapan" 재확인. 그러나 enwikt https://en.wiktionary.org/wiki/optimis 는 Etymology 2 에 Adjective "optimistic"(동의어 optimistis)를 표시 없이 실음 → 출처가 갈림. 그림 키 `illust-perasaan.json` 의 `optimis` 도 함께 바뀌어야 함 |
+| 5-2 12~23 ⑤ | 16 감정·성격 | 67 | pesimis | `pesimistis` 로 | KBBI https://kbbi.kemendikdasmen.go.id/entri/pesimis (명사만)와 enwikt(명사만)는 제안과 맞지만 sederet 는 "pessimist; pessimistic" 둘 다. 무엇보다 바로 윗줄 `optimis` 와 짝이라 한쪽만 바꾸면 66·67행이 어긋남 → 두 줄을 함께 정해야 함 | **확인됨 · 표제어 변경이라 따로 처리 필요(고치지 않음).** KBBI VI https://kbbi.kemendikdasmen.go.id/entri/pesimis (명사 뜻만) · https://kbbi.kemendikdasmen.go.id/entri/pesimistis — "a bersikap atau berpandangan tidak mempunyai harapan baik…: sikap -- bisa menghambat keberhasilan"; enwikt https://en.wiktionary.org/wiki/pesimis 는 Indonesian Noun "pessimist"만, https://en.wiktionary.org/wiki/pesimistis 는 Adjective "pessimistic" → 두 출처가 형용사는 `pesimistis` 라고 함. 반대 쪽: sederet https://www.sederet.com/id-en/pesimis — "pessimist; pessimistic". 바꾸면 ID 이전(v4)·그림 키 `illust-perasaan.json` `pesimis`·66행 `optimis` 와의 짝을 함께 정해야 함 |
+| 5-2 12~23 ⑪ | 14 가족·호칭 | 21 | sesama (뜻) | `이웃/다른 사람들 (같은 처지의 사람)` | KBBI: "sama-sama (satu golongan)", sederet: "fellow; neighbor". 지금 뜻이 어색한 것은 맞으나 제안 문구("다른 사람들")도 사전 뜻과 딱 맞지 않아 문구 선택이 필요(의견 항목) | **계속 보류.** sederet https://www.sederet.com/id-en/sesama 재확인 — "fellow; neighbor; each other". enwikt 에는 `sesama` 항목 없음(404), KBBI 공식판은 하루 조회 한도로 다시 열지 못함. 문구 선택 문제는 그대로 |
+| 5-2 12~23 ⑭ | 13 빈도·양태 | 38 | sebetulnya (뜻·예문뜻) | `사실은/실은`, `실은 말씀드리고…` | KBBI https://kbbi.kemendikdasmen.go.id/entri/sebetulnya: "sebenarnya; sesungguhnya"(사실은). 그러나 sederet https://www.sederet.com/id-en/sebetulnya 는 "actually" 뒤에 **"frankly"** 도 가능한 뜻으로 실음 → "솔직히"가 틀렸다고 두 출처가 말하지 않음 | **계속 보류.** KBBI VI https://kbbi.kemendikdasmen.go.id/entri/sebetulnya — "adv sebenarnya; sesungguhnya"; sederet https://www.sederet.com/id-en/sebetulnya — "actually; … frankly; in fact"(재확인). KamusSABDA https://kamus.sabda.org/kamus/sebetulnya 는 KBBI 사본이라 같은 출처. enwikt 에는 항목 없음(404). "솔직히"가 틀렸다고 한 출처는 여전히 없음 |
+| 5-2 12~23 ⑰ | 13 빈도·양태 | 67 | barangkali (예문·예문뜻) | 예문 끝을 `?` 로, 또는 예문뜻을 평서문으로 | 평서문↔의문문 불일치는 사실. 제안이 두 갈래이고 어느 쪽이 자연스러운지는 원어민 판단(KBBI 뜻은 "mungkin") | **계속 보류.** 원어민 판단 대상. KBBI 공식판은 하루 조회 한도로 다시 열지 못함 |
+| 5-2 12~23 ⑳ | 14 가족·호칭 | 77 | mengandung (예문뜻) | `그는` → `그녀는` | 출처로 확인할 사실이 아니라 표기 방침("그/그녀" 통일 기준). 판단 필요 12~23 #1 과 같은 문제 | **계속 보류.** 표기 방침(판단 12~23 #1)이라 사전 확인 대상이 아님 |
+| 5-2 24~34 ⑪ | 29 식물·농업 | 20 | rotan (뜻) | `등나무/등(籐)` → `라탄/등(籐)` | **출처가 제안과 다름.** 표준 https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=등나무 에 `등-나무2 (籐나무)` "야자나뭇과 등속 식물… 의자나 가구 따위를 만드는 데 쓴다"가 따로 실려 있어 지금 뜻이 맞음. `라탄` 은 표준국어대사전에 없고 우리말샘은 "규범 표기는 ‘래탠’" | **계속 보류(지금 뜻이 맞음).** 1차에 표준국어대사전·우리말샘 두 곳으로 확인됨. 새로 찾은 반대 출처 없음 |
+| 5-2 24~34 ⑫ | 29 식물·농업 | 40 | cengkeh | `cengkih` 로 | 주 표제어가 `cengkih` 인 것은 맞음(KBBI 뜻풀이, idwiki 문서 제목·목록은 `cengkeh` 를 "Salah"로 적음, enwikt 는 alternative form). 그러나 **KBBI VI 공식판 https://kbbi.kemendikdasmen.go.id/entri/cengkeh 는 `cengkeh` 를 비표준 표시(`→`, "bentuk tidak baku")가 아니라 뜻풀이 "n cengkih" 를 가진 표제어로 실음.** 최신 KBBI 기준으로 비표준이라고 확정하지 못함(검수자도 "재확인 권장") | **주 표제어 `cengkih` 는 확인됨 · 표제어 변경이라 따로 처리 필요(고치지 않음).** KBBI VI https://kbbi.kemendikdasmen.go.id/entri/cengkih (본 뜻풀이) · https://kbbi.kemendikdasmen.go.id/entri/cengkeh — "n cengkih"(참조형, 비표준 표시는 없음); idwiki 목록 https://id.wikipedia.org/wiki/Wikipedia:Daftar_kosakata_bahasa_Indonesia_yang_sering_salah_dieja — Benar `cengkih` / Salah `cengkeh`; idwiki 문서 제목 https://id.wikipedia.org/wiki/Cengkih ; enwikt https://en.wiktionary.org/wiki/cengkih — "Alternative forms: cengkeh"(`cengkeh` 항목 자체는 없음). 한편 sederet https://www.sederet.com/id-en/cengkeh 는 `cengkeh` 를 그대로 실음. 바꾸면 ID 이전(v4)·그림 키 `illust-tanaman.json` `cengkeh` 가 따라야 함 |
+| 5-2 24~34 ⑬ | 29 식물·농업 | 53 | bibit (뜻·예문뜻) | 뜻 `모종/묘목`, 예문뜻 `볏모는 작은 모판에서 기른다.` | **출처가 제안과 다름.** 검수자는 "씨모는 남한 표준어가 아님(북한어)"이라 했으나 표준 https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=씨모 에 `씨-모` 「명사」『농업』 "씨에서 싹이 터서 난 모"로 실려 있음(우리말샘도 일반어). 예문뜻 "볍씨 모종"이 어색한 것은 따로 볼 만함(`볏모` 는 표준국어대사전 표제어) | **계속 보류.** 낱말 뜻은 맞음 — KBBI(kbbi.web.id 사본) https://kbbi.web.id/bibit — "semaian (padi dan sebagainya yang akan ditanam)", https://kbbi.web.id/semai — menyemai "menanam (menaburkan) benih … untuk menghasilkan bibit"; enwikt https://en.wiktionary.org/wiki/bibit — "seedling", https://en.wiktionary.org/wiki/semai — "to sow (seeds)". 검수자 논거(씨모 = 북한어)는 1차에 반박됨. 예문뜻 "볍씨 모종은 … 뿌린다"를 다듬을지는 문구 선택 |
+| 5-2 24~34 ⑮ | 32 장소·여행 | 33 | vihara | `wihara` 로 | 주 표제어가 `wihara` 인 것은 맞음(KBBI 뜻풀이, idwiki 문서 제목 `Wihara`, enwikt). 그러나 KBBI VI https://kbbi.kemendikdasmen.go.id/entri/vihara 는 `vihara` 를 비표준 표시 없이 "n wihara" 로 싣고, idwiki 본문도 "Wihara atau vihara", 오류 목록에도 없음. **지금 표기가 틀렸다고 한 출처가 없음** | **계속 보류 · 표제어 변경 건.** KBBI VI https://kbbi.kemendikdasmen.go.id/entri/vihara — "n wihara"(비표준 표시 없음), https://kbbi.kemendikdasmen.go.id/entri/wihara (본 뜻풀이) 재확인; enwikt 는 Indonesian 항목을 https://en.wiktionary.org/wiki/wihara 에만 두고 https://en.wiktionary.org/wiki/vihara 에는 Indonesian 항목이 없음; idwiki https://id.wikipedia.org/wiki/Wihara — "Wihara atau vihara"; sederet https://www.sederet.com/id-en/vihara — "monastery". 주 표제어가 `wihara` 인 것은 두 곳이 뒷받침하나 `vihara` 가 틀렸다고 한 출처는 없음. 바꾸면 ID 이전(v4)·그림 키 `illust-wisata.json` `vihara` 가 따라야 함 |
+| 5-3 표본 ⑥ | 38 교리·신학 | 21 | omnipresent | `omnipresen` 으로 | 두 출처 미달. `omnipresen` 은 KBBI("Entri tidak ditemukan")·sederet·KamusSABDA·enwikt 어디에도 없고, idwiki 에서만 넘겨주기(`Omnipresen` → `Maha Hadir`)와 본문 4건으로 확인됨. TB 본문에도 없음(SABDA 검색 0건). GotQuestions 인니어판은 `Mahahadir` 를 씀. 영어 철자가 인니어가 아닌 것은 분명하나 무엇으로 바꿀지는 원어민·교단 확인 | **계속 보류 · 표제어 변경 건.** `omnipresen`: KBBI VI "Entri tidak ditemukan"(재확인), enwikt·id.wiktionary 항목 없음(404). `mahahadir`: kbbi.web.id "tidak ditemukan", enwikt·id.wiktionary 없음(404), KBBI 공식판은 조회 한도. idwiki 만 `Omnipresen`·`Mahahadir` → 문서 `Maha Hadir`(https://id.wikipedia.org/wiki/Maha_Hadir , 본문에 mahahadir 도 씀) → 여전히 한 출처뿐 |
+| 5-3 표본 밖 ③ | 35 성경 핵심어 | 29 ↔ 75 | mujizat ↔ mukjizat | TB 표기 하나만 남김 | TB 가 `mujizat` 인 것은 확인(행 2:22 "mujizat-mujizat", sabda·bible.com 모두). 그러나 한 줄을 지우면 단어 수가 3,555 → 3,554 로 바뀌고(금지), 75행을 `mujizat` 로 고치면 같은 파일 안 표제어 중복이 됨. 75행을 다른 낱말로 바꾸는 것은 새 내용이라 결정 필요 | **계속 보류.** 표기 사실(TB = `mujizat`)은 1차에 두 곳으로 확인됨. 남은 것은 줄 수·중복 문제라 결정 필요. KBBI 공식판은 조회 한도로 다시 열지 못함 |
 
 ### 2-2. 판단 필요 — 01~11 (16)
 
