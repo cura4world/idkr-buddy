@@ -1,0 +1,70 @@
+name: E2E (자동 화면 테스트)
+
+# Playwright 화면 테스트(`npm run test:e2e`)를 release/public 에 올릴 때마다 돌립니다. (2026-11-14 결정)
+#
+# - 미리보기 APK 빌드(build-preview.yml)와 따로 도는 워크플로입니다. 이 테스트가 실패해도 미리보기 빌드는 그대로 진행됩니다.
+# - 비밀값을 쓰지 않습니다. 테스트는 바깥 네트워크를 모두 끊고 돕니다(e2e/fixtures.ts) — AI·서버·Play 를 부르지 않습니다.
+# - main 에서는 돌지 않습니다(트리거에 넣지 않음). 손으로 돌릴 때는 Actions → 이 워크플로 → Run workflow.
+# - 실패하면 리포트와 실패 화면 그림을 이 실행의 산출물(Artifacts, 7일 보관)로 올립니다.
+#   받는 곳: Actions → 이 실행 → 맨 아래 Artifacts 의 e2e-report (zip 을 풀어 playwright-report/index.html 을 엽니다).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [release/public]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'data/**'
+      - 'scripts/**'
+      - 'e2e/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.*'
+      - 'playwright.config.ts'
+      - '.github/workflows/e2e.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e
+        env:
+          CI: '1'
+        run: npm run test:e2e
+
+      - name: Upload report (실패했을 때만)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
