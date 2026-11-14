@@ -27,6 +27,8 @@ import {
   restoreDetailed,
 } from "@/lib/billing";
 import { loadOffers, usePlusPricing } from "@/lib/playOffers";
+import { getCategories, getWords } from "@/lib/store";
+import { isFaithWordbook } from "@/lib/wordbookAccess";
 import {
   CTA_CLOSE,
   CTA_MANAGE,
@@ -79,6 +81,7 @@ import {
   TOAST_TRIAL_STARTED,
   TOAST_VERIFYING,
   toastFailed,
+  wordCountNote,
 } from "@/lib/plusCopy";
 
 // 시안 색 (docs/release/08 공통 규칙: Plus 는 귤색 상자 + 황금갈색 버튼)
@@ -221,6 +224,26 @@ const Plus = () => {
 
   const priceReady = pricing.state === "ready";
 
+  // 혜택 첫 줄의 단어 수 — 홈 "단어장" 줄과 같은 방식으로 기본 단어장 34권(성경과 신앙 묶음 제외)의 단어를 셉니다.
+  // 두 화면의 숫자가 다르게 보이지 않게 하려는 것입니다(출시 전 점검 C-12). 세지 못하면 plusCopy 의 고정 덧말을 씁니다.
+  const basicWordCount = useMemo(() => {
+    try {
+      const ids = new Set(
+        getCategories()
+          .filter((c) => c.isShared && !c.owner && !isFaithWordbook(c))
+          .map((c) => c.id),
+      );
+      let n = 0;
+      const words = getWords();
+      for (let i = 0; i < words.length; i++) {
+        if (ids.has(words[i].categoryId)) n++;
+      }
+      return n;
+    } catch (e) {
+      return 0;
+    }
+  }, []);
+
   const cards: PlanCard[] = useMemo(() => [
     {
       key: "yearly",
@@ -349,7 +372,9 @@ const Plus = () => {
         </div>
 
         <ul className="m-0 p-0 list-none flex flex-col" style={{ gap: 13 }}>
-          {PLUS_PERKS.map((p) => (
+          {PLUS_PERKS.map((p) => {
+            const note = p.icon === "book" && basicWordCount > 0 ? wordCountNote(basicWordCount) : p.note;
+            return (
             <li key={p.title} className="flex items-center" style={{ gap: 12 }}>
               <span
                 className="flex items-center justify-center"
@@ -360,14 +385,15 @@ const Plus = () => {
               <span className="flex-1 min-w-0">
                 <span className="block" style={{ fontSize: "0.875rem", fontWeight: 600 }}>
                   {p.title}
-                  {p.note ? <span style={{ marginLeft: 5, fontWeight: 500, color: C.gray }}>{p.note}</span> : null}
+                  {note ? <span style={{ marginLeft: 5, fontWeight: 500, color: C.gray }}>{note}</span> : null}
                 </span>
                 <span className={"block " + gothic} style={{ marginTop: 1, fontSize: "0.75rem", color: C.gray }}>
                   {p.sub}
                 </span>
               </span>
             </li>
-          ))}
+            );
+          })}
         </ul>
 
         {entitled ? (
