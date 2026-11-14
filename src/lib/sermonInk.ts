@@ -78,6 +78,7 @@ export async function saveInk(rec: InkRecord): Promise<void> {
       tx.objectStore(STORE).put(rec);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 저장 실패해도 화면의 필기는 그대로 유지됩니다
@@ -94,6 +95,7 @@ export async function deleteInk(id: string): Promise<void> {
       tx.objectStore(STORE).delete(id);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 무시
