@@ -72,7 +72,9 @@
 
 - `npm run build` 통과 · `npx tsc` 0 · `npx vitest run` 131개(18파일) · `node --test workers/kata-public/test.mjs` 45개 · `npm run test:e2e` 93개. 마지막 코드 변경(잠금 파일 갱신) 뒤에 모두 다시 돌렸다.
 - 1·2·3·4부: `98d088f..d1b03dc`(26개 커밋) — 미리보기 **실행 #67** `success`.
-- 5·6부와 문서: 이 절 끝의 다음 줄에 적는다.
+- 5·6부: `d1b03dc..9386f44`(9개 커밋) — 미리보기 **실행 #68** `success`. 산출물 `kata-kata-preview-apk`(8,006,133바이트, 만료 2026-11-28)를 내려받아 확인: `kata-kata-preview.apk` 0.9.68-preview, 커밋 `9386f44`. **이것이 4차의 코드가 모두 들어간 미리보기다.**
+  지도 사진 워크플로·스토어 빌드는 돌지 않았다(워크플로 파일을 바꾸지 않음). 공개 릴리스·태그 0개 그대로.
+- 그 뒤의 문서 커밋(followup·user-checklist·DECISIONS·HANDOFF)은 코드가 아니라 화면에 영향이 없다.
 - 확인에 쓴 명령: `gh run list --branch release/public --limit 3 --json name,number,headSha,status,conclusion`
 - **폰에서는 아무것도 보지 못했다.** 볼 것은 `user-checklist.md` (바) 9~11번.
 
