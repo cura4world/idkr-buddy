@@ -6,6 +6,9 @@
 
 `[ ]` 표시는 하신 뒤 체크하시면 됩니다.
 
+> **2026-11-14 밤 현재**: 1·2·3·5·6절은 Arga 님이 콘솔에서 끝냈습니다(아래 `[x]` 와 적어 둔 값). **남은 것은 4절(서버 배포 — `08-cloudflare-deploy.md` 를 따라 하면 됩니다) → 7절(앱 콘텐츠·심사용 계정) → 8절(main 병합) → 9절(내부 테스트)** 입니다.
+> 콘솔에 실제로 넣은 값의 기록은 `DECISIONS.md` 16장 "출시 설정 2026-11-14".
+
 ---
 
 ## 0. 먼저 — 출시 전 선행 조건
@@ -20,7 +23,11 @@
 - [x] **시행일** — 2026-11-13 으로 채움(최종 수정 2026-11-14). 게시본은 `naruve-ganada` 의 `docs/apps/kata-kata/{privacy,terms,delete}/index.html` 이고,
       이 저장소의 `docs/release/policy-final/` 과 `public/` 사본이 그것과 같은 내용이어야 한다(고치면 세 곳을 함께).
 
-## 1. 업로드 키 만들기 (PC, 5분)
+## 1. 업로드 키 만들기 (PC, 5분) — ✅ 2026-11-14 완료
+
+- [x] 만들었습니다 — 저장소 밖에 보관, 별칭 `upload`, PKCS12 형식.
+      업로드 키 SHA-1: `B8:26:C6:26:3B:71:49:B1:36:A6:63:2F:2D:E5:E9:B4:1E:DE:88:4B` (지문은 비밀값이 아닙니다)
+- 아래는 만들 때 쓴 방법입니다(다시 할 필요 없음).
 
 PC 명령창에서 (자바가 깔려 있으면 `keytool` 이 있습니다):
 
@@ -35,37 +42,50 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
   keytool -list -v -keystore kata-store-upload.jks -alias upload
   ```
 
-## 2. GitHub 비밀값 (저장소 Settings → Secrets and variables → Actions)
+## 2. GitHub 비밀값 (저장소 Settings → Secrets and variables → Actions) — ✅ 2026-11-14 완료
 
 **Secrets** 탭:
-- [ ] `STORE_KEYSTORE_BASE64` — 키 파일을 base64 로 바꾼 값
+- [x] `STORE_KEYSTORE_BASE64` — 키 파일을 base64 로 바꾼 값
   (PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("kata-store-upload.jks")) | Set-Clipboard`)
-- [ ] `STORE_KEYSTORE_PASSWORD`
-- [ ] `STORE_KEY_ALIAS` = `upload`
-- [ ] `STORE_KEY_PASSWORD`
+- [x] `STORE_KEYSTORE_PASSWORD`
+- [x] `STORE_KEY_ALIAS` = `upload`
+- [x] `STORE_KEY_PASSWORD`
 
 **Variables** 탭:
-- [ ] `STORE_WEB_CLIENT_ID` — 3번에서 만드는 **웹** 클라이언트 ID (비밀값 아님)
+- [x] `STORE_WEB_CLIENT_ID` — 3번에서 만드는 **웹** 클라이언트 ID (비밀값 아님)
+      = `228056729729-kalemfhdg394bgo2mft16g5asnin21gd.apps.googleusercontent.com`
 
-## 3. Google Cloud 콘솔 — 로그인용 OAuth (15분)
+## 3. Google Cloud 콘솔 — 로그인용 OAuth (15분) — ✅ 2026-11-14 완료
 
-기존 프로젝트 `Kata-kata`(Cloud Run 이 있는 곳)를 그대로 써도 됩니다.
+기존 프로젝트 `Kata-kata`(`gen-lang-client-0453772321`, Cloud Run 이 있는 곳)에 만들었습니다.
 
-1. [ ] **OAuth 동의 화면**: 외부(External), 앱 이름 Kata kata, 지원 이메일, 개인정보처리방침 주소
+1. [x] **OAuth 동의 화면**: 외부(External), 앱 이름 Kata kata, 지원 이메일, 개인정보처리방침 주소
    `https://naruve.app/apps/kata-kata/privacy/`, 범위는 기본(openid·email·profile)만 → **프로덕션으로 게시**
-2. [ ] **OAuth 클라이언트 ID — 웹 애플리케이션** 하나 → 나온 ID 를
-   - GitHub 변수 `STORE_WEB_CLIENT_ID` (2번)
-   - Worker 변수 `GOOGLE_WEB_CLIENT_ID` (4번)
-3. [ ] **OAuth 클라이언트 ID — Android** (패키지 `app.naruve.katakata`) 를 SHA-1 마다 하나씩:
+   - 넣은 값: 홈 `https://naruve.app/` · 방침 `https://naruve.app/apps/kata-kata/privacy/` · 약관 `https://naruve.app/apps/kata-kata/terms/` · 승인 도메인 `naruve.app` · 로고 없음(그래서 Google 인증 심사가 필요 없음)
+2. [x] **OAuth 클라이언트 ID — 웹 애플리케이션** 하나 → 나온 ID 를
+   - GitHub 변수 `STORE_WEB_CLIENT_ID` (2번) — 넣음
+   - Worker 변수 `GOOGLE_WEB_CLIENT_ID` (4번) — `workers/kata-public/wrangler.toml` 에 채워 둠(9차)
+3. [x] **OAuth 클라이언트 ID — Android** (패키지 `app.naruve.katakata`) 를 SHA-1 마다 하나씩 — **4개 만듦**:
+   - 업로드 키 `B8:26:C6:26:3B:71:49:B1:36:A6:63:2F:2D:E5:E9:B4:1E:DE:88:4B`
+   - Play 앱 서명 키(현재) `99:AC:89:84:57:4F:C4:1B:21:25:91:2B:37:AB:F2:FC:7E:72:5A:F0`
+   - Play 앱 서명 키 `E8:41:15:E1:CF:CC:16:74:9F:F5:4F:35:F2:92:77:BF:62:3A:8F:B7`
+   - Play 앱 서명 키 `EF:7B:A3:0D:B3:FC:67:E9:51:25:84:4A:23:B6:99:98:DA:8D:F3:EE`
+   - (아래는 처음 안내 그대로)
    - 업로드 키 SHA-1 (1번)
    - **Play 앱 서명 키 SHA-1** — Play Console → 앱 → 테스트 및 출시 → 앱 무결성 → 앱 서명 (5번에서 첫 업로드 뒤에 보임)
    - (선택) 디버그 빌드로 시험할 때만: 디버그 키 SHA-1
 
    ※ Android 클라이언트가 없거나 SHA-1 이 다르면 로그인 창이 뜨지 않고 `FAILED`/`NO_ACCOUNT` 가 납니다. 가장 흔한 실수입니다.
-4. [ ] **Google Play Android Developer API** 사용 설정 (API 및 서비스 → 라이브러리)
-5. [ ] **서비스 계정** 만들기 → JSON 키 받기 → 6번 Play Console 에서 이 계정을 초대 → Worker 비밀값 `PLAY_SERVICE_ACCOUNT` 에 JSON 전체를 넣음
+4. [x] **Google Play Android Developer API** 사용 설정 (API 및 서비스 → 라이브러리)
+5. [x] **서비스 계정** 만들기 → JSON 키 받기 → 6번 Play Console 에서 이 계정을 초대 → Worker 비밀값 `PLAY_SERVICE_ACCOUNT` 에 JSON 전체를 넣음
+   - 만든 계정: `kata-play-billing@gen-lang-client-0453772321.iam.gserviceaccount.com` (JSON 키는 저장소 밖에 보관). Play Console 초대까지 끝.
+   - **남은 것**: Worker 비밀값 `PLAY_SERVICE_ACCOUNT` 에 넣기 — 4절(`08-cloudflare-deploy.md` 5단계)에서 합니다.
 
-## 4. Cloudflare — 공개판 서버 `kata-public` (15분)
+## 4. Cloudflare — 공개판 서버 `kata-public` (15분) — ⏳ 다음에 할 일
+
+**따라 하는 순서는 `08-cloudflare-deploy.md` 에 복사해 붙여 넣는 명령으로 적어 두었습니다(9차). 그 문서대로 하면 아래 1~5 와 4-1·4-2 가 한 번에 끝납니다.**
+`wrangler.toml` 에는 `GOOGLE_WEB_CLIENT_ID`·`PLAY_PACKAGE`·`PRODUCT_IDS`·`AI_DAILY_BUDGET`(`{"all":3000,"tts":1000}`)를 이미 채웠고, KV id 한 칸만 남았습니다.
+아래는 처음 안내 그대로입니다(대시보드에 붙여 넣는 방법은 Durable Object 가 만들어지지 않으므로 쓰지 않습니다).
 
 1. [ ] KV 네임스페이스 `PUBLIC_KV` 만들기
 2. [ ] Worker `kata-public` 만들기 → `workers/kata-public/worker.js` 내용을 붙여 넣기 → KV 바인딩 이름 `PUBLIC_KV`
@@ -83,7 +103,7 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
    - **KV 만으로 무료 요금제에서 돌리면 금방 막힙니다.** KV 무료 한도는 **하루 쓰기 1,000번**인데, KV 방식은 AI 호출 한 번에 2~3번을 씁니다(하루 300~400번 호출이면 끝).
      한도에 닿으면 서버는 AI 를 멈추고 "지금은 사용할 수 없습니다"를 냅니다(세지 못한 채 부르지 않게 2026-11-14 에 고침). Durable Object 를 켜면 AI 호출은 KV 를 쓰지 않습니다.
    - **방법: 대시보드에 코드를 붙여 넣는 것으로는 만들어지지 않습니다. PC 에서 한 번 `wrangler` 로 배포해야 합니다.**
-     1. `workers/kata-public/wrangler.toml` 에서 `GOOGLE_WEB_CLIENT_ID` 와 KV `id` 두 칸을 채웁니다(이 파일의 `[vars]` 는 대시보드 변수를 덮어씁니다. 비밀값은 덮어쓰지 않습니다). 채운 값은 공개돼도 되는 값이지만, 커밋할지는 정하세요.
+     1. `workers/kata-public/wrangler.toml` 에서 KV `id` 칸을 채웁니다 — `GOOGLE_WEB_CLIENT_ID` 는 9차에 채워 두었습니다(이 파일의 `[vars]` 는 대시보드 변수를 덮어씁니다. 비밀값은 덮어쓰지 않습니다). 채운 값은 공개돼도 되는 값이지만, 커밋할지는 정하세요.
      2. 그 폴더에서 `npx wrangler login` → `npx wrangler deploy`. 파일에 Durable Object 바인딩·마이그레이션(`new_sqlite_classes`)·매시간 Cron 이 이미 적혀 있습니다(2026-11-14 `wrangler deploy --dry-run` 으로 설정 확인).
      3. 확인: `curl "https://kata-public.cura4world.workers.dev/admin/budget" -H "x-admin-key: <ADMIN_KEY>"` → `"counter":"durable-object"` 이면 켜진 것. `"kv"` 면 바인딩이 없는 것입니다.
    - 켜지 않고 배포해도 깨지지 않습니다(예전처럼 KV 로 셉니다). KV 로 쓰다가 나중에 켜면 그날의 사용량은 0 부터 다시 셉니다.
@@ -111,34 +131,43 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
    `POST AI_PROXY_URL` + 헤더 `x-kata-proxy`(비밀)·`x-kata-model`(모델) + 본문 그대로로 만들었습니다.
    kata-sermon 의 `/ai/gemini` 처리부와 다르면 `worker.js` 의 `handleAi` 안 `tfetch(env.AI_PROXY_URL, …)` 부분만 맞추면 됩니다.
 
-## 5. Play Console — 앱 만들기와 첫 업로드 (30분)
+## 5. Play Console — 앱 만들기와 첫 업로드 (30분) — ✅ 2026-11-14 완료
 
-1. [ ] 앱 만들기: 이름 Kata kata, 기본 언어 한국어, 앱, 무료(인앱 구매 있음)
-2. [ ] GitHub → Actions → **Build Store AAB (공개판)** → Run workflow (브랜치 `release/public` 또는 병합 뒤 `main`)
+1. [x] 앱 만들기: 이름 Kata kata, 기본 언어 한국어, 앱, 무료(인앱 구매 있음)
+   - 만든 앱: "Kata kata: 인도네시아어 사전·단어장" · `app.naruve.katakata` · 앱 ID `4972371469520427632` · 개발자 계정 Naruve Studio(`9140545952027668113`, 조직)
+2. [x] GitHub → Actions → **Build Store AAB (공개판)** → Run workflow (브랜치 `release/public` 또는 병합 뒤 `main`)
    → 끝나면 아티팩트 `kata-kata-store-aab` 다운로드
-3. [ ] 테스트 및 출시 → **내부 테스트** → 새 버전 → AAB 업로드 (Play 앱 서명 사용 동의)
-4. [ ] 앱 서명 키 SHA-1 을 3-3번 Android 클라이언트에 추가
-5. [ ] 내부 테스터에 Arga 님 Google 계정 추가 → 테스트 링크로 설치
+   - 올린 것: 실행 #9 (versionCode 9, 1.0.9), 서명 확인함
+3. [x] 테스트 및 출시 → **내부 테스트** → 새 버전 → AAB 업로드 (Play 앱 서명 사용 동의)
+4. [x] 앱 서명 키 SHA-1 을 3-3번 Android 클라이언트에 추가 (3개)
+5. [x] 내부 테스터에 Arga 님 Google 계정 추가 → 테스트 링크로 설치
+   - 이메일 목록 "Kata kata 내부 테스터"(2명). 같은 목록을 라이선스 테스터로도 씀.
+   - ⚠ 지금 설치하면 **예전 화면**이 보입니다(정상) — 스토어 앱은 `https://cura4world.github.io/idkr-buddy/` 를 불러오는데, 공개판 화면은 8절의 `main` 병합 뒤에 올라갑니다.
 
-## 6. Play Console — 구독 상품 (첫 업로드 뒤에 열림)
+## 6. Play Console — 구독 상품 (첫 업로드 뒤에 열림) — ✅ 2026-11-14 완료 (f·g·h 의 확인 일부만 남음)
 
-- [ ] 수익 창출 → 구독 → 상품 ID **`plus`** (바꾸면 Worker `PRODUCT_IDS` 도 같이)
+- [x] 수익 창출 → 구독 → 상품 ID **`plus`** (바꾸면 Worker `PRODUCT_IDS` 도 같이) — "Kata kata Plus", 활성
+  - 실제로 만든 것: 기본 요금제 `monthly`(P1M, KRW 3,900) · `yearly`(P1Y, KRW 34,800 — 한국만 직접 지정). 175개국에 판매, 다른 나라 가격은 Google 자동 환산
+    (예: IDR 53,000 / 469,000 · USD 2.89 / 25.99 · JPY 520 / 4,580).
+  - 9차에 코드와 대조했습니다 — 앱·서버가 기대하는 상품 ID·기본 요금제·체험 판별과 **모두 맞습니다**(고친 코드 없음, 실제 이름으로 테스트만 추가).
   - 기본 요금제 `monthly` (1개월, 자동 갱신) / `yearly` (1년, 자동 갱신)
   - 가격 (**2026-11-14 결정**): **월간 3,900원 / 연간 34,800원**(월 2,900원 꼴). 다른 나라 가격은 Play 가 환율로 채움
     - 앱은 Play 에서 받은 가격만 보여 줍니다. 월 환산 "(월 2,900원)"과 할인율은 앱이 Play 연 가격 ÷ 12 로 계산하므로,
       **콘솔에 넣은 값이 곧 화면 값**입니다. 다른 값을 넣으면 화면도 그 값으로 바뀝니다(코드를 고칠 필요 없음).
     - 미리보기 APK 에만 대체값 34,800원 / 3,900원이 들어 있습니다(`src/lib/plusCopy.ts`). 가격을 바꾸면 이 두 숫자도 같이.
   - 각 기본 요금제에 **7일 무료 체험** 제안
-- [ ] **(a) 연간 가격 확인** — 위 34,800원으로 넣었는지. 예전 문서에 적혀 있던 잠정 연간 가격은 폐기된 값입니다.
-- [ ] **(b) 체험 제안 ID 에 `trial` 을 넣기** — 예: `trial-7d`. 서버가 Play 응답에서 체험 단계를 못 읽을 때 이 글자로
+- [x] **(a) 연간 가격 확인** — 위 34,800원으로 넣었는지. 예전 문서에 적혀 있던 잠정 연간 가격은 폐기된 값입니다.
+- [x] **(b) 체험 제안 ID 에 `trial` 을 넣기** — 실제 ID: **`trial-7d-monthly`**(월간) · **`trial-7d-yearly`**(연간), 무료 체험 7일, 둘 다 활성. 서버가 Play 응답에서 체험 단계를 못 읽을 때 이 글자로
       체험을 알아봅니다(`03-architecture.md` "체험 판정"). 이름에 `trial` 이 없으면 체험 중인 사람이 Plus 한도로 잡힐 수 있습니다.
-- [ ] **(c) 체험 제안의 자격을 "신규 고객 획득 — 이 구독을 구매한 적이 없는 사용자"로** — 화면의
+- [x] **(c) 체험 제안의 자격을 "신규 고객 획득 — 이 구독을 구매한 적이 없는 사용자"로** (넣은 값: "신규 고객 확보 / 이 구독(plus)을 이용한 적 없음") — 화면의
       "무료 체험은 계정마다 한 번만 제공됩니다"가 이 설정에 기대고 있습니다. 앱은 Play 가 체험 제안을 줄 때만 "7일 무료"를 보여 줍니다.
-- [ ] **(d) 유예 기간·계정 보류 기간을 정해서 여기에 적어 두기** — 기본 요금제마다 설정합니다.
+- [x] **(d) 유예 기간·계정 보류 기간을 정해서 여기에 적어 두기** — 기본 요금제마다 설정합니다.
       서버는 유예 기간(`IN_GRACE_PERIOD`)에는 Plus 를 유지하고 계정 보류(`ON_HOLD`)에는 무료로 내립니다.
       기본값에 맡기면 결제 실패 뒤 며칠 동안 Plus 가 유지되는지 아무도 모릅니다.
-      → 정한 값: 월간 유예 `___`일 · 보류 `___`일 / 연간 유예 `___`일 · 보류 `___`일
-- [ ] 사용자 및 권한 → 3-5번 서비스 계정 초대 → 앱 권한: **재무 데이터 보기**, **주문 및 구독 관리**
+      → 정한 값(2026-11-14): **월간 유예 `7`일 · 보류 `53`일 / 연간 유예 `14`일 · 보류 `46`일** (어느 쪽이든 결제 실패 뒤 60일 안에 해결되지 않으면 구독이 끝남)
+      뜻: 결제가 실패해도 월간은 7일, 연간은 14일 동안 Plus 가 유지되고, 그 뒤 보류 기간에는 무료로 내려갑니다. 보류 중에 결제 수단을 고치면 Plus 로 돌아옵니다.
+- [x] 사용자 및 권한 → 3-5번 서비스 계정 초대 → 앱 권한: **재무 데이터 보기**, **주문 및 구독 관리**
+  - 넣은 권한(2026-11-14): 앱 정보 보기 + 재무 데이터 보기 + 주문 및 구독 관리 — 필요한 두 권한이 모두 들어 있습니다.
   - **⚠ "주문 및 구독 관리" 권한이 빠지면 구매 조회는 되는데 구매 확인(acknowledge)만 실패합니다.
     그러면 모든 구매가 사흘 뒤 Google 에 의해 자동 환불됩니다. 두 권한을 모두 넣었는지 반드시 다시 확인하세요.**
   - 지금 서버는 확인이 실패해도 Plus 는 먼저 열어 주고 10분마다 다시 확인하지만, 권한이 없으면 끝내 성공하지 못해 사흘 뒤 환불됩니다.
@@ -146,7 +175,7 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
     내부 테스트에서 구독한 뒤 **KV 에 `ackfail:` 키가 하나도 없는지** 확인하세요.
 - [ ] **(e) 서비스 계정 권한은 넣은 뒤 반영까지 시간이 걸릴 수 있습니다**(길면 하루). 넣자마자 시험하면
       조회부터 401·403 이 나는데, 코드 오류가 아닙니다. 이때 앱은 "결제는 완료되었습니다. 확인 중입니다."를 보여 주고 자동으로 다시 확인합니다.
-- [ ] 설정 → 라이선스 테스트 → Arga 님 계정 추가 (실제 결제 없이 구독 시험)
+- [x] 설정 → 라이선스 테스트 → Arga 님 계정 추가 (실제 결제 없이 구독 시험) — 목록 "Kata kata 내부 테스터"(2명)
 - [ ] **(f) 환불 처리 방침 정하기** — 콘솔에서 환불할 때 두 가지가 있습니다.
   - "환불 + 권한 회수(구독 취소)": 서버가 **하루 안에** 알아채고 무료로 내립니다(마지막 확인에서 24시간이 지난 뒤 첫 요청 때 Play 에 다시 묻습니다).
     바로 내려야 하면 Cloudflare KV 에서 그 계정의 `ent:<uid>` 를 지웁니다(관리자가 준 Special·심사용 등급이 있었다면 다시 줘야 함).
@@ -157,6 +186,11 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
       문제가 되면 그때 Pub/Sub 주제를 연결합니다(서버 코드 추가 필요 — CC 에게).
 - [ ] **(h) Play Console 결제 프로필의 한국 판매용 사업자 정보·환불 안내** — 약관 페이지의 "사업자 정보"
       (`https://naruve.app/apps/kata-kata/terms/#business-info`)와 같은 값(상호·대표자·사업자등록번호·주소·연락처)인지 대조합니다.
+  - [x] 결제 프로필 만듦(2026-11-14): 나루브스튜디오(간이과세) · 카드 명세서 이름 `NARUVE STUDIO` · 고객지원 `support@naruve.app`
+  - [x] 판매자 상태: **판매자(Trader) 선언 완료**
+  - [x] 한국 개발자 추가 정보(사업자번호·통신판매업 신고번호)는 **비워 둠** — 간이과세자라 통신판매업 신고가 면제이고, 공정위 조회 결과도 미신고입니다.
+        필요해지면 2027년 1월에 신고합니다(연말에 신고하면 등록면허세를 두 해 치 내게 됨). 알림을 맞춰 두었습니다.
+  - [ ] 남은 확인: 판매자 선언에 넣은 주소·전화·이메일이 약관의 "사업자 정보"와 글자까지 같은지 한 번 대조(콘솔은 Arga 님만 볼 수 있습니다).
 
 ## 7. Play Console — 앱 콘텐츠(정책)
 
@@ -183,6 +217,7 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 - [ ] 데이터 보안: `07-data-safety.md` 답안 그대로
 - [ ] 계정 삭제 주소: `https://naruve.app/apps/kata-kata/delete/`
 - [ ] 스토어 등록정보: `06-store-listing.md` + 스크린샷 (폰 2~8장), 아이콘 512×512, 그래픽 이미지 1024×500
+  - 스크린샷 **초안 14장**(1080×1920)을 9차에 만들어 저장소 밖 `../run9/screens/` 에 두었습니다(고르는 법·주의는 그 폴더의 `README.md`). Plus 화면에 얹을 "Plus" 표시와 그래픽 이미지 1024×500 은 아직 없습니다.
 
 ## 8. 웹 반영 (CC 에게)
 
