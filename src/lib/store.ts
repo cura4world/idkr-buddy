@@ -303,7 +303,7 @@ function sortMyWordbookNewestFirstOnce() {
 try {
   migrateSharedIdsOnce(localStorage, seedData as SeedLike);
 } catch (e) {}
-// 2026-11-14 검수에서 표기를 고친 표제어 19개의 "다시 외울 표시"를 새 ID 로 (한 번만)
+// 2026-11-14 검수에서 표기를 고친 표제어(v3 19개 + v4 7개)의 "다시 외울 표시"를 새 ID 로 (판마다 한 번만)
 try {
   migrateRenamedHeadwordsOnce(localStorage);
 } catch (e) {}
