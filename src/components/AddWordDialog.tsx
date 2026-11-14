@@ -72,7 +72,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
       if (msg === "INVALID_API_KEY" || msg === "NOT_AVAILABLE") {
         aiErrorToast(msg, "API 키가 올바르지 않습니다. 설정에서 확인하세요");
       } else if (msg === "RATE_LIMIT") {
-        toast("잠시 후 다시 시도하세요 (요청 한도)");
+        toast("요청이 많습니다. 잠시 뒤 다시 시도하세요");
       } else if (msg === "NO_API_KEY" || msg === "SESSION_EXPIRED") {
         aiErrorToast(msg, "설정에서 Gemini API 키를 먼저 입력하세요");
       } else if (msg.indexOf("QUOTA") === 0) {
@@ -193,7 +193,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
       </div>
 
       <div>
-        <FormLabel>카테고리</FormLabel>
+        <FormLabel>단어장</FormLabel>
         <div className={"relative " + FORM_FIELD_CLASS} style={{ minHeight: 44 }}>
           {selectedCat ? (
             <span className="shrink-0 flex items-center text-[1rem] leading-none" aria-hidden="true">
