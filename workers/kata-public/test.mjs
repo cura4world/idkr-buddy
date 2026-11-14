@@ -4,7 +4,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import worker, { __resetCachesForTest } from "./worker.js";
+import worker, { __resetCachesForTest, UsageCounter } from "./worker.js";
 
 const ORIGIN = "https://cura4world.github.io";
 const CLIENT_ID = "web-client.apps.googleusercontent.com";
@@ -1245,5 +1245,421 @@ test("끝난 옛 구매를 검증해도 지금 이용 중인 구독이 무료로
   assert.equal(old.data.valid, false);
   assert.equal(old.data.plan.tier, "plus");
   assert.equal(entOf(env, uid).purchaseToken, "tok-live");
+  resetWorld();
+});
+
+// ── 4차(2026-11-14): Durable Object 카운터 · 전체 하루 상한 · 신고 알림 · 보안 보강 ──
+
+// 가짜 Durable Object 저장소·이름공간. 실제처럼 값은 복사해서 주고받고, 읽기·쓰기는 한 박자씩 쉽니다
+// (쉬는 사이에 다른 요청이 끼어들 수 있어야 "줄 세우기"가 정말 필요한지 드러납니다).
+const tick = () => new Promise((ok) => setTimeout(ok, 0));
+function makeStorage() {
+  const m = new Map();
+  let alarm = null;
+  return {
+    m,
+    async get(k) { await tick(); return m.has(k) ? structuredClone(m.get(k)) : undefined; },
+    async put(k, v) { await tick(); m.set(k, structuredClone(v)); },
+    async delete(k) { m.delete(k); },
+    async deleteAll() { m.clear(); },
+    async list() { return new Map([...m].map(([k, v]) => [k, structuredClone(v)])); },
+    async getAlarm() { return alarm; },
+    async setAlarm(t) { alarm = t; },
+    alarmAt: () => alarm,
+  };
+}
+function makeDO({ broken = false } = {}) {
+  const objs = new Map();
+  return {
+    objs,
+    idFromName: (n) => n,
+    get(id) {
+      if (!objs.has(id)) {
+        const storage = makeStorage();
+        objs.set(id, { storage, obj: new UsageCounter({ storage }) });
+      }
+      const o = objs.get(id).obj;
+      return {
+        fetch: async (url, init) => {
+          if (broken) throw new Error("durable object unavailable");
+          return o.fetch(new Request(url, init));
+        },
+      };
+    },
+  };
+}
+// 읽기가 한 박자 쉬는 KV — 실제 KV 처럼 "읽고 나서 쓰기 전"에 다른 요청이 끼어듭니다.
+function makeSlowKV() {
+  const kv = makeKV();
+  const get = kv.get.bind(kv);
+  kv.get = async (k) => { await tick(); return get(k); };
+  return kv;
+}
+const burst = (n, fn) => Promise.all(Array.from({ length: n }, (_, i) => fn(i)));
+const count = (rs, status) => rs.filter((r) => r.status === status).length;
+const ADMIN = { headers: { "x-admin-key": "admin-key" } };
+
+// 텔레그램 흉내
+let tgStatus = 200; // 0 = 통신 오류
+const baseFetch = globalThis.fetch;
+globalThis.fetch = async (url, init = {}) => {
+  if (String(url).indexOf("https://api.telegram.org/") === 0) {
+    calls.push({ url: String(url), init });
+    if (tgStatus === 0) throw new Error("network down");
+    return new Response(JSON.stringify({ ok: tgStatus === 200 }), { status: tgStatus });
+  }
+  return baseFetch(url, init);
+};
+const tgCalls = () => calls.filter((c) => c.url.indexOf("https://api.telegram.org/") === 0);
+const tgTexts = () => tgCalls().map((c) => JSON.parse(c.init.body).text);
+const TG = { TELEGRAM_BOT_TOKEN: "123:abc", TELEGRAM_CHAT_ID: "777" };
+
+test("S-22 동시 요청: KV 는 한도를 넘겨 통과시키고(알려진 한계), Durable Object 는 정확히 한도까지만", async () => {
+  resetWorld();
+  // KV 방식 — 무료 이야기는 하루 1편인데 동시에 20개를 쏘면 여러 개가 통과합니다.
+  const envKv = makeEnv({ PUBLIC_KV: makeSlowKV() });
+  const tk = await login(envKv, { sub: "9801", email: "c1@example.com" });
+  const kvRes = await burst(20, () => ai(envKv, tk, "story"));
+  assert.ok(count(kvRes, 200) > 1, "KV 방식의 한계가 재현돼야 함 (통과 " + count(kvRes, 200) + ")");
+
+  // Durable Object — 정확히 1개만 통과
+  const envDo = makeEnv({ PUBLIC_KV: makeSlowKV(), USAGE_DO: makeDO() });
+  const td = await login(envDo, { sub: "9802", email: "c2@example.com" });
+  const doRes = await burst(20, () => ai(envDo, td, "story"));
+  assert.equal(count(doRes, 200), 1);
+  assert.equal(count(doRes, 429), 19);
+  assert.equal(doRes.find((r) => r.status === 429).data.error, "QUOTA_STORY");
+
+  // Plus 이야기 하루 5편 — 정확히 5개
+  clockOffset += DAY; // 새 날
+  await makePlus(envDo, td);
+  const plusRes = await burst(20, () => ai(envDo, td, "story"));
+  assert.equal(count(plusRes, 200), 5);
+  assert.equal(count(plusRes, 429), 15);
+  const me = await call(envDo, "GET", "/me", { token: td });
+  assert.equal(me.data.features.story.used.day, 5);
+  assert.equal(me.data.features.story.left.day, 0);
+  // 사용량은 KV 가 아니라 객체에 적힘
+  assert.ok(![...envDo.PUBLIC_KV.m.keys()].some((k) => k.indexOf("use:") === 0 || k.indexOf("usem:") === 0));
+  assert.ok(envDo.USAGE_DO.objs.has("u:g_9802"));
+  resetWorld();
+});
+
+test("Durable Object: 실패한 호출 돌려받기·같은 요청 번호·긴 읽기 한 편·신고 상한이 KV 때와 같게 돈다", async () => {
+  resetWorld();
+  const env = makeEnv({ USAGE_DO: makeDO() });
+  const t = await login(env, { sub: "9811", email: "d1@example.com" });
+  // 실패(5xx)는 돌려받음
+  proxyStatus = 500;
+  assert.equal((await ai(env, t, "story")).status, 500);
+  proxyStatus = 200;
+  assert.equal((await ai(env, t, "story")).status, 200);
+  assert.equal((await ai(env, t, "story")).data.error, "QUOTA_STORY");
+  // 잠긴 기능
+  assert.equal((await ai(env, t, "longread")).data.error, "PLUS_REQUIRED");
+  // 같은 요청 번호의 재시도는 한 번만 셈 (무료 오늘의 문장 하루 1번)
+  const h = { "x-kata-req": "abcdefgh1234" };
+  assert.equal((await ai(env, t, "phrase", null, h)).status, 200);
+  assert.equal((await ai(env, t, "phrase", null, h)).status, 200);
+  assert.equal((await ai(env, t, "phrase", null, { "x-kata-req": "zzzzzzzz9999" })).data.error, "QUOTA_PHRASE");
+  // Plus: 긴 읽기 한 편의 조각 여러 개는 한 번
+  await makePlus(env, t);
+  for (let i = 0; i < 4; i++) assert.equal((await ai(env, t, "longread", null, { "x-kata-unit": "story:1" })).status, 200);
+  assert.equal((await call(env, "GET", "/me", { token: t })).data.features.longread.used.day, 1);
+  // 신고 하루 상한(Plus 50) — 동시에 60개를 보내도 정확히 50개
+  const reps = await burst(60, (i) => call(env, "POST", "/report", { token: t, body: { feature: "dict", reason: "r" + i } }));
+  assert.equal(count(reps, 200), 50);
+  assert.equal(count(reps, 429), 10);
+  assert.equal(reps.find((r) => r.status === 429).data.error, "QUOTA_REPORT");
+  resetWorld();
+});
+
+test("Durable Object: 계정을 지우면 객체의 사용량도 지워지고, 지난 칸은 날짜가 바뀌면 정리된다", async () => {
+  resetWorld();
+  const env = makeEnv({ USAGE_DO: makeDO() });
+  const t = await login(env, { sub: "9821", email: "d2@example.com" });
+  assert.equal((await ai(env, t, "text")).status, 200);
+  const st = env.USAGE_DO.objs.get("u:g_9821").storage;
+  assert.ok(st.m.size >= 2); // 하루 칸 + 한 달 칸
+  assert.ok(st.alarmAt() > Date.now()); // 요청이 없어도 지우도록 알람을 걸어 둠
+  const firstDayKey = [...st.m.keys()].find((k) => k.indexOf("use:") === 0);
+  // 사흘 뒤 다시 쓰면 지난 하루 칸은 사라짐
+  clockOffset += 4 * DAY;
+  assert.equal((await ai(env, t, "text")).status, 200);
+  assert.ok(!st.m.has(firstDayKey));
+  // 알람만 돌아도(요청 없이) 지난 칸이 지워짐
+  clockOffset += 45 * DAY;
+  await env.USAGE_DO.objs.get("u:g_9821").obj.alarm();
+  assert.equal([...st.m.keys()].filter((k) => k.indexOf("use") === 0).length, 0);
+  // 계정 삭제
+  clockOffset = 0;
+  const t2 = await login(env, { sub: "9822", email: "d3@example.com" });
+  await ai(env, t2, "text");
+  const st2 = env.USAGE_DO.objs.get("u:g_9822").storage;
+  assert.ok(st2.m.size > 0);
+  assert.equal((await call(env, "POST", "/account/delete", { token: t2 })).status, 200);
+  assert.equal(st2.m.size, 0);
+  resetWorld();
+});
+
+test("Durable Object 가 없거나 고장 나도 KV 방식으로 그대로 돈다", async () => {
+  resetWorld();
+  const env = makeEnv({ USAGE_DO: makeDO({ broken: true }) });
+  const t = await login(env, { sub: "9831", email: "d4@example.com" });
+  assert.equal((await ai(env, t, "story")).status, 200);
+  assert.equal((await ai(env, t, "story")).data.error, "QUOTA_STORY"); // KV 로 세어 한도도 지켜짐
+  assert.ok([...env.PUBLIC_KV.m.keys()].some((k) => k.indexOf("use:g_9831:") === 0));
+  assert.equal((await call(env, "GET", "/me", { token: t })).data.features.story.used.day, 1);
+  resetWorld();
+});
+
+test("S-21 전체 하루 상한(AI_DAILY_BUDGET): 넘으면 503, 계정 한도는 쓰지 않고, 다음 날 풀린다", async () => {
+  resetWorld();
+  // 비어 있으면 상한 없음(예전과 같음) — KV 에 전체 칸도 만들지 않음
+  const envNone = makeEnv();
+  const tn = await login(envNone, { sub: "9841", email: "b0@example.com" });
+  for (let i = 0; i < 5; i++) assert.equal((await ai(envNone, tn, "text")).status, 200);
+  assert.ok(![...envNone.PUBLIC_KV.m.keys()].some((k) => k.indexOf("budget:") === 0));
+  assert.equal((await call(envNone, "GET", "/admin/budget", ADMIN)).data.caps, null);
+
+  const env = makeEnv({ AI_DAILY_BUDGET: "3" });
+  const t = await login(env, { sub: "9842", email: "b1@example.com" });
+  calls.length = 0;
+  // 실패한 호출은 전체 칸도 돌려받음
+  proxyStatus = 500;
+  assert.equal((await ai(env, t, "text")).status, 500);
+  proxyStatus = 200;
+  for (let i = 0; i < 3; i++) assert.equal((await ai(env, t, "text")).status, 200);
+  const blocked = await ai(env, t, "text");
+  assert.equal(blocked.status, 503);
+  assert.equal(blocked.data.error, "SERVICE_PAUSED");
+  assert.equal(blocked.data.reason, "budget");
+  assert.equal(blocked.headers.get("x-kata-paused"), "1");
+  // 막힌 호출은 AI 쪽으로 나가지 않았고 계정 한도도 쓰지 않음
+  assert.equal(calls.filter((c) => c.url === PROXY).length, 4);
+  assert.equal((await call(env, "GET", "/me", { token: t })).data.usage.text, 3);
+  // 다른 계정도 막힘(전체 상한). 로그인·/me 는 그대로
+  const t2 = await login(env, { sub: "9843", email: "b2@example.com" });
+  assert.equal((await ai(env, t2, "story")).status, 503);
+  assert.equal((await call(env, "GET", "/me", { token: t2 })).data.features.story.used.day, 0);
+  // 관리자·Special 은 막지 않음(세기는 함)
+  await call(env, "POST", "/admin/special", Object.assign({ body: { email: "b2@example.com", tier: "admin" } }, ADMIN));
+  assert.equal((await ai(env, t2, "text")).status, 200);
+  const b = await call(env, "GET", "/admin/budget", ADMIN);
+  assert.equal(b.status, 200);
+  assert.deepEqual(b.data.caps, { all: 3, text: null, tts: null });
+  assert.equal(b.data.used.all, 4);
+  assert.equal(b.data.counter, "kv");
+  assert.ok(b.data.reachedAt > 0);
+  assert.equal((await call(env, "GET", "/admin/budget")).status, 403);
+  // 다음 날(한국 날짜)에는 풀림
+  clockOffset += DAY;
+  assert.equal((await ai(env, t, "text")).status, 200);
+  resetWorld();
+});
+
+test("S-21 하루 상한: 소리만 따로 두기, 잘못 적은 값은 0 으로 보고 막기, AI_PAUSED 와 함께", async () => {
+  resetWorld();
+  const env = makeEnv({ AI_DAILY_BUDGET: '{"all":10,"tts":2}' });
+  const t = await login(env, { sub: "9851", email: "b3@example.com" });
+  assert.equal((await ai(env, t, "word-audio")).status, 200);
+  assert.equal((await ai(env, t, "word-audio")).status, 200);
+  const r = await ai(env, t, "word-audio");
+  assert.equal(r.status, 503);
+  assert.equal(r.data.reason, "budget");
+  assert.equal((await ai(env, t, "text")).status, 200); // 글은 아직 됨
+
+  const envBad = makeEnv({ AI_DAILY_BUDGET: "많이" });
+  const tb = await login(envBad, { sub: "9852", email: "b4@example.com" });
+  assert.equal((await ai(envBad, tb, "text")).status, 503);
+  const b = await call(envBad, "GET", "/admin/budget", ADMIN);
+  assert.equal(b.data.invalid, true);
+  assert.equal(b.data.caps.all, 0);
+
+  // AI_PAUSED 가 먼저 — 전체 칸을 쓰지 않음
+  const envP = makeEnv({ AI_DAILY_BUDGET: "5", AI_PAUSED: "all" });
+  const tp = await login(envP, { sub: "9853", email: "b5@example.com" });
+  const p = await ai(envP, tp, "text");
+  assert.equal(p.data.error, "SERVICE_PAUSED");
+  assert.equal(p.data.reason, undefined);
+  assert.equal(p.headers.get("x-kata-paused"), "1");
+  assert.equal((await call(envP, "GET", "/admin/budget", ADMIN)).data.used.all, 0);
+  resetWorld();
+});
+
+test("S-21 하루 상한 + Durable Object: 여러 계정이 동시에 쏴도 정확히 상한까지만 나간다", async () => {
+  resetWorld();
+  const env = makeEnv({ PUBLIC_KV: makeSlowKV(), USAGE_DO: makeDO(), AI_DAILY_BUDGET: "7", ...TG });
+  const tokens = [];
+  for (let i = 0; i < 4; i++) tokens.push(await login(env, { sub: "986" + i, email: "m" + i + "@example.com" }));
+  calls.length = 0;
+  const rs = await burst(40, (i) => ai(env, tokens[i % 4], "text"));
+  assert.equal(count(rs, 200), 7);
+  assert.equal(count(rs, 503), 33);
+  assert.equal(calls.filter((c) => c.url === PROXY).length, 7);
+  // 막힌 호출은 계정 칸을 돌려받음 — 계정별 사용량 합이 7
+  let used = 0;
+  for (const tk of tokens) used += (await call(env, "GET", "/me", { token: tk })).data.usage.text;
+  assert.equal(used, 7);
+  const b = await call(env, "GET", "/admin/budget", ADMIN);
+  assert.equal(b.data.counter, "durable-object");
+  assert.equal(b.data.used.all, 7);
+  // 상한에 닿았다는 운영자 알림은 하루 한 번만
+  assert.equal(tgCalls().length, 1);
+  assert.ok(tgTexts()[0].indexOf("하루 상한") >= 0);
+  // 상한이 없어도 Durable Object 가 있으면 오늘 나간 수를 셈
+  const env2 = makeEnv({ USAGE_DO: makeDO() });
+  const t2 = await login(env2, { sub: "9869", email: "m9@example.com" });
+  await ai(env2, t2, "text");
+  assert.equal((await call(env2, "GET", "/admin/budget", ADMIN)).data.used.all, 1);
+  resetWorld();
+});
+
+test("P-19 신고 알림: 비밀값이 없으면 아무것도 안 함, 있으면 첫 신고를 알리고 한 시간 안의 것은 묶는다", async () => {
+  resetWorld();
+  tgStatus = 200;
+  const envOff = makeEnv();
+  const t0 = await login(envOff, { sub: "9871", email: "n0@example.com" });
+  assert.equal((await call(envOff, "POST", "/report", { token: t0, body: { feature: "dict", reason: "x" } })).status, 200);
+  assert.equal(tgCalls().length, 0);
+  // 하나만 있어도 보내지 않음
+  const envHalf = makeEnv({ TELEGRAM_BOT_TOKEN: "123:abc" });
+  const th = await login(envHalf, { sub: "9872", email: "n1@example.com" });
+  await call(envHalf, "POST", "/report", { token: th, body: { feature: "dict", reason: "x" } });
+  assert.equal(tgCalls().length, 0);
+
+  const env = makeEnv(TG);
+  const t = await login(env, { sub: "9873", email: "reporter@example.com", name: "Budi Reporter" });
+  const long = "뜻이 틀렸습니다 제 메일 someone@example.com 전화 0812-3456-7890 로 알려 주세요 그리고 더 긴 설명이 이어집니다";
+  assert.equal((await call(env, "POST", "/report", { token: t, body: { feature: "story", input: "in", output: "out", reason: long } })).status, 200);
+  assert.equal(tgCalls().length, 1);
+  const c = tgCalls()[0];
+  assert.ok(c.url.indexOf("/bot123:abc/sendMessage") > 0);
+  const sent = JSON.parse(c.init.body);
+  assert.equal(sent.chat_id, "777");
+  assert.ok(sent.text.indexOf("새 신고 1건") >= 0);
+  assert.ok(sent.text.indexOf("기능: story") >= 0);
+  assert.ok(sent.text.indexOf("한국 시각") >= 0);
+  assert.ok(sent.text.indexOf("앞부분: 뜻이 틀렸습니다") >= 0);
+  // 개인정보 없음: 계정 번호·이메일·이름·전화, 그리고 긴 글의 뒷부분
+  for (const bad of ["g_9873", "reporter@example.com", "Budi", "someone@example.com", "0812", "이어집니다"]) {
+    assert.ok(sent.text.indexOf(bad) < 0, "알림에 들어가면 안 되는 값: " + bad);
+  }
+  // 한 시간 안의 신고 둘 — 보내지 않고 셈
+  clockOffset += 10 * MIN;
+  await call(env, "POST", "/report", { token: t, body: { feature: "dict", reason: "둘" } });
+  clockOffset += 10 * MIN;
+  await call(env, "POST", "/report", { token: t, body: { feature: "dict", reason: "셋" } });
+  assert.equal(tgCalls().length, 1);
+  // 한 시간이 지난 뒤의 다음 신고 — 그사이 것까지 한 통으로
+  clockOffset += 61 * MIN;
+  await call(env, "POST", "/report", { token: t, body: { feature: "tips", reason: "넷" } });
+  assert.equal(tgCalls().length, 2);
+  assert.ok(tgTexts()[1].indexOf("새 신고 3건 (그사이 2건 포함)") >= 0);
+  // 신고 4건이 모두 저장돼 있음
+  assert.equal((await call(env, "GET", "/admin/reports", ADMIN)).data.items.length, 4);
+  resetWorld();
+});
+
+test("P-19 신고 알림: 텔레그램이 실패해도 신고는 저장되고, 묵은 묶음은 Cron(scheduled)이 보낸다", async () => {
+  resetWorld();
+  const env = makeEnv(TG);
+  const t = await login(env, { sub: "9881", email: "n2@example.com" });
+  tgStatus = 500;
+  assert.equal((await call(env, "POST", "/report", { token: t, body: { feature: "dict", reason: "하나" } })).status, 200);
+  tgStatus = 0; // 통신 오류
+  assert.equal((await call(env, "POST", "/report", { token: t, body: { feature: "dict", reason: "둘" } })).status, 200);
+  assert.equal((await call(env, "GET", "/admin/reports", ADMIN)).data.items.length, 2);
+  assert.equal(tgCalls().length, 2); // 둘 다 시도는 했음
+  // 텔레그램이 돌아오면 다음 신고 때 밀린 것까지 알림
+  tgStatus = 200;
+  await call(env, "POST", "/report", { token: t, body: { feature: "dict", reason: "셋" } });
+  assert.ok(tgTexts()[2].indexOf("새 신고 3건 (그사이 2건 포함)") >= 0);
+  // 한 시간 안에 하나 더 → 묶임. 그 뒤 신고가 없어도 Cron 이 한 시간 뒤에 알림
+  await call(env, "POST", "/report", { token: t, body: { feature: "dict", reason: "넷" } });
+  assert.equal(tgCalls().length, 3);
+  await worker.scheduled({}, env, undefined);
+  assert.equal(tgCalls().length, 3); // 아직 한 시간 전
+  clockOffset += 61 * MIN;
+  await worker.scheduled({}, env, undefined);
+  assert.equal(tgCalls().length, 4);
+  assert.ok(tgTexts()[3].indexOf("신고 1건이 더") >= 0);
+  await worker.scheduled({}, env, undefined);
+  assert.equal(tgCalls().length, 4); // 보낸 뒤에는 다시 보내지 않음
+  // 비밀값이 없으면 Cron 도 아무것도 안 함
+  await worker.scheduled({}, makeEnv(), undefined);
+  assert.equal(tgCalls().length, 4);
+  tgStatus = 200;
+  resetWorld();
+});
+
+test("보안 보강: 카운터를 적지 못하면(KV 쓰기 한도 등) AI 를 부르지 않고 503 — 세지 않은 호출이 나가지 않는다", async () => {
+  resetWorld();
+  const kv = makeKV();
+  const put = kv.put.bind(kv);
+  let full = false; // true 면 사용량·전체 칸 쓰기가 실패(무료 요금제의 하루 쓰기 한도에 닿은 상황 흉내)
+  kv.put = async (k, v, o) => {
+    if (full && ["use:", "usem:", "uset:", "budget:"].some((p) => k.indexOf(p) === 0)) throw new Error("KV PUT failed: 429 Too Many Requests");
+    return put(k, v, o);
+  };
+  const env = makeEnv({ PUBLIC_KV: kv });
+  const t = await login(env, { sub: "9895", email: "kvfull@example.com" });
+  assert.equal((await ai(env, t, "text")).status, 200);
+  full = true;
+  calls.length = 0;
+  const r = await ai(env, t, "text");
+  assert.equal(r.status, 503);
+  assert.equal(r.data.error, "SERVICE_PAUSED");
+  assert.equal(r.data.reason, "store");
+  assert.equal(r.headers.get("x-kata-paused"), "1");
+  assert.equal(calls.filter((c) => c.url === PROXY).length, 0);
+  // 로그인·/me 는 그대로
+  assert.equal((await call(env, "GET", "/me", { token: t })).status, 200);
+  // 전체 하루 칸(KV)을 적지 못해도 마찬가지 — 상한을 정해 두었고 Durable Object 가 없을 때
+  const env2 = makeEnv({ PUBLIC_KV: kv, AI_DAILY_BUDGET: "100", LIMITS_JSON: "{}" });
+  const t2 = await login(env2, { sub: "9896", email: "kvfull2@example.com" });
+  const kvPut = kv.put;
+  kv.put = async (k, v, o) => {
+    if (k.indexOf("budget:") === 0) throw new Error("KV PUT failed");
+    return put(k, v, o);
+  };
+  calls.length = 0;
+  const r2 = await ai(env2, t2, "text");
+  assert.equal(r2.status, 503);
+  assert.equal(r2.data.reason, "store");
+  assert.equal(calls.filter((c) => c.url === PROXY).length, 0);
+  assert.equal((await call(env2, "GET", "/me", { token: t2 })).data.usage.text, 0); // 계정 칸은 돌려받음
+  kv.put = kvPut;
+  resetWorld();
+});
+
+test("보안 보강: 이메일 확인 표시가 없는 토큰은 거절, content-length 없이 보낸 큰 본문은 끊는다", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const noFlag = await call(env, "POST", "/auth/google", { body: { idToken: await idToken({ email_verified: undefined }) } });
+  assert.equal(noFlag.status, 401);
+  assert.equal(noFlag.data.error, "EMAIL_NOT_VERIFIED");
+  const notVerified = await call(env, "POST", "/auth/google", { body: { idToken: await idToken({ email_verified: false }) } });
+  assert.equal(notVerified.status, 401);
+  assert.equal((await call(env, "POST", "/auth/google", { body: { idToken: await idToken({ email_verified: "true" }) } })).status, 200);
+  // 미리 준 등급이 확인 안 된 이메일로 넘어가지 않음
+  await call(env, "POST", "/admin/special", Object.assign({ body: { email: "vip@example.com", tier: "special" } }, ADMIN));
+  const steal = await call(env, "POST", "/auth/google", { body: { idToken: await idToken({ sub: "9891", email: "vip@example.com", email_verified: undefined }) } });
+  assert.equal(steal.status, 401);
+  assert.ok([...env.PUBLIC_KV.m.keys()].some((k) => k.indexOf("spec:") === 0)); // 그대로 남아 있음
+
+  // 본문 상한: 흘려보내는(스트림) 본문은 content-length 가 없음 — 상한에서 끊고 413
+  const t = await login(env, { sub: "9892", email: "big@example.com" });
+  const big = new TextEncoder().encode(JSON.stringify({ feature: "dict", reason: "x".repeat(40 * 1024) }));
+  const stream = new ReadableStream({
+    start(ctrl) { for (let i = 0; i < big.length; i += 4096) ctrl.enqueue(big.slice(i, i + 4096)); ctrl.close(); },
+  });
+  const req = new Request("https://kata-public.example.workers.dev/report", {
+    method: "POST", headers: { origin: ORIGIN, authorization: "Bearer " + t, "content-type": "application/json" }, body: stream, duplex: "half",
+  });
+  assert.equal(req.headers.get("content-length"), null);
+  const res = await worker.fetch(req, env);
+  assert.equal(res.status, 413);
+  assert.equal((await call(env, "GET", "/admin/reports", ADMIN)).data.items.length, 0);
   resetWorld();
 });
