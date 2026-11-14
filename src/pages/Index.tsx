@@ -873,7 +873,11 @@ const Index = () => {
     //   33px = 본문 좌우 여백 16 + 목록 테두리 1 + 줄 안쪽 여백 16 → 소제목 왼쪽 여백 17px(px 고정, 글자 크기 단계와 무관).
     //   점은 글자 바깥 빈 공간에 absolute 로 매달아 글자를 밀지 않습니다: 지름 5px, 글자와의 간격 6px(점 왼쪽 끝 = 글자 시작 - 11px),
     //   세로는 글자 줄 가운데(top 50%)라 글자 85~115% 에서도 가운데입니다.
-    const sectionTitle = (t: string) => (
+    // 2026-11-14 사용자 요청: 소제목을 딱딱한 두 글자(학습·문화·신앙)에서 인도네시아어 + 한국어 한 줄로 바꿨습니다.
+    //   인도네시아어(id)는 지금 소제목 모양 그대로(굵게·진회색), 한국어(ko)는 한 단계 작고 옅게 " · " 뒤에 붙입니다.
+    //   홈을 한 화면에 담아야 하므로 두 줄로 나누지 않습니다. 좁은 화면에서는 줄바꿈 대신 끝을 "…"로 줄입니다.
+    //   말줄임은 안쪽 span 에만 겁니다 — <p> 에 overflow:hidden 을 걸면 바깥에 매단 청록 점이 잘립니다.
+    const sectionTitle = (id: string, ko: string) => (
       <p
         className="font-gothic"
         style={{ position: "relative", margin: "0 0 " + fitPx(9, 6) + " 17px", fontSize: hrem(14), fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
@@ -882,7 +886,10 @@ const Index = () => {
           aria-hidden="true"
           style={{ position: "absolute", left: -11, top: "50%", width: 5, height: 5, marginTop: -2.5, borderRadius: "50%", background: "hsl(var(--primary))" }}
         />
-        {t}
+        <span style={{ display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <span lang="id">{id}</span>
+          <span style={{ marginLeft: 6, fontSize: hrem(12), fontWeight: 500, letterSpacing: 0, color: "#646C72" }}>{"· " + ko}</span>
+        </span>
       </p>
     );
     const listBox = "bg-white overflow-hidden";
@@ -1155,9 +1162,9 @@ const Index = () => {
             ) : null}
           </section>
 
-          {/* 학습 (2026-11-13 사용자 요청: 소제목을 두 글자로 통일 — 학습·문화·신앙) */}
+          {/* 학습 (2026-11-14 사용자 요청: 소제목을 인도네시아어 + 한국어로 — 예전 두 글자 "학습") */}
           <section>
-            {sectionTitle("학습")}
+            {sectionTitle("Ayo belajar!", "공부해 볼까요")}
             <div className={listBox} style={listStyle}>
               <PubRow
                 tileBg="#DDF0EA"
@@ -1193,7 +1200,7 @@ const Index = () => {
 
           {/* 문화 */}
           <section>
-            {sectionTitle("문화")}
+            {sectionTitle("Kenali Indonesia", "알아 갈까요")}
             <div className={listBox} style={listStyle} data-fit-anchor="culture">
               <PubRow
                 tileBg="#FCE6D9"
@@ -1248,7 +1255,7 @@ const Index = () => {
               2026-11-13 사용자 요청: 설교문은 사용 빈도가 높아 신앙 첫 줄(오늘의 묵상 위)로 옮기고, 따로 있던 "설교" 구역은 없앴습니다. */}
           {staff ? (
             <section>
-              {sectionTitle("신앙")}
+              {sectionTitle("Firman hari ini", "오늘의 말씀")}
               <div className={listBox} style={listStyle}>
                 {tier === "admin" ? (
                   <PubRow
