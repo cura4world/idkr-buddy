@@ -91,6 +91,10 @@
 - `MY_WORDBOOK_ID`는 각 페이지에 `"my-wordbook"`으로 **로컬 정의**한다 (import하지 않음)
 - 페이지 간 뒤로가기는 `goBackOr(navigate, location.key, fallback)` (`src/lib/nav.ts`). `location.key === "default"`면 첫 진입이라 폴백을 쓴다
 - 한 화면 안에서의 뒤로가기(결과→목록 등)는 `history.pushState` + `popstate`로 처리한다
+- **정책 문서(개인정보처리방침·이용약관·계정 삭제 안내)는 세 곳을 같은 내용으로 둔다** — 한 곳만 고치면 앱 안 링크·심사 서류·실제 주소가 서로 달라진다.
+  ① 게시용 `docs/release/policy-final/{privacy,terms,delete}.html` ② 앱 사본 `public/{privacy,terms,delete-account}.html`(①과 **바이트 단위로 같게**)
+  ③ 게시본 `naruve-ganada` 저장소의 `docs/apps/kata-kata/{privacy,terms,delete}/index.html`(PR 로 올린다. 그 저장소 규칙대로 `node scripts/bump.mjs`·`node scripts/check_docs.mjs`).
+  고친 뒤 `cmp` 로 ①–② 세 쌍을 대조하고, 게시 뒤 `https://naruve.app/apps/kata-kata/{privacy,terms,delete}/` 를 받아 ①과 다시 대조한다. 안쪽 링크는 끝에 `/` 를 붙인 절대 주소
 
 ## Tailwind / 폰트
 - `bg-primary/10` 같은 반투명은 밑바탕에 따라 색이 완전히 달라진다. 어두운 배경 위에서는 **`bg-card`(불투명) + gradient overlay** 조합을 쓸 것
@@ -328,6 +332,10 @@ curl -s "https://api.github.com/repos/cura4world/idkr-buddy/actions/runs?per_pag
 
 - **병합(`git merge`)이 진행 중일 때 `git stash` 를 치지 않는다.** 병합 상태(`MERGE_HEAD`)가 풀려 그대로 커밋하면 병합 커밋이 아니게 된다(2026-11-14, 다시 병합해 복구).
   충돌은 스크립트나 Edit 도구로 풀고, 풀기 전 상태를 보고 싶으면 `git show <커밋>:<경로>` 로 본다
+- **하위 작업자(subagent)를 여러 개 동시에 돌릴 때는 git 명령(`add`·`commit`·`stash`·`checkout`)을 맡기지 않는다.** 작업자는 편집만 하고,
+  고칠 파일을 서로 겹치지 않게 나눠 주며, 커밋은 주 세션이 검증 뒤 파일별로 한다. 여럿이 같은 때 git 을 치면 `index.lock` 이 부딪혀
+  한 줄로 이어 둔 커밋의 뒷부분이 조용히 빠진다(2026-11-14 3차 — 7개 중 4개가 빠져 다시 실행). 작업자가 Edit 도구로 고친 파일은 CRLF 가
+  되어 있는 일이 잦으니, 커밋 전에 작업 트리의 바뀐 파일 전체에서 CR 을 센다
 
 ## 원인 찾기 (증상이 안 잡힐 때)
 
