@@ -29,6 +29,7 @@ import PlusLockBox from "@/components/PlusLockBox";
 import { ProfileAvatar, profileName } from "@/components/BottomTabs";
 import { usePlan, PAYWALL_PATH, Tier, TIER_LABEL, isPreviewBuild, isReviewAccount } from "@/lib/plan";
 import { getSession, onSessionChange, signOut, deleteAccount, PublicSession } from "@/lib/account";
+import { askLocalWipe } from "@/lib/localWipe";
 import { billingAvailable, manageSubscription } from "@/lib/billing";
 import { usePlusPricing } from "@/lib/playOffers";
 import { isStoreApp, storeAppVersion, hasNativeFileSave, saveFileNative, PRIVACY_URL, TERMS_URL, BUSINESS_INFO_URL } from "@/lib/platform";
@@ -451,6 +452,8 @@ const MyInfo = () => {
           : "계정을 삭제했습니다",
         { duration: 8000 },
       );
+      // 삭제가 끝난 직후에만 "이 폰의 단어장과 학습 기록도 지울까요?"를 묻습니다(D-10). 로그아웃에서는 묻지 않습니다.
+      askLocalWipe();
     } catch (e) {
       // 실패 이유별로 안내합니다 — 세션이 끝난 경우에는 인터넷이 아니라 다시 로그인이 필요합니다(출시 전 점검 C-12)
       const code = e instanceof Error ? e.message : "";
@@ -1009,7 +1012,8 @@ const MyInfo = () => {
           <AlertDialogHeader>
             <AlertDialogTitle className="font-body text-[0.9375rem] text-gray-900">계정을 삭제하시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription className="font-gothic text-[0.6875rem] leading-relaxed">
-              서버의 계정·사용 기록·구독 연결이 삭제되고 되돌릴 수 없습니다. 이 폰의 단어장은 그대로 남습니다.
+              서버의 계정·사용 기록·구독 연결이 삭제되고 되돌릴 수 없습니다. 이 폰의 단어장을 지울지는 삭제한 뒤에 묻습니다.
+              단어장도 지울 생각이면 먼저 "백업 파일 저장"으로 백업해 두세요.
               구독 중이라면 결제는 Google Play에서 따로 해지해야 합니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
