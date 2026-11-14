@@ -9,7 +9,9 @@ import {
   LEGACY_SHARED_CATEGORY_IDS,
   LEGACY_WORD_RENAMES,
   HEADWORD_RENAMES_V3,
+  HEADWORD_RENAMES_V4,
   SHARED_ID_RENAME_KEY,
+  SHARED_ID_RENAME_KEY_V4,
   migrateRenamedHeadwordsOnce,
   upgradeRenamedWordId,
   SHARED_ID_MIGRATION_KEY,
@@ -236,6 +238,51 @@ describe("이전 표가 실제 CSV 와 맞는다", () => {
       expect(heads.indexOf(oldW) >= 0, oldW).toBe(false);
       expect(LEGACY_WORD_RENAMES[oldW]).toBe(newW);
     }
+  });
+
+  it("11/13 검수 브랜치 병합으로 바뀐 7개도 그 단어장 파일에 새 글자로만 있다", () => {
+    expect(HEADWORD_RENAMES_V4).toHaveLength(7);
+    for (const [cat, oldW, newW] of HEADWORD_RENAMES_V4) {
+      const file = files.find((f) => idOf(f) === cat);
+      expect(file, cat).toBeTruthy();
+      const heads = fs.readFileSync(path.join(dir, file as string), "utf-8").split("\n").map((l) => l.split(",")[0]);
+      expect(heads.indexOf(newW) >= 0, newW).toBe(true);
+      expect(heads.indexOf(oldW) >= 0, oldW).toBe(false);
+      expect(LEGACY_WORD_RENAMES[oldW]).toBe(newW);
+    }
+  });
+});
+
+describe("11/13 검수 병합으로 바뀐 표제어의 다시 외울 표시 옮기기 (v4)", () => {
+  const OLD4 = "shared_shared_38_교리·신학_omnipresent";
+  const NEW4 = "shared_shared_38_교리·신학_omnipresen";
+  const OLD3 = "shared_shared_28_동물_orangutan";
+
+  it("v3 이 이미 돈 기기에서도 v4 의 표시만 옮긴다", () => {
+    const store = fakeStore({
+      [SHARED_ID_RENAME_KEY]: "1",
+      "kata-saved": JSON.stringify(["mine-1", OLD4, OLD3]),
+    });
+    expect(migrateRenamedHeadwordsOnce(store)).toBe(1);
+    // v3 은 이미 돈 판이라 그 표의 옛 ID 는 건드리지 않습니다
+    expect(JSON.parse(store.data["kata-saved"])).toEqual(["mine-1", NEW4, OLD3]);
+    expect(store.data[SHARED_ID_RENAME_KEY_V4]).toBe("1");
+    expect(migrateRenamedHeadwordsOnce(store)).toBe(0);
+  });
+
+  it("처음 켜는 기기에서는 두 판을 한 번에 옮긴다. 사라진 mukjizat 의 표시는 mujizat 으로 간다", () => {
+    const store = fakeStore({
+      "kata-saved": JSON.stringify([OLD3, OLD4, "shared_shared_35_성경_핵심어_mukjizat", "shared_shared_35_성경_핵심어_mujizat"]),
+    });
+    expect(migrateRenamedHeadwordsOnce(store)).toBe(3);
+    expect(JSON.parse(store.data["kata-saved"])).toEqual([
+      "shared_shared_28_동물_orang utan",
+      NEW4,
+      "shared_shared_35_성경_핵심어_mujizat",
+    ]);
+    expect(store.data[SHARED_ID_RENAME_KEY]).toBe("1");
+    expect(store.data[SHARED_ID_RENAME_KEY_V4]).toBe("1");
+    expect(upgradeRenamedWordId(OLD4)).toBe(NEW4);
   });
 });
 
