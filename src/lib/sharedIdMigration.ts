@@ -106,6 +106,14 @@ export const LEGACY_WORD_RENAMES: Record<string, string> = {
   "buku kehidupan": "kitab kehidupan",
   "millenium": "milenium",
   "imanuel": "Imanuel",
+  // 2026-11-14 5차: 11/13 검수 브랜치 병합으로 바뀐 표기 — 아래 HEADWORD_RENAMES_V4 와 같은 쌍입니다
+  "kotbah di bukit": "khotbah di bukit",
+  "mukjizat": "mujizat",
+  "berkat harun": "berkat Harun",
+  "doxologi": "doksologi",
+  "omnipresent": "omnipresen",
+  "hamartologi": "hamartiologi",
+  "otorisasi Alkitab": "otoritas Alkitab",
 };
 
 // ── 2026-11-14: 표제어 표기만 고친 단어 (단어장 번호는 그대로) ─────────────────
@@ -136,10 +144,34 @@ export const HEADWORD_RENAMES_V3: [string, string, string][] = [
   ["shared_41_설교_표현", "imanuel", "Imanuel"],
 ];
 
-const RENAMED_WORD_IDS: Record<string, string> = {};
-for (const r of HEADWORD_RENAMES_V3) {
-  RENAMED_WORD_IDS["shared_" + r[0] + "_" + r[1]] = "shared_" + r[0] + "_" + r[2];
+// ── 2026-11-14 5차: 11/13 검수 브랜치(단어장)를 병합하며 바뀐 표제어 ──────────────
+// v3 이전이 이미 돈 기기(미리보기 APK 를 먼저 써 본 폰)에서도 돌아야 해서 표시 키를 따로 둡니다.
+// mukjizat 은 표기 변경이 아닙니다 — 그 줄이 새 낱말 tanda(표적)로 바뀌어 사라졌으므로,
+// 같은 단어장에 남아 있는 같은 뜻의 mujizat(기적)으로 표시를 넘깁니다.
+export const SHARED_ID_RENAME_KEY_V4 = "kata-shared-ids-v4";
+
+/** [단어장 ID, 옛 표제어, 새 표제어] */
+export const HEADWORD_RENAMES_V4: [string, string, string][] = [
+  ["shared_35_성경_핵심어", "kotbah di bukit", "khotbah di bukit"],
+  ["shared_35_성경_핵심어", "mukjizat", "mujizat"],
+  ["shared_37_예배·예전", "berkat harun", "berkat Harun"],
+  ["shared_37_예배·예전", "doxologi", "doksologi"],
+  ["shared_38_교리·신학", "omnipresent", "omnipresen"],
+  ["shared_38_교리·신학", "hamartologi", "hamartiologi"],
+  ["shared_38_교리·신학", "otorisasi Alkitab", "otoritas Alkitab"],
+];
+
+function renameMap(list: [string, string, string][]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const r of list) {
+    map["shared_" + r[0] + "_" + r[1]] = "shared_" + r[0] + "_" + r[2];
+  }
+  return map;
 }
+
+const RENAMED_V3 = renameMap(HEADWORD_RENAMES_V3);
+const RENAMED_V4 = renameMap(HEADWORD_RENAMES_V4);
+const RENAMED_WORD_IDS: Record<string, string> = { ...RENAMED_V3, ...RENAMED_V4 };
 
 /** 표기를 고친 공용 단어의 옛 ID 면 새 ID 를, 아니면 그대로 돌려줍니다. */
 export function upgradeRenamedWordId(id: string): string {
@@ -343,25 +375,33 @@ export function migrateSharedIdsOnce(store: KeyValueStore, seed: SeedLike | null
 }
 
 /**
- * 한 번만 돕니다(2026-11-14). 표기를 고친 표제어 19개의 "다시 외울 표시"를 새 ID 로 옮깁니다.
+ * 판마다 한 번만 돕니다(2026-11-14). 표기를 고친 표제어의 "다시 외울 표시"를 새 ID 로 옮깁니다 —
+ * v3 은 19개(3차 검수), v4 는 7개(11/13 검수 브랜치 병합). 이미 돈 판은 다시 돌지 않습니다.
  * 공용 단어 자체는 시드 동기화가 새 표기로 다시 깔므로 손대지 않습니다. 옮긴 표시 수를 돌려줍니다.
  */
 export function migrateRenamedHeadwordsOnce(store: KeyValueStore): number {
   let moved = 0;
   try {
-    if (store.getItem(SHARED_ID_RENAME_KEY) === "1") return 0;
+    const rounds: [string, Record<string, string>][] = [
+      [SHARED_ID_RENAME_KEY, RENAMED_V3],
+      [SHARED_ID_RENAME_KEY_V4, RENAMED_V4],
+    ];
+    const pending = rounds.filter((r) => store.getItem(r[0]) !== "1");
+    if (pending.length === 0) return 0;
+    const map: Record<string, string> = {};
+    for (const r of pending) Object.assign(map, r[1]);
     const saved = parseArray(store.getItem(SAVED_KEY));
     if (saved) {
       const out: string[] = [];
       for (const s of saved) {
         if (typeof s !== "string" || !s) continue;
-        const id = upgradeRenamedWordId(s);
+        const id = map[s] || s;
         if (id !== s) moved++;
         if (out.indexOf(id) === -1) out.push(id);
       }
       if (moved > 0) store.setItem(SAVED_KEY, JSON.stringify(out));
     }
-    store.setItem(SHARED_ID_RENAME_KEY, "1");
+    for (const r of pending) store.setItem(r[0], "1");
   } catch (e) {
     // 다음 실행에 다시 시도합니다
   }
