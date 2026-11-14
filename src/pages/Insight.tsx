@@ -148,7 +148,7 @@ const Insight = () => {
   }
   const life: RowItem[] = [
     { icon: Hourglass, bg: "#EAF2DF", fg: "#4E6A2A", title: "인도네시아 역사", sub: "Sejarah", to: "/insight/history" },
-    { icon: Lightbulb, bg: "#FFF3D6", fg: "#8A6A12", title: "문화와 생활정보", sub: "Info dan Tips", to: "/insight/tips" },
+    { icon: Lightbulb, bg: "#FFF3D6", fg: "#8A6A12", title: "문화와 생활 정보", sub: "Info dan Tips", to: "/insight/tips" },
   ];
 
   return (
