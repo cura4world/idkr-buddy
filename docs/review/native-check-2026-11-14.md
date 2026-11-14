@@ -15,6 +15,10 @@
 | 5 | 지도·인도네시아 이해 — 새로 쓰거나 고친 예문 | 8문장 |
 | 6 | 회화집 — 읽는 소리(TTS) 표기가 의심스러워 남긴 것 | 14건 |
 | 7 | 홈 소제목 — 새로 지은 짧은 문구 | 3줄 |
+| 8 | **5차(2026-11-14)** — 11/13 검수 브랜치 병합으로 앱에 들어간 줄(회화 1줄, 단어장 72줄)과, 앞 절의 물음 가운데 달라진 것 | 73줄 |
+
+> **5차 병합 표시**: 1절의 회화 35행과 4절의 표제어 19개는 병합 뒤에도 **그대로 앱에 있습니다**(검수 브랜치가 같은 줄을 다르게 고친 곳은 3차 문장을 두었습니다).
+> 3절의 물음 가운데 9·10·12·13·14·16번은 병합으로 문장이나 뜻이 바뀌었습니다 — 바뀐 내용은 맨 아래 8-3 에 적었습니다. 나머지 물음(1~8·11·15번)은 그대로입니다.
 
 ## 1. 기본 회화집 — 이번에 바꾼 줄 전부
 
@@ -175,3 +179,108 @@
 | H-2 | `Kenali Indonesia` | 알아 갈까요 | 문화 (인도네시아 이해·지도) | 명령형이 딱딱하게 들리는가? 대안 `Mengenal Indonesia` |
 | H-3 | `Firman hari ini` | 오늘의 말씀 | 신앙 (설교문·묵상·성경·기도, 관리자·Special Member 만) | 설교문·성경·기도까지 묶는 이름으로 자연스러운가? |
 
+
+## 8. 5차(2026-11-14) — 11/13 검수 브랜치 병합으로 앱에 들어간 줄
+
+11/13 의 Claude 검수 브랜치 두 개(단어장·회화집)를 `release/public` 에 병합했습니다. 아래는 그 병합으로 **인도네시아어가 바뀐 줄**입니다 — 모두 AI 가 고친 것이라 원어민 확인 대상입니다.
+같은 칸을 3·4차에서 이미 고친 곳은 3·4차 값을 두었으므로(위 1~4절의 내용 그대로) 여기에 없습니다. 한국어 뜻만 바뀐 줄(단어장 47줄, 회화 5줄)은 싣지 않았습니다.
+검수의 근거와 "확인 필요(고치지 않음)" 목록은 `data/REVIEW-2026-11-13.md`(단어장, 원어민 확인 권장 54건) · `src/data/percakapan/REVIEW-2026-11-13.md`(회화집, 확인 필요 6건)에 있습니다.
+
+### 8-1. 회화집 (인도네시아어가 바뀐 줄 1개)
+
+| 장면 · 줄 | 이전 | 이후 | 물을 것 |
+|---|---|---|---|
+| `03-makan.ts` · 길거리 음식 사기 · 11번째 줄 | `Bang, tolong sausnya dipisah.` | `Bang, tolong bumbunya dipisah.` | 사테의 땅콩 소스를 따로 달라고 할 때 `bumbunya dipisah` 가 자연스러운지 (소리를 새로 받게 `rev: 2`) |
+
+검수 브랜치가 고친 다른 두 줄(헤어지며 인사하기 9번째 줄, 초대받아 집에서 식사하기 10번째 줄)은 3차에서 이미 고친 줄이라 3차 문장을 두었습니다 — 1절의 B-5·B-4. 검수 쪽 문장은 `Naik Grab, tadi udah aku pesan.` / `Enak banget! Bumbunya meresap, ya.` 였습니다(어순·쉼표만 다름). 어느 쪽이 나은지 함께 물어 주세요.
+한국어만 바뀐 줄: 식당에서 자리 잡기("천천히 보세요") · 오토바이 점검하기 첫 줄("아저씨, …") · 하숙방 구하기("입주하려면 …") · 소그룹에서 나누기("마음은 아직 부글부글해요").
+
+### 8-2. 단어장 (표제어나 예문의 인도네시아어가 바뀐 줄 72개)
+
+괄호 없는 숫자는 단어장 번호:줄 번호입니다. 표제어가 바뀐 줄은 **굵게** 표시했습니다.
+
+| 위치 | 이전 (표제어 — 예문) | 이후 (표제어 — 예문) |
+|---|---|---|
+| 04:33 | `tujuh belas` — Hari kemerdekaan jatuh pada tanggal tujuh belas Agustus. | `tujuh belas` — Hari Kemerdekaan jatuh pada tanggal tujuh belas Agustus. |
+| 05:59 | `Agustus` — Hari kemerdekaan dirayakan bulan Agustus. | `Agustus` — Hari Kemerdekaan dirayakan bulan Agustus. |
+| 06:27 | `cuma` — Aku cuma bercanda. | `cuma` — Harganya cuma sepuluh ribu. |
+| 08:23 | `mengirim` — Saya mengirim pesan kepada ibuku. | `mengirim` — Saya mengirim pesan kepada ibu saya. |
+| 10:20 | `keberanian` — Keberanian bukan berarti tidak takut melainkan tetap melangkah meski takut. | `keberanian` — Keberanian bukan berarti tidak takut, melainkan tetap melangkah meski takut. |
+| 12:21 | `lebih-lebih` — Dia tidak suka keramaian lebih-lebih di tempat tertutup. | `lebih-lebih` — Dia tidak suka keramaian, lebih-lebih di tempat tertutup. |
+| 12:27 | `semakin` — Semakin banyak belajar semakin banyak yang kita ketahui. | `semakin` — Semakin banyak belajar, semakin banyak yang kita ketahui. |
+| 12:67 | `menakjubkan` — Pemandangan dari puncak gunung itu menakjubkan. | `menakjubkan` — Pertunjukan kembang api tadi malam sangat menakjubkan. |
+| 13:43 | `umumnya` — Umumnya toko tutup pada hari Minggu. | `umumnya` — Umumnya bank tutup pada hari Minggu. |
+| 14:34 | `anak tunggal` — Dia anak tunggal jadi tidak punya saudara. | `anak tunggal` — Dia anak tunggal, jadi tidak punya saudara. |
+| 16:33 | `bermimpi` — Dia bermimpi menjadi dokter sejak kecil. | `bermimpi` — Tadi malam saya bermimpi buruk. |
+| 16:42 | `cerdas` — Anak itu sangat cerdas. | `cerdas` — Anak yang cerdas itu cepat memahami pelajaran baru. |
+| 16:56 | `cemas` — Ibu terlihat cemas menunggu anaknya pulang. | `cemas` — Dia terlihat cemas menunggu hasil pemeriksaan dokter. |
+| 16:71 | `tekun` — Dia tekun belajar setiap hari tanpa henti. | `tekun` — Petani itu tekun merawat kebunnya setiap hari. |
+| 16:72 | `gigih` — Atlet itu gigih berlatih demi meraih medali. | `gigih` — Dia gigih mencari pekerjaan meskipun berkali-kali ditolak. |
+| 17:39 | `meniriskan` — Niriskan sayuran setelah dicuci. | `meniriskan` — Tiriskan sayuran setelah dicuci. |
+| 17:68 | `tahu` — Ibu menggoreng tahu untuk makan malam. | `tahu` — Tahu ini lembut sekali. |
+| 19:52 | `ukuran` — Ada ukuran yang lebih besar untuk baju ini? | `ukuran` — Ukuran sepatu saya empat puluh. |
+| 19:74 | `sisir` — Tolong pinjam sisirmu sebentar. | `sisir` — Tolong pinjamkan sisirmu sebentar. |
+| 20:16 | `pedagang` — Pedagang kaki lima itu menjual makanan di pinggir jalan. | `pedagang` — Pedagang itu menimbang cabai untuk pembelinya. |
+| 22:3 | `merancang` — Arsitek itu merancang gedung baru. | `merancang` — Tim kami sedang merancang program pelatihan untuk karyawan baru. |
+| 22:21 | `karyawan` — Karyawan perusahaan itu mendapat bonus akhir tahun. | `karyawan` — Perusahaan itu punya lebih dari dua ratus karyawan. |
+| 22:23 | `pemimpin` — Pemimpin yang baik melayani bukan memerintah. | `pemimpin` — Pemimpin yang baik melayani, bukan memerintah. |
+| 22:56 | `rapat` — Rapat dimulai pukul sembilan pagi. | `rapat` — Saya tidak bisa mengangkat telepon karena sedang rapat. |
+| 23:37 | `matematika` — Matematika adalah pelajaran favoritnya. | `matematika` — Saya kurang pandai matematika. |
+| 23:48 | `semester` — Semester baru dimulai bulan depan. | `semester` — Dia sekarang kuliah semester lima. |
+| 23:80 | `kantin` — Kami makan siang di kantin sekolah. | `kantin` — Anak-anak jajan di kantin saat jam istirahat. |
+| 23:82 | `pensil` — Tolong pinjam pensilmu sebentar. | `pensil` — Pensil saya patah, boleh saya pinjam punyamu? |
+| 24:87 | `istirahat total` — Dokter menyarankan istirahat total seminggu. | `istirahat total` — Pasien itu harus istirahat total selama tiga hari. |
+| 25:57 | `imigrasi` — Kami mengurus visa di kantor imigrasi. | `imigrasi` — Antrean di kantor imigrasi panjang sekali pagi ini. |
+| 28:10 | `burung` — Burung-burung berkicau merdu setiap pagi di taman. | `burung` — Seekor burung hinggap di jendela kamar saya. |
+| 30:14 | `tanah` — Tanah di sini sangat subur untuk bercocok tanam. | `tanah` — Sepatunya penuh tanah setelah bermain bola di lapangan. |
+| 30:20 | `kolam` — Anak-anak itu berenang di kolam renang yang jernih. | `kolam` — Ada banyak ikan koi di kolam depan rumah itu. |
+| 30:41 | `cuaca` — Cuaca hari ini sangat cerah dan menyenangkan. | `cuaca` — Kami menunda perjalanan karena cuaca buruk. |
+| 30:54 | `cerah` — Cuaca hari ini cerah sekali. | `cerah` — Setelah hujan semalam, pagi ini cerah sekali. |
+| 31:25 | `halte` — Ia menunggu bus di halte selama setengah jam. | `halte` — Halte terdekat ada di depan bank itu. |
+| 31:26 | `terowongan` — Terowongan panjang itu menembus gunung selama beberapa kilometer. | `terowongan` — Terowongan panjang itu menembus gunung sepanjang beberapa kilometer. |
+| 32:49 | `tiket pesawat` — Tiket pesawat lebih murah kalau pesan awal. | `tiket pesawat` — Tiket pesawat lebih murah kalau dipesan lebih awal. |
+| 32:51 | `oleh-oleh` — Dia membawa oleh-oleh dari kampung halamannya. | `oleh-oleh` — Bakpia adalah oleh-oleh khas Yogyakarta. |
+| 34:21 | `tradisional` — Tari tradisional itu sangat indah untuk ditonton. | `tradisional` — Rumah tradisional itu terbuat dari kayu dan bambu. |
+| 34:27 | `lagu kebangsaan` — Semua berdiri saat lagu kebangsaan dinyanyikan. | `lagu kebangsaan` — Lagu kebangsaan Indonesia adalah Indonesia Raya. |
+| 34:48 | `gotong royong` — Warga desa membersihkan sungai secara gotong royong. | `gotong royong` — Saat ada hajatan, para tetangga membantu secara gotong royong. |
+| 35:5 | `Roh Kudus` — Roh Kudus memimpin kita kepada kebenaran. | `Roh Kudus` — Roh Kudus turun ke atas Yesus seperti burung merpati. |
+| 35:24 | `gembala` — Tuhan adalah gembala yang baik bagi domba-domba-Nya. | `gembala` — Gembala itu mencari dombanya yang hilang. |
+| 35:34 | `kebenaran` — Yesus berkata Akulah jalan kebenaran dan hidup. | `kebenaran` — Yesus berkata: Akulah jalan dan kebenaran dan hidup. |
+| 35:35 | `kesetiaan` — Kesetiaan Allah tidak pernah goyah. | `kesetiaan` — Tuhan menghargai kesetiaan kita dalam perkara kecil. |
+| 35:44 | `terang` — Yesus adalah terang dunia. | `terang` — Pada hari pertama Allah menciptakan terang. |
+| 35:61 | `pokok anggur` — Yesus berkata Akulah pokok anggur dan kamu adalah ranting-Nya. | `pokok anggur` — Yesus berkata: Akulah pokok anggur dan kamulah ranting-rantingnya. |
+| **35:73** | `kotbah di bukit` — Kotbah di bukit berisi inti ajaran etika Kerajaan Allah. | `khotbah di bukit` — Khotbah di bukit berisi inti ajaran etika Kerajaan Allah. |
+| **35:75** | `mukjizat` — Mukjizat Yesus membuktikan bahwa Dia adalah Anak Allah. | `tanda` — Yesus membuat banyak tanda di depan mata murid-murid-Nya. |
+| 35:78 | `lembah kekelaman` — Meski berjalan di lembah kekelaman aku tidak takut. | `lembah kekelaman` — Meski berjalan di lembah kekelaman, aku tidak takut. |
+| 35:88 | `hidup kekal` — Barangsiapa percaya kepada-Nya tidak binasa melainkan beroleh hidup kekal. | `hidup kekal` — Barang siapa percaya kepada-Nya tidak binasa melainkan beroleh hidup kekal. |
+| 36:23 | `Yunus` — Yunus berlari dari panggilan Tuhan namun akhirnya taat. | `Yunus` — Yunus lari dari panggilan Tuhan namun akhirnya taat. |
+| 37:4 | `ibadah` — Ibadah yang sejati harus berasal dari hati yang tulus. | `ibadah` — Anak-anak ikut ibadah bersama orang tua mereka. |
+| **37:13** | `berkat harun` — Berkat Harun dibacakan setiap akhir ibadah. | `berkat Harun` — Berkat Harun dibacakan setiap akhir ibadah. |
+| **37:17** | `doxologi` — Doxologi dinyanyikan sebagai penutup ibadah. | `doksologi` — Doksologi dinyanyikan sebagai penutup ibadah. |
+| 37:35 | `kebaktian doa` — Kebaktian doa diadakan setiap Sabtu malam. | `kebaktian doa` — Banyak jemaat datang ke kebaktian doa malam ini. |
+| 37:45 | `pengakuan dosa` — Setelah pengakuan dosa kami menerima pengampunan. | `pengakuan dosa` — Setelah pengakuan dosa, kami menerima pengampunan. |
+| 37:75 | `Jumat Agung` — Jumat Agung kami merenungkan salib Kristus. | `Jumat Agung` — Pada Jumat Agung, kami merenungkan salib Kristus. |
+| 37:79 | `Minggu Palma` — Minggu Palma jemaat membawa daun palem. | `Minggu Palma` — Pada Minggu Palma, jemaat membawa daun palem. |
+| 38:5 | `kekekalan` — Kita percaya akan kehidupan yang penuh kekekalan. | `kekekalan` — Kekekalan Allah tidak dibatasi oleh waktu. |
+| **38:21** | `omnipresent` — Allah yang omnipresent hadir di mana-mana sekaligus. | `omnipresen` — Allah yang omnipresen hadir di mana-mana sekaligus. |
+| 38:26 | `cobaan` — Cobaan yang kita hadapi tidak melebihi kemampuan kita. | `cobaan` — Dia tetap tersenyum walaupun banyak cobaan menimpanya. |
+| 38:66 | `kedaulatan Allah` — Kedaulatan Allah tidak bisa dibatasi oleh apapun. | `kedaulatan Allah` — Kedaulatan Allah tidak bisa dibatasi oleh apa pun. |
+| **38:73** | `hamartologi` — Hamartologi adalah studi tentang dosa dan dampaknya. | `hamartiologi` — Hamartiologi adalah studi tentang dosa dan dampaknya. |
+| **38:79** | `otorisasi Alkitab` — Otorisasi Alkitab melampaui semua otoritas manusia. | `otoritas Alkitab` — Otoritas Alkitab melampaui semua otoritas manusia. |
+| 40:2 | `bersekutu` — Penting bagi kita untuk bersekutu bersama sesama percaya. | `bersekutu` — Penting bagi kita untuk bersekutu bersama sesama orang percaya. |
+| 40:7 | `persekutuan` — Persekutuan antar sesama percaya sangat penting. | `persekutuan` — Persekutuan pemuda diadakan setiap Sabtu sore. |
+| 41:8 | `hosana` — Hosana berarti selamatkanlah kami yang diucapkan kepada Yesus. | `hosana` — Hosana yang diucapkan kepada Yesus berarti selamatkanlah kami. |
+| 41:22 | `Saudara-saudara terkasih` — Saudara-saudara terkasih mari kita membuka Alkitab kita. | `Saudara-saudara terkasih` — Saudara-saudara terkasih, mari kita membuka Alkitab kita. |
+| 41:23 | `Bapak-bapak dan Ibu-ibu` — Bapak-bapak dan Ibu-ibu selamat datang di ibadah pagi ini. | `Bapak-bapak dan Ibu-ibu` — Bapak-bapak dan Ibu-ibu, selamat datang di ibadah pagi ini. |
+| 41:24 | `jemaat yang dikasihi Tuhan` — Jemaat yang dikasihi Tuhan mari kita berdiri bersama. | `jemaat yang dikasihi Tuhan` — Jemaat yang dikasihi Tuhan, mari kita berdiri bersama. |
+
+### 8-3. 앞 절의 물음 가운데 이 병합으로 달라진 것
+
+- 3절 9번 `Bibit padi disemai di petak kecil.` — 인도네시아어는 그대로, 한국어 뜻만 "볍씨는 작은 모판에 뿌린다."로 바뀌었습니다. 물음은 그대로입니다.
+- 3절 10번 `Tekan tombol ini untuk memulai mesin.` — 인도네시아어는 그대로, 한국어만 "…기계를 작동시키세요."로. 물음은 그대로입니다.
+- 3절 12번 — `sisir` 예문은 `Tolong pinjamkan sisirmu sebentar.` 로, `pensil` 예문은 `Pensil saya patah, boleh saya pinjam punyamu?` 로 바뀌었습니다(새 문장 확인). `Sulit membedakan kedua kembar itu.` 는 그대로입니다.
+- 3절 13번 — 표제어가 `omnipresen` 이 되었습니다(`Allah yang omnipresen hadir di mana-mana sekaligus.`). `mahahadir` 와 어느 쪽을 쓰는지의 물음은 그대로입니다.
+- 3절 14번 — `kekekalan` 예문은 `Kekekalan Allah tidak dibatasi oleh waktu.`, `bersekutu` 예문은 `…bersama sesama orang percaya.`, `persekutuan` 예문은 `Persekutuan pemuda diadakan setiap Sabtu sore.` 로 바뀌었습니다(새 문장 확인).
+- 3절 16번 — `Saudara-saudara terkasih, mari kita membuka Alkitab kita.` 에는 쉼표가 들어갔습니다. `Yang kedua firman ini mengajak kita bersyukur.` 는 그대로입니다.
+- 3절 끝의 방침 물음(TB 의 `sorga`·`Iblis`) — 아직 정하지 않았습니다. `mukjizat` 줄은 새 낱말 `tanda`(표적)가 되어 `mujizat` 한 줄만 남았습니다.
+- 4절의 표제어 19개는 그대로이고, 이 병합으로 표제어 7개가 더 바뀌었습니다: `kotbah di bukit` → `khotbah di bukit`, `mukjizat` → `tanda`(낱말 교체), `berkat harun` → `berkat Harun`, `doxologi` → `doksologi`, `omnipresent` → `omnipresen`, `hamartologi` → `hamartiologi`, `otorisasi Alkitab` → `otoritas Alkitab`.
