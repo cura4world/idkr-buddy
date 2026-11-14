@@ -4,6 +4,8 @@
 // 생성된 묵상(devotionStore)에는 본문을 통째로 저장하지 않고 범위/메타데이터만 남깁니다.
 
 const TODAY_URL = "https://raw.githubusercontent.com/cura4world/kata-qt-today/main/today.json";
+// 오늘의 QT 받기의 마감
+const QT_FETCH_TIMEOUT_MS = 20000;
 
 export interface QtSection {
   label: string;
@@ -39,19 +41,36 @@ let cache: { date: string; data: QtToday } | null = null;
 
 // 오늘의 QT를 가져옵니다. 같은 세션 내 같은 날짜면 재요청하지 않습니다.
 export async function fetchTodayQt(): Promise<QtToday> {
-  let res: Response;
-  try {
-    res = await fetch(TODAY_URL + "?t=" + Date.now(), { cache: "no-store" });
-  } catch {
-    throw new Error("QT_FETCH_FAILED");
-  }
-  if (!res.ok) throw new Error("QT_FETCH_FAILED");
+  // 응답이 안 오면 "불러오는 중"이 끝나지 않으므로 마감을 겁니다(본문을 다 읽을 때까지. 출시 전 점검 C-16).
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    try {
+      controller.abort();
+    } catch {
+      // 무시
+    }
+  }, QT_FETCH_TIMEOUT_MS);
 
   let data: any;
   try {
-    data = await res.json();
-  } catch {
-    throw new Error("QT_PARSE_FAILED");
+    let res: Response;
+    try {
+      res = await fetch(TODAY_URL + "?t=" + Date.now(), { cache: "no-store", signal: controller.signal });
+    } catch {
+      throw new Error("QT_FETCH_FAILED");
+    }
+    if (!res.ok) throw new Error("QT_FETCH_FAILED");
+
+    try {
+      data = await res.json();
+    } catch {
+      // 받는 중에 마감에 걸린 것은 형식 오류가 아니라 받기 실패입니다.
+      throw new Error(timedOut ? "QT_FETCH_FAILED" : "QT_PARSE_FAILED");
+    }
+  } finally {
+    clearTimeout(timer);
   }
   if (!data || typeof data.date !== "string" || !Array.isArray(data.verses)) {
     throw new Error("QT_PARSE_FAILED");
