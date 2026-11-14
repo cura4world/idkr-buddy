@@ -19,7 +19,7 @@ const BASIC: Row[] = [
   { label: "면적", value: "약 191만 km² · 세계 14위 (한국의 약 19배)" },
   { label: "섬", value: "약 17,000여 개 (세계 최대 도서 국가)" },
   { label: "공용어", value: "인도네시아어 (Bahasa Indonesia) · 지역어 700개 이상" },
-  { label: "민족", value: "자바족 약 40% 등 300개 이상 민족" },
+  { label: "종족", value: "자바족 약 40% 등 300개 이상 종족" },
   { label: "시간대", value: "3개 (서부 WIB · 중부 WITA · 동부 WIT) · 자카르타는 한국보다 2시간 느림" },
   { label: "통화", value: "루피아 (IDR, Rp)" },
   { label: "정치 체제", value: "대통령 중심제 공화국 · 대통령 프라보워 수비안토 (2024년 10월 취임)" },
