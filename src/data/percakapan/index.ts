@@ -41,7 +41,7 @@ export const BUILTIN_CATEGORIES: PercakapanCategory[] = [
   { id: "uang", title: "돈과 은행", titleId: "Uang dan Bank", emoji: "💰" },
   { id: "transportasi", title: "이동과 교통", titleId: "Transportasi", emoji: "🛵" },
   { id: "penginapan", title: "숙소와 여행", titleId: "Penginapan", emoji: "🏨" },
-  { id: "sehari-hari", title: "일상 생활", titleId: "Sehari-hari", emoji: "🏠" },
+  { id: "sehari-hari", title: "일상생활", titleId: "Sehari-hari", emoji: "🏠" },
   { id: "hari-raya", title: "명절과 경조사", titleId: "Hari Raya dan Acara", emoji: "🎉" },
   { id: "kesehatan", title: "건강과 병원", titleId: "Kesehatan", emoji: "💊" },
   { id: "kerja", title: "일과 업무", titleId: "Kerja", emoji: "💼" },
