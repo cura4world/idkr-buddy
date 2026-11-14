@@ -38,6 +38,7 @@ export async function saveEdition(edition: NewsEdition): Promise<void> {
       tx.objectStore(STORE).put(edition);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 저장 실패해도 세션 내 사용은 가능
@@ -87,6 +88,7 @@ export async function deleteEdition(date: string): Promise<void> {
       tx.objectStore(STORE).delete(date);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 무시
@@ -102,6 +104,7 @@ export async function clearNews(): Promise<void> {
       tx.objectStore(STORE).clear();
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
     });
   } catch {
     // 무시
