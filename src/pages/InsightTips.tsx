@@ -124,13 +124,13 @@ const InsightTips = () => {
       setOpenId(rec.id);
     } catch (e) {
       const msg = (e as Error).message;
-      if (msg === "RATE_LIMIT") toast("잠시 뒤 다시 시도하세요 (사용량 초과)");
+      if (msg === "RATE_LIMIT") toast("요청이 많습니다. 잠시 뒤 다시 시도하세요");
       else if (msg === "INVALID_API_KEY" || msg === "NOT_AVAILABLE" || msg === "SESSION_EXPIRED" || msg === "NO_API_KEY") {
         aiErrorToast(msg, "API 키를 확인하세요");
       } else if (msg.indexOf("QUOTA") === 0) {
         // 한도·Plus 안내는 aiProxy 가 이미 띄웠습니다
       }
-      else toast("정보를 불러오지 못했습니다. 다시 시도하세요");
+      else toast("정보를 가져오지 못했습니다. 잠시 뒤 다시 시도하세요");
     } finally {
       setLoading(false);
     }
@@ -174,7 +174,7 @@ const InsightTips = () => {
       >
         {loading ? (
           <>
-            <Loader2 size={17} className="animate-spin" /> 새로운 정보를 찾는 중...
+            <Loader2 size={17} className="animate-spin" /> 새 정보를 가져오는 중...
           </>
         ) : (
           <>
@@ -190,7 +190,7 @@ const InsightTips = () => {
           <p className="text-sm font-gothic text-muted-foreground leading-relaxed">
             아직 정보가 없습니다.
             <br />
-            위 버튼을 눌러 첫 번째 정보를 열어 보세요.
+            위 버튼을 눌러 첫 정보를 가져와 보세요.
           </p>
         </div>
       )}
