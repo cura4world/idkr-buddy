@@ -142,7 +142,7 @@ src/
     SavedPhrases.tsx   저장해 둔 문장 목록 (/phrase/saved)
     Percakapan.tsx / PercakapanCategory.tsx / PercakapanRead.tsx   회화집 폴더·목록·읽기
     Permainan.tsx      게임방 입구 (/permainan)
-    Game*.tsx          게임 7종 — Kata(오늘의 단어 퍼즐) / Jodoh(빠른 짝짓기) / OX(스피드)
+    Game*.tsx          게임 7종 — Kata(오늘의 단어 퍼즐) / Jodoh(빠른 짝 맞추기) / OX(스피드)
                        / Dengar(듣고 고르기) / Susun(문장조립) / Eja(철자채우기) / Tangkap(단어받기)
                        (2026-11 Match 짝맞추기는 뺌. 공용 틀은 components/game/GameKit.tsx)
     MyInfo.tsx         내 정보 (/me, 공개판 하단 탭)  · Plus.tsx 구독 화면 (/plus)
@@ -205,8 +205,7 @@ src/
     percakapan/     기본 회화집 (코드로 들어 있음, 손대지 않음)
     phrase-seed.json 내장 문장 36개 해설(커밋함. scripts/gen-phrase-seed.mjs 로 만들고 Claude 가 교차 검수, 예문은 원어민 확인 대상)
   test/             vitest 설정 + 예제
-  qtToday.ts        lib/qtToday.ts와 내용이 같은 미사용 사본 — 고칠 때 lib 쪽을 볼 것
-  (2026-11 공개판에서 더한 것) lib/plan.ts 등급 판단(모든 잠금은 여기로만) · lib/preview.ts 미리보기 빌드 ·
+  (2026-11 공개판에서 더한 것) lib/plan.ts 등급 판단(모든 잠금은 여기로만. 서버의 심사용 등급 review 는 Plus 로 다룸 — isReviewAccount) · lib/preview.ts 미리보기 빌드 ·
   lib/account.ts·billing.ts·aiProxy.ts·aiErrors.ts 공개판 계정·결제·AI 경로·오류 문구 · lib/platform.ts isStoreApp ·
   lib/wordbookGroups.ts·wordbookAccess.ts 단어장 묶음·성경과 신앙 숨김 · lib/sharedIdMigration.ts 단어장 ID 이전 ·
   lib/illust.ts·illustFit.ts + data/illust/ 색연필 그림(README 가 정본) · lib/kataHariIni.ts + data/kataHariIniWords.ts
