@@ -181,7 +181,7 @@ export default function SavedQuizMode() {
   if (allWords.length < 2) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
-        <p className="text-muted-foreground">퀴즈를 위해 최소 2개의 단어가 필요합니다.</p>
+        <p className="text-muted-foreground">퀴즈를 풀려면 단어가 2개 이상 있어야 합니다.</p>
         <button onClick={() => navigate("/saved")} className="mt-4 text-primary underline underline-offset-4">돌아가기</button>
       </div>
     );
@@ -285,7 +285,7 @@ export default function SavedQuizMode() {
         >
           <Shuffle size={15} />
           <span className="font-gothic text-[0.75rem] font-semibold tracking-wide">
-            {isRandom ? "ON" : "OFF"}
+            {isRandom ? "켬" : "끔"}
           </span>
         </button>
         <button
@@ -304,7 +304,7 @@ export default function SavedQuizMode() {
         >
           {speakOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
           <span className="font-gothic text-[0.75rem] font-semibold tracking-wide">
-            {speakOn ? "ON" : "OFF"}
+            {speakOn ? "켬" : "끔"}
           </span>
         </button>
       </div>
