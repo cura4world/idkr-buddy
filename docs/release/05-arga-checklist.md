@@ -81,23 +81,30 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
    - 만든 계정: `kata-play-billing@gen-lang-client-0453772321.iam.gserviceaccount.com` (JSON 키는 저장소 밖에 보관). Play Console 초대까지 끝.
    - **남은 것**: Worker 비밀값 `PLAY_SERVICE_ACCOUNT` 에 넣기 — 4절(`08-cloudflare-deploy.md` 5단계)에서 합니다.
 
-## 4. Cloudflare — 공개판 서버 `kata-public` (15분) — ⏳ 다음에 할 일
+## 4. Cloudflare — 공개판 서버 `kata-public` (15분) — ✅ 2026-11-15 배포 완료
+
+**배포 결과(2026-11-15, Arga 가 PC 에서 `wrangler` 로 배포)**
+- 주소: `https://kata-public.cura4world.workers.dev` — 열면 `{"ok":true,"service":"kata-public"}`(10차에 키 없이 다시 확인, 200)
+- 사용량 카운터: `counter=durable-object` · 하루 상한 `caps` = 전체 3000 / 소리 1000
+- 비밀값 4개(이름만): `AI_PROXY_URL` · `PROXY_SECRET` · `PLAY_SERVICE_ACCOUNT` · `ADMIN_KEY` — 값은 Cloudflare 에만 있습니다
+- KV id `a5019fff1fa8429e8a7535fd7fee14d1`(`wrangler.toml` 에 커밋됨, 비밀값 아님) · `preview_urls = false`
+- 남은 것: 4-3(텔레그램 알림, 선택)과 6(Cloud Run 호출 형식 대조 — 내부 테스트에서 AI 가 실제로 답하는지로 확인)
 
 **따라 하는 순서는 `08-cloudflare-deploy.md` 에 복사해 붙여 넣는 명령으로 적어 두었습니다(9차). 그 문서대로 하면 아래 1~5 와 4-1·4-2 가 한 번에 끝납니다.**
 `wrangler.toml` 에는 `GOOGLE_WEB_CLIENT_ID`·`PLAY_PACKAGE`·`PRODUCT_IDS`·`AI_DAILY_BUDGET`(`{"all":3000,"tts":1000}`)를 이미 채웠고, KV id 한 칸만 남았습니다.
 아래는 처음 안내 그대로입니다(대시보드에 붙여 넣는 방법은 Durable Object 가 만들어지지 않으므로 쓰지 않습니다).
 
-1. [ ] KV 네임스페이스 `PUBLIC_KV` 만들기
-2. [ ] Worker `kata-public` 만들기 → `workers/kata-public/worker.js` 내용을 붙여 넣기 → KV 바인딩 이름 `PUBLIC_KV`
-3. [ ] 변수: `GOOGLE_WEB_CLIENT_ID`, `PLAY_PACKAGE`=`app.naruve.katakata`, `PRODUCT_IDS`=`plus`
-4. [ ] 비밀값:
+1. [x] KV 네임스페이스 `PUBLIC_KV` 만들기
+2. [x] Worker `kata-public` 만들기(대시보드가 아니라 `wrangler deploy` 로) → `workers/kata-public/worker.js` 내용을 붙여 넣기 → KV 바인딩 이름 `PUBLIC_KV`
+3. [x] 변수: `GOOGLE_WEB_CLIENT_ID`, `PLAY_PACKAGE`=`app.naruve.katakata`, `PRODUCT_IDS`=`plus`
+4. [x] 비밀값:
    - `AI_PROXY_URL`, `PROXY_SECRET` — **kata-sermon Worker 에 넣은 것과 같은 값** (Cloud Run 중계)
    - `PLAY_SERVICE_ACCOUNT` — 3-5번의 JSON
    - `ADMIN_KEY` — 아무 긴 무작위 문자열 (신고 조회·등급 지정·계정 삭제 대행용, 따로 보관)
    - (평소에는 넣지 않음) `AI_PAUSED` — AI 요청을 급히 멈출 때만 넣는 변수. `free` 면 무료 계정만, `all` 이면 모두 멈춥니다
      (앱에는 평소의 서버 오류 안내가 나옵니다 — 한도는 깎이지 않음). 지우면 바로 풀립니다. 비용이 갑자기 늘 때 쓰는 비상 차단입니다.
    - `ADMIN_KEY` 는 **32자 이상 무작위 값**으로 넣으세요(틀린 시도 횟수를 서버가 세지 않습니다).
-4-1. [ ] **(첫 배포 때 권장) 사용량 카운터를 Durable Object 로** — 2026-11-14 추가
+4-1. [x] **(첫 배포 때 권장) 사용량 카운터를 Durable Object 로** — 2026-11-14 추가
    - 무엇: 한도를 세는 곳을 KV 에서 Durable Object(`USAGE_DO`, 클래스 `UsageCounter`)로 옮깁니다. 같은 순간에 여러 번 눌러도 한도가 정확히 지켜지고, 전체 하루 상한도 여기서 셉니다.
    - **무료 요금제에서 됩니다.** Cloudflare 문서 기준 Workers Free 는 "SQLite 방식" Durable Object 만 쓸 수 있고, 이 서버가 그 방식입니다(하루 요청 10만 · 쓰기 10만 행 · 저장 5GB 안. 2026-11-14 확인).
    - **KV 만으로 무료 요금제에서 돌리면 금방 막힙니다.** KV 무료 한도는 **하루 쓰기 1,000번**인데, KV 방식은 AI 호출 한 번에 2~3번을 씁니다(하루 300~400번 호출이면 끝).
@@ -108,7 +115,7 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
      3. 확인: `curl "https://kata-public.cura4world.workers.dev/admin/budget" -H "x-admin-key: <ADMIN_KEY>"` → `"counter":"durable-object"` 이면 켜진 것. `"kv"` 면 바인딩이 없는 것입니다.
    - 켜지 않고 배포해도 깨지지 않습니다(예전처럼 KV 로 셉니다). KV 로 쓰다가 나중에 켜면 그날의 사용량은 0 부터 다시 셉니다.
    - 알아 둘 것: 무료 요금제의 Worker 는 요청 하나에 CPU 10ms 까지입니다. 로그인(서명 확인)·결제 검증·긴 소리 응답이 이 한도에 걸리는지는 내부 테스트 때 Cloudflare 대시보드의 오류(`exceeded CPU`)로 확인하세요. 걸리면 Workers Paid(월 5달러)가 필요합니다. — 측정하지 못한 항목입니다.
-4-2. [ ] **(첫 배포 때 권장) 전체 하루 상한 `AI_DAILY_BUDGET`** — 2026-11-14 추가
+4-2. [x] **(첫 배포 때 권장) 전체 하루 상한 `AI_DAILY_BUDGET`** — 2026-11-14 추가
    - 무엇: 하루(한국 날짜)에 서버가 AI 쪽으로 보내는 **호출 수**의 천장입니다. 계정별 한도와 별개로, 가입이 몰리거나 누가 계정을 많이 만들어도 하루 비용이 이 선에서 멈춥니다.
      닿으면 그날은 무료·체험·Plus·심사용의 AI 기능이 "지금은 사용할 수 없습니다"로 멈추고(한도는 깎이지 않음), 다음 날 0시(한국)에 풀립니다. Special·관리자는 멈추지 않습니다.
    - 값: 변수(비밀값 아님)로 `5000` 처럼 숫자 하나, 또는 `{"all":5000,"tts":2000}` 처럼 소리만 더 낮게. **비워 두면 상한 없음**(예전과 같음). `AI_PAUSED` 와 함께 쓸 수 있습니다(`AI_PAUSED` 가 먼저).
@@ -125,7 +132,7 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
    - 알림이 실패해도 신고 저장에는 영향이 없습니다. 전체 목록은 예전처럼 `…/admin/reports`.
    - **켜기 전에 정할 것**: 알림에는 사용자가 신고에 적은 글의 앞부분(30자)이 텔레그램 서버를 거쳐 갑니다. 지금 개인정보처리방침의 처리 위탁·국외 이전 업체 목록에는 텔레그램이 없습니다.
      켜려면 방침(과 `07-data-safety.md`)에 텔레그램을 넣을지 HQ 와 먼저 정하세요. 정하기 전에는 비밀값을 넣지 않으면 됩니다(넣지 않으면 아무것도 나가지 않음).
-5. [ ] 주소 확인: `https://kata-public.cura4world.workers.dev/` 를 열면 `{"ok":true,"service":"kata-public"}`
+5. [x] 주소 확인: `https://kata-public.cura4world.workers.dev/` 를 열면 `{"ok":true,"service":"kata-public"}`
    - 주소가 다르면 `src/lib/account.ts` 의 `PUBLIC_BASE` 한 줄을 고칩니다
 6. [ ] ⚠ **Cloud Run 호출 형식 대조** — 저는 kata-sermon Worker 소스를 볼 수 없어서, 결정 기록에 적힌 대로
    `POST AI_PROXY_URL` + 헤더 `x-kata-proxy`(비밀)·`x-kata-model`(모델) + 본문 그대로로 만들었습니다.
@@ -222,6 +229,8 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 ## 8. 웹 반영 (CC 에게)
 
 - [ ] `release/public` 를 `main` 에 병합 → Pages 배포 확인
+  - **2026-11-15 10차: 병합 준비는 끝났고, `main` 에 올리기 직전에 멈췄습니다.** 준비된 것 — 되돌리기 태그 `pre-main-merge-2026-11-15`, `main` 커밋 3개 받기, manifest `lang` 을 `en` 으로 보류, `deploy.yml` Node 20(18 에서는 빌드가 실패), 검증 전부 통과.
+    멈춘 이유 — 지시문의 병합 직전 확인("`public/manifest.json`·`build-apk.yml` 이 `main` 과 같아야 함")에서 `build-apk.yml` 이 다르게 나왔습니다(11-14 에 공개 릴리스 올리기를 뺀 변경). 이어 가는 방법은 `HANDOFF.md` 10차 절.
   - 바뀐 동작은 모두 "스토어 앱일 때만" 켜지므로 관리자판·회원판 APK 에서는 달라지는 것이 없어야 합니다.
     예외 두 가지는 모든 판에 적용됩니다: 지도 사진 출처 표시 + 위키미디어 공용 사진만 사용, 정책 페이지 3개 공개
   - 병합 뒤 Arga 님 폰에서 **아무것도 달라지지 않았는지** 먼저 확인
