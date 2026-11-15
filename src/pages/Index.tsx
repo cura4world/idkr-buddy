@@ -1164,7 +1164,7 @@ const Index = () => {
 
           {/* 학습 (2026-11-14 사용자 요청: 소제목을 인도네시아어 + 한국어로 — 예전 두 글자 "학습") */}
           <section>
-            {sectionTitle("Ayo belajar!", "공부해 볼까요")}
+            {sectionTitle("Ayo belajar!", "공부해 봅시다")}
             <div className={listBox} style={listStyle}>
               <PubRow
                 tileBg="#DDF0EA"
@@ -1200,7 +1200,7 @@ const Index = () => {
 
           {/* 문화 */}
           <section>
-            {sectionTitle("Kenali Indonesia", "알아 갈까요")}
+            {sectionTitle("Kenali Indonesia", "알아 갑시다")}
             <div className={listBox} style={listStyle} data-fit-anchor="culture">
               <PubRow
                 tileBg="#FCE6D9"
