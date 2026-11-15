@@ -59,6 +59,12 @@ type LandMode = "off" | "native" | "css";
 // 대도시(tier 1)는 1.05 부터 — 처음 여는 배율(1.55)에서 흐리지 않고 또렷하게 보이도록(시안 MP1, 0.5 구간에 걸쳐 나타남).
 const tierStart = (tier: number): number =>
   tier === 1 ? 1.05 : tier === 2 ? 2.4 : tier === 3 ? 3.0 : 4.5;
+// 점(동그라미)이 나타나기 시작하는 배율 — render 와 findPin 이 함께 씁니다.
+// 도시는 예전 그대로 tier 를 따릅니다. 관광지·종교·역사·종족·문화는 분류 버튼을 켠 동안에만 그려지므로,
+// 켰는데 깊이 확대해야만 보이면 "눌렀는데 아무 일도 없다"가 됩니다. 그래서 점은 대도시와 같은 배율(1.05)부터
+// 보이고, 이름표만 예전 배율(tierStart)부터 나옵니다 — 처음 화면에서 이름이 겹치지 않게(2026-11-15).
+const dotStart = (p: { type: PinType; tier: number }): number =>
+  p.type === "city" ? tierStart(p.tier) : Math.min(tierStart(p.tier), tierStart(1));
 
 const PINS: Pin[] = [
   ...MAP_CITIES.map((p) => ({ ...p, type: "city" as PinType })),
@@ -328,8 +334,9 @@ const IndoMap = () => {
     });
 
     // 핀: 부분 역스케일(1/k^0.65 — 확대할수록 화면상 글자가 커짐)
-    // tier별 표시 시점: 1=대도시 k≥1.05, 2=중소도시 k≥2.4, 3=관광지 k≥3.0,
-    //                   4=종교·역사/민족·문화 k≥4.5 (tierStart 참조)
+    // 점이 나타나는 배율(dotStart): 도시는 1=대도시 k≥1.05, 2=중소도시 k≥2.4.
+    //   관광지·종교·역사·종족·문화는 분류 버튼을 켜면 k≥1.05 부터(처음 배율 1.55 에서 바로 보임).
+    // 이름표가 나타나는 배율(tierStart): 3=관광지 k≥3.0, 4=종교·역사/종족·문화 k≥4.5 — 아래 겹침 처리에서 봅니다.
     const pinScale = 1 / Math.pow(s.k, 0.65);
     PINS.forEach((p, i) => {
       const el = pinRefs.current[i];
@@ -337,7 +344,7 @@ const IndoMap = () => {
         pinVisible.current[i] = false;
         return;
       }
-      const start = tierStart(p.tier);
+      const start = dotStart(p);
       const kindOn =
         p.type === "spot"
           ? showSpotsRef.current
@@ -367,9 +374,18 @@ const IndoMap = () => {
         txt.setAttribute("opacity", "0");
         return;
       }
+      // 이름표는 tierStart 부터(0.5 구간에 걸쳐 나타남). 점이 먼저 보이는 분류(관광지 등)는 그 전까지 점만 둡니다.
+      // 도시는 점과 이름표의 시작 배율이 같아 예전과 똑같이 그려집니다(묶음의 opacity 가 이미 흐림을 맡음).
+      const labelStart = tierStart(p.tier);
+      const labelOp = labelStart > dotStart(p) ? Math.max(0, Math.min(1, (s.k - labelStart) / 0.5)) : 1;
+      if (labelOp <= 0.35) {
+        txt.setAttribute("opacity", "0");
+        return;
+      }
+      const shown = labelOp >= 1 ? "1" : labelOp.toFixed(2);
       // 충분히 확대(k≥6)하면 겹침 무시하고 모든 이름 표시
       if (s.k >= 6) {
-        txt.setAttribute("opacity", "1");
+        txt.setAttribute("opacity", shown);
         return;
       }
       const w = (p.id.length * 10.5 + 14) * pinScale;
@@ -383,7 +399,7 @@ const IndoMap = () => {
       if (hit) {
         txt.setAttribute("opacity", "0");
       } else {
-        txt.setAttribute("opacity", "1");
+        txt.setAttribute("opacity", shown);
         placedRects.push(rect);
       }
     });
@@ -425,7 +441,7 @@ const IndoMap = () => {
       let bestD = 1e9;
       PINS.forEach((pin) => {
         if (pin.staff && !staffRef.current) return;
-        const start = tierStart(pin.tier);
+        const start = dotStart(pin);
         const kindOn =
           pin.type === "spot"
             ? showSpotsRef.current
@@ -903,7 +919,13 @@ const IndoMap = () => {
             ))}
             {PINS.map((p, i) =>
               pinShown(p) ? (
-                <g key={p.type + "-" + p.id} ref={(el) => (pinRefs.current[i] = el)} opacity={0}>
+                <g
+                  key={p.type + "-" + p.id}
+                  ref={(el) => (pinRefs.current[i] = el)}
+                  opacity={0}
+                  data-pin-type={p.type}
+                  data-pin-id={p.id}
+                >
                   <circle
                     r={p.tier === 1 ? 9 : p.tier === 2 ? 8 : p.tier === 3 ? 7.5 : 7}
                     className={"kkm-pin-dot" + (p.type === "city" ? "" : " " + p.type)}
