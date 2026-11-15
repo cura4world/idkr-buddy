@@ -561,3 +561,9 @@ Arga 가 2026-11-14 밤에 콘솔에서 끝낸 것을 사실 그대로 적는다
 - 스토어 앱은 `https://cura4world.github.io/idkr-buddy/` 를 불러온다. `release/public` 을 `main` 에 병합하기 전까지 내부 테스트 앱에는 **옛 화면**이 보인다(정상).
 - 서버(`kata-public`)는 아직 배포되지 않았다. 배포 전에는 로그인·AI·결제 검증이 모두 되지 않는다.
 - 보안 게이트 공식 판정은 그대로다(통과 아님). 출시 가능이라고 하지 않는다.
+
+## 17. `release/public` → `main` 병합 준비 2026-11-15 (10차)
+
+- **`public/manifest.json` 의 `"lang"` 은 `main` 과 같은 `"en"` 으로 되돌려 두었다(A-58 의 manifest 부분만 보류).** `build-apk.yml` 은 `main` 에 push 될 때 이 파일이 바뀌어 있으면 관리자 APK 를 저절로 빌드한다. 병합 때 그 빌드가 돌지 않게 하려는 것이다. `index.html` 등 다른 `lang` 설정은 `ko` 그대로다. `"ko"` 로 바꾸는 일은 다음에 관리자 APK 를 다시 빌드할 때 함께 한다.
+- 되돌리기 기준점: 원격 태그 `pre-main-merge-2026-11-15` = 병합 전 `main`(`a7a05f1`).
+- `main` 에만 있던 커밋 3개(글자 크기 기준 15.2px·백업 묶음의 글자 기준 표시·홈 간격)는 `release/public` 에 이미 같은 내용으로 들어 있었다. `git merge --no-ff origin/main` 은 충돌 없이 끝났고 파일 변화가 없다(이력만 이어짐).
