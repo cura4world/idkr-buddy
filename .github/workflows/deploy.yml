@@ -15,7 +15,10 @@ jobs:
 
       - uses: actions/setup-node@v3
         with:
-          node-version: 18
+          # 2026-11-15: 18 → 20. 잠금 파일의 빌드 도구(serialize-javascript 7 — 서비스워커를 줄이는 단계)가
+          # Node 20 이상을 요구해, 18 에서는 "crypto is not defined" 로 빌드가 실패합니다(main 병합 전 로컬 재현).
+          # 미리보기 빌드·화면 테스트 워크플로와 같은 판입니다.
+          node-version: 20
 
       # 잠금 파일(package-lock.json) 그대로 설치합니다. npm install 은 잠금 파일과 다른 판을 받아 올 수 있어,
       # 스토어 앱이 불러오는 페이지가 검사하지 않은 의존성으로 빌드될 수 있었습니다(2026-11-14 출시 전 점검 S-07).
