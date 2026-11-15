@@ -50,7 +50,7 @@ export interface MapPlacePhotos {
 // 목록을 만들지 못했습니다. 비어 있는 동안 시트에는 사진이 나오지 않습니다.
 // scripts/build-map-photos.mjs 를 돌리면 이 아래가 채워집니다.
 // @generated-start
-// 2026-11-10 scripts/build-map-photos.mjs — 지점 136 · 2장 66 · 1장 38 · 0장 32
+// 2026-11-15 scripts/build-map-photos.mjs — 지점 136 · 2장 97 · 1장 38 · 0장 1
 export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   "Agats": {
     "region": "papua",
@@ -193,11 +193,45 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Banjarmasin": {
     "region": "kalimantan",
-    "photos": []
+    "photos": [
+      {
+        "file": "Kota Banjarmasin.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Kota_Banjarmasin.jpg/500px-Kota_Banjarmasin.jpg",
+        "author": "Halim Drone",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Kota_Banjarmasin.jpg"
+      },
+      {
+        "file": "Banjarmasin floating market, 2018.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Banjarmasin_floating_market%2C_2018.jpg/500px-Banjarmasin_floating_market%2C_2018.jpg",
+        "author": "Mahfud651",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Banjarmasin_floating_market,_2018.jpg"
+      }
+    ]
   },
   "Banten Lama": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Masjid agung banten lama.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Masjid_agung_banten_lama.jpg/500px-Masjid_agung_banten_lama.jpg",
+        "author": "Firdaus31",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Masjid_agung_banten_lama.jpg"
+      },
+      {
+        "file": "Tampak Fondasi Ruang Dayang-Dayang Keraton Surosowan.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Tampak_Fondasi_Ruang_Dayang-Dayang_Keraton_Surosowan.jpg/500px-Tampak_Fondasi_Ruang_Dayang-Dayang_Keraton_Surosowan.jpg",
+        "author": "Arif Permana Putra",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Tampak_Fondasi_Ruang_Dayang-Dayang_Keraton_Surosowan.jpg"
+      }
+    ]
   },
   "Banyuwangi": {
     "region": "jawa",
@@ -235,7 +269,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Bekasi": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Kalimalang.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Kalimalang.jpg/500px-Kalimalang.jpg",
+        "author": "@preplime",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Kalimalang.jpg"
+      },
+      {
+        "file": "Bekasi Mall Night 2.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Bekasi_Mall_Night_2.jpg/500px-Bekasi_Mall_Night_2.jpg",
+        "author": "Garybhaztara",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Bekasi_Mall_Night_2.jpg"
+      }
+    ]
   },
   "Bengkulu": {
     "region": "sumatera",
@@ -273,19 +324,87 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Bima": {
     "region": "bali-nusa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Bima di atas bukit.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Bima_di_atas_bukit.jpg/500px-Bima_di_atas_bukit.jpg",
+        "author": "Bungpras",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Bima_di_atas_bukit.jpg"
+      },
+      {
+        "file": "City of bima indonesia.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/City_of_bima_indonesia.jpg/500px-City_of_bima_indonesia.jpg",
+        "author": "22nurhidayanti",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:City_of_bima_indonesia.jpg"
+      }
+    ]
   },
   "Binjai": {
     "region": "sumatera",
-    "photos": []
+    "photos": [
+      {
+        "file": "Binjai.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Binjai.jpg/500px-Binjai.jpg",
+        "author": "Davidelit",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Binjai.jpg"
+      },
+      {
+        "file": "AmirHamzahHouse.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/AmirHamzahHouse.jpg/500px-AmirHamzahHouse.jpg",
+        "author": "Davidelit",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:AmirHamzahHouse.jpg"
+      }
+    ]
   },
   "Bogor": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Istana presiden republik Indonesia di Bogor.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Istana_presiden_republik_Indonesia_di_Bogor.jpg/500px-Istana_presiden_republik_Indonesia_di_Bogor.jpg",
+        "author": "Nafisathallah",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Istana_presiden_republik_Indonesia_di_Bogor.jpg"
+      },
+      {
+        "file": "Kebun Raya Bogor 19.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Kebun_Raya_Bogor_19.jpg/500px-Kebun_Raya_Bogor_19.jpg",
+        "author": "Cep Budhi Darma",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Kebun_Raya_Bogor_19.jpg"
+      }
+    ]
   },
   "Bone": {
     "region": "sulawesi",
-    "photos": []
+    "photos": [
+      {
+        "file": "Port of Bajoe, Bone, South Sulawesi 3 2012.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Port_of_Bajoe%2C_Bone%2C_South_Sulawesi_3_2012.jpg/500px-Port_of_Bajoe%2C_Bone%2C_South_Sulawesi_3_2012.jpg",
+        "author": "Midori",
+        "license": "CC BY 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Port_of_Bajoe,_Bone,_South_Sulawesi_3_2012.jpg"
+      },
+      {
+        "file": "KMP Kotabumi at Port of Bajoe Bone South Sulawesi.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/KMP_Kotabumi_at_Port_of_Bajoe_Bone_South_Sulawesi.jpg/500px-KMP_Kotabumi_at_Port_of_Bajoe_Bone_South_Sulawesi.jpg",
+        "author": "Midori",
+        "license": "CC BY 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+        "page": "https://commons.wikimedia.org/wiki/File:KMP_Kotabumi_at_Port_of_Bajoe_Bone_South_Sulawesi.jpg"
+      }
+    ]
   },
   "Borobudur": {
     "region": "jawa",
@@ -373,7 +492,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Bunaken": {
     "region": "sulawesi",
-    "photos": []
+    "photos": [
+      {
+        "file": "Bunaken.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Bunaken.jpg/500px-Bunaken.jpg",
+        "author": "User:Borgx",
+        "license": "Public domain",
+        "licenseUrl": "",
+        "page": "https://commons.wikimedia.org/wiki/File:Bunaken.jpg"
+      },
+      {
+        "file": "Bunaken3.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Bunaken3.jpg/500px-Bunaken3.jpg",
+        "author": "No machine-readable author provided. Borgx assumed (based on copyright claims).",
+        "license": "Public domain",
+        "licenseUrl": "",
+        "page": "https://commons.wikimedia.org/wiki/File:Bunaken3.jpg"
+      }
+    ]
   },
   "Cirebon": {
     "region": "jawa",
@@ -432,7 +568,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Dataran Tinggi Dieng": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Arjuna Temple Complex in the Dieng Plateau.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Arjuna_Temple_Complex_in_the_Dieng_Plateau.jpg/500px-Arjuna_Temple_Complex_in_the_Dieng_Plateau.jpg",
+        "author": "Uncredited",
+        "license": "Public domain",
+        "licenseUrl": "",
+        "page": "https://commons.wikimedia.org/wiki/File:Arjuna_Temple_Complex_in_the_Dieng_Plateau.jpg"
+      },
+      {
+        "file": "Pagi Candi Arjuna Dieng.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Pagi_Candi_Arjuna_Dieng.jpg/500px-Pagi_Candi_Arjuna_Dieng.jpg",
+        "author": "Yogaprihananto",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Pagi_Candi_Arjuna_Dieng.jpg"
+      }
+    ]
   },
   "Demak": {
     "region": "jawa",
@@ -723,7 +876,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Kampung Naga": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Abdulrohmatt3.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Abdulrohmatt3.jpg/500px-Abdulrohmatt3.jpg",
+        "author": "Abdulrohmatt",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Abdulrohmatt3.jpg"
+      },
+      {
+        "file": "DSC00029 Java Little Sundanais Traditional Village Kampung Naga (6219569245).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/DSC00029_Java_Little_Sundanais_Traditional_Village_Kampung_Naga_%286219569245%29.jpg/500px-DSC00029_Java_Little_Sundanais_Traditional_Village_Kampung_Naga_%286219569245%29.jpg",
+        "author": "DANIEL JULIE from Paris, France",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:DSC00029_Java_Little_Sundanais_Traditional_Village_Kampung_Naga_(6219569245).jpg"
+      }
+    ]
   },
   "Kawah Ijen": {
     "region": "jawa",
@@ -782,7 +952,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Kepulauan Banda": {
     "region": "maluku",
-    "photos": []
+    "photos": [
+      {
+        "file": "BandaBesarIslandSeenFromFortBelgica.JPG",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/BandaBesarIslandSeenFromFortBelgica.JPG/500px-BandaBesarIslandSeenFromFortBelgica.JPG",
+        "author": "Photo by Mark Richards",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "page": "https://commons.wikimedia.org/wiki/File:BandaBesarIslandSeenFromFortBelgica.JPG"
+      },
+      {
+        "file": "Banda-0039.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Banda-0039.jpg/500px-Banda-0039.jpg",
+        "author": "Anton Leddin",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Banda-0039.jpg"
+      }
+    ]
   },
   "Kepulauan Derawan": {
     "region": "kalimantan",
@@ -807,7 +994,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Kepulauan Mentawai": {
     "region": "sumatera",
-    "photos": []
+    "photos": [
+      {
+        "file": "Mentawai Uma.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Mentawai_Uma.jpg/500px-Mentawai_Uma.jpg",
+        "author": "Alex Lapuerta",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Mentawai_Uma.jpg"
+      },
+      {
+        "file": "Pantai Jati 1.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Pantai_Jati_1.jpg/500px-Pantai_Jati_1.jpg",
+        "author": "S Kartika",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Pantai_Jati_1.jpg"
+      }
+    ]
   },
   "Kepulauan Togean": {
     "region": "sulawesi",
@@ -832,7 +1036,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Krakatau": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Anak Krakatau-2.JPG",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Anak_Krakatau-2.JPG/500px-Anak_Krakatau-2.JPG",
+        "author": "Lord Mountbatten",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Anak_Krakatau-2.JPG"
+      },
+      {
+        "file": "Anak Krakatau.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Anak_Krakatau.jpg/500px-Anak_Krakatau.jpg",
+        "author": "Evanradit12",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Anak_Krakatau.jpg"
+      }
+    ]
   },
   "Kudus": {
     "region": "jawa",
@@ -878,7 +1099,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Kuta": {
     "region": "bali-nusa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Kuta Beach (6924448550).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Kuta_Beach_%286924448550%29.jpg/500px-Kuta_Beach_%286924448550%29.jpg",
+        "author": "Simon_sees from Australia",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Kuta_Beach_(6924448550).jpg"
+      },
+      {
+        "file": "Kuta Square.JPG",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Kuta_Square.JPG/500px-Kuta_Square.JPG",
+        "author": "Sho Horiuchi",
+        "license": "CC0",
+        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "page": "https://commons.wikimedia.org/wiki/File:Kuta_Square.JPG"
+      }
+    ]
   },
   "Labuan Bajo": {
     "region": "bali-nusa",
@@ -908,7 +1146,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Lasem": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Oemah Batik Lasem.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Oemah_Batik_Lasem.jpg/500px-Oemah_Batik_Lasem.jpg",
+        "author": "Harditaher",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Oemah_Batik_Lasem.jpg"
+      },
+      {
+        "file": "Sarung batik tulis lasem premium tiga negeri.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Sarung_batik_tulis_lasem_premium_tiga_negeri.jpg/500px-Sarung_batik_tulis_lasem_premium_tiga_negeri.jpg",
+        "author": "Kynnrzk",
+        "license": "CC0",
+        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "page": "https://commons.wikimedia.org/wiki/File:Sarung_batik_tulis_lasem_premium_tiga_negeri.jpg"
+      }
+    ]
   },
   "Lembah Baliem": {
     "region": "papua",
@@ -933,7 +1188,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Madiun": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Kantor Pemerintahan Kota Madiun tahun 2020.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Kantor_Pemerintahan_Kota_Madiun_tahun_2020.jpg/500px-Kantor_Pemerintahan_Kota_Madiun_tahun_2020.jpg",
+        "author": "Anantohermawan1988",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Kantor_Pemerintahan_Kota_Madiun_tahun_2020.jpg"
+      },
+      {
+        "file": "Area depan Eks Roemah Kapitein Tjina Njoo Swie Lian Madiun.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Area_depan_Eks_Roemah_Kapitein_Tjina_Njoo_Swie_Lian_Madiun.jpg/500px-Area_depan_Eks_Roemah_Kapitein_Tjina_Njoo_Swie_Lian_Madiun.jpg",
+        "author": "Annidafattiya",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Area_depan_Eks_Roemah_Kapitein_Tjina_Njoo_Swie_Lian_Madiun.jpg"
+      }
+    ]
   },
   "Magelang": {
     "region": "jawa",
@@ -1091,15 +1363,66 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Merauke": {
     "region": "papua",
-    "photos": []
+    "photos": [
+      {
+        "file": "Tugu Lingkaran Brawijaya 969.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Tugu_Lingkaran_Brawijaya_969.jpg/500px-Tugu_Lingkaran_Brawijaya_969.jpg",
+        "author": "Marwan Mohamad",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Tugu_Lingkaran_Brawijaya_969.jpg"
+      },
+      {
+        "file": "Melaleuca.Sp lahan basah TN Wasur.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Melaleuca.Sp_lahan_basah_TN_Wasur.jpg/500px-Melaleuca.Sp_lahan_basah_TN_Wasur.jpg",
+        "author": "Arifrudiana 011213",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Melaleuca.Sp_lahan_basah_TN_Wasur.jpg"
+      }
+    ]
   },
   "Muara Jambi": {
     "region": "sumatera",
-    "photos": []
+    "photos": [
+      {
+        "file": "Candi Muaro Jambi di siang hari.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Candi_Muaro_Jambi_di_siang_hari.jpg/500px-Candi_Muaro_Jambi_di_siang_hari.jpg",
+        "author": "Ryan Wijaya",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Candi_Muaro_Jambi_di_siang_hari.jpg"
+      },
+      {
+        "file": "004 Main Building, Side View, Candi Tinggi 2 (39127443191).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/004_Main_Building%2C_Side_View%2C_Candi_Tinggi_2_%2839127443191%29.jpg/500px-004_Main_Building%2C_Side_View%2C_Candi_Tinggi_2_%2839127443191%29.jpg",
+        "author": "Anandajoti Bhikkhu from Sadao, Thailand",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:004_Main_Building,_Side_View,_Candi_Tinggi_2_(39127443191).jpg"
+      }
+    ]
   },
   "Muntilan": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Kerkof Muntilan, Magelang, Jawa Tengah.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Kerkof_Muntilan%2C_Magelang%2C_Jawa_Tengah.jpg/500px-Kerkof_Muntilan%2C_Magelang%2C_Jawa_Tengah.jpg",
+        "author": "Makamindo",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Kerkof_Muntilan,_Magelang,_Jawa_Tengah.jpg"
+      },
+      {
+        "file": "Makam Justinus Kardinal Darmoyuwono di Kerkof Muntilan 8.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Makam_Justinus_Kardinal_Darmoyuwono_di_Kerkof_Muntilan_8.jpg/500px-Makam_Justinus_Kardinal_Darmoyuwono_di_Kerkof_Muntilan_8.jpg",
+        "author": "Makamindo",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Makam_Justinus_Kardinal_Darmoyuwono_di_Kerkof_Muntilan_8.jpg"
+      }
+    ]
   },
   "Nusa Penida": {
     "region": "bali-nusa",
@@ -1163,7 +1486,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Palangkaraya": {
     "region": "kalimantan",
-    "photos": []
+    "photos": [
+      {
+        "file": "Bundaran Besar Palangka Raya (baru).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Bundaran_Besar_Palangka_Raya_%28baru%29.jpg/500px-Bundaran_Besar_Palangka_Raya_%28baru%29.jpg",
+        "author": "ParadoxP P",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Bundaran_Besar_Palangka_Raya_(baru).jpg"
+      },
+      {
+        "file": "Duta Mall Palangka Raya (20260117 145441).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Duta_Mall_Palangka_Raya_%2820260117_145441%29.jpg/500px-Duta_Mall_Palangka_Raya_%2820260117_145441%29.jpg",
+        "author": "Gabpzxs",
+        "license": "CC0",
+        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "page": "https://commons.wikimedia.org/wiki/File:Duta_Mall_Palangka_Raya_(20260117_145441).jpg"
+      }
+    ]
   },
   "Palembang": {
     "region": "sumatera",
@@ -1193,7 +1533,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Pamekasan": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Monumen Arek Lancor Pamekasan.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Monumen_Arek_Lancor_Pamekasan.jpg/500px-Monumen_Arek_Lancor_Pamekasan.jpg",
+        "author": "Andika Faris",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Monumen_Arek_Lancor_Pamekasan.jpg"
+      },
+      {
+        "file": "Karapan Sapi Madura.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Karapan_Sapi_Madura.jpg/500px-Karapan_Sapi_Madura.jpg",
+        "author": "Ivuvisual",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Karapan_Sapi_Madura.jpg"
+      }
+    ]
   },
   "Pangkalpinang": {
     "region": "sumatera",
@@ -1312,15 +1669,66 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Pulau Belitung": {
     "region": "sumatera",
-    "photos": []
+    "photos": [
+      {
+        "file": "Berlayar di Semenanjung Belitung.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Berlayar_di_Semenanjung_Belitung.jpg/500px-Berlayar_di_Semenanjung_Belitung.jpg",
+        "author": "Tesatj",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Berlayar_di_Semenanjung_Belitung.jpg"
+      },
+      {
+        "file": "Pantai Tanjung Tinggi Belitung 02.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Pantai_Tanjung_Tinggi_Belitung_02.jpg/500px-Pantai_Tanjung_Tinggi_Belitung_02.jpg",
+        "author": "Raflinoer32",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Pantai_Tanjung_Tinggi_Belitung_02.jpg"
+      }
+    ]
   },
   "Pulau Komodo": {
     "region": "bali-nusa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Komodo Island north aerial.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Komodo_Island_north_aerial.jpg/500px-Komodo_Island_north_aerial.jpg",
+        "author": "jon hanson from London",
+        "license": "CC BY-SA 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Komodo_Island_north_aerial.jpg"
+      },
+      {
+        "file": "Komodo Dragon (01).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Komodo_Dragon_%2801%29.jpg/500px-Komodo_Dragon_%2801%29.jpg",
+        "author": "NAPARAZZI",
+        "license": "CC BY-SA 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Komodo_Dragon_(01).jpg"
+      }
+    ]
   },
   "Pulau Mansinam": {
     "region": "papua",
-    "photos": []
+    "photos": [
+      {
+        "file": "Mansinam Jesus Statue.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Mansinam_Jesus_Statue.jpg/500px-Mansinam_Jesus_Statue.jpg",
+        "author": "Radio Republik Indonesia",
+        "license": "Public domain",
+        "licenseUrl": "",
+        "page": "https://commons.wikimedia.org/wiki/File:Mansinam_Jesus_Statue.jpg"
+      },
+      {
+        "file": "Sumur Tua JL Van Hasselt 005.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Sumur_Tua_JL_Van_Hasselt_005.jpg/500px-Sumur_Tua_JL_Van_Hasselt_005.jpg",
+        "author": "Muhhussen",
+        "license": "CC0",
+        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "page": "https://commons.wikimedia.org/wiki/File:Sumur_Tua_JL_Van_Hasselt_005.jpg"
+      }
+    ]
   },
   "Pulau Nias": {
     "region": "sumatera",
@@ -1345,7 +1753,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Pulau Sabu": {
     "region": "bali-nusa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Boats at Raijua Pier 2022.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Boats_at_Raijua_Pier_2022.jpg/500px-Boats_at_Raijua_Pier_2022.jpg",
+        "author": "Bobby Battileo",
+        "license": "CC BY 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Boats_at_Raijua_Pier_2022.jpg"
+      },
+      {
+        "file": "Tubular dress, Savu, Indonesia, early 20th century, cotton - Fernbank Museum of Natural History - DSC09979.JPG",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Tubular_dress%2C_Savu%2C_Indonesia%2C_early_20th_century%2C_cotton_-_Fernbank_Museum_of_Natural_History_-_DSC09979.JPG/500px-Tubular_dress%2C_Savu%2C_Indonesia%2C_early_20th_century%2C_cotton_-_Fernbank_Museum_of_Natural_History_-_DSC09979.JPG",
+        "author": "Daderot",
+        "license": "CC0",
+        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "page": "https://commons.wikimedia.org/wiki/File:Tubular_dress,_Savu,_Indonesia,_early_20th_century,_cotton_-_Fernbank_Museum_of_Natural_History_-_DSC09979.JPG"
+      }
+    ]
   },
   "Pulau Sumba": {
     "region": "bali-nusa",
@@ -1396,7 +1821,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Purwokerto": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "View of the General Gatot Subroto Monument.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/View_of_the_General_Gatot_Subroto_Monument.jpg/500px-View_of_the_General_Gatot_Subroto_Monument.jpg",
+        "author": "Nararya Danuwijaya",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:View_of_the_General_Gatot_Subroto_Monument.jpg"
+      },
+      {
+        "file": "Alun - Alun Purwokerto & Pendapa Si Panji dengan Latar belakang Gunung Slamet.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Alun_-_Alun_Purwokerto_%26_Pendapa_Si_Panji_dengan_Latar_belakang_Gunung_Slamet.jpg/500px-Alun_-_Alun_Purwokerto_%26_Pendapa_Si_Panji_dengan_Latar_belakang_Gunung_Slamet.jpg",
+        "author": "Tyo Satriany",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Alun_-_Alun_Purwokerto_%26_Pendapa_Si_Panji_dengan_Latar_belakang_Gunung_Slamet.jpg"
+      }
+    ]
   },
   "Putussibau": {
     "region": "kalimantan",
@@ -1421,7 +1863,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Raja Ampat": {
     "region": "papua",
-    "photos": []
+    "photos": [
+      {
+        "file": "Piaynemo, Raja Ampat (39660320633).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Piaynemo%2C_Raja_Ampat_%2839660320633%29.jpg/500px-Piaynemo%2C_Raja_Ampat_%2839660320633%29.jpg",
+        "author": "peter harris",
+        "license": "CC0",
+        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "page": "https://commons.wikimedia.org/wiki/File:Piaynemo,_Raja_Ampat_(39660320633).jpg"
+      },
+      {
+        "file": "Pulau Piaynemo, Raja Ampat.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Pulau_Piaynemo%2C_Raja_Ampat.jpg/500px-Pulau_Piaynemo%2C_Raja_Ampat.jpg",
+        "author": "Rizalubun",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Pulau_Piaynemo,_Raja_Ampat.jpg"
+      }
+    ]
   },
   "Sade": {
     "region": "bali-nusa",
@@ -1480,7 +1939,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Sangiran": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Java Man Statue at the Sangiran Early Man Site.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Java_Man_Statue_at_the_Sangiran_Early_Man_Site.jpg/500px-Java_Man_Statue_at_the_Sangiran_Early_Man_Site.jpg",
+        "author": "Ministry of Culture (Indonesia)",
+        "license": "Public domain",
+        "licenseUrl": "",
+        "page": "https://commons.wikimedia.org/wiki/File:Java_Man_Statue_at_the_Sangiran_Early_Man_Site.jpg"
+      },
+      {
+        "file": "Sangiran Early Man Museum, Krikilan Cluster.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Sangiran_Early_Man_Museum%2C_Krikilan_Cluster.jpg/500px-Sangiran_Early_Man_Museum%2C_Krikilan_Cluster.jpg",
+        "author": "Ministry of Culture (Indonesia)",
+        "license": "Public domain",
+        "licenseUrl": "",
+        "page": "https://commons.wikimedia.org/wiki/File:Sangiran_Early_Man_Museum,_Krikilan_Cluster.jpg"
+      }
+    ]
   },
   "Saparua": {
     "region": "maluku",
@@ -1547,7 +2023,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Serang": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Great Mosque of Serang.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Great_Mosque_of_Serang.jpg/500px-Great_Mosque_of_Serang.jpg",
+        "author": "JahlilMA",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Great_Mosque_of_Serang.jpg"
+      },
+      {
+        "file": "Cagar Alam Pulau Dua, Banten, 23042017.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Cagar_Alam_Pulau_Dua%2C_Banten%2C_23042017.jpg/500px-Cagar_Alam_Pulau_Dua%2C_Banten%2C_23042017.jpg",
+        "author": "Raffiakbar29",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Cagar_Alam_Pulau_Dua,_Banten,_23042017.jpg"
+      }
+    ]
   },
   "Sidoarjo": {
     "region": "jawa",
@@ -1564,11 +2057,45 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Singkawang": {
     "region": "kalimantan",
-    "photos": []
+    "photos": [
+      {
+        "file": "Tugu Naga Singkawang.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Tugu_Naga_Singkawang.jpg/500px-Tugu_Naga_Singkawang.jpg",
+        "author": "Muhammad Ali Yofi",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Tugu_Naga_Singkawang.jpg"
+      },
+      {
+        "file": "Bangunan Cagar Budaya Marga Tjhia.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Bangunan_Cagar_Budaya_Marga_Tjhia.jpg/500px-Bangunan_Cagar_Budaya_Marga_Tjhia.jpg",
+        "author": "Liuzhary",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Bangunan_Cagar_Budaya_Marga_Tjhia.jpg"
+      }
+    ]
   },
   "Soe": {
     "region": "bali-nusa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Rumah Bulat.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Rumah_Bulat.jpg/500px-Rumah_Bulat.jpg",
+        "author": "Jek Atapada",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Rumah_Bulat.jpg"
+      },
+      {
+        "file": "Oelekam, Central Mollo, South Timor Tengah Regency, East Nusa Tenggara, Indonesia - panoramio.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Oelekam%2C_Central_Mollo%2C_South_Timor_Tengah_Regency%2C_East_Nusa_Tenggara%2C_Indonesia_-_panoramio.jpg/500px-Oelekam%2C_Central_Mollo%2C_South_Timor_Tengah_Regency%2C_East_Nusa_Tenggara%2C_Indonesia_-_panoramio.jpg",
+        "author": "Emus Usboko",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Oelekam,_Central_Mollo,_South_Timor_Tengah_Regency,_East_Nusa_Tenggara,_Indonesia_-_panoramio.jpg"
+      }
+    ]
   },
   "Sorong": {
     "region": "papua",
@@ -1585,7 +2112,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Sukabumi": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Sukabumi Grand Mosque 2022 01.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Sukabumi_Grand_Mosque_2022_01.jpg/500px-Sukabumi_Grand_Mosque_2022_01.jpg",
+        "author": "Afrogindahood",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Sukabumi_Grand_Mosque_2022_01.jpg"
+      },
+      {
+        "file": "Dago Pedestrian Zone, Sukabumi.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Dago_Pedestrian_Zone%2C_Sukabumi.jpg/500px-Dago_Pedestrian_Zone%2C_Sukabumi.jpg",
+        "author": "Afrogindahood",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Dago_Pedestrian_Zone,_Sukabumi.jpg"
+      }
+    ]
   },
   "Surabaya": {
     "region": "jawa",
@@ -1610,15 +2154,66 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Surakarta": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Pura Mangkunegaran Surakarta.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Pura_Mangkunegaran_Surakarta.jpg/500px-Pura_Mangkunegaran_Surakarta.jpg",
+        "author": "SakaReksapustaka",
+        "license": "CC0",
+        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "page": "https://commons.wikimedia.org/wiki/File:Pura_Mangkunegaran_Surakarta.jpg"
+      },
+      {
+        "file": "The front facade of Pasar Gedhe Hardjonagoro in 2019.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/The_front_facade_of_Pasar_Gedhe_Hardjonagoro_in_2019.jpg/500px-The_front_facade_of_Pasar_Gedhe_Hardjonagoro_in_2019.jpg",
+        "author": "Sam Hidayat",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:The_front_facade_of_Pasar_Gedhe_Hardjonagoro_in_2019.jpg"
+      }
+    ]
   },
   "Takengon": {
     "region": "sumatera",
-    "photos": []
+    "photos": [
+      {
+        "file": "Takengon.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/Takengon.jpg/500px-Takengon.jpg",
+        "author": "Weirasi",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Takengon.jpg"
+      },
+      {
+        "file": "Laut Tawar Lake.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Laut_Tawar_Lake.jpg/500px-Laut_Tawar_Lake.jpg",
+        "author": "ArgoRaung",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Laut_Tawar_Lake.jpg"
+      }
+    ]
   },
   "Taman Nasional Lorentz": {
     "region": "papua",
-    "photos": []
+    "photos": [
+      {
+        "file": "Taman Nasional Lorentz.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Taman_Nasional_Lorentz.jpg/500px-Taman_Nasional_Lorentz.jpg",
+        "author": "Ganjarmustika1904",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Taman_Nasional_Lorentz.jpg"
+      },
+      {
+        "file": "Wikiearth-Danau Habema Taman Nasional Lorentz.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Wikiearth-Danau_Habema_Taman_Nasional_Lorentz.jpg/500px-Wikiearth-Danau_Habema_Taman_Nasional_Lorentz.jpg",
+        "author": "RaiyaniM",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Wikiearth-Danau_Habema_Taman_Nasional_Lorentz.jpg"
+      }
+    ]
   },
   "Tana Toraja": {
     "region": "sulawesi",
@@ -1643,15 +2238,66 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Tangerang": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Azhom 2.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Azhom_2.jpg/500px-Azhom_2.jpg",
+        "author": "JahlilMA",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Azhom_2.jpg"
+      },
+      {
+        "file": "Boen Tek Bio.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Boen_Tek_Bio.jpg/500px-Boen_Tek_Bio.jpg",
+        "author": "Cun Cun",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Boen_Tek_Bio.jpg"
+      }
+    ]
   },
   "Tangkuban Perahu": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Tangkuban Prahu.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Tangkuban_Prahu.jpg/500px-Tangkuban_Prahu.jpg",
+        "author": "Vivi Lestari",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Tangkuban_Prahu.jpg"
+      },
+      {
+        "file": "Tangkuban Parahu.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Tangkuban_Parahu.jpg/500px-Tangkuban_Parahu.jpg",
+        "author": "CHJL",
+        "license": "Public domain",
+        "licenseUrl": "",
+        "page": "https://commons.wikimedia.org/wiki/File:Tangkuban_Parahu.jpg"
+      }
+    ]
   },
   "Tanjung Puting": {
     "region": "kalimantan",
-    "photos": []
+    "photos": [
+      {
+        "file": "Orangutan at Tanjung Puting National Park (31266099698).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Orangutan_at_Tanjung_Puting_National_Park_%2831266099698%29.jpg/500px-Orangutan_at_Tanjung_Puting_National_Park_%2831266099698%29.jpg",
+        "author": "Jorge Franganillo",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Orangutan_at_Tanjung_Puting_National_Park_(31266099698).jpg"
+      },
+      {
+        "file": "Landscape of theTanjung Puting National Park - Indonesia 2.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Landscape_of_theTanjung_Puting_National_Park_-_Indonesia_2.jpg/500px-Landscape_of_theTanjung_Puting_National_Park_-_Indonesia_2.jpg",
+        "author": "Thomas Fuhrmann",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Landscape_of_theTanjung_Puting_National_Park_-_Indonesia_2.jpg"
+      }
+    ]
   },
   "Tanjung Selor": {
     "region": "kalimantan",
@@ -1668,7 +2314,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Tanjungpinang": {
     "region": "sumatera",
-    "photos": []
+    "photos": [
+      {
+        "file": "Governors House.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Governors_House.jpg/500px-Governors_House.jpg",
+        "author": "a_rabin",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Governors_House.jpg"
+      },
+      {
+        "file": "Pulau Penyengat.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Pulau_Penyengat.jpg/500px-Pulau_Penyengat.jpg",
+        "author": "Achmad Rabin Taim",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Pulau_Penyengat.jpg"
+      }
+    ]
   },
   "Tarakan": {
     "region": "kalimantan",
@@ -1905,7 +2568,24 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   },
   "Yogyakarta": {
     "region": "jawa",
-    "photos": []
+    "photos": [
+      {
+        "file": "Jogja - Tugu Monument (2025) - img 06.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Jogja_-_Tugu_Monument_%282025%29_-_img_06.jpg/500px-Jogja_-_Tugu_Monument_%282025%29_-_img_06.jpg",
+        "author": "Chainwit.",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Jogja_-_Tugu_Monument_(2025)_-_img_06.jpg"
+      },
+      {
+        "file": "Eastern face of west gate, Taman Sari, Yogyakarta, 2014-04-24 (from 19 images).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Eastern_face_of_west_gate%2C_Taman_Sari%2C_Yogyakarta%2C_2014-04-24_%28from_19_images%29.jpg/500px-Eastern_face_of_west_gate%2C_Taman_Sari%2C_Yogyakarta%2C_2014-04-24_%28from_19_images%29.jpg",
+        "author": "Crisco 1492",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Eastern_face_of_west_gate,_Taman_Sari,_Yogyakarta,_2014-04-24_(from_19_images).jpg"
+      }
+    ]
   }
 };
 // @generated-end
