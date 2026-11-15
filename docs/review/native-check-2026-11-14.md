@@ -175,8 +175,8 @@
 
 | 번호 | 인도네시아어 | 한국어(옆에 작게) | 구역 | 물음 |
 |---|---|---|---|---|
-| H-1 | `Ayo belajar!` | 공부해 볼까요 | 학습 (단어장·회화집·게임 등) | `Yuk, belajar!` 가 더 친근한가? |
-| H-2 | `Kenali Indonesia` | 알아 갈까요 | 문화 (인도네시아 이해·지도) | 명령형이 딱딱하게 들리는가? 대안 `Mengenal Indonesia` |
+| H-1 | `Ayo belajar!` | 공부해 봅시다 | 학습 (단어장·회화집·게임 등) | `Yuk, belajar!` 가 더 친근한가? |
+| H-2 | `Kenali Indonesia` | 알아 갑시다 | 문화 (인도네시아 이해·지도) | 명령형이 딱딱하게 들리는가? 대안 `Mengenal Indonesia` |
 | H-3 | `Firman hari ini` | 오늘의 말씀 | 신앙 (설교문·묵상·성경·기도, 관리자·Special Member 만) | 설교문·성경·기도까지 묶는 이름으로 자연스러운가? |
 
 
