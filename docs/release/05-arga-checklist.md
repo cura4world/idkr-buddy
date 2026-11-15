@@ -228,12 +228,14 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 
 ## 8. 웹 반영 (CC 에게)
 
-- [ ] `release/public` 를 `main` 에 병합 → Pages 배포 확인
-  - **2026-11-15 10차: 병합 준비는 끝났고, `main` 에 올리기 직전에 멈췄습니다.** 준비된 것 — 되돌리기 태그 `pre-main-merge-2026-11-15`, `main` 커밋 3개 받기, manifest `lang` 을 `en` 으로 보류, `deploy.yml` Node 20(18 에서는 빌드가 실패), 검증 전부 통과.
-    멈춘 이유 — 지시문의 병합 직전 확인("`public/manifest.json`·`build-apk.yml` 이 `main` 과 같아야 함")에서 `build-apk.yml` 이 다르게 나왔습니다(11-14 에 공개 릴리스 올리기를 뺀 변경). 이어 가는 방법은 `HANDOFF.md` 10차 절.
+- [x] `release/public` 를 `main` 에 병합 → Pages 배포 확인 — ✅ 2026-11-15 완료
+  - **2026-11-15 10차: `main` 에 올렸습니다**(빨리 감기 병합, `a7a05f1` → `d879f23`, 982커밋. 강제 push 아님). Arga 님이 "`build-apk.yml` 이 `main` 과 다른 채로 올려도 된다"고 정해 이어 갔습니다.
+    확인한 것 — 배포 `Deploy to GitHub Pages` #748 `success`, Pages 게시 #710 `success`, `build-apk.yml` 은 돌지 않음(최근 실행이 여전히 #28, 2026-08-10), 사이트 200 · 새 빌드 반영(`index-DLyoPZ82.js` → `index-B1XDHc-n.js`), 키 없는 브라우저에는 안내 화면.
+    준비 단계에서 한 것 — 되돌리기 태그 `pre-main-merge-2026-11-15`, `main` 커밋 3개 받기, manifest `lang` 을 `en` 으로 보류, `deploy.yml` Node 20(18 에서는 빌드가 실패). 되돌리는 법은 저장소 밖 `../run10/ROLLBACK.md`.
   - 바뀐 동작은 모두 "스토어 앱일 때만" 켜지므로 관리자판·회원판 APK 에서는 달라지는 것이 없어야 합니다.
     예외 두 가지는 모든 판에 적용됩니다: 지도 사진 출처 표시 + 위키미디어 공용 사진만 사용, 정책 페이지 3개 공개
-  - 병합 뒤 Arga 님 폰에서 **아무것도 달라지지 않았는지** 먼저 확인
+  - [ ] 병합 뒤 Arga 님 폰·아내 폰에서 **아무것도 달라지지 않았는지** 확인(앱을 완전히 닫았다 다시 열기 → 홈·사전·단어장·설교문/성경·글자 크기). 목록은 `../run10/final-report.md`
+  - 알아 둘 것: 회원키도 예전 설정도 없는 브라우저는 이제 앱 대신 안내 화면을 봅니다. 폰에 안내 화면이 뜨면 맨 아래 "회원키가 있습니다"에 회원키를 넣습니다
 
 ## 9. 내부 테스트 시나리오 (스토어 앱)
 
