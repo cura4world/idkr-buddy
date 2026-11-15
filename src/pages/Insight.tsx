@@ -176,9 +176,9 @@ const Insight = () => {
           </div>
         </section>
 
-        {/* 사람과 믿음 */}
+        {/* 종족과 종교 */}
         <section className="mt-2">
-          <SectionTitle>사람과 믿음</SectionTitle>
+          <SectionTitle>종족과 종교</SectionTitle>
           <Rows items={people} locked={locked} go={go} />
         </section>
 
