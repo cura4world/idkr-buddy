@@ -89,6 +89,35 @@ const PICK = {
   "Madiun": ["Kantor Pemerintahan Kota Madiun tahun 2020.jpg", "Area depan Eks Roemah Kapitein Tjina Njoo Swie Lian Madiun.jpg"], // 자동
   "Binjai": ["Binjai.jpg", "AmirHamzahHouse.jpg"], // 자동
   "Yogyakarta": ["Jogja - Tugu Monument (2025) - img 06.jpg", "Eastern face of west gate, Taman Sari, Yogyakarta, 2014-04-24 (from 19 images).jpg"], // 자동 2번은 시내버스
+
+  // ── 2026-11-16(13차): 옛 기록 사진뿐이라 화면에 0장이던 22곳. 자동 후보와 공용 검색 결과를 화면으로 보고 골랐습니다.
+  //    "자동"이라고 적지 않은 줄은 자동 선택이 엉뚱해서(다른 도시의 모스크·공항·버스·시위·교회·옛 사진 등) 바꾼 것입니다.
+  // 관광지
+  "Prambanan": ["Yogyakarta Indonesia Prambanan-temple-complex-02.jpg", "Brahma temple Prambanan 2017-08-02 (3).jpg"], // 자동
+  "Ubud": ["Ubud (49818456887).jpg", "Ubud Palace (2022).jpg"], // 2번을 구능 카위(탐팍시링) 대신 우붓 왕궁으로
+  "Tana Toraja": ["Ke'te' Kesu' 1.jpg", "Tarian Pagellu.jpg"], // 2번을 교회 대신 파겔루 춤으로
+  "Ujung Kulon": ["Ujung Kulon National Park, 2014.jpg", "Pulau peucang taman nasional ujung kulon.jpg"], // 2번을 1975년 숲 사진 대신 프우짱 섬 해변으로
+  "Pulau Weh": ["Balohan Sea Port from the hill of east side of Weh Island, Sabang. Aceh.jpg", "Mangroves in Pulau Weh (8217722738).jpg"], // 자동
+  "Kepulauan Togean": ["Babyrousa togeanensis.jpg", "Reconnect-resort-buka-buka-island.jpg"], // 자동(토기안 바비루사 + 섬 풍경)
+  "Maros-Pangkep": ["Area sawah tadah hujan dengan bukit karst di rammang-rammang.jpg", "Bantimurung-Bulusauraung National Park.jpg"], // 자동
+  // 종교·역사
+  "Kudus": ["Masjid Menara Kudus.jpg", "Masjid Menara Kudus Tampak Depan.jpg"], // 자동 2번은 메단의 대모스크
+  "Tuban": ["Kelenteng Kwan Sing Bio, Kutorejo, Kecamatan Tuban.jpg", "Kompleks Pemakaman Sunan Bonang, Tuban.jpg"], // 자동
+  "Tarutung": ["Tarutung - panoramio (1).jpg", "Salib Kasih Tapanuli Utara.jpg"], // 관리자·Special 전용 핀. 자동 2번은 기차 사진 → 살리브 카시
+  "Larantuka": ["Cattedrale di Larantuka.jpg", "Prosesi Laut Antar Tuan Meninu (Patung Bayi Yesus).jpg"], // 관리자·Special 전용 핀. 2번을 군중 사진 대신 바다 행렬로
+  // 종족·문화
+  "Berastagi": ["Tugu Brastagi.jpg", "Berastagi viewed from Gundaling Hill (Panorama) 01.jpg"], // 자동
+  // 도시
+  "Tarakan": ["Islamic Center Tarakan.jpg", "AmalBeachTarakan.jpg"], // 자동
+  "Ternate": ["Ternate in sight.jpg", "Ternate, Keraton.jpg"], // 2번을 요새 담장 대신 술탄 궁전으로
+  "Pati": ["Mintorahayu, Winong, Pati Regency, Central Java, Indonesia - panoramio.jpg", "Masjid Agung Baitunnur Pati.jpg"], // 자동 2번은 시위 사진
+  "Probolinggo": ["Benteng Mayangan Kota Probolinggo.jpg", "Fishing boats, Probolinggo, 2016 (02).jpg"], // 자동은 교회·버스 정류장
+  "Surabaya": ["Central Surabaya view taken from JW Marriott Surabaya.jpg", "Suramadu Bridge 3.JPG"], // 자동 2번은 시내버스 → 수라마두 다리
+  "Medan": ["Istana Maimun.jpg", "Great mosque in Medan cropped.jpg"], // 자동 2번은 공항 계류장 → 메단 대모스크
+  "Semarang": ["Lawang Sewu in Semarang City.jpg", "Gedung Batu Temple Semarang (little cropped).jpg"], // 자동
+  "Palembang": ["LRT Palembang Ampera Bridge.jpg", "Ampera Bridge at Late Afternoon, Palembang.jpg"], // 2번을 경전 판 가까이 찍은 사진 대신 무시강의 배들로
+  "Pontianak": ["Equator Pontianak Monument.jpg", "Keraton Kadariah 01.jpg"], // 자동 2번은 음식 사진 → 카드리아 왕궁
+  "Balikpapan": ["2018-12-04 Balikpapan cropped.jpg", "2018-06-13 Balikpapan Islamic Center.jpg"], // 1번을 경기장 항공사진 대신 시내로
 };
 // 어디에도 쓰지 않을 파일 이름
 // 2026-11-11 첫 실행 확인: 도시(마나도) 대표 사진으로 교회 건물 두 장이 들어와 공개판에 맞지 않아 뺍니다.
