@@ -28,7 +28,7 @@ import { isStoreApp } from "@/lib/platform";
 import { dropReturnTicket } from "@/lib/readReturn";
 import { medaliEngine } from "@/lib/medali";
 import { useBackClose } from "@/hooks/useBackClose";
-import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
+import { loadVoiceLang, saveVoiceLang, voiceLangLabel, withQuestionMark } from "@/lib/voiceSearchLang";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // TTS: AndroidTTS 우선, 없으면 speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -642,6 +642,14 @@ const Dictionary = () => {
   const setVoiceLang = (v: "ko" | "id") => { setVoiceLangState(v); saveVoiceLang(v); };
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  // "?" 토글 — 켜고 말하면 인식된 문장 끝에 물음표를 붙여 의문문으로 찾습니다.
+  // 한 번 쓰면 꺼집니다(켜 둔 걸 잊고 평서문까지 의문문이 되는 걸 막음, 2026-11-16 사용자 요청)
+  const [askMode, setAskMode] = useState(false);
+  const toggleAskMode = () => {
+    const next = !askMode;
+    setAskMode(next);
+    if (next) toast("다음 음성 검색에 물음표(?)를 붙여 의문문으로 찾습니다");
+  };
 
   const speechSupported =
     typeof window !== "undefined" &&
@@ -666,10 +674,12 @@ const Dictionary = () => {
       rec.maxAlternatives = 1;
       rec.continuous = false;
       rec.onresult = (ev: any) => {
-        const text = ev?.results?.[0]?.[0]?.transcript?.trim();
-        if (text) {
+        const heard = ev?.results?.[0]?.[0]?.transcript?.trim();
+        if (heard) {
+          const text = withQuestionMark(heard, askMode);
           setQuery(text);
           setListening(false);
+          if (askMode) setAskMode(false);
           handleSearch(text);
         }
       };
@@ -846,6 +856,18 @@ const Dictionary = () => {
             >
               {voiceLangLabel(voiceLang)}
             </button>
+            {/* 의문문 토글 (?) — 켜면 다음 음성 검색 한 번에 물음표를 붙입니다 */}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={toggleAskMode}
+              className={`shrink-0 h-6 w-6 rounded-full font-gothic text-[12px] font-bold ${askMode ? "bg-[#2C6D63] text-white" : "bg-[#EEF3F2] text-[#2C6D63]"}`}
+              title="의문문으로 음성 검색"
+              aria-label={askMode ? "의문문으로 음성 검색: 켜짐" : "의문문으로 음성 검색: 꺼짐"}
+              aria-pressed={askMode}
+            >
+              ?
+            </button>
             {/* 마이크 */}
             <button
               onClick={startVoice}
@@ -904,6 +926,7 @@ const Dictionary = () => {
             <p className="text-white text-sm">
               {voiceLang === "ko" ? "한국어" : "인도네시아어"}로 말해 보세요
             </p>
+            {askMode && <p className="text-white/90 text-xs">의문문(?)으로 찾습니다</p>}
             <p className="text-white/60 text-xs">누르면 멈춤</p>
           </div>
         )}
