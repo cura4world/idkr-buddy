@@ -125,6 +125,10 @@ function makeEnv(extra = {}) {
   }, extra);
 }
 
+// 한도 장치(빈 응답·같은 요청 번호·동시 요청·Durable Object·전체 상한) 시험용 — 예전 "무료 이야기 하루 1편"을 이 시험들에서만 되살립니다.
+// 2026-11-16 무료 이야기가 잠긴 뒤에도 같은 장치를 같은 숫자로 시험하려는 것이고, 실제 한도와는 관계없습니다.
+const FREE_STORY_ONE = JSON.stringify({ free: { story: { locked: false, day: 1 } } });
+
 async function call(env, method, path, { body, token, headers = {} } = {}) {
   const h = Object.assign({ origin: ORIGIN }, headers);
   if (token) h.authorization = "Bearer " + token;
@@ -422,21 +426,14 @@ async function makePlus(env, t, extraSub = {}) {
   return v.data.plan;
 }
 
-test("무료: 이야기 하루 1편, 회화 만들기·긴 읽기·공용 소리 잠김, 단어 발음·오늘의 문장", async () => {
+test("무료: 이야기·회화 만들기·긴 읽기·공용 소리 잠김, 단어 발음·오늘의 문장", async () => {
   __resetCachesForTest();
   proxyStatus = 200;
   const env = makeEnv();
   const t = await login(env);
 
-  assert.equal((await ai(env, t, "story")).status, 200);
-  const over = await ai(env, t, "story");
-  assert.equal(over.status, 429);
-  assert.equal(over.data.error, "QUOTA_STORY");
-  assert.equal(over.data.period, "day");
-  assert.equal(over.data.limit, 1);
-  assert.equal(over.data.plan, "free");
-
-  for (const k of ["percakapan-make", "longread", "shared-audio"]) {
+  // 2026-11-16: 새 이야기 불러오기는 Plus 전용(무료는 앱에 담긴 맛보기 3편만)
+  for (const k of ["story", "percakapan-make", "longread", "shared-audio"]) {
     const r = await ai(env, t, k);
     assert.equal(r.status, 403, k);
     assert.equal(r.data.error, "PLUS_REQUIRED", k);
@@ -460,9 +457,8 @@ test("무료: 이야기 하루 1편, 회화 만들기·긴 읽기·공용 소리
 
   const me = await call(env, "GET", "/me", { token: t });
   const f = me.data.features;
-  assert.deepEqual(f.story.used, { day: 1, month: 1 });
-  assert.deepEqual(f.story.limit, { day: 1, month: null });
-  assert.deepEqual(f.story.left, { day: 0, month: null });
+  assert.equal(f.story.locked, true);
+  assert.equal(me.data.usage.story || 0, 0); // 잠겨 있어 세지 않음
   assert.equal(f.longread.locked, true);
   assert.equal(f["dict-new"].hidden, true);
   assert.equal(f["dict-new"].limit.day, 50);
@@ -566,7 +562,8 @@ test("체험: Play 의 무료 체험 단계 → trial, 한도는 절반·긴 읽
   const me = await call(env, "GET", "/me", { token: t });
   assert.equal(me.data.plan.tier, "trial");
   const f = me.data.features;
-  assert.deepEqual(f.story.limit, { day: 2, month: null });
+  // 이야기: 무료가 잠김(2026-11-16)이라 체험은 Plus(5/60)의 절반 그대로 — 하루 2, 한 달 30
+  assert.deepEqual(f.story.limit, { day: 2, month: 30 });
   assert.deepEqual(f["percakapan-make"].limit, { day: 1, month: 15 });
   assert.deepEqual(f.longread.limit, { day: 2, month: 25, total: 15 });
   assert.deepEqual(f["dict-new"].limit, { day: 50, month: null }); // 무료(50)보다 박해지지 않게
@@ -698,7 +695,7 @@ test("LIMITS_JSON: 새 모양(칸별 day/month/locked)과 예전 모양(숫자) 
   proxyStatus = 200;
   const env = makeEnv({
     LIMITS_JSON: JSON.stringify({
-      free: { story: { day: 2 }, longread: { locked: false, day: 1 }, text: 3 },
+      free: { story: { locked: false, day: 2 }, longread: { locked: false, day: 1 }, text: 3 },
       plus: { story: { month: null } },
       trial: { longread: { total: 3 } },
     }),
@@ -989,7 +986,7 @@ test("S10-b Play 오류가 하루 넘게 이어지면 무료로 보이지만, �
 
 test("C-02 빈 응답(200 인데 글이 없음)은 한도를 쓰지 않는다 — 글·소리 모두", async () => {
   resetWorld();
-  const env = makeEnv();
+  const env = makeEnv({ LIMITS_JSON: FREE_STORY_ONE });
   const t = await login(env, { sub: "9601", email: "c02@example.com" });
   const storyLeft = async () => (await call(env, "GET", "/me", { token: t })).data.features.story;
 
@@ -1022,7 +1019,7 @@ test("C-02 빈 응답(200 인데 글이 없음)은 한도를 쓰지 않는다 �
 
 test("C-02 같은 요청 번호(x-kata-req)의 재시도·모델 바꿈은 한 번만 센다", async () => {
   resetWorld();
-  const env = makeEnv();
+  const env = makeEnv({ LIMITS_JSON: FREE_STORY_ONE });
   const t = await login(env, { sub: "9602", email: "c02b@example.com" });
   const used = async (k) => (await call(env, "GET", "/me", { token: t })).data.features[k].used.day;
   const req = { "x-kata-req": "press0001abcdef" };
@@ -1077,7 +1074,7 @@ test("C-02 같은 요청 번호(x-kata-req)의 재시도·모델 바꿈은 한 �
 
 test("C-02 실패(5xx)한 호출은 요청 번호가 있어도 칸을 돌려받고, 다음 재시도가 새로 한 칸을 잡는다", async () => {
   resetWorld();
-  const env = makeEnv();
+  const env = makeEnv({ LIMITS_JSON: FREE_STORY_ONE });
   const t = await login(env, { sub: "9603", email: "c02c@example.com" });
   const req = { "x-kata-req": "failthenok00001" };
   proxyStatus = 503;
@@ -1348,13 +1345,13 @@ const TG = { TELEGRAM_BOT_TOKEN: "123:abc", TELEGRAM_CHAT_ID: "777" };
 test("S-22 동시 요청: KV 는 한도를 넘겨 통과시키고(알려진 한계), Durable Object 는 정확히 한도까지만", async () => {
   resetWorld();
   // KV 방식 — 무료 이야기는 하루 1편인데 동시에 20개를 쏘면 여러 개가 통과합니다.
-  const envKv = makeEnv({ PUBLIC_KV: makeSlowKV() });
+  const envKv = makeEnv({ PUBLIC_KV: makeSlowKV(), LIMITS_JSON: FREE_STORY_ONE });
   const tk = await login(envKv, { sub: "9801", email: "c1@example.com" });
   const kvRes = await burst(20, () => ai(envKv, tk, "story"));
   assert.ok(count(kvRes, 200) > 1, "KV 방식의 한계가 재현돼야 함 (통과 " + count(kvRes, 200) + ")");
 
   // Durable Object — 정확히 1개만 통과
-  const envDo = makeEnv({ PUBLIC_KV: makeSlowKV(), USAGE_DO: makeDO() });
+  const envDo = makeEnv({ PUBLIC_KV: makeSlowKV(), USAGE_DO: makeDO(), LIMITS_JSON: FREE_STORY_ONE });
   const td = await login(envDo, { sub: "9802", email: "c2@example.com" });
   const doRes = await burst(20, () => ai(envDo, td, "story"));
   assert.equal(count(doRes, 200), 1);
@@ -1378,7 +1375,7 @@ test("S-22 동시 요청: KV 는 한도를 넘겨 통과시키고(알려진 한�
 
 test("Durable Object: 실패한 호출 돌려받기·같은 요청 번호·긴 읽기 한 편·신고 상한이 KV 때와 같게 돈다", async () => {
   resetWorld();
-  const env = makeEnv({ USAGE_DO: makeDO() });
+  const env = makeEnv({ USAGE_DO: makeDO(), LIMITS_JSON: FREE_STORY_ONE });
   const t = await login(env, { sub: "9811", email: "d1@example.com" });
   // 실패(5xx)는 돌려받음
   proxyStatus = 500;
@@ -1435,7 +1432,7 @@ test("Durable Object: 계정을 지우면 객체의 사용량도 지워지고, �
 
 test("Durable Object 가 없거나 고장 나도 KV 방식으로 그대로 돈다", async () => {
   resetWorld();
-  const env = makeEnv({ USAGE_DO: makeDO({ broken: true }) });
+  const env = makeEnv({ USAGE_DO: makeDO({ broken: true }), LIMITS_JSON: FREE_STORY_ONE });
   const t = await login(env, { sub: "9831", email: "d4@example.com" });
   assert.equal((await ai(env, t, "story")).status, 200);
   assert.equal((await ai(env, t, "story")).data.error, "QUOTA_STORY"); // KV 로 세어 한도도 지켜짐
@@ -1453,7 +1450,7 @@ test("S-21 전체 하루 상한(AI_DAILY_BUDGET): 넘으면 503, 계정 한도�
   assert.ok(![...envNone.PUBLIC_KV.m.keys()].some((k) => k.indexOf("budget:") === 0));
   assert.equal((await call(envNone, "GET", "/admin/budget", ADMIN)).data.caps, null);
 
-  const env = makeEnv({ AI_DAILY_BUDGET: "3" });
+  const env = makeEnv({ AI_DAILY_BUDGET: "3", LIMITS_JSON: FREE_STORY_ONE });
   const t = await login(env, { sub: "9842", email: "b1@example.com" });
   calls.length = 0;
   // 실패한 호출은 전체 칸도 돌려받음
