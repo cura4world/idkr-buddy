@@ -5,12 +5,15 @@
 // 홈의 "Kata kata Plus" 줄(시안 H5)은 꽃 아이콘이 붙은 다른 시안이라 여기 들지 않습니다.
 // 버튼 둘째 줄 "7일 무료 체험"은 Play 체험 제안이 있을 때만 보입니다(기간도 Play 값). 체험을 이미 쓴 계정이나
 // 아직 Play 값을 못 받았을 때는 "자세히 보기" (2026-11-14 출시 전 점검 B-05, src/lib/playOffers.ts).
+//
+// 버튼은 상자 위아래 끝까지(제목 줄부터) 채웁니다 — 버튼 위·아래·오른쪽 여백이 모두 상자 안쪽 여백 14px 로 같습니다
+// (2026-11-17 Arga 요청). 그래서 제목은 버튼 왼쪽 칸에 들어가고, 칸보다 길면 줄임표 대신 두 줄로 넘어갑니다.
 
 import { usePlusPricing } from "@/lib/playOffers";
 import { lockButtonSub } from "@/lib/plusCopy";
 
 interface Props {
-  /** 첫 줄 (15px 굵게, 한 줄) */
+  /** 첫 줄 (15px 굵게). 버튼 왼쪽 칸보다 길면 두 줄 */
   title: string;
   /** 설명 두 줄 */
   lines: [string, string];
@@ -28,30 +31,30 @@ const PlusLockBox = ({ title, lines, onClick, wholeBox = false }: Props) => {
     tabIndex={wholeBox ? 0 : undefined}
     onClick={wholeBox ? onClick : undefined}
     onKeyDown={wholeBox ? (e) => { if (e.key === "Enter") onClick(); } : undefined}
-    className={"rounded-[18px] border border-[#F1E0AE] bg-[#FFF6DC] py-3.5 pr-3.5 pl-[22px]" + (wholeBox ? " active:opacity-90" : "")}
+    className={"flex items-stretch gap-3 rounded-[18px] border border-[#F1E0AE] bg-[#FFF6DC] py-3.5 pr-3.5 pl-[22px]" + (wholeBox ? " active:opacity-90" : "")}
   >
-    <p className="m-0 text-[0.875rem] font-semibold text-[#1D1F1E] whitespace-nowrap overflow-hidden text-ellipsis">
-      {title}
-    </p>
-    <div className="mt-1.5 flex items-stretch gap-3">
-      <span className="flex-1 min-w-0 font-gothic text-[0.6875rem] leading-[1.55] text-[#6E5612] break-keep">
+    <div className="flex-1 min-w-0">
+      <p className="m-0 text-[0.875rem] font-semibold leading-[1.4] text-[#1D1F1E] break-keep">
+        {title}
+      </p>
+      <p className="m-0 mt-1.5 font-gothic text-[0.6875rem] leading-[1.55] text-[#6E5612] break-keep">
         {lines[0]}
         <br />
         {lines[1]}
-      </span>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick();
-        }}
-        className="shrink-0 px-3.5 rounded-xl bg-[#8A6A12] text-white font-gothic text-[0.65625rem] font-bold leading-[1.25] active:opacity-90"
-      >
-        Plus
-        <br />
-        {lockButtonSub(pricing.trialAny)}
-      </button>
+      </p>
     </div>
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="shrink-0 self-stretch px-3.5 rounded-xl bg-[#8A6A12] text-white font-gothic text-[0.65625rem] font-bold leading-[1.25] active:opacity-90"
+    >
+      Plus
+      <br />
+      {lockButtonSub(pricing.trialAny)}
+    </button>
   </div>
   );
 };
