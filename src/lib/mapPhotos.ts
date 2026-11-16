@@ -1368,20 +1368,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "sumatera",
     "photos": [
       {
+        "file": "Medan city 2019.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Medan_city_2019.jpg/500px-Medan_city_2019.jpg",
+        "author": "Bluesatellite",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Medan_city_2019.jpg"
+      },
+      {
         "file": "Istana Maimun.jpg",
         "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Istana_Maimun.jpg/500px-Istana_Maimun.jpg",
         "author": "Adhmi",
         "license": "CC BY-SA 4.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
         "page": "https://commons.wikimedia.org/wiki/File:Istana_Maimun.jpg"
-      },
-      {
-        "file": "Great mosque in Medan cropped.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Great_mosque_in_Medan_cropped.jpg/500px-Great_mosque_in_Medan_cropped.jpg",
-        "author": "Daniel Berthold",
-        "license": "CC BY-SA 4.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
-        "page": "https://commons.wikimedia.org/wiki/File:Great_mosque_in_Medan_cropped.jpg"
       }
     ]
   },
@@ -1533,20 +1533,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "sumatera",
     "photos": [
       {
-        "file": "LRT Palembang Ampera Bridge.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/LRT_Palembang_Ampera_Bridge.jpg/500px-LRT_Palembang_Ampera_Bridge.jpg",
-        "author": "Gaudi Renanda",
-        "license": "CC BY-SA 4.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
-        "page": "https://commons.wikimedia.org/wiki/File:LRT_Palembang_Ampera_Bridge.jpg"
-      },
-      {
         "file": "Ampera Bridge at Late Afternoon, Palembang.jpg",
         "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Ampera_Bridge_at_Late_Afternoon%2C_Palembang.jpg/500px-Ampera_Bridge_at_Late_Afternoon%2C_Palembang.jpg",
         "author": "Gunawan Kartapranata",
         "license": "CC BY-SA 3.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
         "page": "https://commons.wikimedia.org/wiki/File:Ampera_Bridge_at_Late_Afternoon,_Palembang.jpg"
+      },
+      {
+        "file": "LRT Palembang Ampera Bridge.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/LRT_Palembang_Ampera_Bridge.jpg/500px-LRT_Palembang_Ampera_Bridge.jpg",
+        "author": "Gaudi Renanda",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:LRT_Palembang_Ampera_Bridge.jpg"
       }
     ]
   },
@@ -1664,12 +1664,12 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
         "page": "https://commons.wikimedia.org/wiki/File:Equator_Pontianak_Monument.jpg"
       },
       {
-        "file": "Keraton Kadariah 01.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Keraton_Kadariah_01.jpg/500px-Keraton_Kadariah_01.jpg",
-        "author": "Zhilal Darma",
+        "file": "Pontianak Kapuas Bridge.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Pontianak_Kapuas_Bridge.jpg/500px-Pontianak_Kapuas_Bridge.jpg",
+        "author": "Liuzhary",
         "license": "CC BY-SA 4.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
-        "page": "https://commons.wikimedia.org/wiki/File:Keraton_Kadariah_01.jpg"
+        "page": "https://commons.wikimedia.org/wiki/File:Pontianak_Kapuas_Bridge.jpg"
       }
     ]
   },
