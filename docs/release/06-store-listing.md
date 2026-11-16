@@ -1,6 +1,6 @@
 # 06. 스토어 등록정보 초안 (한국어 기본 + 영어)
 
-작성: 2026-11-10 · 고침: 2026-11-14(출시 전 점검 P-01·P-02 — 무료와 Plus 를 나눠 적음, 게임 수·단추 이름·영어 앱 이름 바로잡음.
+작성: 2026-11-10 · 고침: 2026-11-16(새 이야기 불러오기를 Plus 로 옮김 — 무료는 "맛보기 이야기 3편". 콘솔에 이미 넣었다면 콘솔도 같이 고칠 것) · 2026-11-14(출시 전 점검 P-01·P-02 — 무료와 Plus 를 나눠 적음, 게임 수·단추 이름·영어 앱 이름 바로잡음.
 같은 날 3차 — 앱에서 바꾼 낱말에 맞춤: 빠른 짝 맞추기, 대화 86개, 3,005단어, 한 달 60편, 조사 띄어쓰기)
 Play Console → 스토어 등록정보에 그대로 붙여 넣는 용도.
 
@@ -37,8 +37,8 @@ Google 계정으로 로그인해 사용합니다.
 ■ 오늘의 문장
 매일 속담·관용구·내 단어장에서 한 문장. 풀이와 발음까지.
 
-■ 오늘의 이야기 (하루 1편)
-난이도를 골라 짧은 인도네시아어 이야기를 읽고, 모르는 단어는 눌러서 바로 뜻을 봅니다. 뒷면에는 한국어 번역.
+■ 맛보기 이야기 3편
+난이도별(하·중·상) 짧은 인도네시아어 이야기를 읽고, 모르는 단어는 눌러서 바로 뜻을 봅니다. 뒷면에는 한국어 번역.
 
 ■ 오늘의 단어 퍼즐
 하루 한 문제, 글자를 맞혀 단어를 찾는 게임.
@@ -51,8 +51,8 @@ Google 계정으로 로그인해 사용합니다.
 ■ 단어 게임 6가지
 빠른 짝 맞추기, 스피드 O/X, 듣고 고르기, 문장 조립, 철자 채우기, 단어 받기.
 
-■ 인도네시아어 음성으로 이야기 듣기
-새 이야기를 하루 5편, 한 달 60편까지 불러오고, 본문을 소리로 듣습니다.
+■ 매일 새 이야기 읽고 듣기
+난이도를 골라 새 이야기를 하루 5편, 한 달 60편까지 불러오고, 본문을 인도네시아어 음성으로 듣습니다.
 
 ■ 회화집 공부와 대화 만들기
 대화 86개를 읽고 듣고, 원하는 상황의 대화를 새로 만듭니다.
@@ -93,13 +93,13 @@ FREE
 • Dictionary — type Indonesian or Korean, a word or a whole sentence. Get meanings, examples, word analysis, related forms and synonyms on one screen. Voice search included.
 • My wordbook — save words instantly, make your own wordbooks, and review with flashcards and quizzes.
 • Phrase of the day — proverbs, idioms and your own saved words, explained.
-• Story of the day (1 per day) — a short graded story; tap any word to see its meaning, flip for the Korean translation.
+• 3 sample stories (easy, medium, hard) — tap any word to see its meaning, flip for the Korean translation.
 • Daily word puzzle — one puzzle a day.
 
 KATA KATA PLUS (subscription)
 • 34 built-in wordbooks (3,005 words) with pictures, flashcards and quizzes.
 • 6 word games.
-• Listen to stories in an Indonesian voice; load up to 5 new stories a day and 60 a month.
+• New stories every day — choose a level and load up to 5 new stories a day and 60 a month, and listen in an Indonesian voice.
 • Conversations — read and listen to 86 dialogues, and create your own.
 • Understanding Indonesia — overview, peoples, religions, history, tips, and a map with readings for islands and cities.
 
