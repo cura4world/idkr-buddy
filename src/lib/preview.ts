@@ -140,3 +140,17 @@ export async function clearPreviewData(): Promise<void> {
     window.location.reload();
   }
 }
+
+/**
+ * "새 무료 계정으로 처음부터" — 스토어 앱을 처음 설치해 로그인한 무료 사용자의 화면을 다시 보기 위한 것.
+ * 데이터 비우기에 더해 등급을 무료로, "체험을 이미 쓴 계정"을 끔으로 돌립니다(체험 제안이 다시 보임).
+ * Gemini 키만 남깁니다. 미리보기가 아니면 아무것도 하지 않습니다. (2026-11-17 Arga 요청)
+ */
+export async function resetPreviewAsNewFreeUser(): Promise<void> {
+  if (!isPreview()) return;
+  try {
+    localStorage.setItem("kata-preview-tier", "free");
+    localStorage.removeItem(TRIAL_USED_KEY);
+  } catch (e) {}
+  await clearPreviewData(); // 끝나면 첫 화면으로 다시 열립니다
+}
