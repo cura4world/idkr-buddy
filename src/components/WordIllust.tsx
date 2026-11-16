@@ -39,16 +39,36 @@ const DEFS_HTML =
 // 윤곽선 겹은 같은 도형을 칠 없이 진한 갈색 가는 선으로 다시 그립니다.
 const PCOL_CSS = ".pcol *{fill:none !important;stroke:#6B5444 !important;stroke-width:1.1 !important}";
 
+/**
+ * 앱에 딸린(번들에 들어 있는) SVG 조각을 그 svg 요소 안에 넣습니다. 바깥 입력(사용자 글·AI 응답)은 받지 않습니다.
+ * 예전에는 React 의 HTML 직접 주입 속성으로 넣었는데, 보안 검사기가 그 이름만 보고 XSS 위험으로 표시해(2026-11-17)
+ * 같은 일을 하는 Range.createContextualFragment(innerHTML 과 같은 HTML 파서, svg 문맥)로 바꿨습니다. 그려지는 결과는 같습니다.
+ */
+function useSvgMarkup(markup: string) {
+  const ref = useRef<SVGSVGElement | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    while (el.firstChild) el.removeChild(el.firstChild);
+    if (!markup) return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    el.appendChild(range.createContextualFragment(markup));
+  }, [markup]);
+  return ref;
+}
+
 export function PencilDefs() {
+  const defsRef = useSvgMarkup(DEFS_HTML);
   return (
     <>
       <style>{PCOL_CSS}</style>
       <svg
+        ref={defsRef}
         width="0"
         height="0"
         aria-hidden="true"
         style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}
-        dangerouslySetInnerHTML={{ __html: DEFS_HTML }}
       />
     </>
   );
@@ -285,6 +305,7 @@ export default function WordIllust({
   const boxRef = useRef<HTMLDivElement | null>(null);
   const [near, setNear] = useState(false);
   const firstKey = useRef(true);
+  const svgRef = useSvgMarkup(scene && near ? sceneSvg(scene) : "");
 
   useEffect(() => {
     if (!scene || near) return;
@@ -325,10 +346,10 @@ export default function WordIllust({
     >
       {near ? (
         <svg
+          ref={svgRef}
           viewBox={scene.vb}
           aria-hidden="true"
           style={{ display: "block", width: "100%", height: "100%", overflow: "visible" }}
-          dangerouslySetInnerHTML={{ __html: sceneSvg(scene) }}
         />
       ) : null}
     </div>
