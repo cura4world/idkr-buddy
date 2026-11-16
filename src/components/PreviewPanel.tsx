@@ -3,7 +3,7 @@
 // (QA Q04: 예전 오른쪽 아래 알약은 퍼즐 자판·지도 축소·사전 ▼ 등 실제 버튼을 덮었습니다.)
 // App.tsx 가 isPreview() 일 때만 한 번 붙입니다. 관리자판·회원판·스토어 앱에는 나타나지 않습니다.
 //
-// 시트: 등급 전환 / 체험을 이미 쓴 계정 / Gemini API 키 / 이 미리보기 데이터 비우기.
+// 시트: 등급 전환 / 체험을 이미 쓴 계정 / Gemini API 키 / 새 무료 계정으로 처음부터 / 이 미리보기 데이터 비우기.
 // 폰 뒤로가기는 시트만 닫도록 히스토리를 한 칸 쌓습니다(CLAUDE.md: 한 화면 안의 뒤로가기는 pushState + popstate).
 
 import { useEffect, useRef, useState } from "react";
@@ -11,7 +11,7 @@ import { Check, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tier, TIER_LABEL, setPreviewTier, usePlan } from "@/lib/plan";
 import {
-  clearPreviewData, onPreviewChange, previewBuildLabel, previewTrialUsed, setPreviewTrialUsed,
+  clearPreviewData, onPreviewChange, previewBuildLabel, previewTrialUsed, resetPreviewAsNewFreeUser, setPreviewTrialUsed,
 } from "@/lib/preview";
 import { getGeminiApiKey, setGeminiApiKey, cleanGeminiKeyInput, geminiKeyInputProblem } from "@/lib/gemini";
 
@@ -34,6 +34,7 @@ export default function PreviewPanel() {
   const [checking, setChecking] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
   const [wiping, setWiping] = useState(false);
+  const [confirmFresh, setConfirmFresh] = useState(false);
   const openRef = useRef(false);
   const pushedRef = useRef(false);
 
@@ -47,6 +48,7 @@ export default function PreviewPanel() {
       pushedRef.current = false;
       setOpen(false);
       setConfirmWipe(false);
+      setConfirmFresh(false);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -57,6 +59,7 @@ export default function PreviewPanel() {
     setSavedKey(getGeminiApiKey());
     setKeyInput("");
     setConfirmWipe(false);
+    setConfirmFresh(false);
     setOpen(true);
     openRef.current = true;
     try {
@@ -79,6 +82,7 @@ export default function PreviewPanel() {
     openRef.current = false;
     setOpen(false);
     setConfirmWipe(false);
+    setConfirmFresh(false);
   };
 
   const saveKey = () => {
@@ -152,6 +156,13 @@ export default function PreviewPanel() {
     if (wiping) return;
     setWiping(true);
     await clearPreviewData(); // 끝나면 첫 화면으로 다시 열립니다
+  };
+
+  // 새 무료 계정으로 처음부터 — 데이터 비우기 + 등급 무료 + 체험 안 쓴 계정. 키만 남김.
+  const fresh = async () => {
+    if (wiping) return;
+    setWiping(true);
+    await resetPreviewAsNewFreeUser(); // 끝나면 첫 화면으로 다시 열립니다
   };
 
   const build = previewBuildLabel();
@@ -293,6 +304,48 @@ export default function PreviewPanel() {
               ) : null}
             </section>
 
+            {/* 새 무료 계정으로 처음부터 */}
+            <section className="border-t border-border px-4 py-3.5">
+              <h3 className="text-[13px] font-semibold text-foreground">새 무료 계정으로 처음부터</h3>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
+                처음 설치해 로그인한 무료 사용자의 화면으로 돌아갑니다. 데이터를 모두 지우고 등급은 무료, 체험은 아직 안 쓴 계정으로 바꿉니다. API 키는 남겨 둡니다.
+              </p>
+              {confirmFresh ? (
+                <div className="mt-2.5 rounded-[12px] border border-border bg-muted/40 p-3">
+                  <p className="text-[12px] leading-relaxed text-foreground">
+                    이 미리보기의 단어장·지난 이야기·기록·저장된 글과 소리가 모두 지워지고 무료 등급으로 다시 열립니다. 지금 쓰시는 앱에는 영향이 없습니다.
+                  </p>
+                  <div className="mt-2.5 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmFresh(false)}
+                      disabled={wiping}
+                      className="h-10 flex-1 rounded-[10px] border border-border bg-card text-[13px] text-foreground active:bg-muted disabled:opacity-50"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="button"
+                      onClick={fresh}
+                      disabled={wiping}
+                      className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[#2C6D63] text-[13px] font-semibold text-white disabled:opacity-70"
+                    >
+                      {wiping ? <Loader2 size={15} className="animate-spin" /> : null}
+                      처음부터
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setConfirmWipe(false); setConfirmFresh(true); }}
+                  className="mt-2.5 h-10 w-full rounded-[10px] border border-[#2C6D63]/40 text-[13px] font-semibold text-[#2C6D63] active:bg-muted"
+                >
+                  새 무료 계정으로 처음부터
+                </button>
+              )}
+            </section>
+
             {/* 데이터 비우기 */}
             <section className="border-t border-border px-4 py-3.5">
               <h3 className="text-[13px] font-semibold text-foreground">이 미리보기 데이터 비우기</h3>
@@ -327,7 +380,7 @@ export default function PreviewPanel() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setConfirmWipe(true)}
+                  onClick={() => { setConfirmFresh(false); setConfirmWipe(true); }}
                   className="mt-2.5 h-10 w-full rounded-[10px] border border-red-300 text-[13px] font-semibold text-red-600 active:bg-red-50"
                 >
                   데이터 비우기
