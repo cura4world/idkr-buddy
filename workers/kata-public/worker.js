@@ -42,7 +42,8 @@ const APP_ORIGINS = ["https://cura4world.github.io"];
 // 운영 중 바꿀 때는 LIMITS_JSON 변수로 덮어씁니다(아래 getLimits).
 const DEFAULT_LIMITS = {
   free: {
-    story: { day: 1 },
+    // 새 이야기 불러오기는 Plus 전용(2026-11-16 사용자 결정). 무료는 앱에 담긴 맛보기 3편만 읽습니다.
+    story: { locked: true },
     "percakapan-make": { locked: true },
     longread: { locked: true },
     "dict-new": { day: 50, hidden: true },
