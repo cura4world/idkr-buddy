@@ -43,7 +43,7 @@ const PICK = {
   "Pulau Sumba": ["Kampung Adat Ratenggaro - Sumba.jpg"],
 
   // ── 2026-11-15(11차): 비어 있던 41곳의 후보. 자동으로 나온 후보와 공용 검색 결과를 화면으로 보고 골랐습니다.
-  //    아직 사람(Arga)이 확인하기 전입니다 — 확인용 HTML 을 보고 바꿀 것은 여기서 파일 이름을 바꿉니다.
+  //    2026-11-16 Arga 가 확인용 HTML 로 모두 확인했습니다(바꿀 것 없음) — main 에도 올림.
   //    "자동"이라고 적지 않은 줄은 자동 선택이 엉뚱해서(다른 나라·다른 도시·옛 판화·음식·버스 등) 직접 찾아 바꾼 것입니다.
   // 관광지
   "Raja Ampat": ["Piaynemo, Raja Ampat (39660320633).jpg", "Pulau Piaynemo, Raja Ampat.jpg"], // 1번을 카르스트 섬 풍경으로(자동은 둘 다 물속)
@@ -431,7 +431,10 @@ async function main() {
   }
   for (const p of places) {
     const ex = existing[p.id];
-    if (ex && ex.photos && ex.photos.length > 0) {
+    // 2026-11-16(13차): 사진이 모두 옛 기록 사진(트로펜 박물관·KITLV)인 지점은 앱이 하나도 보여 주지 않으므로(화면 0장)
+    // 빈 지점처럼 새로 채웁니다(메단·수라바야·스마랑·우붓 등 22곳, Arga 결정). 보이는 사진이 한 장이라도 있으면 그대로 둡니다.
+    const visibleExisting = ex && ex.photos ? ex.photos.filter((ph) => !ARCHIVE.test(ph.file)) : [];
+    if (visibleExisting.length > 0) {
       result[p.id] = ex;
       kept++;
       continue;
