@@ -24,7 +24,7 @@ import MedaliIdDialog from "@/components/MedaliIdDialog";
 import { needsMedaliId, syncMedali } from "@/lib/medaliSync";
 import { getEdition, takeRevokedNotice } from "@/lib/access";
 import { isStoreApp } from "@/lib/platform";
-import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
+import { loadVoiceLang, saveVoiceLang, voiceLangLabel, withQuestionMark } from "@/lib/voiceSearchLang";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { usePlusPricing } from "@/lib/playOffers";
 import { lockButtonSub } from "@/lib/plusCopy";
@@ -321,6 +321,14 @@ const Index = () => {
   const setVoiceLang = (v: "ko" | "id") => { setVoiceLangState(v); saveVoiceLang(v); };
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  // "?" 토글 — 켜고 말하면 인식된 문장 끝에 물음표를 붙여 의문문으로 찾습니다(사전 화면과 같은 동작, 2026-11-16 사용자 요청).
+  // 검색하면 사전으로 넘어가 이 화면이 내려가므로 따로 끄지 않아도 다음엔 꺼진 채로 시작합니다.
+  const [askMode, setAskMode] = useState(false);
+  const toggleAskMode = () => {
+    const next = !askMode;
+    setAskMode(next);
+    if (next) toast("다음 음성 검색에 물음표(?)를 붙여 의문문으로 찾습니다");
+  };
 
   // 검색창을 누르면 최근 검색어를 보여줍니다.
   const [history, setHistory] = useState<string[]>([]);
@@ -681,9 +689,10 @@ const Index = () => {
       rec.maxAlternatives = 1;
       rec.continuous = false;
       rec.onresult = (ev: any) => {
-        const text = ev?.results?.[0]?.[0]?.transcript?.trim();
+        const heard = ev?.results?.[0]?.[0]?.transcript?.trim();
         setListening(false);
-        if (text) {
+        if (heard) {
+          const text = withQuestionMark(heard, askMode);
           setQuery(text);
           goSearch(text);
         }
@@ -698,7 +707,7 @@ const Index = () => {
       recognitionRef.current = rec;
       setListening(true);
       rec.start();
-      toast(voiceLang === "ko" ? "한국어로 말해 보세요" : "인도네시아어로 말해 보세요");
+      toast((voiceLang === "ko" ? "한국어로 말해 보세요" : "인도네시아어로 말해 보세요") + (askMode ? " · 의문문(?)" : ""));
     } catch (e) {
       setListening(false);
       toast("음성 검색을 시작하지 못했습니다");
@@ -1062,6 +1071,18 @@ const Index = () => {
                 >
                   {voiceLangLabel(voiceLang)}
                 </button>
+                {/* 의문문 토글 (?) — 켜면 다음 음성 검색 한 번에 물음표를 붙입니다 */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={toggleAskMode}
+                  aria-label={askMode ? "의문문으로 음성 검색: 켜짐" : "의문문으로 음성 검색: 꺼짐"}
+                  aria-pressed={askMode}
+                  className="shrink-0 flex items-center justify-center rounded-full font-gothic"
+                  style={{ width: 24, height: 24, borderRadius: 12, background: askMode ? "#2C6D63" : "#EEF3F2", color: askMode ? "#FFFFFF" : "#2C6D63", fontSize: 12, fontWeight: 700 }}
+                >
+                  ?
+                </button>
                 <button
                   type="button"
                   onClick={startVoice}
@@ -1200,7 +1221,7 @@ const Index = () => {
 
           {/* 문화 */}
           <section>
-            {sectionTitle("Kenali Indonesia", "알아 갑시다")}
+            {sectionTitle("Kenali Indonesia", "인도네시아 알아가기")}
             <div className={listBox} style={listStyle} data-fit-anchor="culture">
               <PubRow
                 tileBg="#FCE6D9"
@@ -1496,6 +1517,17 @@ const Index = () => {
               title="음성 검색 언어 바꾸기"
             >
               {voiceLangLabel(voiceLang)}
+            </button>
+            {/* 의문문 토글 (?) */}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={toggleAskMode}
+              className={"shrink-0 h-6 w-6 rounded-full font-gothic text-[12px] font-bold " + (askMode ? "bg-primary text-white" : "bg-muted text-primary")}
+              title="의문문으로 음성 검색"
+              aria-pressed={askMode}
+            >
+              ?
             </button>
             <button
               type="button"
