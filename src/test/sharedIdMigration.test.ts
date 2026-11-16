@@ -1,3 +1,5 @@
+/// <reference types="node" />
+// (위 한 줄: 이 시험은 파일을 직접 읽으므로 node 타입이 필요합니다. vitest 5 부터는 node 타입을 함께 끌어오지 않습니다 — 2026-11-17)
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
