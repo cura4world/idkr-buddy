@@ -89,6 +89,7 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 - 비밀값 4개(이름만): `AI_PROXY_URL` · `PROXY_SECRET` · `PLAY_SERVICE_ACCOUNT` · `ADMIN_KEY` — 값은 Cloudflare 에만 있습니다
 - KV id `a5019fff1fa8429e8a7535fd7fee14d1`(`wrangler.toml` 에 커밋됨, 비밀값 아님) · `preview_urls = false`
 - 남은 것: 4-3(텔레그램 알림, 선택)과 6(Cloud Run 호출 형식 대조 — 내부 테스트에서 AI 가 실제로 답하는지로 확인)
+- **2026-11-16 다시 배포**(버전 `9271b081`): 무료 등급의 새 이야기 불러오기 잠금(`free.story`)을 서버에도 반영. 배포 뒤 실서버 확인(다른 출처 차단·로그인 없이 401·관리자 403)은 `docs/review/security-recheck-2026-11-14.md` 6절
 
 **따라 하는 순서는 `08-cloudflare-deploy.md` 에 복사해 붙여 넣는 명령으로 적어 두었습니다(9차). 그 문서대로 하면 아래 1~5 와 4-1·4-2 가 한 번에 끝납니다.**
 `wrangler.toml` 에는 `GOOGLE_WEB_CLIENT_ID`·`PLAY_PACKAGE`·`PRODUCT_IDS`·`AI_DAILY_BUDGET`(`{"all":3000,"tts":1000}`)를 이미 채웠고, KV id 한 칸만 남았습니다.
@@ -224,7 +225,9 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 - [ ] 데이터 보안: `07-data-safety.md` 답안 그대로
 - [ ] 계정 삭제 주소: `https://naruve.app/apps/kata-kata/delete/`
 - [ ] 스토어 등록정보: `06-store-listing.md` + 스크린샷 (폰 2~8장), 아이콘 512×512, 그래픽 이미지 1024×500
-  - 스크린샷 **초안 14장**(1080×1920)을 9차에 만들어 저장소 밖 `../run9/screens/` 에 두었습니다(고르는 법·주의는 그 폴더의 `README.md`). Plus 화면에 얹을 "Plus" 표시와 그래픽 이미지 1024×500 은 아직 없습니다.
+  - 스크린샷 **초안 14장**(1080×1920)을 9차에 만들어 저장소 밖 `../run9/screens/` 에 두었습니다(고르는 법·주의는 그 폴더의 `README.md`).
+  - **2026-11-16 13차: 등록정보를 콘솔에 넣고 저장했습니다**(상태 "검토를 위해 전송 준비 완료" — **아직 검토 요청은 보내지 않음**). 새 설명(맛보기 이야기 3편 반영), 그래픽 이미지 1024×500, 스크린샷 8장(순서대로), 아이콘 512, AI 애셋 선언은 Arga 님 결정대로 "라벨 지정 안 함".
+    올린 파일은 저장소 밖 `../run13/upload/`. **검토 요청(게시 개요에서 보내기)은 Arga 님이 정합니다.**
 
 ## 8. 웹 반영 (CC 에게)
 
