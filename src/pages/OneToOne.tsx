@@ -217,7 +217,7 @@ const OneToOne = () => {
       // 만 여기서 넣어 줍니다 — 이게 없으면 글자 크기·자리가 전부 어긋납니다.
       const textLayerDiv = textLayerRef.current;
       if (textLayerDiv) {
-        textLayerDiv.innerHTML = "";
+        textLayerDiv.textContent = ""; // 앞 쪽의 글자 층을 비움(자식 노드를 모두 지움)
         const cssScale = scale / (window.devicePixelRatio || 1);
         const cssViewport = page.getViewport({ scale: cssScale });
         textLayerDiv.style.setProperty("--total-scale-factor", String(cssScale));
@@ -235,7 +235,7 @@ const OneToOne = () => {
       // ---- 링크 층: PDF 내부 링크(목차 항목 → 쪽)를 그 자리에 투명 탭 영역으로 얹습니다 ----
       const linkLayerDiv = linkLayerRef.current;
       if (linkLayerDiv) {
-        linkLayerDiv.innerHTML = "";
+        linkLayerDiv.textContent = ""; // 앞 쪽의 링크 층을 비움
         const cssScale2 = scale / (window.devicePixelRatio || 1);
         const cssViewport2 = page.getViewport({ scale: cssScale2 });
         try {
