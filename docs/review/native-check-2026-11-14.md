@@ -287,3 +287,13 @@
 - 3절 16번 — `Saudara-saudara terkasih, mari kita membuka Alkitab kita.` 에는 쉼표가 들어갔습니다. `Yang kedua firman ini mengajak kita bersyukur.` 는 그대로입니다.
 - 3절 끝의 방침 물음(TB 의 `sorga`·`Iblis`) — 8차(2026-11-14)에 최종으로 정해졌습니다: **단어장(일반·성경 모두)은 KBBI 표준 표기(`surga`·`iblis`) 유지, 성경 본문을 그대로 인용하는 곳(기도 화면의 주기도문·사도신경 등)은 TB 원문 표기(`sorga`) 유지.** 성경 단어장의 5줄(35:20·35:27·35:76·38:84·39:51)은 지금 표기 그대로 둡니다(`DECISIONS.md` 15장 7차 2번. 7차에 "성경 단어장은 TB"라고 적었던 것을 바로잡은 것입니다). `mukjizat` 줄은 새 낱말 `tanda`(표적)가 되어 `mujizat` 한 줄만 남았습니다.
 - 4절의 표제어 19개는 그대로이고, 이 병합으로 표제어 7개가 더 바뀌었습니다: `kotbah di bukit` → `khotbah di bukit`, `mukjizat` → `tanda`(낱말 교체), `berkat harun` → `berkat Harun`, `doxologi` → `doksologi`, `omnipresent` → `omnipresen`, `hamartologi` → `hamartiologi`, `otorisasi Alkitab` → `otoritas Alkitab`.
+
+## 9. 맛보기 이야기 3편 (2026-11-16)
+
+새 이야기 불러오기가 Plus 전용이 되어, 무료 사용자에게는 앱에 담은 이야기 3편만 열립니다(`src/data/storySamples.ts`).
+AI 가 만든 글이 아니라 Claude 가 쓴 글이고 신고 단추도 없으므로, 원어민 확인을 먼저 받습니다. 물음은 세 가지입니다.
+① 문장이 자연스러운가 ② 난이도(하·중·상)에 맞는가 ③ 사실이 맞는가(3편의 바틱 설명).
+
+1. **하 — `Pagi di Pasar`** (시장의 아침, 스토어 스크린샷에도 쓴 글). 특히 `“Manis sekali!” kata Rina.`, `es kelapa muda di warung kecil`.
+2. **중 — `Hujan Sore di Jakarta`** (자카르타의 오후 비). 특히 `aplikasinya menunjukkan bahwa semua pengemudi sedang sibuk`, `berteduh`, 끝 문장 `Kadang-kadang hujan juga mempertemukan kita dengan teman baru.`
+3. **상 — `Batik: Kain yang Bercerita`** (바틱: 이야기를 담은 천). 특히 `Kata “batik” sering dikaitkan dengan kata dalam bahasa Jawa yang berarti menulis titik-titik kecil.`, `canting, yaitu alat kecil berisi malam atau lilin panas`, `Warisan Budaya Takbenda`.
