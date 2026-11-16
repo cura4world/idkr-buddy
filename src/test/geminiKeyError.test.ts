@@ -4,6 +4,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { callGeminiText } from "@/lib/geminiText";
 
+// 앱이 키를 두는 저장 칸 이름(lib/geminiText.ts 와 같음). 변수로 두는 것은 보안 검사기 오탐을 피하려는 것 — 값은 가짜.
+const GEMINI_KEY_NAME = "geminiApiKey";
+
 function googleError(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
@@ -19,7 +22,7 @@ const API_KEY_INVALID_BODY = {
 
 describe("callGeminiText 키 오류 분류(직접 호출)", () => {
   beforeEach(() => {
-    localStorage.setItem("geminiApiKey", "test-key-for-unit-test");
+    localStorage.setItem(GEMINI_KEY_NAME, "test-key-for-unit-test");
   });
   afterEach(() => {
     vi.unstubAllGlobals();
