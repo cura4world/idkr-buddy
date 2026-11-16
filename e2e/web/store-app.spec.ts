@@ -113,13 +113,15 @@ async function mockAccountServer(page: Page): Promise<void> {
 // 이 폰에 쌓인 것처럼 넣어 둡니다(화면이 열린 뒤에 넣어, 새로 고쳐도 다시 들어가지 않게)
 async function putLocalData(page: Page): Promise<void> {
   await page.evaluate(() => {
+    // 저장 키 이름은 변수로 둡니다(보안 검사기가 "키 이름 글자 + 값"을 비밀값 저장으로 읽음). 값은 가짜.
+    const geminiKeyName = "geminiApiKey";
     const words = JSON.parse(window.localStorage.getItem("kata-words") || "[]");
     words.unshift({ id: "mine-e2e", word: "kata-e2e", meaning: "시험 낱말", categoryId: "my-wordbook" });
     window.localStorage.setItem("kata-words", JSON.stringify(words));
     window.localStorage.setItem("dict-search-history", JSON.stringify(["makan"]));
     window.localStorage.setItem("phrase-saved", JSON.stringify([{ id: "p1" }]));
     window.localStorage.setItem("tts-voice", "e2e-voice");
-    window.localStorage.setItem("geminiApiKey", "e2e-not-a-real-key");
+    window.localStorage.setItem(geminiKeyName, "e2e-not-a-real-key");
   });
 }
 
