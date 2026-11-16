@@ -266,7 +266,7 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
 - **관리자판 APK 빌드(`build-apk.yml`)도 지금은 실패할 가능성이 큽니다.** 스토어 빌드를 만들다 보니
   `android-actions/setup-android@v3` 가 2026-11 러너에서 실패했습니다(마지막 성공은 2026-08-10).
   다음에 관리자판 APK 를 다시 빌드할 일이 생기면 `build-store.yml` 처럼 SDK 설정 단계를 바꿔야 합니다.
-- 공개판 사용량 한도는 `workers/kata-public/worker.js` 의 `DEFAULT_LIMITS` 가 정본입니다(무료: 이야기 하루 1 · 새 사전 풀이 하루 50 ·
+- 공개판 사용량 한도는 `workers/kata-public/worker.js` 의 `DEFAULT_LIMITS` 가 정본입니다(무료: 이야기 잠김(맛보기 3편만, 2026-11-16) · 새 사전 풀이 하루 50 ·
   오늘의 문장 하루 1 · 긴 읽기와 회화 만들기는 잠김 / Plus: 이야기 하루 5·한 달 60, 회화 만들기 하루 3·한 달 30, 긴 읽기 하루 5·한 달 50 /
   체험: 이 가운데 네 가지가 Plus 의 절반). 운영 중에는 Worker 변수 `LIMITS_JSON` 하나로 바꿉니다.
 - **단어 발음**: 스토어 앱에서 인도네시아어 낱말은 폰 내장 음성으로 읽습니다(2026-11 결정, 한도에 세지 않음).
