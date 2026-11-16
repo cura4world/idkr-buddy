@@ -1,3 +1,5 @@
+/// <reference types="node" />
+// (위 한 줄: 이 시험은 파일을 직접 읽으므로 node 타입이 필요합니다. vitest 5 부터는 node 타입을 함께 끌어오지 않습니다 — 2026-11-17)
 // 내장 문장(STATIC_PHRASES)의 해설을 담은 src/data/phrase-seed.json 이 온전한지 검사합니다.
 // (첫 실행 첫 화면이 AI 없이 열리려면 36개 전부, 앱이 읽는 모양대로 들어 있어야 합니다.)
 
