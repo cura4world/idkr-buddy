@@ -25,6 +25,11 @@
 - 이 프로젝트는 웹(폰) Claude Code 환경에서 작업합니다.
 - 코드 수정 후 별도 언급 없이 **항상 자동으로 `main` 브랜치에 push까지 완료**합니다.
 - GitHub Actions가 `main` push 시 자동으로 빌드·배포(GitHub Pages)합니다.
+- **앱에 보이는 변경은 `release/public` 에도 별도 언급 없이 올린다(2026-11-16 사용자 지시).** 공개판 미리보기 APK(`build-preview.yml`)는
+  `release/public` push 때만 빌드되므로, `main` 에만 올리면 미리보기 앱에는 아무 변화가 없다. 순서는
+  ① `main` push·배포 확인 → ② `release/public` 최신을 받아 이번 커밋을 cherry-pick(`release/public` 에만 있는 커밋은 그대로 둠, 강제 push 금지)
+  → ③ 검증 명령 통과 뒤 push → ④ 미리보기 빌드 결과 확인. 문서(`DECISIONS.md`·`HANDOFF.md`)가 충돌하면 그 커밋만 빼고 `main` 에 기록이 있음을 보고에 적는다.
+  PC 에 S21 이 연결돼 있으면 미리보기 APK 를 받아 덮어 설치까지 한다(`gh run download <실행> -n kata-kata-preview-apk` → `adb install -r`).
 - **세션이 다른 브랜치로 지정되어 있어 `main`에 push할 수 없다면, 작업을 시작하기 전에 먼저 알린다.** 브랜치에만 올리면 배포가 돌지 않아 사용자 앱에는 아무 변화가 없다. 작업을 끝낸 뒤 통보하는 것은 늦다(사용자가 이미 완료로 여긴 뒤다).
 - **push 후에는 배포 워크플로가 끝날 때까지 확인하고 최종 결과를 보고한다.** push 성공은 배포 성공이 아니다.
 - **APK는 껍데기**라 코드 수정은 앱 재실행만으로 두 폰 모두 반영됩니다.
