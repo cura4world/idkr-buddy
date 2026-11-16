@@ -113,10 +113,10 @@ const PICK = {
   "Pati": ["Mintorahayu, Winong, Pati Regency, Central Java, Indonesia - panoramio.jpg", "Masjid Agung Baitunnur Pati.jpg"], // 자동 2번은 시위 사진
   "Probolinggo": ["Benteng Mayangan Kota Probolinggo.jpg", "Fishing boats, Probolinggo, 2016 (02).jpg"], // 자동은 교회·버스 정류장
   "Surabaya": ["Central Surabaya view taken from JW Marriott Surabaya.jpg", "Suramadu Bridge 3.JPG"], // 자동 2번은 시내버스 → 수라마두 다리
-  "Medan": ["Istana Maimun.jpg", "Great mosque in Medan cropped.jpg"], // 자동 2번은 공항 계류장 → 메단 대모스크
+  "Medan": ["Medan city 2019.jpg", "Istana Maimun.jpg"], // 2026-11-16 Arga 지정: 시내 + 마이문 궁전 (자동 2번은 공항 계류장)
   "Semarang": ["Lawang Sewu in Semarang City.jpg", "Gedung Batu Temple Semarang (little cropped).jpg"], // 자동
-  "Palembang": ["LRT Palembang Ampera Bridge.jpg", "Ampera Bridge at Late Afternoon, Palembang.jpg"], // 2번을 경전 판 가까이 찍은 사진 대신 무시강의 배들로
-  "Pontianak": ["Equator Pontianak Monument.jpg", "Keraton Kadariah 01.jpg"], // 자동 2번은 음식 사진 → 카드리아 왕궁
+  "Palembang": ["Ampera Bridge at Late Afternoon, Palembang.jpg", "LRT Palembang Ampera Bridge.jpg"], // 2026-11-16 Arga 지정 순서: 무시강의 배들 + 암페라 다리
+  "Pontianak": ["Equator Pontianak Monument.jpg", "Pontianak Kapuas Bridge.jpg"], // 2026-11-16 Arga 지정: 적도 기념탑 + 카푸아스 다리 (자동 2번은 음식 사진)
   "Balikpapan": ["2018-12-04 Balikpapan cropped.jpg", "2018-06-13 Balikpapan Islamic Center.jpg"], // 1번을 경기장 항공사진 대신 시내로
 };
 // 어디에도 쓰지 않을 파일 이름
@@ -463,7 +463,18 @@ async function main() {
     // 2026-11-16(13차): 사진이 모두 옛 기록 사진(트로펜 박물관·KITLV)인 지점은 앱이 하나도 보여 주지 않으므로(화면 0장)
     // 빈 지점처럼 새로 채웁니다(메단·수라바야·스마랑·우붓 등 22곳, Arga 결정). 보이는 사진이 한 장이라도 있으면 그대로 둡니다.
     const visibleExisting = ex && ex.photos ? ex.photos.filter((ph) => !ARCHIVE.test(ph.file)) : [];
-    if (visibleExisting.length > 0) {
+    // PICK 에 2장을 적은 지점은 PICK 이 정본입니다. 지금 목록이 PICK 의 앞 두 장과 다르면(사람이 PICK 을 바꿈) 다시 고릅니다.
+    // PICK 이 1장뿐인 지점(숨바 섬 등)은 나머지를 자동으로 채웠으므로 이 규칙에 들지 않습니다(2026-11-16).
+    const pick2 = PICK[p.id] && PICK[p.id].length >= 2 ? PICK[p.id].slice(0, 2) : null;
+    const pickChanged = !!pick2 && (ex && ex.photos ? ex.photos.map((ph) => ph.file) : []).join("|") !== pick2.join("|");
+    if (pickChanged && ex && ex.photos) {
+      // 다시 고르는 지점의 지금 사진은 "이미 쓴 사진"에서 뺍니다 — 같은 사진을 순서만 바꿔 다시 쓸 수 있게
+      for (const ph of ex.photos) {
+        used.delete(ph.file);
+        used.delete(ph.thumb);
+      }
+    }
+    if (visibleExisting.length > 0 && !pickChanged) {
       result[p.id] = ex;
       kept++;
       continue;
