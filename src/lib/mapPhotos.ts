@@ -50,7 +50,7 @@ export interface MapPlacePhotos {
 // 목록을 만들지 못했습니다. 비어 있는 동안 시트에는 사진이 나오지 않습니다.
 // scripts/build-map-photos.mjs 를 돌리면 이 아래가 채워집니다.
 // @generated-start
-// 2026-11-15 scripts/build-map-photos.mjs — 지점 136 · 2장 97 · 1장 38 · 0장 1
+// 2026-11-16 scripts/build-map-photos.mjs — 지점 136 · 2장 108 · 1장 27 · 0장 1
 export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
   "Agats": {
     "region": "papua",
@@ -119,20 +119,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "kalimantan",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Gezicht over de Baai van Balikpapan met olietanks en steigers van de Bataafsche Petroleum Maatschappij (BPM) TMnr 60018714.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/COLLECTIE_TROPENMUSEUM_Gezicht_over_de_Baai_van_Balikpapan_met_olietanks_en_steigers_van_de_Bataafsche_Petroleum_Maatschappij_%28BPM%29_TMnr_60018714.jpg/500px-COLLECTIE_TROPENMUSEUM_Gezicht_over_de_Baai_van_Balikpapan_met_olietanks_en_steigers_van_de_Bataafsche_Petroleum_Maatschappij_%28BPM%29_TMnr_60018714.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Gezicht_over_de_Baai_van_Balikpapan_met_olietanks_en_steigers_van_de_Bataafsche_Petroleum_Maatschappij_(BPM)_TMnr_60018714.jpg"
+        "file": "2018-12-04 Balikpapan cropped.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/2018-12-04_Balikpapan_cropped.jpg/500px-2018-12-04_Balikpapan_cropped.jpg",
+        "author": "consigliere ivan",
+        "license": "CC0",
+        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "page": "https://commons.wikimedia.org/wiki/File:2018-12-04_Balikpapan_cropped.jpg"
       },
       {
-        "file": "COLLECTIE TROPENMUSEUM Luchtfoto olieraffinaderij TMnr 20017995.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/COLLECTIE_TROPENMUSEUM_Luchtfoto_olieraffinaderij_TMnr_20017995.jpg/500px-COLLECTIE_TROPENMUSEUM_Luchtfoto_olieraffinaderij_TMnr_20017995.jpg",
-        "author": "Drs. F.A.M. (Frans) Welman (Fotograaf/photographer).",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Luchtfoto_olieraffinaderij_TMnr_20017995.jpg"
+        "file": "2018-06-13 Balikpapan Islamic Center.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/2018-06-13_Balikpapan_Islamic_Center.jpg/500px-2018-06-13_Balikpapan_Islamic_Center.jpg",
+        "author": "consigliere ivan from Bontang, Indonesia",
+        "license": "CC0",
+        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "page": "https://commons.wikimedia.org/wiki/File:2018-06-13_Balikpapan_Islamic_Center.jpg"
       }
     ]
   },
@@ -313,12 +313,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "sumatera",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Hotel Brastagi aan de voet van de vulkaan Sibayak TMnr 60023683.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/COLLECTIE_TROPENMUSEUM_Hotel_Brastagi_aan_de_voet_van_de_vulkaan_Sibayak_TMnr_60023683.jpg/500px-COLLECTIE_TROPENMUSEUM_Hotel_Brastagi_aan_de_voet_van_de_vulkaan_Sibayak_TMnr_60023683.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Hotel_Brastagi_aan_de_voet_van_de_vulkaan_Sibayak_TMnr_60023683.jpg"
+        "file": "Tugu Brastagi.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Tugu_Brastagi.jpg/500px-Tugu_Brastagi.jpg",
+        "author": "Ken Marshall",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Tugu_Brastagi.jpg"
+      },
+      {
+        "file": "Berastagi viewed from Gundaling Hill (Panorama) 01.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Berastagi_viewed_from_Gundaling_Hill_%28Panorama%29_01.jpg/500px-Berastagi_viewed_from_Gundaling_Hill_%28Panorama%29_01.jpg",
+        "author": "Christian Advs Sltg",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Berastagi_viewed_from_Gundaling_Hill_(Panorama)_01.jpg"
       }
     ]
   },
@@ -1017,20 +1025,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "sulawesi",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM De Togian-eilanden (Schildpad-eilanden) TMnr 60018679.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/COLLECTIE_TROPENMUSEUM_De_Togian-eilanden_%28Schildpad-eilanden%29_TMnr_60018679.jpg/500px-COLLECTIE_TROPENMUSEUM_De_Togian-eilanden_%28Schildpad-eilanden%29_TMnr_60018679.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_De_Togian-eilanden_(Schildpad-eilanden)_TMnr_60018679.jpg"
+        "file": "Babyrousa togeanensis.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/Babyrousa_togeanensis.jpg/500px-Babyrousa_togeanensis.jpg",
+        "author": "Mangkau Zulkifli",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Babyrousa_togeanensis.jpg"
       },
       {
-        "file": "COLLECTIE TROPENMUSEUM S.S. Van Overstraten van de KPM bij de Togian-eilanden (Schildpad-eilanden) TMnr 60018678.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/COLLECTIE_TROPENMUSEUM_S.S._Van_Overstraten_van_de_KPM_bij_de_Togian-eilanden_%28Schildpad-eilanden%29_TMnr_60018678.jpg/500px-COLLECTIE_TROPENMUSEUM_S.S._Van_Overstraten_van_de_KPM_bij_de_Togian-eilanden_%28Schildpad-eilanden%29_TMnr_60018678.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_S.S._Van_Overstraten_van_de_KPM_bij_de_Togian-eilanden_(Schildpad-eilanden)_TMnr_60018678.jpg"
+        "file": "Reconnect-resort-buka-buka-island.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Reconnect-resort-buka-buka-island.jpg/500px-Reconnect-resort-buka-buka-island.jpg",
+        "author": "Thomasdespin",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Reconnect-resort-buka-buka-island.jpg"
       }
     ]
   },
@@ -1059,20 +1067,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "jawa",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM De minaret bij de moskee van Koedoes TMnr 10016671.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/COLLECTIE_TROPENMUSEUM_De_minaret_bij_de_moskee_van_Koedoes_TMnr_10016671.jpg/500px-COLLECTIE_TROPENMUSEUM_De_minaret_bij_de_moskee_van_Koedoes_TMnr_10016671.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_De_minaret_bij_de_moskee_van_Koedoes_TMnr_10016671.jpg"
+        "file": "Masjid Menara Kudus.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Masjid_Menara_Kudus.jpg/500px-Masjid_Menara_Kudus.jpg",
+        "author": "PL09Puryono",
+        "license": "CC0",
+        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "page": "https://commons.wikimedia.org/wiki/File:Masjid_Menara_Kudus.jpg"
       },
       {
-        "file": "COLLECTIE TROPENMUSEUM Gespleten poort bij de moskee van Koedoes TMnr 10016516.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/COLLECTIE_TROPENMUSEUM_Gespleten_poort_bij_de_moskee_van_Koedoes_TMnr_10016516.jpg/500px-COLLECTIE_TROPENMUSEUM_Gespleten_poort_bij_de_moskee_van_Koedoes_TMnr_10016516.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Gespleten_poort_bij_de_moskee_van_Koedoes_TMnr_10016516.jpg"
+        "file": "Masjid Menara Kudus Tampak Depan.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Masjid_Menara_Kudus_Tampak_Depan.jpg/500px-Masjid_Menara_Kudus_Tampak_Depan.jpg",
+        "author": "PL09Puryono",
+        "license": "CC0",
+        "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "page": "https://commons.wikimedia.org/wiki/File:Masjid_Menara_Kudus_Tampak_Depan.jpg"
       }
     ]
   },
@@ -1135,12 +1143,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "bali-nusa",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Gezicht vanaf Larantoeka op het eiland Adonara TMnr 10018570.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/COLLECTIE_TROPENMUSEUM_Gezicht_vanaf_Larantoeka_op_het_eiland_Adonara_TMnr_10018570.jpg/500px-COLLECTIE_TROPENMUSEUM_Gezicht_vanaf_Larantoeka_op_het_eiland_Adonara_TMnr_10018570.jpg",
-        "author": "Dhr. C.C.F.M. (Charles Constant François Marie) Le Roux (Fotograaf/photographer).",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Gezicht_vanaf_Larantoeka_op_het_eiland_Adonara_TMnr_10018570.jpg"
+        "file": "Cattedrale di Larantuka.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Cattedrale_di_Larantuka.jpg/500px-Cattedrale_di_Larantuka.jpg",
+        "author": "Avemundi",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Cattedrale_di_Larantuka.jpg"
+      },
+      {
+        "file": "Prosesi Laut Antar Tuan Meninu (Patung Bayi Yesus).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Prosesi_Laut_Antar_Tuan_Meninu_%28Patung_Bayi_Yesus%29.jpg/500px-Prosesi_Laut_Antar_Tuan_Meninu_%28Patung_Bayi_Yesus%29.jpg",
+        "author": "Flaviana Sogen",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Prosesi_Laut_Antar_Tuan_Meninu_(Patung_Bayi_Yesus).jpg"
       }
     ]
   },
@@ -1305,12 +1321,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "sulawesi",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM De waterval bij Maros TMnr 3728-860.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/COLLECTIE_TROPENMUSEUM_De_waterval_bij_Maros_TMnr_3728-860.jpg/500px-COLLECTIE_TROPENMUSEUM_De_waterval_bij_Maros_TMnr_3728-860.jpg",
-        "author": "Josias Cornelis Rappard",
+        "file": "Area sawah tadah hujan dengan bukit karst di rammang-rammang.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Area_sawah_tadah_hujan_dengan_bukit_karst_di_rammang-rammang.jpg/500px-Area_sawah_tadah_hujan_dengan_bukit_karst_di_rammang-rammang.jpg",
+        "author": "Chafidwahyu",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Area_sawah_tadah_hujan_dengan_bukit_karst_di_rammang-rammang.jpg"
+      },
+      {
+        "file": "Bantimurung-Bulusauraung National Park.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Bantimurung-Bulusauraung_National_Park.jpg/500px-Bantimurung-Bulusauraung_National_Park.jpg",
+        "author": "22Kartika",
         "license": "CC BY-SA 3.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_De_waterval_bij_Maros_TMnr_3728-860.jpg"
+        "page": "https://commons.wikimedia.org/wiki/File:Bantimurung-Bulusauraung_National_Park.jpg"
       }
     ]
   },
@@ -1344,20 +1368,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "sumatera",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM De Sultan van Deli Amaluddin Sani Perkasa Alam Shah tijdens het verlaten van de Grote Moskee op de dag van zijn kroning TMnr 60027930.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/COLLECTIE_TROPENMUSEUM_De_Sultan_van_Deli_Amaluddin_Sani_Perkasa_Alam_Shah_tijdens_het_verlaten_van_de_Grote_Moskee_op_de_dag_van_zijn_kroning_TMnr_60027930.jpg/500px-COLLECTIE_TROPENMUSEUM_De_Sultan_van_Deli_Amaluddin_Sani_Perkasa_Alam_Shah_tijdens_het_verlaten_van_de_Grote_Moskee_op_de_dag_van_zijn_kroning_TMnr_60027930.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_De_Sultan_van_Deli_Amaluddin_Sani_Perkasa_Alam_Shah_tijdens_het_verlaten_van_de_Grote_Moskee_op_de_dag_van_zijn_kroning_TMnr_60027930.jpg"
+        "file": "Istana Maimun.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Istana_Maimun.jpg/500px-Istana_Maimun.jpg",
+        "author": "Adhmi",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Istana_Maimun.jpg"
       },
       {
-        "file": "COLLECTIE TROPENMUSEUM Menigte voor het Istana Maimun het paleis van de Sultan van Deli TMnr 60027931.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/COLLECTIE_TROPENMUSEUM_Menigte_voor_het_Istana_Maimun_het_paleis_van_de_Sultan_van_Deli_TMnr_60027931.jpg/500px-COLLECTIE_TROPENMUSEUM_Menigte_voor_het_Istana_Maimun_het_paleis_van_de_Sultan_van_Deli_TMnr_60027931.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Menigte_voor_het_Istana_Maimun_het_paleis_van_de_Sultan_van_Deli_TMnr_60027931.jpg"
+        "file": "Great mosque in Medan cropped.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Great_mosque_in_Medan_cropped.jpg/500px-Great_mosque_in_Medan_cropped.jpg",
+        "author": "Daniel Berthold",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Great_mosque_in_Medan_cropped.jpg"
       }
     ]
   },
@@ -1509,12 +1533,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "sumatera",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM De rivier de Musi bij Palembang TMnr 5426-8.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/COLLECTIE_TROPENMUSEUM_De_rivier_de_Musi_bij_Palembang_TMnr_5426-8.jpg/500px-COLLECTIE_TROPENMUSEUM_De_rivier_de_Musi_bij_Palembang_TMnr_5426-8.jpg",
-        "author": "Johannes Ykema (Uitgever).",
+        "file": "LRT Palembang Ampera Bridge.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/LRT_Palembang_Ampera_Bridge.jpg/500px-LRT_Palembang_Ampera_Bridge.jpg",
+        "author": "Gaudi Renanda",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:LRT_Palembang_Ampera_Bridge.jpg"
+      },
+      {
+        "file": "Ampera Bridge at Late Afternoon, Palembang.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Ampera_Bridge_at_Late_Afternoon%2C_Palembang.jpg/500px-Ampera_Bridge_at_Late_Afternoon%2C_Palembang.jpg",
+        "author": "Gunawan Kartapranata",
         "license": "CC BY-SA 3.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_De_rivier_de_Musi_bij_Palembang_TMnr_5426-8.jpg"
+        "page": "https://commons.wikimedia.org/wiki/File:Ampera_Bridge_at_Late_Afternoon,_Palembang.jpg"
       }
     ]
   },
@@ -1569,12 +1601,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "jawa",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Moskee Indonesië TMnr 10016740.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/COLLECTIE_TROPENMUSEUM_Moskee_Indonesi%C3%AB_TMnr_10016740.jpg/500px-COLLECTIE_TROPENMUSEUM_Moskee_Indonesi%C3%AB_TMnr_10016740.jpg",
-        "author": "H. (Hendrik) Veen (Fotograaf/photographer).",
+        "file": "Mintorahayu, Winong, Pati Regency, Central Java, Indonesia - panoramio.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Mintorahayu%2C_Winong%2C_Pati_Regency%2C_Central_Java%2C_Indonesia_-_panoramio.jpg/500px-Mintorahayu%2C_Winong%2C_Pati_Regency%2C_Central_Java%2C_Indonesia_-_panoramio.jpg",
+        "author": "Aris Setiawan",
         "license": "CC BY-SA 3.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Moskee_Indonesi%C3%AB_TMnr_10016740.jpg"
+        "page": "https://commons.wikimedia.org/wiki/File:Mintorahayu,_Winong,_Pati_Regency,_Central_Java,_Indonesia_-_panoramio.jpg"
+      },
+      {
+        "file": "Masjid Agung Baitunnur Pati.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Masjid_Agung_Baitunnur_Pati.jpg/500px-Masjid_Agung_Baitunnur_Pati.jpg",
+        "author": "FPVRICO",
+        "license": "CC BY 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Masjid_Agung_Baitunnur_Pati.jpg"
       }
     ]
   },
@@ -1616,20 +1656,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "kalimantan",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Gekapte sagostammen worden stroomafwaarts op de rivier bij Pontianak gevlot West-Borneo TMnr 10011237.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/COLLECTIE_TROPENMUSEUM_Gekapte_sagostammen_worden_stroomafwaarts_op_de_rivier_bij_Pontianak_gevlot_West-Borneo_TMnr_10011237.jpg/500px-COLLECTIE_TROPENMUSEUM_Gekapte_sagostammen_worden_stroomafwaarts_op_de_rivier_bij_Pontianak_gevlot_West-Borneo_TMnr_10011237.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Gekapte_sagostammen_worden_stroomafwaarts_op_de_rivier_bij_Pontianak_gevlot_West-Borneo_TMnr_10011237.jpg"
+        "file": "Equator Pontianak Monument.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Equator_Pontianak_Monument.jpg/500px-Equator_Pontianak_Monument.jpg",
+        "author": "baka_neko_baka",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Equator_Pontianak_Monument.jpg"
       },
       {
-        "file": "COLLECTIE TROPENMUSEUM Straatgezicht met watertonnen TMnr 60014537.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/COLLECTIE_TROPENMUSEUM_Straatgezicht_met_watertonnen_TMnr_60014537.jpg/500px-COLLECTIE_TROPENMUSEUM_Straatgezicht_met_watertonnen_TMnr_60014537.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Straatgezicht_met_watertonnen_TMnr_60014537.jpg"
+        "file": "Keraton Kadariah 01.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Keraton_Kadariah_01.jpg/500px-Keraton_Kadariah_01.jpg",
+        "author": "Zhilal Darma",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Keraton_Kadariah_01.jpg"
       }
     ]
   },
@@ -1637,20 +1677,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "jawa",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Beeld van Shiva als Mahadeva op de Candi Lara Jonggrang oftewel het Prambanan tempelcomplex TMnr 60046668.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/COLLECTIE_TROPENMUSEUM_Beeld_van_Shiva_als_Mahadeva_op_de_Candi_Lara_Jonggrang_oftewel_het_Prambanan_tempelcomplex_TMnr_60046668.jpg/500px-COLLECTIE_TROPENMUSEUM_Beeld_van_Shiva_als_Mahadeva_op_de_Candi_Lara_Jonggrang_oftewel_het_Prambanan_tempelcomplex_TMnr_60046668.jpg",
-        "author": "Unknown author Unknown author",
+        "file": "Yogyakarta Indonesia Prambanan-temple-complex-02.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Yogyakarta_Indonesia_Prambanan-temple-complex-02.jpg/500px-Yogyakarta_Indonesia_Prambanan-temple-complex-02.jpg",
+        "author": "CEphoto, Uwe Aranas",
         "license": "CC BY-SA 3.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Beeld_van_Shiva_als_Mahadeva_op_de_Candi_Lara_Jonggrang_oftewel_het_Prambanan_tempelcomplex_TMnr_60046668.jpg"
+        "page": "https://commons.wikimedia.org/wiki/File:Yogyakarta_Indonesia_Prambanan-temple-complex-02.jpg"
       },
       {
-        "file": "COLLECTIE TROPENMUSEUM De Candi Lara Jonggrang oftewel het Prambanan tempelcomplex TMnr 20026907.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/COLLECTIE_TROPENMUSEUM_De_Candi_Lara_Jonggrang_oftewel_het_Prambanan_tempelcomplex_TMnr_20026907.jpg/500px-COLLECTIE_TROPENMUSEUM_De_Candi_Lara_Jonggrang_oftewel_het_Prambanan_tempelcomplex_TMnr_20026907.jpg",
-        "author": "Boy Lawson",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_De_Candi_Lara_Jonggrang_oftewel_het_Prambanan_tempelcomplex_TMnr_20026907.jpg"
+        "file": "Brahma temple Prambanan 2017-08-02 (3).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Brahma_temple_Prambanan_2017-08-02_%283%29.jpg/500px-Brahma_temple_Prambanan_2017-08-02_%283%29.jpg",
+        "author": "Magul",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Brahma_temple_Prambanan_2017-08-02_(3).jpg"
       }
     ]
   },
@@ -1658,12 +1698,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "jawa",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Feestelijke optocht tijdens een Javaanse bruiloft te Probolinggo Oost-Java TMnr 10002996.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/COLLECTIE_TROPENMUSEUM_Feestelijke_optocht_tijdens_een_Javaanse_bruiloft_te_Probolinggo_Oost-Java_TMnr_10002996.jpg/500px-COLLECTIE_TROPENMUSEUM_Feestelijke_optocht_tijdens_een_Javaanse_bruiloft_te_Probolinggo_Oost-Java_TMnr_10002996.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Feestelijke_optocht_tijdens_een_Javaanse_bruiloft_te_Probolinggo_Oost-Java_TMnr_10002996.jpg"
+        "file": "Benteng Mayangan Kota Probolinggo.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Benteng_Mayangan_Kota_Probolinggo.jpg/500px-Benteng_Mayangan_Kota_Probolinggo.jpg",
+        "author": "Gunarta",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Benteng_Mayangan_Kota_Probolinggo.jpg"
+      },
+      {
+        "file": "Fishing boats, Probolinggo, 2016 (02).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Fishing_boats%2C_Probolinggo%2C_2016_%2802%29.jpg/500px-Fishing_boats%2C_Probolinggo%2C_2016_%2802%29.jpg",
+        "author": "Bahnfrend",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Fishing_boats,_Probolinggo,_2016_(02).jpg"
       }
     ]
   },
@@ -1797,12 +1845,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "sumatera",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Marineschepen in de haven van Sabang op het eiland We TMnr 60011324.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/COLLECTIE_TROPENMUSEUM_Marineschepen_in_de_haven_van_Sabang_op_het_eiland_We_TMnr_60011324.jpg/500px-COLLECTIE_TROPENMUSEUM_Marineschepen_in_de_haven_van_Sabang_op_het_eiland_We_TMnr_60011324.jpg",
-        "author": "Christiaan Benjamin Nieuwenhuis",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Marineschepen_in_de_haven_van_Sabang_op_het_eiland_We_TMnr_60011324.jpg"
+        "file": "Balohan Sea Port from the hill of east side of Weh Island, Sabang. Aceh.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Balohan_Sea_Port_from_the_hill_of_east_side_of_Weh_Island%2C_Sabang._Aceh.jpg/500px-Balohan_Sea_Port_from_the_hill_of_east_side_of_Weh_Island%2C_Sabang._Aceh.jpg",
+        "author": "Tj Pramono",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Balohan_Sea_Port_from_the_hill_of_east_side_of_Weh_Island,_Sabang._Aceh.jpg"
+      },
+      {
+        "file": "Mangroves in Pulau Weh (8217722738).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Mangroves_in_Pulau_Weh_%288217722738%29.jpg/500px-Mangroves_in_Pulau_Weh_%288217722738%29.jpg",
+        "author": "Pavel Kirillov from St.Petersburg, Russia",
+        "license": "CC BY-SA 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Mangroves_in_Pulau_Weh_(8217722738).jpg"
       }
     ]
   },
@@ -2004,20 +2060,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "jawa",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Chinees huis in Semarang TMnr 60022048.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/COLLECTIE_TROPENMUSEUM_Chinees_huis_in_Semarang_TMnr_60022048.jpg/500px-COLLECTIE_TROPENMUSEUM_Chinees_huis_in_Semarang_TMnr_60022048.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Chinees_huis_in_Semarang_TMnr_60022048.jpg"
+        "file": "Lawang Sewu in Semarang City.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Lawang_Sewu_in_Semarang_City.jpg/500px-Lawang_Sewu_in_Semarang_City.jpg",
+        "author": "Uncredited",
+        "license": "Public domain",
+        "licenseUrl": "",
+        "page": "https://commons.wikimedia.org/wiki/File:Lawang_Sewu_in_Semarang_City.jpg"
       },
       {
-        "file": "COLLECTIE TROPENMUSEUM Het hoofdkantoor van de Nederlandsch-Indische Spoorweg Maatschappij (NIS) in Semarang TMnr 10032316.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/COLLECTIE_TROPENMUSEUM_Het_hoofdkantoor_van_de_Nederlandsch-Indische_Spoorweg_Maatschappij_%28NIS%29_in_Semarang_TMnr_10032316.jpg/500px-COLLECTIE_TROPENMUSEUM_Het_hoofdkantoor_van_de_Nederlandsch-Indische_Spoorweg_Maatschappij_%28NIS%29_in_Semarang_TMnr_10032316.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Het_hoofdkantoor_van_de_Nederlandsch-Indische_Spoorweg_Maatschappij_(NIS)_in_Semarang_TMnr_10032316.jpg"
+        "file": "Gedung Batu Temple Semarang (little cropped).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Gedung_Batu_Temple_Semarang_%28little_cropped%29.jpg/500px-Gedung_Batu_Temple_Semarang_%28little_cropped%29.jpg",
+        "author": "Alex Santosa",
+        "license": "CC BY-SA 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Gedung_Batu_Temple_Semarang_(little_cropped).jpg"
       }
     ]
   },
@@ -2135,20 +2191,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "jawa",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM De Pasar Besar met op de achtergrond het spoorwegviaduct de zogenoemde Hogeweg Soerabaja TMnr 10014832.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/COLLECTIE_TROPENMUSEUM_De_Pasar_Besar_met_op_de_achtergrond_het_spoorwegviaduct_de_zogenoemde_Hogeweg_Soerabaja_TMnr_10014832.jpg/500px-COLLECTIE_TROPENMUSEUM_De_Pasar_Besar_met_op_de_achtergrond_het_spoorwegviaduct_de_zogenoemde_Hogeweg_Soerabaja_TMnr_10014832.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_De_Pasar_Besar_met_op_de_achtergrond_het_spoorwegviaduct_de_zogenoemde_Hogeweg_Soerabaja_TMnr_10014832.jpg"
+        "file": "Central Surabaya view taken from JW Marriott Surabaya.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Central_Surabaya_view_taken_from_JW_Marriott_Surabaya.jpg/500px-Central_Surabaya_view_taken_from_JW_Marriott_Surabaya.jpg",
+        "author": "consigliere ivan",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Central_Surabaya_view_taken_from_JW_Marriott_Surabaya.jpg"
       },
       {
-        "file": "COLLECTIE TROPENMUSEUM De achterzijde van het residentiehuis langs de Kali Ketabang Soerabaja TMnr 60005128.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/COLLECTIE_TROPENMUSEUM_De_achterzijde_van_het_residentiehuis_langs_de_Kali_Ketabang_Soerabaja_TMnr_60005128.jpg/500px-COLLECTIE_TROPENMUSEUM_De_achterzijde_van_het_residentiehuis_langs_de_Kali_Ketabang_Soerabaja_TMnr_60005128.jpg",
-        "author": "H. Salzwedel (Fotograaf/photographer).",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_De_achterzijde_van_het_residentiehuis_langs_de_Kali_Ketabang_Soerabaja_TMnr_60005128.jpg"
+        "file": "Suramadu Bridge 3.JPG",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Suramadu_Bridge_3.JPG/500px-Suramadu_Bridge_3.JPG",
+        "author": "Sakurai Midori",
+        "license": "CC BY 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Suramadu_Bridge_3.JPG"
       }
     ]
   },
@@ -2219,20 +2275,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "sulawesi",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Dodenfeest in Toraja Celebes TMnr 10003185.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/COLLECTIE_TROPENMUSEUM_Dodenfeest_in_Toraja_Celebes_TMnr_10003185.jpg/500px-COLLECTIE_TROPENMUSEUM_Dodenfeest_in_Toraja_Celebes_TMnr_10003185.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Dodenfeest_in_Toraja_Celebes_TMnr_10003185.jpg"
+        "file": "Ke'te' Kesu' 1.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Ke%27te%27_Kesu%27_1.jpg/500px-Ke%27te%27_Kesu%27_1.jpg",
+        "author": "Jorge Franganillo",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Ke%27te%27_Kesu%27_1.jpg"
       },
       {
-        "file": "COLLECTIE TROPENMUSEUM Schaalmodellen van Toraja huizen Celebes TMnr 60028782.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/COLLECTIE_TROPENMUSEUM_Schaalmodellen_van_Toraja_huizen_Celebes_TMnr_60028782.jpg/500px-COLLECTIE_TROPENMUSEUM_Schaalmodellen_van_Toraja_huizen_Celebes_TMnr_60028782.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Schaalmodellen_van_Toraja_huizen_Celebes_TMnr_60028782.jpg"
+        "file": "Tarian Pagellu.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Tarian_Pagellu.jpg/500px-Tarian_Pagellu.jpg",
+        "author": "RaiyaniM",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Tarian_Pagellu.jpg"
       }
     ]
   },
@@ -2337,12 +2393,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "kalimantan",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Afscheepsteiger Tarakan 14 TMnr 10010382.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/COLLECTIE_TROPENMUSEUM_Afscheepsteiger_Tarakan_14_TMnr_10010382.jpg/500px-COLLECTIE_TROPENMUSEUM_Afscheepsteiger_Tarakan_14_TMnr_10010382.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Afscheepsteiger_Tarakan_14_TMnr_10010382.jpg"
+        "file": "Islamic Center Tarakan.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Islamic_Center_Tarakan.jpg/500px-Islamic_Center_Tarakan.jpg",
+        "author": "Si Gam",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Islamic_Center_Tarakan.jpg"
+      },
+      {
+        "file": "AmalBeachTarakan.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/AmalBeachTarakan.jpg/500px-AmalBeachTarakan.jpg",
+        "author": "Davidelit",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:AmalBeachTarakan.jpg"
       }
     ]
   },
@@ -2350,12 +2414,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "sumatera",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Een overstroming van de Silindoengvlakte bij Taroetoeng TMnr 60021568.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/COLLECTIE_TROPENMUSEUM_Een_overstroming_van_de_Silindoengvlakte_bij_Taroetoeng_TMnr_60021568.jpg/500px-COLLECTIE_TROPENMUSEUM_Een_overstroming_van_de_Silindoengvlakte_bij_Taroetoeng_TMnr_60021568.jpg",
-        "author": "Unknown author Unknown author",
+        "file": "Tarutung - panoramio (1).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Tarutung_-_panoramio_%281%29.jpg/500px-Tarutung_-_panoramio_%281%29.jpg",
+        "author": "hotmahtg",
         "license": "CC BY-SA 3.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Een_overstroming_van_de_Silindoengvlakte_bij_Taroetoeng_TMnr_60021568.jpg"
+        "page": "https://commons.wikimedia.org/wiki/File:Tarutung_-_panoramio_(1).jpg"
+      },
+      {
+        "file": "Salib Kasih Tapanuli Utara.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Salib_Kasih_Tapanuli_Utara.jpg/500px-Salib_Kasih_Tapanuli_Utara.jpg",
+        "author": "Herryz",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Salib_Kasih_Tapanuli_Utara.jpg"
       }
     ]
   },
@@ -2405,20 +2477,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "maluku",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Ingang van het paleis van de sultan van Ternate TMnr 60018584.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/COLLECTIE_TROPENMUSEUM_Ingang_van_het_paleis_van_de_sultan_van_Ternate_TMnr_60018584.jpg/500px-COLLECTIE_TROPENMUSEUM_Ingang_van_het_paleis_van_de_sultan_van_Ternate_TMnr_60018584.jpg",
-        "author": "Unknown author Unknown author",
+        "file": "Ternate in sight.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Ternate_in_sight.jpg/500px-Ternate_in_sight.jpg",
+        "author": "Fdprasetyo",
         "license": "CC BY-SA 3.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Ingang_van_het_paleis_van_de_sultan_van_Ternate_TMnr_60018584.jpg"
+        "page": "https://commons.wikimedia.org/wiki/File:Ternate_in_sight.jpg"
       },
       {
-        "file": "COLLECTIE TROPENMUSEUM Uitzicht op Ternate TMnr 3728-865.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/COLLECTIE_TROPENMUSEUM_Uitzicht_op_Ternate_TMnr_3728-865.jpg/500px-COLLECTIE_TROPENMUSEUM_Uitzicht_op_Ternate_TMnr_3728-865.jpg",
-        "author": "Jhr. J.C. (Josias Cornelis) Rappard (Schilder).",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Uitzicht_op_Ternate_TMnr_3728-865.jpg"
+        "file": "Ternate, Keraton.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Ternate%2C_Keraton.jpg/500px-Ternate%2C_Keraton.jpg",
+        "author": "Kainjock",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Ternate,_Keraton.jpg"
       }
     ]
   },
@@ -2510,20 +2582,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "jawa",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Alun-alun met omsloten waringinbomen en voetbalveld Toeban TMnr 10027598.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/COLLECTIE_TROPENMUSEUM_Alun-alun_met_omsloten_waringinbomen_en_voetbalveld_Toeban_TMnr_10027598.jpg/500px-COLLECTIE_TROPENMUSEUM_Alun-alun_met_omsloten_waringinbomen_en_voetbalveld_Toeban_TMnr_10027598.jpg",
-        "author": "Dr. W.G.N. (Wicher Gosen Nicolaas) van der Sleen (Fotograaf/photographer).",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Alun-alun_met_omsloten_waringinbomen_en_voetbalveld_Toeban_TMnr_10027598.jpg"
+        "file": "Kelenteng Kwan Sing Bio, Kutorejo, Kecamatan Tuban.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Kelenteng_Kwan_Sing_Bio%2C_Kutorejo%2C_Kecamatan_Tuban.jpg/500px-Kelenteng_Kwan_Sing_Bio%2C_Kutorejo%2C_Kecamatan_Tuban.jpg",
+        "author": "Klenteng Kwan Sing Bio",
+        "license": "Public domain",
+        "licenseUrl": "",
+        "page": "https://commons.wikimedia.org/wiki/File:Kelenteng_Kwan_Sing_Bio,_Kutorejo,_Kecamatan_Tuban.jpg"
       },
       {
-        "file": "COLLECTIE TROPENMUSEUM Grot te Rengel Oost-Java TMnr 10021628.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/COLLECTIE_TROPENMUSEUM_Grot_te_Rengel_Oost-Java_TMnr_10021628.jpg/500px-COLLECTIE_TROPENMUSEUM_Grot_te_Rengel_Oost-Java_TMnr_10021628.jpg",
-        "author": "H. (Hendrik) Veen (Fotograaf/photographer).",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Grot_te_Rengel_Oost-Java_TMnr_10021628.jpg"
+        "file": "Kompleks Pemakaman Sunan Bonang, Tuban.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Kompleks_Pemakaman_Sunan_Bonang%2C_Tuban.jpg/500px-Kompleks_Pemakaman_Sunan_Bonang%2C_Tuban.jpg",
+        "author": "Pangeran Kurchilds",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Kompleks_Pemakaman_Sunan_Bonang,_Tuban.jpg"
       }
     ]
   },
@@ -2531,12 +2603,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "bali-nusa",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Markt bij een puri in Oeboed TMnr 10024054.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/COLLECTIE_TROPENMUSEUM_Markt_bij_een_puri_in_Oeboed_TMnr_10024054.jpg/500px-COLLECTIE_TROPENMUSEUM_Markt_bij_een_puri_in_Oeboed_TMnr_10024054.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Markt_bij_een_puri_in_Oeboed_TMnr_10024054.jpg"
+        "file": "Ubud (49818456887).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Ubud_%2849818456887%29.jpg/500px-Ubud_%2849818456887%29.jpg",
+        "author": "Jorge Franganillo",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Ubud_(49818456887).jpg"
+      },
+      {
+        "file": "Ubud Palace (2022).jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Ubud_Palace_%282022%29.jpg/500px-Ubud_Palace_%282022%29.jpg",
+        "author": "Chainwit.",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Ubud_Palace_(2022).jpg"
       }
     ]
   },
@@ -2544,12 +2624,20 @@ export const MAP_PHOTOS: Record<string, MapPlacePhotos> = {
     "region": "jawa",
     "photos": [
       {
-        "file": "COLLECTIE TROPENMUSEUM Een bantengstier en een kalf op een moerasweide in het wildreservaat Udjung Kulon op West-Java TMnr 10006631.jpg",
-        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/COLLECTIE_TROPENMUSEUM_Een_bantengstier_en_een_kalf_op_een_moerasweide_in_het_wildreservaat_Udjung_Kulon_op_West-Java_TMnr_10006631.jpg/500px-COLLECTIE_TROPENMUSEUM_Een_bantengstier_en_een_kalf_op_een_moerasweide_in_het_wildreservaat_Udjung_Kulon_op_West-Java_TMnr_10006631.jpg",
-        "author": "Unknown author Unknown author",
-        "license": "CC BY-SA 3.0",
-        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-        "page": "https://commons.wikimedia.org/wiki/File:COLLECTIE_TROPENMUSEUM_Een_bantengstier_en_een_kalf_op_een_moerasweide_in_het_wildreservaat_Udjung_Kulon_op_West-Java_TMnr_10006631.jpg"
+        "file": "Ujung Kulon National Park, 2014.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Ujung_Kulon_National_Park%2C_2014.jpg/500px-Ujung_Kulon_National_Park%2C_2014.jpg",
+        "author": "Achmad Soerio Hutomo",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Ujung_Kulon_National_Park,_2014.jpg"
+      },
+      {
+        "file": "Pulau peucang taman nasional ujung kulon.jpg",
+        "thumb": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Pulau_peucang_taman_nasional_ujung_kulon.jpg/500px-Pulau_peucang_taman_nasional_ujung_kulon.jpg",
+        "author": "Ewal Jr",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "page": "https://commons.wikimedia.org/wiki/File:Pulau_peucang_taman_nasional_ujung_kulon.jpg"
       }
     ]
   },
