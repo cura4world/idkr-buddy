@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { generateStory, quickLookupWord, StoryDifficulty } from "@/lib/story";
 import { normalizeHeadword } from "@/lib/dictionary";
 import { saveStory, listStories, StoryRecord } from "@/lib/storyStore";
+import { STORY_SAMPLES, isSampleStory } from "@/data/storySamples";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, lookupFailText } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
@@ -371,7 +372,8 @@ const Story = () => {
       setStories(all);
       const t = takeReturnTicket("story");
       if (!t) return;
-      const found = all.find((s) => s.id === t.key);
+      // 구독 화면에 다녀온 무료 사용자는 맛보기 이야기를 보고 있었을 수 있습니다
+      const found = all.find((s) => s.id === t.key) || STORY_SAMPLES.find((s) => s.id === t.key);
       if (!found) return;
       pendingReturnRef.current = { y: t.y, flipped: t.flipped };
       // 카드 칸은 히스토리에 이미 남아 있습니다 (지금 그 칸 위에 서 있습니다).
@@ -404,16 +406,19 @@ const Story = () => {
   };
 
   // ---------- 오늘 더 불러올 수 있는가 ----------
-  // 무료는 하루 1편(한국 시간 자정 기준). 서버가 한도를 세고, 화면은 이 기기의 기록과
-  // 서버가 돌려준 한도 초과(QUOTA)를 보고 미리 막아 둡니다.
+  // 새 이야기 불러오기는 Plus 전용입니다(2026-11-16 사용자 결정 — 예전 무료 하루 1편을 없앰).
+  // 무료 사용자에게는 불러오기 대신 Plus 안내와 맛보기 이야기 3편(STORY_SAMPLES)이 보입니다.
+  // Plus 는 서버가 한도를 세고, 화면은 서버가 돌려준 한도 초과(QUOTA)를 보고 그날 버튼을 막아 둡니다.
   const today = kstDay(Date.now());
-  const madeToday = stories.some((s) => kstDay(s.createdAt) === today);
   const quotaToday = quotaDay === today;
-  const freeUsed = !plan.plus && (madeToday || quotaToday);
-  const blocked = freeUsed || quotaToday;
+  const blocked = quotaToday;
 
   const handleGenerate = async () => {
     if (generating || blocked) return;
+    if (!plan.plus) {
+      goPaywall();
+      return;
+    }
     if (!hasGeminiApiKey()) {
       aiErrorToast("NO_API_KEY", "Gemini API 키가 필요합니다. 설정에서 입력하세요");
       return;
@@ -768,16 +773,19 @@ const Story = () => {
                     </ul>
                   </div>
                 ) : null}
-                {/* AI 이야기 신고 — 스토어 앱(공개판)에서만 보입니다. 카드 뒤집기와 겹치지 않게 클릭을 막습니다 */}
-                <div onClick={(e) => e.stopPropagation()}>
-                  <AiReportButton
-                    feature="story"
-                    input={current.title}
-                    output={current.indonesian}
-                    label="내용이 이상합니다"
-                    className="mt-4 pt-1.5 border-t border-[#EEF1F3]"
-                  />
-                </div>
+                {/* AI 이야기 신고 — 스토어 앱(공개판)에서만 보입니다. 카드 뒤집기와 겹치지 않게 클릭을 막습니다.
+                    맛보기 이야기는 AI 가 만든 글이 아니라 앱에 담은 글이라 달지 않습니다 */}
+                {!isSampleStory(current.id) ? (
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <AiReportButton
+                      feature="story"
+                      input={current.title}
+                      output={current.indonesian}
+                      label="내용이 이상합니다"
+                      className="mt-4 pt-1.5 border-t border-[#EEF1F3]"
+                    />
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
@@ -828,7 +836,37 @@ const Story = () => {
       {header(() => goBackOr(navigate, location.key, "/"), "뒤로")}
 
       <div className="px-4 pt-4 pb-6 flex flex-col gap-2.5">
-        {/* 오늘의 이야기: 난이도 + 불러오기 */}
+        {/* 무료: 새 이야기 불러오기는 Plus 전용 — 불러오기 카드 대신 Plus 안내 + 맛보기 이야기 3편(2026-11-16 사용자 결정) */}
+        {!plan.plus ? (
+          <>
+            <PlusLockBox
+              title="매일 새 이야기 읽고 듣기"
+              lines={["난이도를 골라 불러오고", "음성으로 들을 수 있습니다"]}
+              onClick={goPaywall}
+            />
+            <p className="mt-3.5 mx-1 font-gothic text-[0.8125rem] font-bold tracking-[0.02em]" style={{ color: "#3B4245" }}>
+              맛보기 이야기
+            </p>
+            {STORY_SAMPLES.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => openCard(s)}
+                className="w-full text-left min-w-0 active:opacity-80"
+                style={{ ...CARD_STYLE, padding: "14px 16px" }}
+              >
+                <p className="font-word text-[0.96875rem] font-semibold break-words" style={{ color: C.deep }}>{s.title}</p>
+                <p className="mt-[3px] font-gothic text-[0.75rem] break-words" style={{ color: C.sub }}>{s.titleKo}</p>
+                <div className="mt-2.5 flex items-center gap-1.5 min-w-0">
+                  <Chip tone="amber">{shortCat(s.category)}</Chip>
+                  <Chip tone="grey">난이도 {s.difficulty}</Chip>
+                  <span className="ml-auto shrink-0 font-gothic text-[0.6875rem]" style={{ color: C.mute }}>맛보기</span>
+                </div>
+              </button>
+            ))}
+          </>
+        ) : (
+        <>
+        {/* 오늘의 이야기: 난이도 + 불러오기 (Plus) */}
         <div style={{ ...CARD_STYLE, padding: "18px 16px 16px" }}>
           <div className="flex items-center gap-2.5">
             <span
@@ -873,23 +911,14 @@ const Story = () => {
               {/* 서버가 한도를 알려 온 날에는 그 문장(오늘/이번 달) 하나만 씁니다 — 알림과 버튼 아래 안내가 같은 말이 되게 */}
               {quotaToday && quotaNote
                 ? quotaNote
-                : freeUsed
-                  ? "오늘의 이야기를 불러왔습니다 · 내일 새 이야기가 열립니다"
-                  : "오늘 불러올 수 있는 이야기를 모두 불러왔습니다 · 내일 다시 열립니다"}
+                : "오늘 불러올 수 있는 이야기를 모두 불러왔습니다 · 내일 다시 열립니다"}
             </p>
           ) : null}
         </div>
+        </>
+        )}
 
-        {/* 무료: 듣기·여러 편은 Plus (시안 ST2) */}
-        {!plan.plus ? (
-          <PlusLockBox
-            title="인도네시아어 발음으로 이야기 듣기"
-            lines={["Plus에서는 이야기를 음성으로 듣고,", "하루에 여러 편을 불러올 수 있습니다"]}
-            onClick={goPaywall}
-          />
-        ) : null}
-
-        {/* 지난 이야기 */}
+        {/* 지난 이야기 — 무료가 된 뒤에도 이 폰에 받아 둔 이야기는 계속 읽을 수 있습니다 */}
         {stories.length > 0 ? (
           <>
             <p className="mt-3.5 mx-1 font-gothic text-[0.8125rem] font-bold tracking-[0.02em]" style={{ color: "#3B4245" }}>
