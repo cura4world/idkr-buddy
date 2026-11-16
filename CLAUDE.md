@@ -97,9 +97,10 @@
 - 페이지 간 뒤로가기는 `goBackOr(navigate, location.key, fallback)` (`src/lib/nav.ts`). `location.key === "default"`면 첫 진입이라 폴백을 쓴다
 - 한 화면 안에서의 뒤로가기(결과→목록 등)는 `history.pushState` + `popstate`로 처리한다
 - **정책 문서(개인정보처리방침·이용약관·계정 삭제 안내)는 세 곳을 같은 내용으로 둔다** — 한 곳만 고치면 앱 안 링크·심사 서류·실제 주소가 서로 달라진다.
-  ① 게시용 `docs/release/policy-final/{privacy,terms,delete}.html` ② 앱 사본 `public/{privacy,terms,delete-account}.html`(①과 **바이트 단위로 같게**)
-  ③ 게시본 `naruve-ganada` 저장소의 `docs/apps/kata-kata/{privacy,terms,delete}/index.html`(PR 로 올린다. 그 저장소 규칙대로 `node scripts/bump.mjs`·`node scripts/check_docs.mjs`).
-  **그 저장소는 PR 을 여는 순간 자동으로 squash 병합·게시한다**(`auto-merge.yml`) — "PR 만 열고 병합은 나중에"는 되지 않는다. 그런 조건이 붙으면 PR 을 열지 말고 브랜치만 push 한 뒤 알린다(2026-11-14 7차, PR #111).
+  ① **정본** `docs/release/policy-final/{privacy,terms,delete}.html` ② 앱 사본 `public/{privacy,terms,delete-account}.html`(①과 **바이트 단위로 같게**)
+  ③ **게시는 `naruve-studio-site` 저장소**(Naruve Studio 홈페이지, Cloudflare Pages)가 `https://naruve.app/apps/kata-kata/{privacy,terms,delete}/` 로 한다(2026-11-16 부터).
+  이 저장소에서는 ①·② 만 고치고, 바뀐 파일 경로를 보고에 적는다 — 게시는 HQ 가 홈페이지 세션에 지시한다. 직접 올려야 할 때는 그 저장소의 `CLAUDE.md` 를 먼저 읽는다.
+  (예전 게시처 `naruve-ganada` 의 `docs/apps/kata-kata/` 사본은 2026-11-16 부터 쓰지 않는다. 그 저장소는 PR 을 여는 순간 자동 병합·게시했다 — 2026-11-14 7차, PR #111.)
   남의 저장소에 무엇이든 올리기 전에 그 저장소의 `CLAUDE.md` 를 먼저 읽는다.
   고친 뒤 `cmp` 로 ①–② 세 쌍을 대조하고, 게시 뒤 `https://naruve.app/apps/kata-kata/{privacy,terms,delete}/` 를 받아 ①과 다시 대조한다. 안쪽 링크는 끝에 `/` 를 붙인 절대 주소
 
