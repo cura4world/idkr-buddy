@@ -48,7 +48,7 @@ const speakWord = (text: string) => {
 };
 import PhraseFindBar from "@/components/PhraseFindBar";
 import AiReportButton from "@/components/AiReportButton";
-import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { usePlan, PAYWALL_PATH, paywallNotice } from "@/lib/plan";
 import { isBackCloseEntry } from "@/hooks/useBackClose";
 
 const TEAL = "#2C6D63";
@@ -188,8 +188,7 @@ const PercakapanRead = () => {
   useEffect(() => {
     if (!scene) return;
     if (!plan.plus && !scene.custom) {
-      toast("회화집은 Plus 회원 기능입니다");
-      navigate(PAYWALL_PATH, { replace: true });
+      navigate(PAYWALL_PATH, paywallNotice("회화집은 Plus 회원 기능입니다", true));
     }
   }, [scene, plan.plus, navigate]);
 
