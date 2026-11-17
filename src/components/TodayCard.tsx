@@ -1,6 +1,7 @@
 // src/components/TodayCard.tsx
 // 인도네시아 이해 맨 위의 "오늘의 인도네시아" 카드 (2026-11-17 결정 문서 ⑥, 시안 simple-card).
 //   글이 주인공, 그림은 오른쪽에 작게. 카드 바탕(크림)을 그림 바탕과 맞춰 그림이 카드에 녹아들게 합니다.
+//   카드 바탕 #F9F2E1 = 서버 그림 12장의 바탕을 재어 맞춘 값(2026-11-18, 그림 바탕 #F7F0DD~#FBF6E3). 그림 가장자리는 DailyCardImage 가 흐리게 합니다.
 //   누르면 안쪽 화면(/insight/card/<날짜>). 무료 사용자에게도 카드는 보이고, 누르면 구독 화면으로 갑니다
 //   (인도네시아 이해의 다른 메뉴와 같은 방식 — 메뉴는 보이고 열 때 Plus).
 //   카드를 받지 못하면(서버에 아직 카드가 없고 이 기기에도 없음) 아무것도 그리지 않습니다.
@@ -40,7 +41,7 @@ const TodayCard = ({ locked, onOpen, title }: Props) => {
       <section>
         {title}
         <div
-          className="rounded-[18px] bg-[#FBF6EC] h-[118px] animate-pulse"
+          className="rounded-[18px] bg-[#F9F2E1] h-[118px] animate-pulse"
           style={{ boxShadow: "0 1px 3px rgba(16,40,50,0.06)" }}
           aria-hidden="true"
         />
@@ -55,7 +56,7 @@ const TodayCard = ({ locked, onOpen, title }: Props) => {
     <button
       type="button"
       onClick={() => onOpen(card.d)}
-      className="w-full flex items-center gap-3 rounded-[18px] bg-[#FBF6EC] pl-4 pr-3 py-3.5 text-left active:opacity-90"
+      className="w-full flex items-center gap-3 rounded-[18px] bg-[#F9F2E1] pl-4 pr-3 py-3.5 text-left active:opacity-90"
       style={{ boxShadow: "0 1px 3px rgba(16,40,50,0.06)" }}
     >
       <span className="flex-1 min-w-0">
