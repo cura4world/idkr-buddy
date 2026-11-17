@@ -1,7 +1,8 @@
 // src/pages/Insight.tsx
 // "인도네시아 이해" 허브 (시안 IN1-Plus · IN2-Free, 2026-11-10).
 //   · 맨 위에 지도를 큰 카드로 (실제 지도 모양 + 대도시 점)
-//   · 개관 / 종족 / 종교 / (관리자판: 기독교) / 역사 / 생활 정보 — 차분한 색 타일 목록
+//   · 맨 위에 오늘의 카드(2026-11-17, components/TodayCard.tsx) — 서버가 하루 한 장
+//   · 개관 / 종족 / 종교 / (관리자판: 기독교) / 역사 / 지난 카드 모아 보기 — 차분한 색 타일 목록
 //   · 공개판 무료 사용자: 메뉴는 보이되 잠기고, 위에 귤색 안내 상자. 누르면 구독 화면(PAYWALL_PATH)
 //   · 하위 화면과 /map 은 App.tsx 에서 InsightGate 로 한 번 더 막습니다(주소로 바로 들어오는 경우)
 
@@ -10,8 +11,9 @@ import { goBackOr } from "@/lib/nav";
 import { isStoreApp } from "@/lib/platform";
 import { PAYWALL_PATH, usePlan } from "@/lib/plan";
 import PlusLockBox from "@/components/PlusLockBox";
+import TodayCard from "@/components/TodayCard";
 import { INDONESIA_PATH, MAP_CITIES, NEIGHBOR_SHAPES } from "@/lib/mapData";
-import { ArrowLeft, Globe, Landmark, Users, Cross, Hourglass, Lightbulb, ChevronRight, Lock } from "lucide-react";
+import { ArrowLeft, Globe, Landmark, Users, Cross, Hourglass, CalendarDays, ChevronRight, Lock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface RowItem {
@@ -148,7 +150,8 @@ const Insight = () => {
   }
   const life: RowItem[] = [
     { icon: Hourglass, bg: "#EAF2DF", fg: "#4E6A2A", title: "인도네시아 역사", sub: "Sejarah", to: "/insight/history" },
-    { icon: Lightbulb, bg: "#FFF3D6", fg: "#8A6A12", title: "문화와 생활 정보", sub: "Info dan Tips", to: "/insight/tips" },
+    // 예전 "문화와 생활 정보"(누를 때마다 생성) 자리 — 2026-11-17 오늘의 카드로 바뀌며 지난 카드 모아 보기로
+    { icon: CalendarDays, bg: "#FFF3D6", fg: "#8A6A12", title: "지난 카드 모아 보기", sub: "Arsip Kartu", to: "/insight/cards" },
   ];
 
   return (
@@ -167,8 +170,14 @@ const Insight = () => {
       <div className="px-4 pt-4 flex flex-col gap-2.5">
         {locked ? <PlusBox onClick={() => navigate(PAYWALL_PATH)} /> : null}
 
-        {/* 한눈에 보기 */}
+        {/* 오늘의 인도네시아 — 서버가 하루 한 장 만드는 카드(2026-11-17). 받지 못하면 이 구역은 그리지 않습니다 */}
         <section>
+          <SectionTitle>오늘의 인도네시아</SectionTitle>
+          <TodayCard locked={locked} onOpen={(d) => go("/insight/card/" + d)} />
+        </section>
+
+        {/* 한눈에 보기 */}
+        <section className="mt-2">
           <SectionTitle>한눈에 보기</SectionTitle>
           <div className="flex flex-col gap-2.5">
             <MapCard locked={locked} onClick={() => go("/map")} />
