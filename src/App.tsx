@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
@@ -27,7 +27,8 @@ import InsightReligion from "./pages/InsightReligion";
 import InsightChristian from "./pages/InsightChristian";
 import InsightEthnic from "./pages/InsightEthnic";
 import InsightHistory from "./pages/InsightHistory";
-import InsightTips from "./pages/InsightTips";
+import InsightCard from "./pages/InsightCard";
+import InsightCards from "./pages/InsightCards";
 import InsightGate from "./pages/InsightGate";
 import PhotoCredits from "./pages/PhotoCredits";
 import Percakapan from "./pages/Percakapan";
@@ -146,7 +147,11 @@ const App = () => (
           <Route path="/insight/christian" element={<HiddenInPublic><InsightChristian /></HiddenInPublic>} />
           <Route path="/insight/ethnic" element={<InsightGate><InsightEthnic /></InsightGate>} />
           <Route path="/insight/history" element={<InsightGate><InsightHistory /></InsightGate>} />
-          <Route path="/insight/tips" element={<InsightGate><InsightTips /></InsightGate>} />
+          {/* 오늘의 카드(2026-11-17). 예전 생활 정보 주소(/insight/tips)는 지난 카드로 보냅니다 */}
+          <Route path="/insight/card" element={<InsightGate><InsightCard /></InsightGate>} />
+          <Route path="/insight/card/:date" element={<InsightGate><InsightCard /></InsightGate>} />
+          <Route path="/insight/cards" element={<InsightGate><InsightCards /></InsightGate>} />
+          <Route path="/insight/tips" element={<Navigate to="/insight/cards" replace />} />
           <Route path="/about/photos" element={<PhotoCredits />} />
           <Route path="/percakapan" element={<Percakapan />} />
           <Route path="/percakapan/c/:id" element={<PercakapanCategory />} />
