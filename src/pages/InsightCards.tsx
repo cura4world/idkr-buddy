@@ -81,7 +81,7 @@ const InsightCards = () => {
                   (i < items.length - 1 ? "border-b border-[#EEF1F3]" : "")
                 }
               >
-                <span className="rounded-xl overflow-hidden bg-[#FBF6EC] shrink-0">
+                <span className="rounded-xl overflow-hidden bg-[#F9F2E1] shrink-0">
                   <DailyCardImage d={e.d} has={e.img} size={52} rounded={12} />
                 </span>
                 <span className="flex-1 min-w-0">
