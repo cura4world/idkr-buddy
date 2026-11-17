@@ -149,7 +149,8 @@ src/
     SermonRead.tsx     설교문 읽기 + S펜 필기 + 문단 듣기
                        (~2,100줄, **최대 파일** — 한 곳만 정밀 수정할 것)
     IndoMap.tsx        인도네시아 지도 (SVG 85핀)
-    Insight*.tsx       인도네시아 이해 허브 + 서브 6개
+    Insight*.tsx       인도네시아 이해 허브 + 서브(개관·종족·종교·기독교·역사) + 오늘의 카드 InsightCard(/insight/card/<날짜>)·지난 카드 InsightCards(/insight/cards)
+                       (카드 컴포넌트는 components/TodayCard·DailyCardImage)
     PhraseDetail.tsx   오늘의 인도네시아어 문장 상세 (/phrase)
     SavedPhrases.tsx   저장해 둔 문장 목록 (/phrase/saved)
     Percakapan.tsx / PercakapanCategory.tsx / PercakapanRead.tsx   회화집 폴더·목록·읽기
@@ -195,7 +196,8 @@ src/
     peribahasa.ts   오늘의 인도네시아어 문장 풀
     phrase.ts       문장 상세 해설 — IndexedDB 캐시 → 앱에 담긴 seed → AI 순서로 찾고 보관
     phrasePrompt.ts 문장 해설 프롬프트(앱과 scripts/gen-phrase-seed.mjs 가 같이 씀. import 없는 순수 TS 로 둘 것)
-    tips.ts         인도네시아 정보(팁) 생성 + IndexedDB
+    dailyCard.ts    오늘의 카드(인도네시아 이해 맨 위) — 서버 kata-public 의 /card/* 에서 받아 IndexedDB(kata-daily-card)에 둠.
+                    카드는 서버 Cron 이 하루 한 장 만들고 확인까지 마친 것(앱은 AI 를 부르지 않음). 2026-11-17 예전 생활 정보(tips.ts) 대체
     medali.ts       Medali 엔진 — 불꽃(주간 점수)·별(확정 단어) 판정, IndexedDB
     gamePool.ts     게임 출제 풀 (단어장·찾아본 단어·시드 3층, API 호출 없음)
     sermon.ts       Cloudflare Worker 호출 + IndexedDB
@@ -244,7 +246,7 @@ data/WORDLIST-PLAN.md       단어장 목표 개수·형식·분류 원칙
 | 저장소 | 내용 |
 |---|---|
 | localStorage | 단어장/단어, `geminiApiKey`, `app-font-scale-step`, `dict-search-history`(50개), 개인 폴더명, 난이도, TTS 음성, 설교문 서버 설정 |
-| IndexedDB | `kata-dict-results`(5,000 FIFO) · `kata-lookup-words` · `kata-stories` · `kata-qt-*` · `kata-sermon` · `kata-sermon-ink` · `kata-tts-audio`(공용 TTS 캐시, 5,000 FIFO) · `kata-sermon-audio`(설교문 낭독, **개수 제한 없음** — 한 편이 수십 MB 라 공용 TTS 캐시와 분리했다) |
+| IndexedDB | `kata-dict-results`(5,000 FIFO) · `kata-lookup-words` · `kata-stories` · `kata-qt-*` · `kata-sermon` · `kata-sermon-ink` · `kata-tts-audio`(공용 TTS 캐시, 5,000 FIFO) · `kata-daily-card`(받아 둔 오늘의 카드 글·그림) · `kata-sermon-audio`(설교문 낭독, **개수 제한 없음** — 한 편이 수십 MB 라 공용 TTS 캐시와 분리했다) |
 | GitHub CSV | `data/categories/*.csv` → 빌드 시 seed.json → 모든 기기 기본 단어장 |
 | Cloudflare R2 | 성경 낭독 mp3 1,189장 |
 | Cloudflare KV | 설교문 (Worker 경유) |
