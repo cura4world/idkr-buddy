@@ -1777,6 +1777,17 @@ test("오늘의 카드: Cron 이 오늘·내일을 하나씩 만들고, 오늘�
   await worker.scheduled({}, env, undefined);
   assert.equal(seen.gen, 2);
 
+  // 미리보기 앱 출처(appassets)도 카드 조회는 허용, 다른 길은 그대로 막힘 (2026-11-17 — 미리보기에서 카드가 비어 보이던 오류)
+  const PREVIEW_ORIGIN = "https://appassets.androidplatform.net";
+  const pv = await call(env, "GET", "/card/today", { headers: { origin: PREVIEW_ORIGIN } });
+  assert.equal(pv.headers.get("access-control-allow-origin"), PREVIEW_ORIGIN);
+  const pvImg = await call(env, "GET", "/card/img/" + today, { headers: { origin: PREVIEW_ORIGIN } });
+  assert.equal(pvImg.headers.get("access-control-allow-origin"), PREVIEW_ORIGIN);
+  const pvList = await call(env, "GET", "/card/list", { headers: { origin: PREVIEW_ORIGIN } });
+  assert.equal(pvList.headers.get("access-control-allow-origin"), PREVIEW_ORIGIN);
+  assert.equal((await call(env, "GET", "/", { headers: { origin: PREVIEW_ORIGIN } })).headers.get("access-control-allow-origin"), null);
+  assert.equal((await call(env, "GET", "/card/today", { headers: { origin: "https://evil.example" } })).headers.get("access-control-allow-origin"), null);
+
   // 하루가 지나면 어제 만든 "내일" 카드가 오늘 카드
   clockOffset += DAY;
   const t2 = await call(env, "GET", "/card/today");
