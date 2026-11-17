@@ -8,6 +8,7 @@ import {
   analyzeIdSentence,
   lookupKoWord,
   translateKoSentence,
+  koQuestionAmbiguous,
   DictResult,
   DictRelatedItem,
   IdSentenceResult,
@@ -28,7 +29,7 @@ import { isStoreApp } from "@/lib/platform";
 import { dropReturnTicket } from "@/lib/readReturn";
 import { medaliEngine } from "@/lib/medali";
 import { useBackClose } from "@/hooks/useBackClose";
-import { loadVoiceLang, saveVoiceLang, voiceLangLabel, withQuestionMark } from "@/lib/voiceSearchLang";
+import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // TTS: AndroidTTS 우선, 없으면 speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -385,7 +386,10 @@ const Dictionary = () => {
 
     // 캐시 적중: setLoading(true)를 아예 거치지 않아 로딩 화면이 깜빡이지 않습니다.
     if (!forceRefresh) {
-      const cached = await getCachedResult(cacheKey);
+      const cached0 = await getCachedResult(cacheKey);
+      // 말끝이 애매한 한국어 문장인데 의문문 번역이 없는 예전 결과(2026-11-17 전)면 새로 받습니다.
+      const cached =
+        cached0 && detected === "ko_sentence" && koQuestionAmbiguous(w) && !(cached0 as KoSentenceResult).question ? null : cached0;
       if (cached) {
         resetForNewSearch();
         if (detected === "id_word") {
@@ -642,14 +646,7 @@ const Dictionary = () => {
   const setVoiceLang = (v: "ko" | "id") => { setVoiceLangState(v); saveVoiceLang(v); };
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<any>(null);
-  // "?" 토글 — 켜고 말하면 인식된 문장 끝에 물음표를 붙여 의문문으로 찾습니다.
-  // 한 번 쓰면 꺼집니다(켜 둔 걸 잊고 평서문까지 의문문이 되는 걸 막음, 2026-11-16 사용자 요청)
-  const [askMode, setAskMode] = useState(false);
-  const toggleAskMode = () => {
-    const next = !askMode;
-    setAskMode(next);
-    if (next) toast("다음 음성 검색에 물음표(?)를 붙여 의문문으로 찾습니다");
-  };
+  // 2026-11-17: 예전 "?" 의문문 토글은 없앴습니다 — 말끝이 애매한 한국어 문장은 결과에 평서문·의문문을 함께 보여 줍니다(translateKoSentence).
 
   const speechSupported =
     typeof window !== "undefined" &&
@@ -676,10 +673,9 @@ const Dictionary = () => {
       rec.onresult = (ev: any) => {
         const heard = ev?.results?.[0]?.[0]?.transcript?.trim();
         if (heard) {
-          const text = withQuestionMark(heard, askMode);
+          const text = heard;
           setQuery(text);
           setListening(false);
-          if (askMode) setAskMode(false);
           handleSearch(text);
         }
       };
@@ -856,18 +852,6 @@ const Dictionary = () => {
             >
               {voiceLangLabel(voiceLang)}
             </button>
-            {/* 의문문 토글 (?) — 켜면 다음 음성 검색 한 번에 물음표를 붙입니다 */}
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={toggleAskMode}
-              className={`shrink-0 h-6 w-6 rounded-full font-gothic text-[12px] font-bold ${askMode ? "bg-[#2C6D63] text-white" : "bg-[#EEF3F2] text-[#2C6D63]"}`}
-              title="의문문으로 음성 검색"
-              aria-label={askMode ? "의문문으로 음성 검색: 켜짐" : "의문문으로 음성 검색: 꺼짐"}
-              aria-pressed={askMode}
-            >
-              ?
-            </button>
             {/* 마이크 */}
             <button
               onClick={startVoice}
@@ -926,7 +910,6 @@ const Dictionary = () => {
             <p className="text-white text-sm">
               {voiceLang === "ko" ? "한국어" : "인도네시아어"}로 말해 보세요
             </p>
-            {askMode && <p className="text-white/90 text-xs">의문문(?)으로 찾습니다</p>}
             <p className="text-white/60 text-xs">누르면 멈춤</p>
           </div>
         )}
@@ -1173,7 +1156,17 @@ const Dictionary = () => {
               <p className="m-0 break-words text-[0.96875rem] font-semibold leading-[1.55]">{koSentence.query}</p>
             </HeroCard>
             <BodyCard>
-              {[{ label: "구어체", bg: "#DDF0EA", fg: "#245A51", v: koSentence.casual }, { label: "문어체", bg: "#DCEAF6", fg: "#24506F", v: koSentence.formal }].map((row, i) => (
+              {/* 말끝이 애매한 문장(음성 입력 등)은 평서문 두 줄 + 의문문 한 줄 (2026-11-17, 예전 "?" 토글 대신) */}
+              {koSentence.question ? (
+                <p className="m-0 font-gothic text-[0.75rem] leading-[1.5] text-[#6B7479] break-keep">
+                  말끝만으로는 평서문인지 의문문인지 알 수 없어 둘 다 보여 줍니다.
+                </p>
+              ) : null}
+              {[
+                { label: koSentence.question ? "평서문 · 구어체" : "구어체", bg: "#DDF0EA", fg: "#245A51", v: koSentence.casual },
+                { label: koSentence.question ? "평서문 · 문어체" : "문어체", bg: "#DCEAF6", fg: "#24506F", v: koSentence.formal },
+                ...(koSentence.question ? [{ label: "의문문 · 구어체", bg: "#FCEBD9", fg: "#8A4B14", v: koSentence.question }] : []),
+              ].map((row, i) => (
                 row.v.id ? (
                   <section key={i} className="flex flex-col gap-1.5">
                     <span
@@ -1209,7 +1202,7 @@ const Dictionary = () => {
               <AiReportButton
                 feature="dictionary"
                 input={koSentence.query}
-                output={JSON.stringify({ casual: koSentence.casual, formal: koSentence.formal })}
+                output={JSON.stringify({ casual: koSentence.casual, formal: koSentence.formal, question: koSentence.question })}
                 className="flex flex-col items-center"
               />
             </div>
