@@ -137,7 +137,7 @@ const InsightCard = () => {
 
       {state === "ok" && card ? (
         <>
-          <div className="bg-[#FBF6EC] flex justify-center pt-4 pb-2">
+          <div className="bg-[#F9F2E1] flex justify-center pt-4 pb-2">
             <DailyCardImage d={card.d} has={card.img} size={150} rounded={0} />
           </div>
 
@@ -221,7 +221,7 @@ const InsightCard = () => {
                       key={e.d}
                       type="button"
                       onClick={() => openCard(e.d)}
-                      className="flex-1 min-w-0 bg-[#FBF6EC] rounded-[14px] px-2 pt-2 pb-2.5 flex flex-col items-center text-center active:opacity-90"
+                      className="flex-1 min-w-0 bg-[#F9F2E1] rounded-[14px] px-2 pt-2 pb-2.5 flex flex-col items-center text-center active:opacity-90"
                       style={CARD_SHADOW}
                     >
                       <DailyCardImage d={e.d} has={e.img} size={60} rounded={10} />
