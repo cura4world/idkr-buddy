@@ -152,7 +152,7 @@ const InsightCard = () => {
                 {card.d === kstToday() ? "오늘의 카드" : cardDateLabel(card.d)}
               </span>
             </div>
-            <h2 className="mt-2.5 mb-3 font-gothic text-[1.3125rem] font-bold leading-snug text-foreground break-keep">{card.title}</h2>
+            <h2 className="mt-2.5 mb-3 font-gothic text-[1.1875rem] font-bold leading-snug text-foreground break-keep">{card.title}</h2>
 
             <div>
               {card.body.map((p, i) => (
