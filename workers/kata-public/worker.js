@@ -2153,9 +2153,22 @@ function cardPublic(c) {
   };
 }
 
+// 카드 조회(로그인 없음·모두에게 같은 글)만 미리보기 앱 출처에도 엽니다(2026-11-17 오류 수정).
+// 미리보기 APK 는 웹 파일을 appassets.androidplatform.net 에서 열어(지금 앱과 저장소를 나누려고) 출처가 다르고,
+// 예전에는 이 출처에 CORS 허용이 없어 미리보기 앱에서 카드·지난 카드가 늘 비어 보였습니다.
+// 로그인·AI·구독 같은 다른 길은 그대로 APP_ORIGINS 만 받습니다.
+const CARD_EXTRA_ORIGINS = ["https://appassets.androidplatform.net"];
+
+function cardCors(request, headers) {
+  const origin = request.headers.get("origin") || "";
+  if (CARD_EXTRA_ORIGINS.indexOf(origin) >= 0) headers.set("access-control-allow-origin", origin);
+  return headers;
+}
+
 function cardJson(request, data, status, maxAge) {
   const res = json(request, data, status);
   res.headers.set("cache-control", maxAge ? "public, max-age=" + maxAge : "no-store");
+  cardCors(request, res.headers);
   return res;
 }
 
@@ -2197,7 +2210,9 @@ async function handleCardImg(request, env, d) {
   const headers = corsHeaders(request);
   headers["content-type"] = "text/plain; charset=utf-8";
   headers["cache-control"] = "public, max-age=31536000, immutable";
-  return new Response(b64, { status: 200, headers });
+  const res = new Response(b64, { status: 200, headers });
+  cardCors(request, res.headers);
+  return res;
 }
 
 /** POST /admin/card/generate {date, force}  (x-admin-key) → 그 날짜 카드를 지금 만듭니다(미리 만들기·다시 만들기). */
