@@ -89,7 +89,7 @@ const InsightCards = () => {
                     <span className="font-gothic text-[0.6875rem] text-[#8A9398]">{e.d === today ? "오늘" : cardDateLabel(e.d)}</span>
                     {e.chip ? <span className="font-gothic text-[0.6875rem] text-[#1E8A99]">· {e.chip}</span> : null}
                   </span>
-                  <span className="block mt-0.5 font-gothic text-[0.90625rem] leading-tight text-foreground truncate">{e.title}</span>
+                  <span className="block mt-0.5 font-gothic text-[0.84375rem] leading-tight text-foreground truncate">{e.title}</span>
                 </span>
                 <ChevronRight size={16} strokeWidth={2} className="shrink-0 text-[#B7BDC1]" />
               </button>
