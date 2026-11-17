@@ -23,7 +23,7 @@ import {
 } from "@/lib/percakapan";
 import type { PercakapanCategory, PercakapanLevel } from "@/lib/percakapan";
 import { builtinScenesOf } from "@/data/percakapan";
-import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { usePlan, PAYWALL_PATH, paywallNotice } from "@/lib/plan";
 import { isStoreApp } from "@/lib/platform";
 import LevelCircles from "@/components/LevelCircles";
 import FormSheet, { FORM_FIELD_CLASS, FormLabel, FormPrimaryButton } from "@/components/FormSheet";
@@ -176,8 +176,7 @@ const Percakapan = () => {
 
   // 잠긴 기능: 안내를 띄우고 구독 화면으로 (setState 없이 이동만)
   const goLocked = () => {
-    toast(LOCK_TEXT);
-    navigate(PAYWALL_PATH);
+    navigate(PAYWALL_PATH, paywallNotice(LOCK_TEXT));
   };
 
   const openMake = () => {
