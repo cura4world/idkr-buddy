@@ -46,7 +46,7 @@ export const WIPE_DBS: string[] = [
   "kata-dict-results",  // 사전 결과
   "kata-stories",       // 불러온 이야기
   "kata-percakapan",    // 만든 대화
-  "kata-tips",          // 가져온 생활 정보
+  "kata-daily-card",    // 받아 둔 오늘의 카드·그림 (예전 생활 정보 kata-tips 는 2026-11-17 main.tsx 가 지움)
 ];
 
 const ASK_EVENT = "kata-ask-local-wipe";
