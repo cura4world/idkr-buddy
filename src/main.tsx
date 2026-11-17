@@ -29,6 +29,22 @@ try {
   // IndexedDB 미지원 환경에서는 무시
 }
 
+// 생활 정보(누를 때마다 생성) → 오늘의 카드로 바뀜(2026-11-17)에 따른 1회성 정리.
+// 예전에 가져와 둔 생활 정보 저장소(kata-tips)를 지웁니다 — Arga·아내 앱에 쌓인 목록을 정리하기로 함.
+// 위 사전 이미지 정리와 같은 방식: 성공했을 때만 표시를 남기고, 실패하면 다음 실행에서 다시 시도합니다.
+try {
+  if (localStorage.getItem("kata-tips-purged") !== "1") {
+    const tipsReq = indexedDB.deleteDatabase("kata-tips");
+    tipsReq.onsuccess = () => {
+      try {
+        localStorage.setItem("kata-tips-purged", "1");
+      } catch (e) {}
+    };
+  }
+} catch (e) {
+  // IndexedDB 미지원 환경에서는 무시
+}
+
 // 앱 자동 업데이트: 앱이 포그라운드로 돌아올 때마다 새 버전이 있는지 확인하고,
 // 서비스워커가 새 버전으로 교체되면 "화면이 가려져 있을 때만" 새로고침합니다(출시 전 점검 C-04).
 //   - 처음 설치(이 페이지를 불러올 때 서비스워커가 없던 경우)의 첫 교체는 새 버전이 아니므로 새로고침하지 않습니다.
