@@ -377,11 +377,27 @@ export interface KoSentenceResult {
   formal: KoSentenceVariant;   // 문어체
   casual: KoSentenceVariant;   // 구어체
   hardWords: HardWord[];       // 학습 단어 (예문에 나온 어려운 단어)
+  /** 말끝만으로 평서문인지 의문문인지 알 수 없을 때, 의문문으로 읽은 번역(구어체). 그때 formal·casual 은 평서문 */
+  question?: KoSentenceVariant;
+}
+
+// 평서문·의문문이 같은 모양인 말끝 (2026-11-17 Arga 요청 — 예전 "?" 토글 대신)
+// "냈어요" "먹었어" "갔지" "좋아" 처럼 억양으로만 갈리는 끝. 물음표·마침표·느낌표가 붙어 있으면 그 뜻대로 봅니다.
+const KO_AMBIGUOUS_END = new RegExp("(요|어|아|해|지|죠|야|래|대|네)$");
+const KO_END_PUNCT = "?？.!。";
+
+/** 이 한국어 문장이 말끝만으로는 평서문인지 의문문인지 알 수 없는가 */
+export function koQuestionAmbiguous(sentence: string): boolean {
+  const t = String(sentence || "").trim();
+  if (!t) return false;
+  if (KO_END_PUNCT.indexOf(t.charAt(t.length - 1)) >= 0) return false;
+  return KO_AMBIGUOUS_END.test(t);
 }
 
 export async function translateKoSentence(sentence: string): Promise<KoSentenceResult> {
   const trimmed = sentence.trim();
   if (!trimmed) throw new Error("EMPTY_WORD");
+  const ambiguous = koQuestionAmbiguous(trimmed);
 
   const prompt =
     "당신은 한국인 학습자를 위한 한국어→인도네시아어 번역기입니다.\n" +
@@ -392,12 +408,16 @@ export async function translateKoSentence(sentence: string): Promise<KoSentenceR
     '  "query": "입력 문장",\n' +
     '  "formal": {"id": "문어체 인니어 문장", "pron": "발음(한글 근사)"},\n' +
     '  "casual": {"id": "구어체 인니어 문장", "pron": "발음(한글 근사)"},\n' +
+    (ambiguous ? '  "question": {"id": "의문문으로 읽었을 때의 구어체 인니어 문장(물음표로 끝남)", "pron": "발음(한글 근사)"},\n' : "") +
     '  "hardWords": [{"word": "인니어 단어", "meaning": "간략한 한국어 뜻"}]\n' +
     "}\n\n" +
     "주의:\n" +
     "- formal은 격식체/문어체(뉴스·공식 상황), casual은 일상 대화체로 자연스럽게.\n" +
     "- pron은 한국인이 읽기 쉽게 한글로 근사 표기.\n" +
-    "- hardWords는 위 두 문장에 나온 단어 중 초중급 학습자가 모를 만한 단어만 골라 넣으세요. 쉬운 단어는 제외.\n";
+    (ambiguous
+      ? "- 이 문장은 말끝만으로 평서문인지 의문문인지 알 수 없습니다(음성 입력은 물음표가 붙지 않음). formal·casual은 평서문으로 번역하고, 같은 문장을 묻는 말로 읽었을 때의 자연스러운 구어체 번역을 question에 넣으세요.\n"
+      : "") +
+    "- hardWords는 위 문장들에 나온 단어 중 초중급 학습자가 모를 만한 단어만 골라 넣으세요. 쉬운 단어는 제외.\n";
 
   const parsed = await callGeminiJSON(prompt, DICT_NEW);
   const variant = (v: any): KoSentenceVariant => ({
@@ -409,10 +429,12 @@ export async function translateKoSentence(sentence: string): Promise<KoSentenceR
   const casual = variant(parsed.casual);
   // 번역문이 둘 다 비어 왔으면 실패로 알립니다(빈 결과가 캐시에 남지 않게 — C-24).
   if (!formal.id && !casual.id) throw new Error("EMPTY_RESPONSE");
+  const question = ambiguous ? variant(parsed.question) : null;
   return {
     query: (parsed.query || trimmed).toString().trim(),
     formal,
     casual,
+    ...(question && question.id ? { question } : {}),
     hardWords: arr<HardWord>(parsed.hardWords).map((h) => ({
       word: (h?.word || "").toString().trim(),
       meaning: (h?.meaning || "").toString().trim(),
