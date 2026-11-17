@@ -24,8 +24,8 @@ import MedaliIdDialog from "@/components/MedaliIdDialog";
 import { needsMedaliId, syncMedali } from "@/lib/medaliSync";
 import { getEdition, takeRevokedNotice } from "@/lib/access";
 import { isStoreApp } from "@/lib/platform";
-import { loadVoiceLang, saveVoiceLang, voiceLangLabel, withQuestionMark } from "@/lib/voiceSearchLang";
-import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
+import { usePlan, PAYWALL_PATH, paywallNotice } from "@/lib/plan";
 import { usePlusPricing } from "@/lib/playOffers";
 import { lockButtonSub } from "@/lib/plusCopy";
 import { isWordbookVisible } from "@/lib/wordbookAccess";
@@ -164,8 +164,6 @@ const FOG_CSS =
   "100%{opacity:0;transform:translate(-50%,-36px) scale(1.03);filter:blur(8px)}}" +
   ".kata-fog{animation:kataFog 2.4s ease-out forwards}";
 
-// 잠긴 메뉴: 안내가 다 떠오른 뒤 구독 화면으로 넘어갑니다
-const LOCK_NAV_DELAY_MS = 700;
 
 const FLOWER_PETAL = "M0 0 C8 -6 12 -18 5 -24 C-1 -22 -4 -10 0 0 Z";
 
@@ -321,14 +319,7 @@ const Index = () => {
   const setVoiceLang = (v: "ko" | "id") => { setVoiceLangState(v); saveVoiceLang(v); };
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<any>(null);
-  // "?" 토글 — 켜고 말하면 인식된 문장 끝에 물음표를 붙여 의문문으로 찾습니다(사전 화면과 같은 동작, 2026-11-16 사용자 요청).
-  // 검색하면 사전으로 넘어가 이 화면이 내려가므로 따로 끄지 않아도 다음엔 꺼진 채로 시작합니다.
-  const [askMode, setAskMode] = useState(false);
-  const toggleAskMode = () => {
-    const next = !askMode;
-    setAskMode(next);
-    if (next) toast("다음 음성 검색에 물음표(?)를 붙여 의문문으로 찾습니다");
-  };
+  // 2026-11-17: 예전 "?" 의문문 토글은 없앴습니다 — 말끝이 애매한 한국어 문장은 사전 결과가 평서문·의문문을 함께 보여 줍니다.
 
   // 검색창을 누르면 최근 검색어를 보여줍니다.
   const [history, setHistory] = useState<string[]>([]);
@@ -564,13 +555,10 @@ const Index = () => {
   }, [staff]);
   const [fog, setFog] = useState<{ text: string; x: number; y: number; n: number } | null>(null);
   const fogTimers = useRef<number[]>([]);
-  const lockNavTimer = useRef<number | null>(null);
   useEffect(() => {
     return () => {
       fogTimers.current.forEach((t) => window.clearTimeout(t));
       fogTimers.current = [];
-      if (lockNavTimer.current !== null) window.clearTimeout(lockNavTimer.current);
-      lockNavTimer.current = null;
     };
   }, []);
 
@@ -592,15 +580,11 @@ const Index = () => {
     fogTimers.current.push(window.setTimeout(() => setFog(null), 2500));
   };
 
-  // 무료 사용자가 잠긴 메뉴를 누르면: 안내가 떠오르고, 곧 구독 화면으로 넘어갑니다.
-  // 넘어갈 때는 setState 없이 navigate 만 부릅니다(언마운트 중 setState 금지 규칙).
-  const tapLocked = (e: React.MouseEvent<HTMLElement>, text: string) => {
-    if (lockNavTimer.current !== null) return;
-    showFog(e.currentTarget, text);
-    lockNavTimer.current = window.setTimeout(() => {
-      lockNavTimer.current = null;
-      navigate(PAYWALL_PATH);
-    }, LOCK_NAV_DELAY_MS);
+  // 무료 사용자가 잠긴 메뉴를 누르면 바로 구독 화면으로 갑니다. 안내 글은 구독 화면 맨 위에서 스르륵 내려왔다 올라갑니다
+  // (2026-11-17 Arga 요청 — 예전에는 여기서 안내를 띄우고 0.7초 뒤 넘어가 글을 다 읽기 어려웠음).
+  // setState 없이 navigate 만 부릅니다(언마운트 중 setState 금지 규칙).
+  const tapLocked = (_e: React.MouseEvent<HTMLElement>, text: string) => {
+    navigate(PAYWALL_PATH, paywallNotice(text));
   };
 
   // 무료: "다른 문장" 은 하루 한 번
@@ -692,7 +676,7 @@ const Index = () => {
         const heard = ev?.results?.[0]?.[0]?.transcript?.trim();
         setListening(false);
         if (heard) {
-          const text = withQuestionMark(heard, askMode);
+          const text = heard;
           setQuery(text);
           goSearch(text);
         }
@@ -707,7 +691,7 @@ const Index = () => {
       recognitionRef.current = rec;
       setListening(true);
       rec.start();
-      toast((voiceLang === "ko" ? "한국어로 말해 보세요" : "인도네시아어로 말해 보세요") + (askMode ? " · 의문문(?)" : ""));
+      toast((voiceLang === "ko" ? "한국어로 말해 보세요" : "인도네시아어로 말해 보세요"));
     } catch (e) {
       setListening(false);
       toast("음성 검색을 시작하지 못했습니다");
@@ -1070,18 +1054,6 @@ const Index = () => {
                   style={{ width: 28, height: 24, borderRadius: 12, background: "#EEF3F2", color: "#2C6D63", fontSize: 11, fontWeight: 700, letterSpacing: "0.02em" }}
                 >
                   {voiceLangLabel(voiceLang)}
-                </button>
-                {/* 의문문 토글 (?) — 켜면 다음 음성 검색 한 번에 물음표를 붙입니다 */}
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={toggleAskMode}
-                  aria-label={askMode ? "의문문으로 음성 검색: 켜짐" : "의문문으로 음성 검색: 꺼짐"}
-                  aria-pressed={askMode}
-                  className="shrink-0 flex items-center justify-center rounded-full font-gothic"
-                  style={{ width: 24, height: 24, borderRadius: 12, background: askMode ? "#2C6D63" : "#EEF3F2", color: askMode ? "#FFFFFF" : "#2C6D63", fontSize: 12, fontWeight: 700 }}
-                >
-                  ?
                 </button>
                 <button
                   type="button"
@@ -1517,17 +1489,6 @@ const Index = () => {
               title="음성 검색 언어 바꾸기"
             >
               {voiceLangLabel(voiceLang)}
-            </button>
-            {/* 의문문 토글 (?) */}
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={toggleAskMode}
-              className={"shrink-0 h-6 w-6 rounded-full font-gothic text-[12px] font-bold " + (askMode ? "bg-primary text-white" : "bg-muted text-primary")}
-              title="의문문으로 음성 검색"
-              aria-pressed={askMode}
-            >
-              ?
             </button>
             <button
               type="button"
