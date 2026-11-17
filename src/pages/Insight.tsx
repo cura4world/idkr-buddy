@@ -171,10 +171,11 @@ const Insight = () => {
         {locked ? <PlusBox onClick={() => navigate(PAYWALL_PATH)} /> : null}
 
         {/* 오늘의 인도네시아 — 서버가 하루 한 장 만드는 카드(2026-11-17). 받지 못하면 이 구역은 그리지 않습니다 */}
-        <section>
-          <SectionTitle>오늘의 인도네시아</SectionTitle>
-          <TodayCard locked={locked} onOpen={(d) => go("/insight/card/" + d)} />
-        </section>
+        <TodayCard
+          locked={locked}
+          onOpen={(d) => go("/insight/card/" + d)}
+          title={<SectionTitle>오늘의 인도네시아</SectionTitle>}
+        />
 
         {/* 한눈에 보기 */}
         <section className="mt-2">
