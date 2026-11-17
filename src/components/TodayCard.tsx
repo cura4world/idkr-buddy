@@ -13,9 +13,11 @@ import { DailyCard, loadTodayCard, kstToday, cardDateLabel } from "@/lib/dailyCa
 interface Props {
   locked: boolean;
   onOpen: (d: string) => void;
+  /** 카드 위 구역 제목 (허브의 SectionTitle). 카드가 없으면 제목도 함께 숨깁니다 */
+  title: React.ReactNode;
 }
 
-const TodayCard = ({ locked, onOpen }: Props) => {
+const TodayCard = ({ locked, onOpen, title }: Props) => {
   const [card, setCard] = useState<DailyCard | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "none">("loading");
 
@@ -35,16 +37,21 @@ const TodayCard = ({ locked, onOpen }: Props) => {
 
   if (state === "loading" || !card) {
     return (
-      <div
-        className="rounded-[18px] bg-[#FBF6EC] h-[118px] animate-pulse"
-        style={{ boxShadow: "0 1px 3px rgba(16,40,50,0.06)" }}
-        aria-hidden="true"
-      />
+      <section>
+        {title}
+        <div
+          className="rounded-[18px] bg-[#FBF6EC] h-[118px] animate-pulse"
+          style={{ boxShadow: "0 1px 3px rgba(16,40,50,0.06)" }}
+          aria-hidden="true"
+        />
+      </section>
     );
   }
 
   const isToday = card.d === kstToday();
   return (
+    <section>
+    {title}
     <button
       type="button"
       onClick={() => onOpen(card.d)}
@@ -63,8 +70,8 @@ const TodayCard = ({ locked, onOpen }: Props) => {
           ) : null}
           {locked ? <Lock size={12} strokeWidth={2} className="text-[#A9B0B4]" /> : null}
         </span>
-        <span className="block font-gothic text-[1rem] font-bold leading-snug text-foreground">{card.title}</span>
-        <span className="block mt-1 font-gothic text-[0.78125rem] leading-[1.5] text-[#4D575C]">{card.summary}</span>
+        <span className="block font-gothic text-[1rem] font-bold leading-snug text-foreground break-keep">{card.title}</span>
+        <span className="block mt-1 font-gothic text-[0.78125rem] leading-[1.5] text-[#4D575C] break-keep">{card.summary}</span>
         {card.phrase.id ? (
           <span className="block mt-2">
             <span className="block font-word text-[0.8125rem] leading-snug text-[#1E8A99]">{card.phrase.id}</span>
@@ -74,6 +81,7 @@ const TodayCard = ({ locked, onOpen }: Props) => {
       </span>
       <DailyCardImage d={card.d} has={card.img} size={84} />
     </button>
+    </section>
   );
 };
 
