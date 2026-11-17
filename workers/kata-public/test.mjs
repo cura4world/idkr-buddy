@@ -1857,3 +1857,18 @@ test("오늘의 카드: CARD_AUTOGEN 이 없거나 AI_PAUSED=all 이면 Cron 은
   assert.equal(env.PUBLIC_KV.m.get("card:runs:" + kstToday()), "4");
   resetWorld();
 });
+
+test("오늘의 카드: CARD_BACKFILL_FROM 이 있으면 오늘·내일 다음에 빠진 지난 날을 최근 것부터 하나씩", async () => {
+  resetWorld();
+  const seen = cardWorld();
+  const from = kstToday(-3);
+  const env = makeEnv({ CARD_AUTOGEN: "1", CARD_BACKFILL_FROM: from });
+  for (let i = 0; i < 7; i++) await worker.scheduled({}, env, undefined);
+  const made = JSON.parse(env.PUBLIC_KV.m.get("card:index")).map((e) => e.d);
+  // 오늘·내일·어제·그제·사흘 전 = 5장, 그 뒤로는 할 일 없음
+  assert.deepEqual(made, [kstToday(1), kstToday(), kstToday(-1), kstToday(-2), kstToday(-3)]);
+  assert.equal(seen.gen, 5);
+  // 지난 날 카드는 바로 보임, 내일 것은 아직
+  assert.deepEqual((await call(env, "GET", "/card/list")).data.items.map((e) => e.d), [kstToday(), kstToday(-1), kstToday(-2), kstToday(-3)]);
+  resetWorld();
+});
