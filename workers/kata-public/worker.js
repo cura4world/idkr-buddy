@@ -2105,14 +2105,28 @@ async function generateCard(env, d, ctx) {
   return made;
 }
 
-/** Cron 이 부릅니다 — 오늘·내일 카드 가운데 없는 것 하나를 만듭니다. */
+/**
+ * Cron 이 부릅니다 — 오늘·내일 카드 가운데 없는 것 하나를 만듭니다.
+ * 둘 다 있으면, 변수 CARD_BACKFILL_FROM(날짜)이 있을 때 그날부터 어제까지 빠진 날을 최근 것부터 하나 채웁니다
+ * (출시 첫날에도 "지난 카드"에 읽을거리가 있게 — 결정 문서 ⑥ "출시 전에 2~4주 치").
+ */
 async function runCardJob(env, ctx) {
   if (String(env.CARD_AUTOGEN || "") !== "1") return { skipped: "off" };
   if (!env.AI_PROXY_URL || !env.PROXY_SECRET) return { skipped: "not-configured" };
   if (String(env.AI_PAUSED || "").trim().toLowerCase() === "all") return { skipped: "paused" };
   if (await env.PUBLIC_KV.get(CARD_LOCK_KEY)) return { skipped: "locked" };
   const today = kstDay(Date.now());
-  for (const d of [today, addDays(today, 1)]) {
+  const targets = [today, addDays(today, 1)];
+  const from = String(env.CARD_BACKFILL_FROM || "").trim();
+  if (CARD_DATE_RE.test(from) && from < today) {
+    const have = {};
+    (await cardReadIndex(env)).forEach((e) => { if (e && e.d) have[e.d] = true; });
+    // 하루에 너무 많이 돌지 않게 60일까지만
+    for (let d = addDays(today, -1), n = 0; d >= from && n < 60; d = addDays(d, -1), n++) {
+      if (!have[d]) targets.push(d);
+    }
+  }
+  for (const d of targets) {
     if (await env.PUBLIC_KV.get(cardKey(d))) continue;
     const runs = Number((await env.PUBLIC_KV.get(cardRunsKey(d))) || 0);
     if (runs >= CARD_MAX_RUNS) continue;
