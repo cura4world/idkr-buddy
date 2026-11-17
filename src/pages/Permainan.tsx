@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import { listRounds } from "@/lib/medali";
 import type { GameRound } from "@/lib/medali";
-import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { usePlan, PAYWALL_PATH, paywallNotice } from "@/lib/plan";
 import { isStoreApp } from "@/lib/platform";
 import { currentStreak } from "@/lib/kataHariIni";
 import MedaliSheet from "@/components/MedaliSheet";
@@ -141,8 +141,7 @@ const Permainan = () => {
   const open = (id: GameId) => {
     const locked = id !== "kata" && !plus;
     if (locked) {
-      toast("게임은 Plus 회원 기능입니다");
-      navigate(PAYWALL_PATH);
+      navigate(PAYWALL_PATH, paywallNotice("게임은 Plus 회원 기능입니다"));
       return;
     }
     navigate(GAME_META[id].path);
