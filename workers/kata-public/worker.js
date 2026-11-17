@@ -15,6 +15,8 @@
 //   GET  /admin/special?email=|uid=         그 계정의 등급 확인 (x-admin-key)
 //   POST /admin/delete                      이메일로 삭제를 요청한 계정 지우기 (x-admin-key)
 //   GET  /admin/budget                      오늘의 AI 호출 수와 하루 상한 설정 확인 (x-admin-key)
+//   GET  /card/today · /card/list · /card/day/{날짜} · /card/img/{날짜}   오늘의 카드 (로그인 없이, 오늘까지만)
+//   POST /admin/card/generate · /admin/card/delete · GET /admin/card   오늘의 카드 미리 만들기·내리기·확인 기록 (x-admin-key)
 //
 // 사용량 카운터는 Durable Object(바인딩 USAGE_DO, 클래스 UsageCounter)가 있으면 거기에, 없으면 KV 에 셉니다.
 // 전체 하루 상한은 변수 AI_DAILY_BUDGET, 신고 알림은 비밀값 TELEGRAM_BOT_TOKEN·TELEGRAM_CHAT_ID (모두 비워 두면 꺼짐).
@@ -1720,6 +1722,505 @@ async function handleAdminBudget(request, env) {
   });
 }
 
+// ── 오늘의 카드 (인도네시아 이해 맨 위, 2026-11-17) ─────────────────
+//
+// 서버가 하루에 한 장 만들어 모든 사용자가 같이 봅니다(사용자마다 만들지 않음). 결정 문서 ⑥.
+//   1) 주제 고르기 — 그날이 명절·기념일(CARD_EVENTS)이면 그 주제, 아니면 일반 주제를 날짜로 돌려 가며
+//   2) 글 만들기(Gemini) → 3) 확인(ANTHROPIC_API_KEY 가 있으면 Claude, 없으면 Gemini 가 한 번 더) → 고친 판이 있으면 그것을 씀
+//   4) 그림 만들기(Gemini 이미지, 파스텔 플랫 고정) → 5) 그림 확인(글자·사람·여러 물건이 없는지). 두 번 다 실패하면 그림 없이 냄
+// 만드는 때: Cron(매시간)이 오늘·내일 카드가 없으면 하나씩 만듭니다(변수 CARD_AUTOGEN = "1" 일 때만).
+//   그래서 한국 자정에는 이미 다음 날 카드가 준비되어 있습니다. 날짜마다 시도는 CARD_MAX_RUNS 번까지.
+// 보이는 것: 오늘(한국 날짜)까지의 카드만. 미리 만든 내일 카드는 내일 0시부터 보입니다.
+// 저장: KV — 카드 글 card:v1:<날짜>, 그림 cardimg:v1:<날짜>(base64 글자 그대로, 서버는 풀지 않음), 목록 card:index.
+// 그림은 앱이 base64 를 받아 직접 그림으로 바꿉니다(무료 요금제 CPU 한도 안에 들도록 서버에서 풀지 않음).
+// AI 호출은 사용자 요청과 같은 Cloud Run 중계를 쓰고, 전체 하루 상한(AI_DAILY_BUDGET)에도 셉니다.
+
+const CARD_VER = "v1";
+const CARD_INDEX_KEY = "card:index";
+const CARD_LOCK_KEY = "card:lock";
+const CARD_INDEX_MAX = 1000;
+const CARD_MAX_RUNS = 4;          // 한 날짜에 Cron 이 시도하는 최대 횟수
+const CARD_LOCK_SEC = 600;        // 겹쳐 돌지 않게 — 한 번 도는 데 길어야 몇 분
+const CARD_DATE_RE = new RegExp("^[0-9]{4}-[0-9]{2}-[0-9]{2}$");
+// 문장 끝의 "~요."·"~죠?" (문장부호가 붙었거나 글 끝). "필요 없이"처럼 낱말 속 "요" 는 잡지 않습니다.
+const CARD_YO_RE = new RegExp("(요|죠)([.!?…]+|$)");
+const CARD_FENCE_RE = new RegExp("```(json)?", "g");
+// 글: 앞의 것이 거절되면(없는 모델·일시 오류) 다음 것으로. 사용자 기능의 허용 목록(TEXT_MODELS)보다 앞에 조금 더 좋은 모델을 둡니다.
+const CARD_TEXT_MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-2.5-flash-lite"];
+const CARD_IMAGE_MODELS = ["gemini-3.1-flash-image", "gemini-2.5-flash-image"];
+const CARD_CLAUDE_MODEL = "claude-sonnet-5-5";
+
+// 그림체 — 2026-11-17 Arga 가 시안 4가지(파스텔 플랫·수채화·리소·선화) 중 고르고, 다시 "물건 하나만 심플하게"로 줄인 것.
+// 이 글을 바꾸면 날마다 그림의 느낌이 바뀝니다. 바꿀 때는 결정 문서 ⑥ 도 함께 고칩니다.
+const CARD_IMAGE_STYLE =
+  "Style (fixed): minimal spot illustration, a single small object only, soft pastel flat vector, no outlines, " +
+  "very few simple geometric shapes, at most 4 colors from this palette: pastel teal (#37C0D2 family), warm cream, " +
+  "soft coral, butter yellow, leaf green (use soft red and white only when the object is the Indonesian flag). " +
+  "One subtle soft shadow directly beneath the object. Plain solid cream (#FBF6EC) background, nothing else in the scene, " +
+  "object centered and occupying about 55% of the frame. No people, no faces, no hands, no text, no letters, no numbers.";
+
+// 일반 주제 — 날짜마다 돌려 가며 고릅니다(같은 날 다시 만들면 다음 것).
+const CARD_TOPICS = [
+  { chip: "음식", hint: "인도네시아의 음식·간식·길거리 먹거리 하나" },
+  { chip: "생활 예절", hint: "인도네시아 사람들의 일상 예절이나 인사 습관 하나" },
+  { chip: "말과 표현", hint: "일상에서 자주 쓰는 인도네시아어 표현이나 재미있는 말 하나" },
+  { chip: "지역", hint: "인도네시아의 한 지역(섬·도시)의 특색 하나" },
+  { chip: "자연", hint: "인도네시아의 자연·동물·식물 하나" },
+  { chip: "전통", hint: "전통 공예·의상·악기·춤 가운데 하나" },
+  { chip: "시장", hint: "시장·가게·흥정 같은 쇼핑 문화 하나" },
+  { chip: "커피와 차", hint: "인도네시아의 커피나 차 문화 하나" },
+  { chip: "놀이", hint: "인도네시아의 전통 놀이나 스포츠 하나" },
+  { chip: "속담", hint: "인도네시아 속담 하나와 그 뜻" },
+  { chip: "교통", hint: "앙꼿·오젝·기차 같은 교통수단이나 이동 문화 하나" },
+  { chip: "집과 가족", hint: "집·가족·이웃 사이의 생활 문화 하나" },
+];
+
+// 명절·기념일 — 그날 카드의 주제가 됩니다. 이슬람력 명절은 해마다 날짜가 바뀌므로 정부 발표(SKB 3 Menteri)를 보고 해마다 넣습니다.
+// 2027년은 SKB 1205·3·2 Tahun 2026(2026-09 발표) 기준. 2028년 날짜는 2027년 가을 발표 뒤에 덧붙입니다.
+// approx: 날짜가 정부 판정(sidang isbat)으로 정해져 하루 이틀 달라질 수 있는 것 — 글에 정확한 날짜를 단정하지 않게 합니다.
+const CARD_EVENTS = [
+  { d: "2026-10-28", chip: "청년 맹세의 날", name: "Hari Sumpah Pemuda (1928년 청년 맹세 기념일)" },
+  { d: "2026-11-10", chip: "영웅의 날", name: "Hari Pahlawan (영웅의 날, 1945년 수라바야 전투 기념)" },
+  { d: "2026-11-12", chip: "아버지의 날", name: "Hari Ayah Nasional (인도네시아 아버지의 날)" },
+  { d: "2026-11-25", chip: "교사의 날", name: "Hari Guru Nasional (교사의 날)" },
+  { d: "2026-12-22", chip: "어머니의 날", name: "Hari Ibu (인도네시아 어머니의 날)" },
+  { d: "2026-12-25", chip: "성탄절", name: "Hari Natal (성탄절, 국가 공휴일)" },
+  { d: "2027-01-01", chip: "새해", name: "Tahun Baru Masehi (양력 새해, 국가 공휴일)" },
+  { d: "2027-01-05", chip: "이스라 미으라즈", name: "Isra Mikraj (이슬람 기념일, 국가 공휴일)" },
+  { d: "2027-02-06", chip: "임렉(설날)", name: "Tahun Baru Imlek (중국계 설날, 국가 공휴일)" },
+  { d: "2027-02-08", chip: "라마단", name: "Awal Ramadan (라마단 금식 기간이 시작되는 무렵)", approx: true },
+  { d: "2027-03-05", chip: "무딕", name: "Mudik (르바란을 앞둔 귀향 행렬)" },
+  { d: "2027-03-08", chip: "녀삐", name: "Hari Raya Nyepi (발리 힌두교 새해, 고요의 날, 국가 공휴일)" },
+  { d: "2027-03-10", chip: "르바란", name: "Idulfitri / Lebaran (라마단을 마친 명절, 국가 공휴일)" },
+  { d: "2027-03-26", chip: "성금요일", name: "Wafat Yesus Kristus (성금요일, 국가 공휴일)" },
+  { d: "2027-03-28", chip: "부활절", name: "Paskah (부활절, 국가 공휴일)" },
+  { d: "2027-04-21", chip: "까르띠니의 날", name: "Hari Kartini (여성 교육 선구자 까르띠니 기념일)" },
+  { d: "2027-05-01", chip: "노동절", name: "Hari Buruh (노동절, 국가 공휴일)" },
+  { d: "2027-05-02", chip: "교육의 날", name: "Hari Pendidikan Nasional (교육의 날)" },
+  { d: "2027-05-06", chip: "승천일", name: "Kenaikan Yesus Kristus (예수 승천일, 국가 공휴일)" },
+  { d: "2027-05-17", chip: "이둘아드하", name: "Iduladha (희생제, 국가 공휴일)" },
+  { d: "2027-05-20", chip: "와이삭", name: "Hari Raya Waisak (석가 탄신일, 국가 공휴일)" },
+  { d: "2027-06-01", chip: "빤짜실라", name: "Hari Lahir Pancasila (건국 이념 빤짜실라 탄생일, 국가 공휴일)" },
+  { d: "2027-06-06", chip: "이슬람 새해", name: "Tahun Baru Islam (이슬람력 새해, 국가 공휴일)" },
+  { d: "2027-08-15", chip: "마울리드", name: "Maulid Nabi (예언자 무함마드 탄신일, 국가 공휴일)" },
+  { d: "2027-08-17", chip: "독립기념일", name: "Hari Kemerdekaan (1945년 8월 17일 독립 선언, 국가 공휴일)" },
+  { d: "2027-10-02", chip: "바틱의 날", name: "Hari Batik Nasional (바틱의 날)" },
+  { d: "2027-10-28", chip: "청년 맹세의 날", name: "Hari Sumpah Pemuda (1928년 청년 맹세 기념일)" },
+  { d: "2027-11-10", chip: "영웅의 날", name: "Hari Pahlawan (영웅의 날, 1945년 수라바야 전투 기념)" },
+  { d: "2027-11-25", chip: "교사의 날", name: "Hari Guru Nasional (교사의 날)" },
+  { d: "2027-12-22", chip: "어머니의 날", name: "Hari Ibu (인도네시아 어머니의 날)" },
+  { d: "2027-12-25", chip: "성탄절", name: "Hari Natal (성탄절, 국가 공휴일)" },
+  { d: "2027-12-26", chip: "이스라 미으라즈", name: "Isra Mikraj (이슬람 기념일, 국가 공휴일)" },
+];
+
+function cardKey(d) { return "card:" + CARD_VER + ":" + d; }
+function cardImgKey(d) { return "cardimg:" + CARD_VER + ":" + d; }
+function cardRunsKey(d) { return "card:runs:" + d; }
+function addDays(d, n) { return new Date(Date.parse(d + "T00:00:00Z") + n * 86400000).toISOString().slice(0, 10); }
+function dayNumber(d) { return Math.floor(Date.parse(d + "T00:00:00Z") / 86400000); }
+
+/** 그날의 주제. attempt 가 늘면 일반 주제는 다음 것으로(명절은 그대로). */
+function cardTopicFor(d, attempt) {
+  const ev = CARD_EVENTS.find((e) => e.d === d);
+  if (ev) return { kind: "event", chip: ev.chip, hint: ev.name, approx: !!ev.approx };
+  const n = CARD_TOPICS.length;
+  const t = CARD_TOPICS[(((dayNumber(d) + (attempt || 0)) % n) + n) % n];
+  return { kind: "topic", chip: t.chip, hint: t.hint, approx: false };
+}
+
+function cardStripJson(text) {
+  const s = String(text || "").replace(CARD_FENCE_RE, "").trim();
+  const a = s.indexOf("{");
+  const b = s.lastIndexOf("}");
+  if (a < 0 || b <= a) return null;
+  try { return JSON.parse(s.slice(a, b + 1)); } catch (e) { return null; }
+}
+
+function cardStr(v, max) { return String(v == null ? "" : v).trim().slice(0, max); }
+
+/** 모델이 준 카드 모양을 다듬고 검사합니다. 모자라면 null. */
+function cardNormalize(o) {
+  if (!o || typeof o !== "object") return null;
+  const body = (Array.isArray(o.body) ? o.body : [o.body]).map((p) => cardStr(p, 600)).filter((p) => p);
+  const words = (Array.isArray(o.words) ? o.words : [])
+    .map((w) => ({ id: cardStr(w && w.id, 40), ko: cardStr(w && w.ko, 60) }))
+    .filter((w) => w.id && w.ko)
+    .slice(0, 3);
+  const card = {
+    chip: cardStr(o.chip, 16),
+    title: cardStr(o.title, 40),
+    summary: cardStr(o.summary, 160),
+    body: body.slice(0, 4),
+    phrase: { id: cardStr(o.phrase && o.phrase.id, 120), ko: cardStr(o.phrase && o.phrase.ko, 120) },
+    words,
+    image: cardStr(o.image, 300),
+  };
+  if (!card.title || !card.summary || card.body.length < 1 || !card.phrase.id || !card.phrase.ko || words.length < 2 || !card.image) return null;
+  return card;
+}
+
+/** 앱 문구 규칙 — 설명은 "~입니다" 체. 제목·요약·본문에 "~요" 로 끝나는 문장이 있으면 어긋난 것으로 봅니다(인도네시아어 표현의 뜻풀이는 제외). */
+function cardStyleProblem(card) {
+  const parts = [card.title, card.summary].concat(card.body);
+  for (const p of parts) if (CARD_YO_RE.test(p)) return "STYLE_YO";
+  return "";
+}
+
+function cardGenPrompt(d, topic, recentTitles) {
+  return (
+    "당신은 인도네시아 문화를 잘 아는 한국인 편집자입니다. 인도네시아어를 배우는 한국 사람이 앱에서 매일 한 장씩 보는 '오늘의 인도네시아' 카드를 만듭니다.\n" +
+    "결과는 JSON 하나로만 출력합니다.\n\n" +
+    "날짜: " + d + "\n" +
+    (topic.kind === "event"
+      ? "오늘의 주제(명절·기념일): " + topic.hint + "\n" +
+        (topic.approx ? "이 날짜는 정부 판정으로 하루 이틀 달라질 수 있습니다. 글에 정확한 날짜를 단정하지 말고 '이 무렵'으로 씁니다.\n" : "")
+      : "오늘의 분야: " + topic.chip + " — " + topic.hint + " (그 안에서 구체적인 소재 하나를 고릅니다)\n") +
+    "\n출력 형식:\n" +
+    "{\n" +
+    '  "chip": "카드 위 작은 꼬리표, 한국어 2~8자 (예: ' + topic.chip + ')",\n' +
+    '  "title": "제목, 한국어 16자 이내",\n' +
+    '  "summary": "카드에 보이는 짧은 설명. 한국어 1~2문장, 합쳐서 70자 이내",\n' +
+    '  "body": ["자세한 설명 문단 2~3개. 모두 합쳐 4~6문장"],\n' +
+    '  "phrase": { "id": "주제와 이어지는 인도네시아어 한 마디(짧은 문장이나 표현)", "ko": "그 뜻(한국어)" },\n' +
+    '  "words": [{ "id": "관련 인도네시아어 단어(기본형, 소문자)", "ko": "짧은 한국어 뜻" }, "... 2~3개"],\n' +
+    '  "image": "카드 그림으로 그릴 물건 하나를 영어로 짧게 (예: a bowl of bakso soup). 사람·손·글자·여러 물건이 아닌 단순한 물건 하나"\n' +
+    "}\n\n" +
+    "규칙:\n" +
+    "- 반드시 사실만 씁니다. 확실하지 않은 숫자·연도·유래는 쓰지 않거나 '~라는 이야기가 전해집니다'처럼 씁니다.\n" +
+    "- 한국어 문장은 모두 '~입니다/~습니다' 체로 끝냅니다. '~해요', '~에요', '~죠' 체는 쓰지 않습니다.\n" +
+    "- 인도네시아어는 표준 표기(KBBI·EYD)를 따릅니다. 한국어 음역은 꼭 필요할 때만 괄호 없이 자연스럽게 씁니다.\n" +
+    "- 종교 기념일은 국가 공휴일이라는 사실과 사람들이 그날을 어떻게 보내는지만 중립적으로 소개합니다. 교리 설명·신앙 권유·종교 비교나 평가는 하지 않습니다.\n" +
+    "- 정치·분쟁·재난·사건 사고·민족이나 종교 갈등은 다루지 않습니다.\n" +
+    "- 너무 뻔한 상식보다 '오, 그렇구나' 싶은 구체적인 이야기를 고릅니다.\n" +
+    "- 최근 카드와 겹치지 않게 합니다. 최근 제목: " + (recentTitles.length ? recentTitles.join(", ") : "없음") + "\n"
+  );
+}
+
+function cardReviewPrompt(d, topic, card) {
+  return (
+    "다음은 인도네시아어를 배우는 한국 사람용 앱의 '오늘의 인도네시아' 카드(" + d + ")입니다. 출판 전에 검수합니다.\n" +
+    (topic.kind === "event" ? "주제(명절·기념일): " + topic.hint + "\n" : "") +
+    "\n카드(JSON):\n" + JSON.stringify(card) + "\n\n" +
+    "확인할 것:\n" +
+    "1. 인도네시아에 관한 사실이 정확한가 (숫자·연도·유래·지역·관습). 확실하지 않은 내용은 빼거나 '~라는 이야기가 전해집니다'로 바꿉니다.\n" +
+    "2. phrase.id 가 자연스럽고 맞춤법이 맞는 인도네시아어인가, phrase.ko 가 그 뜻과 맞는가.\n" +
+    "3. words 의 인도네시아어 표기와 한국어 뜻이 맞는가.\n" +
+    "4. 한국어 제목·요약·본문이 '~입니다/~습니다' 체인가 ('~해요/~에요/~죠' 체가 있으면 고칩니다).\n" +
+    "5. 종교는 중립적인 소개만 있는가, 정치·분쟁·재난·갈등이 없는가.\n" +
+    "6. image 가 사람·글자 없는 단순한 물건 하나인가.\n\n" +
+    "결과는 JSON 하나로만 출력합니다:\n" +
+    '{ "ok": true 또는 false, "problems": ["찾은 문제를 한국어로 짧게"], "fixed": 문제가 있으면 같은 모양으로 고친 카드 전체, 없으면 null }\n' +
+    "고칠 수 없을 만큼 틀렸으면 ok 를 false, fixed 를 null 로 둡니다."
+  );
+}
+
+/** Cloud Run 중계로 한 번 부릅니다. 전체 하루 상한에 셉니다(실패하면 돌려받음). */
+async function cardCallProxy(env, model, body, ctx) {
+  const budget = await takeBudget(env, "plus", "text", ctx);
+  let res;
+  try {
+    res = await tfetch(env.AI_PROXY_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-kata-proxy": env.PROXY_SECRET, "x-kata-model": model },
+      body: JSON.stringify(body),
+    }, AI_TIMEOUT_MS);
+  } catch (e) {
+    await refundBudget(env, budget);
+    return { ok: false, status: 0, raw: "" };
+  }
+  let raw = "";
+  try { raw = await res.text(); } catch (e) { raw = ""; }
+  if (!res.ok) await refundBudget(env, budget);
+  return { ok: res.ok, status: res.status, raw };
+}
+
+function cardFirstText(raw) {
+  try {
+    const d = JSON.parse(raw);
+    const parts = d && d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
+    if (!Array.isArray(parts)) return "";
+    return parts.map((p) => (p && typeof p.text === "string" ? p.text : "")).join("").trim();
+  } catch (e) {
+    return "";
+  }
+}
+
+/** 글 모델에 JSON 을 받습니다. 모델 목록을 차례로 시도. 반환 { obj, model } 또는 null. */
+async function cardAskJson(env, prompt, ctx, extraParts) {
+  const parts = (extraParts || []).concat([{ text: prompt }]);
+  const body = {
+    contents: [{ role: "user", parts }],
+    generationConfig: { responseMimeType: "application/json", temperature: 0.7, maxOutputTokens: 4096 },
+  };
+  for (const model of CARD_TEXT_MODELS) {
+    const r = await cardCallProxy(env, model, body, ctx);
+    if (!r.ok) continue;
+    const obj = cardStripJson(cardFirstText(r.raw));
+    if (obj) return { obj, model };
+  }
+  return null;
+}
+
+/** Claude 로 확인(ANTHROPIC_API_KEY 가 있을 때만). 반환 { obj } 또는 null(쓸 수 없음). */
+async function cardAskClaude(env, prompt) {
+  if (!env.ANTHROPIC_API_KEY) return null;
+  try {
+    const res = await tfetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: env.CARD_REVIEW_MODEL || CARD_CLAUDE_MODEL,
+        max_tokens: 4096,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    }, AI_TIMEOUT_MS);
+    if (!res.ok) return null;
+    const d = await res.json();
+    const text = Array.isArray(d && d.content) ? d.content.map((c) => (c && c.type === "text" ? c.text : "")).join("") : "";
+    const obj = cardStripJson(text);
+    return obj ? { obj } : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/** 이미지 응답에서 base64 자료와 형식만 꺼냅니다(수 MB 라 통째로 풀지 않음). */
+function cardExtractImage(raw) {
+  if (!raw) return null;
+  let at = raw.indexOf('"inlineData"');
+  if (at < 0) at = raw.indexOf('"inline_data"');
+  if (at < 0) return null;
+  let mime = "image/png";
+  const mAt = raw.indexOf("ime", at);
+  if (mAt > 0 && mAt - at < 200) {
+    const q1 = raw.indexOf('"', raw.indexOf(":", mAt) + 1);
+    const q2 = raw.indexOf('"', q1 + 1);
+    if (q1 > 0 && q2 > q1 && q2 - q1 < 40) mime = raw.slice(q1 + 1, q2);
+  }
+  const dataAt = raw.indexOf('"data"', at);
+  if (dataAt < 0) return null;
+  const q1 = raw.indexOf('"', raw.indexOf(":", dataAt) + 1);
+  const q2 = raw.indexOf('"', q1 + 1);
+  if (q1 < 0 || q2 <= q1 + 100) return null;
+  if (mime.indexOf("image/") !== 0) return null;
+  return { mime, b64: raw.slice(q1 + 1, q2) };
+}
+
+async function cardMakeImage(env, subject, ctx) {
+  const body = {
+    contents: [{ role: "user", parts: [{ text: "Subject: " + subject + ".\n" + CARD_IMAGE_STYLE }] }],
+    generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+  };
+  for (const model of CARD_IMAGE_MODELS) {
+    const r = await cardCallProxy(env, model, body, ctx);
+    if (!r.ok) continue;
+    const img = cardExtractImage(r.raw);
+    if (img) return Object.assign(img, { model });
+  }
+  return null;
+}
+
+/** 그림 확인 — 글자·사람·여러 물건이 없고 주제와 맞는가. 확인 자체가 안 되면 통과로 봅니다(그림이 없는 것보다 낫다). */
+async function cardCheckImage(env, subject, img, ctx) {
+  const prompt =
+    "This image should be a minimal pastel flat spot illustration of: " + subject + ".\n" +
+    "Check: (1) no visible text, letters or numbers, (2) no people, faces or hands, (3) one main object on a plain light background, " +
+    "(4) it recognisably shows the subject, (5) no obvious drawing errors (broken shapes, duplicated or floating parts).\n" +
+    'Answer with JSON only: { "ok": true or false, "reason": "short reason" }';
+  const r = await cardAskJson(env, prompt, ctx, [{ inlineData: { mimeType: img.mime, data: img.b64 } }]);
+  if (!r) return { ok: true, reason: "check-unavailable" };
+  return { ok: r.obj.ok === true, reason: cardStr(r.obj.reason, 200) };
+}
+
+async function cardReadIndex(env) {
+  const v = await kvGetJson(env, CARD_INDEX_KEY);
+  return Array.isArray(v) ? v : [];
+}
+
+async function cardWriteIndexEntry(env, entry) {
+  const list = (await cardReadIndex(env)).filter((e) => e && e.d !== entry.d);
+  list.push(entry);
+  list.sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0));
+  await kvPutJson(env, CARD_INDEX_KEY, list.slice(0, CARD_INDEX_MAX));
+}
+
+/**
+ * 한 날짜의 카드를 만들어 저장합니다. 성공하면 카드, 실패하면 null.
+ * 글이 확인을 통과하지 못하면 일반 주제는 다음 주제로 한 번 더 해 봅니다.
+ */
+async function generateCard(env, d, ctx) {
+  const index = await cardReadIndex(env);
+  const recentTitles = index.filter((e) => e.d !== d).slice(0, 40).map((e) => e.title);
+  let made = null;
+  for (let attempt = 0; attempt < 2 && !made; attempt++) {
+    const topic = cardTopicFor(d, attempt);
+    const gen = await cardAskJson(env, cardGenPrompt(d, topic, recentTitles), ctx);
+    let card = gen ? cardNormalize(gen.obj) : null;
+    if (!card) continue;
+    // 확인 — Claude(있으면) → 없으면 Gemini 가 한 번 더
+    const reviewPrompt = cardReviewPrompt(d, topic, card);
+    let review = await cardAskClaude(env, reviewPrompt);
+    let reviewer = "claude";
+    if (!review) {
+      review = await cardAskJson(env, reviewPrompt, ctx);
+      reviewer = "gemini";
+    }
+    if (!review) continue; // 확인을 못 했으면 내보내지 않음
+    const problems = Array.isArray(review.obj.problems) ? review.obj.problems.map((p) => cardStr(p, 200)).slice(0, 8) : [];
+    let fixed = false;
+    if (review.obj.ok !== true) {
+      const f = cardNormalize(review.obj.fixed);
+      if (!f) continue; // 고칠 수 없다고 본 것
+      card = f;
+      fixed = true;
+    }
+    if (cardStyleProblem(card)) continue;
+    made = {
+      v: 1, d, chip: card.chip || topic.chip, title: card.title, summary: card.summary, body: card.body,
+      phrase: card.phrase, words: card.words, image: card.image, img: false,
+      event: topic.kind === "event" ? topic.hint : null,
+      gen: gen.model, review: { by: reviewer, fixed, problems }, at: Date.now(),
+    };
+  }
+  if (!made) return null;
+
+  // 그림 — 확인을 통과하지 못하면 한 번 더. 두 번 다 안 되면 그림 없이 냅니다(앱은 기본 그림을 보임).
+  for (let i = 0; i < 2 && !made.img; i++) {
+    const img = await cardMakeImage(env, made.image, ctx);
+    if (!img) break; // 그림 모델 자체가 안 되면 더 시도하지 않음
+    const check = await cardCheckImage(env, made.image, img, ctx);
+    made.imgCheck = check.reason;
+    if (!check.ok) continue;
+    await env.PUBLIC_KV.put(cardImgKey(d), img.b64);
+    made.img = true;
+    made.imgMime = img.mime;
+    made.imgModel = img.model;
+  }
+  await kvPutJson(env, cardKey(d), made);
+  await cardWriteIndexEntry(env, { d, chip: made.chip, title: made.title, img: made.img });
+  return made;
+}
+
+/** Cron 이 부릅니다 — 오늘·내일 카드 가운데 없는 것 하나를 만듭니다. */
+async function runCardJob(env, ctx) {
+  if (String(env.CARD_AUTOGEN || "") !== "1") return { skipped: "off" };
+  if (!env.AI_PROXY_URL || !env.PROXY_SECRET) return { skipped: "not-configured" };
+  if (String(env.AI_PAUSED || "").trim().toLowerCase() === "all") return { skipped: "paused" };
+  if (await env.PUBLIC_KV.get(CARD_LOCK_KEY)) return { skipped: "locked" };
+  const today = kstDay(Date.now());
+  for (const d of [today, addDays(today, 1)]) {
+    if (await env.PUBLIC_KV.get(cardKey(d))) continue;
+    const runs = Number((await env.PUBLIC_KV.get(cardRunsKey(d))) || 0);
+    if (runs >= CARD_MAX_RUNS) continue;
+    await env.PUBLIC_KV.put(cardRunsKey(d), String(runs + 1), { expirationTtl: 3 * 24 * 3600 });
+    await env.PUBLIC_KV.put(CARD_LOCK_KEY, "1", { expirationTtl: CARD_LOCK_SEC });
+    try {
+      const card = await generateCard(env, d, ctx);
+      return { d, made: !!card };
+    } catch (e) {
+      // 하루 상한(503) 등 — 다음 시간에 다시
+      return { d, made: false, error: e && e.code ? e.code : "ERROR" };
+    } finally {
+      try { await env.PUBLIC_KV.delete(CARD_LOCK_KEY); } catch (e) {}
+    }
+  }
+  return { skipped: "done" };
+}
+
+/** 사용자에게 보이는 카드 모양 (확인 기록·모델 이름은 빼고) */
+function cardPublic(c) {
+  return {
+    d: c.d, chip: c.chip, title: c.title, summary: c.summary, body: c.body,
+    phrase: c.phrase, words: c.words, img: !!c.img, event: !!c.event,
+  };
+}
+
+function cardJson(request, data, status, maxAge) {
+  const res = json(request, data, status);
+  res.headers.set("cache-control", maxAge ? "public, max-age=" + maxAge : "no-store");
+  return res;
+}
+
+/** GET /card/today → 오늘(한국 날짜) 카드. 오늘 것이 아직 없으면 가장 최근 카드. */
+async function handleCardToday(request, env) {
+  const today = kstDay(Date.now());
+  let c = await kvGetJson(env, cardKey(today));
+  if (!c) {
+    const latest = (await cardReadIndex(env)).find((e) => e && e.d <= today);
+    if (latest) c = await kvGetJson(env, cardKey(latest.d));
+  }
+  if (!c) return cardJson(request, { error: "NO_CARD" }, 404, 0);
+  return cardJson(request, { today, card: cardPublic(c) }, 200, 300);
+}
+
+/** GET /card/day/<날짜> → 그날 카드(오늘까지만) */
+async function handleCardDay(request, env, d) {
+  if (!CARD_DATE_RE.test(d) || d > kstDay(Date.now())) return cardJson(request, { error: "NOT_FOUND" }, 404, 0);
+  const c = await kvGetJson(env, cardKey(d));
+  if (!c) return cardJson(request, { error: "NOT_FOUND" }, 404, 0);
+  return cardJson(request, { card: cardPublic(c) }, 200, 3600);
+}
+
+/** GET /card/list?before=<날짜>&limit=30 → 지난 카드 목록(최신 먼저, 오늘까지만) */
+async function handleCardList(request, env, url) {
+  const today = kstDay(Date.now());
+  const before = String(url.searchParams.get("before") || "");
+  const limit = Math.max(1, Math.min(60, Number(url.searchParams.get("limit")) || 30));
+  const all = (await cardReadIndex(env)).filter((e) => e && e.d <= today && (!CARD_DATE_RE.test(before) || e.d < before));
+  const items = all.slice(0, limit).map((e) => ({ d: e.d, chip: e.chip, title: e.title, img: !!e.img }));
+  return cardJson(request, { today, items, more: all.length > limit }, 200, 300);
+}
+
+/** GET /card/img/<날짜> → 그림(base64 글자). 앱이 그림으로 바꿉니다. */
+async function handleCardImg(request, env, d) {
+  if (!CARD_DATE_RE.test(d) || d > kstDay(Date.now())) return cardJson(request, { error: "NOT_FOUND" }, 404, 0);
+  const b64 = await env.PUBLIC_KV.get(cardImgKey(d));
+  if (!b64) return cardJson(request, { error: "NOT_FOUND" }, 404, 0);
+  const headers = corsHeaders(request);
+  headers["content-type"] = "text/plain; charset=utf-8";
+  headers["cache-control"] = "public, max-age=31536000, immutable";
+  return new Response(b64, { status: 200, headers });
+}
+
+/** POST /admin/card/generate {date, force}  (x-admin-key) → 그 날짜 카드를 지금 만듭니다(미리 만들기·다시 만들기). */
+async function handleAdminCardGenerate(request, env, ctx) {
+  requireAdmin(request, env);
+  const body = await readJsonBody(request, 4096);
+  const d = String(body.date || "");
+  if (!CARD_DATE_RE.test(d)) throw new HttpError(400, "BAD_DATE");
+  if (!env.AI_PROXY_URL || !env.PROXY_SECRET) throw new HttpError(500, "NOT_CONFIGURED");
+  if (!body.force && (await env.PUBLIC_KV.get(cardKey(d)))) return json(request, { ok: true, existed: true, card: await kvGetJson(env, cardKey(d)) });
+  if (body.force) await env.PUBLIC_KV.delete(cardImgKey(d));
+  const card = await generateCard(env, d, ctx);
+  if (!card) return json(request, { ok: false, error: "GENERATION_FAILED" }, 502);
+  return json(request, { ok: true, card });
+}
+
+/** GET /admin/card?date=  (x-admin-key) → 확인 기록까지 담긴 카드 전체 */
+async function handleAdminCardGet(request, env, url) {
+  requireAdmin(request, env);
+  const d = String(url.searchParams.get("date") || "");
+  if (!CARD_DATE_RE.test(d)) throw new HttpError(400, "BAD_DATE");
+  return json(request, { card: await kvGetJson(env, cardKey(d)), runs: Number((await env.PUBLIC_KV.get(cardRunsKey(d))) || 0) });
+}
+
+/** POST /admin/card/delete {date}  (x-admin-key) → 카드·그림·목록 줄을 지웁니다(잘못된 카드 내리기). */
+async function handleAdminCardDelete(request, env) {
+  requireAdmin(request, env);
+  const body = await readJsonBody(request, 4096);
+  const d = String(body.date || "");
+  if (!CARD_DATE_RE.test(d)) throw new HttpError(400, "BAD_DATE");
+  await env.PUBLIC_KV.delete(cardKey(d));
+  await env.PUBLIC_KV.delete(cardImgKey(d));
+  const list = (await cardReadIndex(env)).filter((e) => e && e.d !== d);
+  await kvPutJson(env, CARD_INDEX_KEY, list);
+  return json(request, { ok: true });
+}
+
 async function route(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname;
@@ -1739,6 +2240,13 @@ async function route(request, env, ctx) {
   if (method === "POST" && path === "/admin/special") return handleAdminSpecial(request, env);
   if (method === "GET" && path === "/admin/special") return handleAdminSpecialGet(request, env, url);
   if (method === "POST" && path === "/admin/delete") return handleAdminDelete(request, env);
+  if (method === "GET" && path === "/card/today") return handleCardToday(request, env);
+  if (method === "GET" && path === "/card/list") return handleCardList(request, env, url);
+  if (method === "GET" && path.indexOf("/card/day/") === 0) return handleCardDay(request, env, path.slice(10));
+  if (method === "GET" && path.indexOf("/card/img/") === 0) return handleCardImg(request, env, path.slice(10));
+  if (method === "POST" && path === "/admin/card/generate") return handleAdminCardGenerate(request, env, ctx);
+  if (method === "POST" && path === "/admin/card/delete") return handleAdminCardDelete(request, env);
+  if (method === "GET" && path === "/admin/card") return handleAdminCardGet(request, env, url);
 
   const m = method === "POST" ? path.match(AI_PATH_RE) : null;
   if (m) return handleAi(request, env, m[1], ctx);
@@ -1760,9 +2268,11 @@ export default {
       return json(request, { error: "SERVER_ERROR" }, 500);
     }
   },
-  // Cron Trigger(선택, wrangler.toml 의 [triggers]) — 한 시간 넘게 묵은 신고 알림 묶음을 보냅니다.
+  // Cron Trigger(선택, wrangler.toml 의 [triggers]) — 한 시간 넘게 묵은 신고 알림 묶음을 보내고,
+  // 오늘·내일 카드가 없으면 하나 만듭니다(CARD_AUTOGEN = "1" 일 때만).
   async scheduled(event, env, ctx) {
     await defer(ctx, flushReportNotice(env));
+    await defer(ctx, runCardJob(env, ctx));
   },
 };
 
