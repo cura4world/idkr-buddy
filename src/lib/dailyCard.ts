@@ -57,7 +57,9 @@ async function getJson(path: string): Promise<any> {
   }, REQ_TIMEOUT_MS);
   let res: Response;
   try {
-    res = await fetch(PUBLIC_BASE + path, { method: "GET", signal: controller.signal });
+    // 글(JSON)은 작으니 기기 HTTP 캐시를 쓰지 않습니다 — 예전 응답(예: 출처 허용 머리글이 없던 것)이
+    // 몇 분씩 남아 카드가 안 보이던 일을 막습니다(2026-11-17 미리보기 오류). 다시 볼 때는 IndexedDB 사본을 씁니다.
+    res = await fetch(PUBLIC_BASE + path, { method: "GET", signal: controller.signal, cache: "no-store" });
   } catch (e) {
     throw new Error("NETWORK_FAILED");
   } finally {
