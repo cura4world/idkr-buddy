@@ -18,12 +18,15 @@ interface Props {
   // 여는 단추의 글자. 기본은 "풀이가 이상합니다". 이야기 카드 뒷면만 "내용이 이상합니다"로 씁니다(2026-11-14 결정).
   // 화면 글자일 뿐이고, 서버로 보내는 신고 종류(feature)·사유 값은 그대로입니다.
   label?: string;
+  // "AI가 만든 내용입니다" 글자를 숨길지 (기본 false). 신고 단추는 그대로 남습니다(Play 정책의 요건은 신고 수단).
+  // 단어 미니 시트만 씁니다 — 작은 시트라 글자가 많다는 사용자 요청(2026-11-18).
+  hideNote?: boolean;
 }
 
 // 말투 규칙(11/10): "~해요" 대신 "~입니다". 시안(사전 안 4)의 버튼 문구 "풀이가 이상합니다"와 맞춥니다.
 const REASONS = ["뜻·번역이 틀립니다", "부적절한 내용입니다", "기타"];
 
-const AiReportButton = ({ feature, input, output, className, label = "풀이가 이상합니다" }: Props) => {
+const AiReportButton = ({ feature, input, output, className, label = "풀이가 이상합니다", hideNote = false }: Props) => {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -57,14 +60,16 @@ const AiReportButton = ({ feature, input, output, className, label = "풀이가 
 
   if (sent) {
     return (
-      <p className={"text-xs font-gothic text-muted-foreground " + (className || "")}>{AI_NOTE} · 신고를 보냈습니다</p>
+      <p className={"text-xs font-gothic text-muted-foreground " + (className || "")}>
+        {hideNote ? "신고를 보냈습니다" : AI_NOTE + " · 신고를 보냈습니다"}
+      </p>
     );
   }
 
   return (
     <div className={className || ""}>
       <div className="flex flex-wrap items-center gap-x-3">
-        <span className="text-xs font-gothic text-muted-foreground">{AI_NOTE}</span>
+        {hideNote ? null : <span className="text-xs font-gothic text-muted-foreground">{AI_NOTE}</span>}
         <button
           type="button"
           onClick={() => setOpen(!open)}
