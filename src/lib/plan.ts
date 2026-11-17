@@ -20,6 +20,15 @@ export type Tier = "free" | "trial" | "plus" | "special" | "admin";
 
 export const PAYWALL_PATH = "/plus";
 
+/**
+ * 잠긴 메뉴를 눌러 구독 화면으로 갈 때 쓰는 이동 옵션 — 안내 글을 구독 화면 맨 위에 잠깐 보입니다(2026-11-17 Arga 요청).
+ * 예전에는 토스트를 띄우고 바로 넘어가 글을 다 읽기 어려웠습니다. 안내는 Plus.tsx 의 PlusNotice 가 그립니다.
+ *   navigate(PAYWALL_PATH, paywallNotice("회화집은 Plus 회원 기능입니다"))
+ */
+export function paywallNotice(text: string, replace = false): { state: { plusNotice: string }; replace: boolean } {
+  return { state: { plusNotice: text }, replace };
+}
+
 export const TIER_LABEL: Record<Tier, string> = {
   free: "무료",
   trial: "Plus 무료 체험 중",
