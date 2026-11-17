@@ -1,6 +1,6 @@
 // src/pages/Insight.tsx
 // "인도네시아 이해" 허브 (시안 IN1-Plus · IN2-Free, 2026-11-10).
-//   · 맨 위에 지도를 큰 카드로 (실제 지도 모양 + 대도시 점)
+//   · 지도 카드 (실제 지도 모양, 밝은 색·작게 — 2026-11-18)
 //   · 맨 위에 오늘의 카드(2026-11-17, components/TodayCard.tsx) — 서버가 하루 한 장
 //   · 개관 / 종족 / 종교 / (관리자판: 기독교) / 역사 / 지난 카드 모아 보기 — 차분한 색 타일 목록
 //   · 공개판 무료 사용자: 메뉴는 보이되 잠기고, 위에 귤색 안내 상자. 누르면 구독 화면(PAYWALL_PATH)
@@ -12,7 +12,7 @@ import { isStoreApp } from "@/lib/platform";
 import { PAYWALL_PATH, usePlan } from "@/lib/plan";
 import PlusLockBox from "@/components/PlusLockBox";
 import TodayCard from "@/components/TodayCard";
-import { INDONESIA_PATH, MAP_CITIES, NEIGHBOR_SHAPES } from "@/lib/mapData";
+import { INDONESIA_PATH, NEIGHBOR_SHAPES } from "@/lib/mapData";
 import { ArrowLeft, Globe, Landmark, Users, Cross, Hourglass, CalendarDays, ChevronRight, Lock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -66,24 +66,23 @@ const Rows = ({ items, locked, go }: { items: RowItem[]; locked: boolean; go: (t
   </div>
 );
 
-// 지도 카드의 작은 지도 — 지도 화면과 같은 해안선 데이터, 대도시(tier 1)만 점으로.
+// 지도 카드의 작은 지도 — 지도 화면과 같은 해안선 데이터.
+// 2026-11-18 사용자 결정(시안 B+C): 밝은 바다·청록 섬으로 바꾸고(어두운 지도가 화면에서 가장 무거워 오늘의 카드보다 먼저 눈에 띔),
+// 높이 118 → 84px, 도시 점은 없앰. 누르면 열리는 지도 화면(IndoMap)은 그대로 어두운 지도입니다.
 const MiniMap = () => (
   <svg
     viewBox="0 60 1000 380"
     width="100%"
-    height={118}
+    height={84}
     preserveAspectRatio="xMidYMid slice"
     className="block"
     aria-hidden="true"
   >
-    <rect x="0" y="0" width="1000" height="460" fill="#0b2f37" />
+    <rect x="0" y="0" width="1000" height="460" fill="#E3F0EF" />
     {NEIGHBOR_SHAPES.map((c) => (
-      <path key={c.id} d={c.d} fill="#123c42" stroke="#2c5860" strokeWidth={1.2} />
+      <path key={c.id} d={c.d} fill="#D3E3E1" stroke="#C2D7D4" strokeWidth={1.2} />
     ))}
-    <path d={INDONESIA_PATH} fill="#17555c" stroke="#3e8d95" strokeWidth={1.4} />
-    {MAP_CITIES.filter((c) => c.tier === 1).map((c) => (
-      <circle key={c.id} cx={c.x} cy={c.y} r={7} fill="#f97316" stroke="#fff" strokeWidth={2.4} />
-    ))}
+    <path d={INDONESIA_PATH} fill="#8CC7C0" stroke="#6FB2AA" strokeWidth={1.4} />
   </svg>
 );
 
@@ -91,28 +90,25 @@ const MapCard = ({ locked, onClick }: { locked: boolean; onClick: () => void }) 
   <button
     type="button"
     onClick={onClick}
-    className="block w-full text-left rounded-[18px] overflow-hidden bg-[#0b2f37] active:opacity-90"
-    style={{ boxShadow: "0 1px 3px rgba(16,40,50,0.10)", opacity: locked ? 0.8 : 1 }}
+    className="block w-full text-left rounded-[18px] overflow-hidden bg-card active:opacity-90"
+    style={{ ...CARD_SHADOW, opacity: locked ? 0.8 : 1 }}
   >
     <MiniMap />
     <span className="flex items-center gap-3 pt-3 pb-3.5 pl-4 pr-3.5">
       <span className="flex-1 min-w-0">
         <span className="flex items-baseline gap-[7px]">
-          <span className="font-gothic text-[0.9375rem] font-semibold text-white">인도네시아 지도</span>
-          <span className="font-word text-[0.6875rem] text-[#9CC3C8]">Peta</span>
+          <span className="font-gothic text-[0.9375rem] font-semibold text-foreground">인도네시아 지도</span>
+          <span className="font-word text-[0.6875rem] text-[#646C72]">Peta</span>
         </span>
-        <span className="block mt-[3px] font-gothic text-[0.71875rem] text-[#B9D4D7]">
+        <span className="block mt-[3px] font-gothic text-[0.71875rem] text-[#646C72]">
           섬과 도시를 눌러 그 지역 이야기를 읽어 보세요
         </span>
       </span>
-      <span
-        className="w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0"
-        style={{ background: "rgba(255,255,255,0.14)" }}
-      >
+      <span className="w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0" style={{ background: "#E2F1EC" }}>
         {locked ? (
-          <Lock size={15} strokeWidth={2} className="text-[#E6EEF0]" />
+          <Lock size={15} strokeWidth={2} className="text-[#2C6D63]" />
         ) : (
-          <ChevronRight size={16} strokeWidth={2.2} className="text-white" />
+          <ChevronRight size={16} strokeWidth={2.2} className="text-[#2C6D63]" />
         )}
       </span>
     </span>
