@@ -193,9 +193,60 @@ interface PlanCard {
   trial: string;
 }
 
+// 잠긴 메뉴에서 넘어왔을 때 맨 위에 잠깐 보이는 안내 (2026-11-17 Arga 요청 — 예전 토스트 대신)
+//   위에서 스르륵 내려와 NOTICE_SHOW_MS 동안 머문 뒤 다시 위로 사라집니다. 글은 lib/plan.ts 의 paywallNotice 로 넘어옵니다.
+const NOTICE_IN_DELAY_MS = 120;
+const NOTICE_SHOW_MS = 3200;
+const NOTICE_SLIDE_MS = 480;
+
+const PlusNotice = ({ text }: { text: string }) => {
+  const [phase, setPhase] = useState<"before" | "in" | "out">("before");
+  useEffect(() => {
+    const t1 = window.setTimeout(() => setPhase("in"), NOTICE_IN_DELAY_MS);
+    const t2 = window.setTimeout(() => setPhase("out"), NOTICE_IN_DELAY_MS + NOTICE_SLIDE_MS + NOTICE_SHOW_MS);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [text]);
+  const shown = phase === "in";
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="absolute flex items-center"
+      style={{
+        left: 16,
+        right: 56,
+        top: 10,
+        minHeight: 36,
+        padding: "8px 14px",
+        borderRadius: 18,
+        backgroundColor: "#FFF4D6",
+        color: "#6E5612",
+        boxShadow: "0 4px 14px rgba(110,86,18,0.14)",
+        transform: shown ? "translateY(0)" : "translateY(-140%)",
+        opacity: shown ? 1 : 0,
+        transition:
+          "transform " + NOTICE_SLIDE_MS + "ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity " + NOTICE_SLIDE_MS + "ms ease",
+        pointerEvents: "none",
+        zIndex: 5,
+      }}
+    >
+      <span className="font-gothic" style={{ fontSize: "0.8125rem", fontWeight: 600, lineHeight: 1.4, wordBreak: "keep-all" }}>
+        {text}
+      </span>
+    </div>
+  );
+};
+
 const Plus = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const plusNotice = (() => {
+    const st = location.state as { plusNotice?: unknown } | null;
+    return st && typeof st.plusNotice === "string" ? st.plusNotice : "";
+  })();
   const { tier } = usePlan();
   const [session, setSession] = useState<PublicSession | null>(getSession());
   const [selected, setSelected] = useState<PlanKey>("yearly");
@@ -342,7 +393,9 @@ const Plus = () => {
       className="max-w-lg mx-auto flex flex-col font-body"
       style={{ minHeight: "calc(100dvh - var(--kata-tabbar-h, 0px))", backgroundColor: "#FFFFFF", color: C.ink, lineHeight: "normal" }}
     >
-      <div className="flex justify-end shrink-0" style={{ padding: "8px 8px 0" }}>
+      <div className="relative flex justify-end shrink-0" style={{ padding: "8px 8px 0" }}>
+        {/* 잠긴 메뉴에서 넘어왔을 때의 안내 — 맨 위 빈자리에서 스르륵 내려왔다가 잠시 뒤 다시 올라갑니다(2026-11-17) */}
+        {plusNotice ? <PlusNotice text={plusNotice} /> : null}
         <button
           type="button"
           onClick={close}
