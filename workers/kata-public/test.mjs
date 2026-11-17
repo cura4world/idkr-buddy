@@ -71,6 +71,7 @@ const calls = [];
 let playSub = null; // 테스트마다 바꿈
 let proxyStatus = 200;
 let proxyEmpty = false; // true 면 AI 가 200 으로 답하지만 글·소리가 비어 있음
+let proxyHook = null; // 오늘의 카드 시험용 — (init) => Response
 let playStatus = 200; // Play 구독 조회 응답 상태 (503 = 일시 오류 흉내)
 let ackStatus = 200;  // Play 확인(acknowledge) 응답 상태 (403 = 서비스 계정 권한 빠짐 흉내)
 
@@ -90,6 +91,7 @@ globalThis.fetch = async (url, init = {}) => {
     return new Response(JSON.stringify({ keys: [googleJwk] }), { status: 200 });
   }
   if (url === PROXY) {
+    if (proxyHook) return proxyHook(init); // 오늘의 카드 시험이 응답을 직접 정함
     if (proxyStatus !== 200) return new Response(JSON.stringify({ error: { code: proxyStatus } }), { status: proxyStatus });
     // 음성 요청에는 소리 자료를, 글 요청에는 글을 돌려줍니다. proxyEmpty 면 200 인데 내용이 빈 응답.
     const wantsAudio = String(init.body || "").indexOf("AUDIO") >= 0;
@@ -732,6 +734,7 @@ function resetWorld() {
   ackStatus = 200;
   proxyStatus = 200;
   proxyEmpty = false;
+  proxyHook = null;
   playSub = null;
 }
 
@@ -1692,5 +1695,165 @@ test("보안 보강: 이메일 확인 표시가 없는 토큰은 거절, content
   const res = await worker.fetch(req, env);
   assert.equal(res.status, 413);
   assert.equal((await call(env, "GET", "/admin/reports", ADMIN)).data.items.length, 0);
+  resetWorld();
+});
+
+// ── 오늘의 카드 (2026-11-17) ─────────────────────────────────
+
+const GOOD_CARD = {
+  chip: "음식", title: "르바란엔 끄뚜빳", summary: "야자잎으로 엮은 주머니에 쌀을 넣어 삶아 만든 음식입니다.",
+  body: ["끄뚜빳은 어린 야자잎 주머니에 쌀을 채워 삶습니다.", "르바란 아침 상에 오릅니다."],
+  phrase: { id: "Mohon maaf lahir dan batin", ko: "몸과 마음으로 지은 잘못을 용서해 주세요" },
+  words: [{ id: "ketupat", ko: "끄뚜빳" }, { id: "janur", ko: "어린 야자잎" }],
+  image: "two woven ketupat rice cakes",
+};
+const IMG_B64 = "iVBORw0KGgo" + "A".repeat(400);
+const textReply = (obj) => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(obj) }] } }] }), {
+  status: 200, headers: { "content-type": "application/json" },
+});
+
+/**
+ * 가짜 Cloud Run — 요청 내용으로 단계를 구분합니다.
+ *   gen(n)     n 번째 글 만들기 요청에 줄 카드
+ *   review(n)  n 번째 확인 요청에 줄 결과
+ *   imgOk(n)   n 번째 그림 확인 결과
+ */
+function cardWorld({ gen = () => GOOD_CARD, review = () => ({ ok: true, problems: [], fixed: null }), imgOk = () => true, imageStatus = 200 } = {}) {
+  const seen = { gen: 0, review: 0, image: 0, check: 0, prompts: [], models: [] };
+  proxyHook = async (init) => {
+    const body = String(init.body || "");
+    seen.models.push(init.headers["x-kata-model"]);
+    if (body.indexOf("This image should be") >= 0) return textReply({ ok: imgOk(seen.check++), reason: "x" });
+    if (body.indexOf("IMAGE") >= 0) {
+      seen.image++;
+      if (imageStatus !== 200) return new Response("{}", { status: imageStatus });
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: "image/png", data: IMG_B64 } }] } }] }), { status: 200 });
+    }
+    if (body.indexOf("출판 전에 검수") >= 0) return textReply(review(seen.review++));
+    seen.prompts.push(body);
+    return textReply(gen(seen.gen++));
+  };
+  return seen;
+}
+
+function kstToday(offsetDays = 0) {
+  return new Date(Date.now() + 9 * HOUR + offsetDays * DAY).toISOString().slice(0, 10);
+}
+
+test("오늘의 카드: Cron 이 오늘·내일을 하나씩 만들고, 오늘까지만 보이며, 그림은 base64 로", async () => {
+  resetWorld();
+  const env = makeEnv({ CARD_AUTOGEN: "1" });
+  const seen = cardWorld();
+  assert.equal((await call(env, "GET", "/card/today")).status, 404);
+
+  await worker.scheduled({}, env, undefined);
+  const today = kstToday();
+  const tomorrow = kstToday(1);
+  const t = await call(env, "GET", "/card/today");
+  assert.equal(t.status, 200);
+  assert.equal(t.data.card.d, today);
+  assert.equal(t.data.card.title, GOOD_CARD.title);
+  assert.equal(t.data.card.img, true);
+  assert.equal(t.data.card.review, undefined); // 확인 기록·모델 이름은 사용자에게 보이지 않음
+  assert.equal(t.headers.get("access-control-allow-origin"), ORIGIN);
+  assert.equal(seen.gen, 1);
+  assert.equal(seen.review, 1);
+  assert.equal(seen.image, 1);
+  assert.equal(seen.models[0], "gemini-3.5-flash");
+
+  // 두 번째 Cron 은 내일 카드를 미리 만들지만, 내일 0시 전에는 보이지 않음
+  await worker.scheduled({}, env, undefined);
+  assert.ok(env.PUBLIC_KV.m.has("card:v1:" + tomorrow));
+  const list = await call(env, "GET", "/card/list");
+  assert.deepEqual(list.data.items.map((e) => e.d), [today]);
+  assert.equal((await call(env, "GET", "/card/day/" + tomorrow)).status, 404);
+  assert.equal((await call(env, "GET", "/card/img/" + tomorrow)).status, 404);
+  const img = await call(env, "GET", "/card/img/" + today);
+  assert.equal(img.status, 200);
+  assert.equal(img.data, IMG_B64);
+  assert.ok(img.headers.get("cache-control").indexOf("immutable") > 0);
+
+  // 둘 다 있으면 Cron 은 아무것도 하지 않음
+  await worker.scheduled({}, env, undefined);
+  assert.equal(seen.gen, 2);
+
+  // 하루가 지나면 어제 만든 "내일" 카드가 오늘 카드
+  clockOffset += DAY;
+  const t2 = await call(env, "GET", "/card/today");
+  assert.equal(t2.data.card.d, tomorrow);
+  assert.deepEqual((await call(env, "GET", "/card/list")).data.items.map((e) => e.d), [tomorrow, today]);
+  assert.deepEqual((await call(env, "GET", "/card/list?before=" + tomorrow)).data.items.map((e) => e.d), [today]);
+  resetWorld();
+});
+
+test("오늘의 카드: 확인에서 고친 판을 쓰고, '~요' 체는 내보내지 않으며, 그림 확인이 두 번 실패하면 그림 없이", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const d = "2026-11-18";
+  const yo = Object.assign({}, GOOD_CARD, { summary: "정말 맛있어요." });
+  const seen = cardWorld({
+    gen: (n) => (n === 0 ? yo : GOOD_CARD),
+    review: (n) => (n === 0 ? { ok: true, problems: [] } : { ok: false, problems: ["뜻이 조금 다름"], fixed: Object.assign({}, GOOD_CARD, { title: "고친 제목" }) }),
+    imgOk: () => false,
+  });
+  const r = await call(env, "POST", "/admin/card/generate", Object.assign({ body: { date: d } }, ADMIN));
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.equal(seen.gen, 2); // 첫 판은 "~요" 체라 버리고 다음 주제로
+  assert.equal(r.data.card.title, "고친 제목");
+  assert.equal(r.data.card.review.fixed, true);
+  assert.deepEqual(r.data.card.review.problems, ["뜻이 조금 다름"]);
+  assert.equal(r.data.card.img, false);
+  assert.equal(seen.image, 2);
+  assert.equal(env.PUBLIC_KV.m.has("cardimg:v1:" + d), false);
+  // 이미 있으면 다시 만들지 않음(force 일 때만)
+  const again = await call(env, "POST", "/admin/card/generate", Object.assign({ body: { date: d } }, ADMIN));
+  assert.equal(again.data.existed, true);
+  assert.equal(seen.gen, 2);
+  // 확인이 "고칠 수 없음"이면 내보내지 않음
+  cardWorld({ review: () => ({ ok: false, problems: ["사실이 틀림"], fixed: null }) });
+  const bad = await call(env, "POST", "/admin/card/generate", Object.assign({ body: { date: "2026-11-19" } }, ADMIN));
+  assert.equal(bad.status, 502);
+  assert.equal(env.PUBLIC_KV.m.has("card:v1:2026-11-19"), false);
+  resetWorld();
+});
+
+test("오늘의 카드: 명절 날짜는 그 주제, 관리자 권한·지우기, 그림 모델이 안 되면 그림 없이", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const seen = cardWorld({ imageStatus: 404 });
+  assert.equal((await call(env, "POST", "/admin/card/generate", { body: { date: "2027-03-10" } })).status, 403);
+  assert.equal((await call(env, "POST", "/admin/card/generate", Object.assign({ body: { date: "3월 10일" } }, ADMIN))).status, 400);
+  const r = await call(env, "POST", "/admin/card/generate", Object.assign({ body: { date: "2027-03-10" } }, ADMIN));
+  assert.equal(r.status, 200);
+  assert.ok(seen.prompts[0].indexOf("Idulfitri") >= 0);
+  assert.ok(r.data.card.event.indexOf("Lebaran") >= 0);
+  assert.equal(r.data.card.img, false);
+  assert.equal(seen.image, 2); // 그림 모델 둘 다 거절
+  // 일반 날짜는 일반 주제(명절 이름이 없음)
+  await call(env, "POST", "/admin/card/generate", Object.assign({ body: { date: "2026-11-20" } }, ADMIN));
+  assert.equal(seen.prompts[1].indexOf("명절·기념일"), -1);
+  // 확인 기록 보기·지우기
+  const g = await call(env, "GET", "/admin/card?date=2027-03-10", ADMIN);
+  assert.equal(g.data.card.review.by, "gemini");
+  await call(env, "POST", "/admin/card/delete", Object.assign({ body: { date: "2026-11-20" } }, ADMIN));
+  assert.equal(env.PUBLIC_KV.m.has("card:v1:2026-11-20"), false);
+  assert.deepEqual(JSON.parse(env.PUBLIC_KV.m.get("card:index")).map((e) => e.d), ["2027-03-10"]);
+  resetWorld();
+});
+
+test("오늘의 카드: CARD_AUTOGEN 이 없거나 AI_PAUSED=all 이면 Cron 은 만들지 않고, 하루 상한에 닿으면 멈춘다", async () => {
+  resetWorld();
+  const seen = cardWorld();
+  await worker.scheduled({}, makeEnv(), undefined);
+  await worker.scheduled({}, makeEnv({ CARD_AUTOGEN: "1", AI_PAUSED: "all" }), undefined);
+  assert.equal(seen.gen, 0);
+  const env = makeEnv({ CARD_AUTOGEN: "1", AI_DAILY_BUDGET: "1" });
+  await worker.scheduled({}, env, undefined);
+  assert.equal(seen.gen, 1); // 첫 호출만 나가고, 확인 단계에서 상한(503)에 걸림
+  assert.equal(env.PUBLIC_KV.m.has("card:v1:" + kstToday()), false);
+  assert.equal(env.PUBLIC_KV.m.has("card:lock"), false); // 잠금은 풀려 있음
+  // 같은 날짜는 4번까지만 시도
+  for (let i = 0; i < 6; i++) await worker.scheduled({}, env, undefined);
+  assert.equal(env.PUBLIC_KV.m.get("card:runs:" + kstToday()), "4");
   resetWorld();
 });
