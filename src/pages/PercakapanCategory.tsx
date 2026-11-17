@@ -17,7 +17,7 @@ import {
   isCategoryVisible,
 } from "@/lib/percakapan";
 import type { PercakapanCategory, PercakapanScene } from "@/lib/percakapan";
-import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { usePlan, PAYWALL_PATH, paywallNotice } from "@/lib/plan";
 import { useBackClose } from "@/hooks/useBackClose";
 
 const LOCK_TEXT = "회화집은 Plus 회원 기능입니다";
@@ -69,8 +69,7 @@ const PercakapanCategory = () => {
   useEffect(() => {
     if (!loaded || plan.plus) return;
     if (scenes.some((s) => s.custom)) return;
-    toast(LOCK_TEXT);
-    navigate(PAYWALL_PATH, { replace: true });
+    navigate(PAYWALL_PATH, paywallNotice(LOCK_TEXT, true));
   }, [loaded, scenes, plan.plus, navigate]);
 
   useEffect(() => {
@@ -131,8 +130,7 @@ const PercakapanCategory = () => {
       return;
     }
     if (!plan.plus && !s.custom) {
-      toast(LOCK_TEXT);
-      navigate(PAYWALL_PATH);
+      navigate(PAYWALL_PATH, paywallNotice(LOCK_TEXT));
       return;
     }
     navigate("/percakapan/" + s.id);
