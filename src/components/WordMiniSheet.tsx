@@ -2,6 +2,8 @@
 // 이야기·회화집 본문에서 단어를 누르면 아래에서 올라오는 작은 뜻 시트.
 // 시안: ST3-Front (단어 Lora + 민트 스피커, 뜻, 설명 13px, "내 단어장에 담기 | ⌄" 청록 + "사전에서 보기" 회색).
 // 2026-11-11 사용자 요청으로 단어 24 → 22.5px, 뜻 16 → 14.5px, 버튼 높이 46 → 40px.
+// 2026-11-18 사용자 요청으로 단어 22.5 → 21px, 아래 버튼 글자 14 → 13px, "AI가 만든 내용입니다" 글자 숨김(신고 단추는 남김),
+//   뜻을 찾는 동안 ⌄ 칸도 왼쪽 담기 칸과 같은 옅은 초록으로 — 두 칸이 함께 진해집니다.
 // 앱의 단어 팝업은 모두 이것 하나를 씁니다(이야기·회화집·오늘의 문장, 관리자판의 뉴스·묵상·기도·성경·설교문·일대일).
 // 모양을 고칠 때는 여기만 고치면 모든 화면이 같이 바뀝니다.
 
@@ -37,6 +39,8 @@ interface Props {
 }
 
 const TEAL = "#2C6D63";
+// 뜻을 다 찾으면 담기 칸과 ⌄ 칸이 같이 진해집니다
+const FADE = "opacity 220ms ease";
 
 const WordMiniSheet = ({
   word,
@@ -73,7 +77,7 @@ const WordMiniSheet = ({
         <div className="mx-auto mb-[14px] h-1 w-9 rounded-full" style={{ background: "#DDE3E6" }} />
         <div className="flex items-center gap-2.5 min-w-0">
           <p
-            className="min-w-0 break-words font-word text-[1.40625rem] font-semibold leading-tight"
+            className="min-w-0 break-words font-word text-[1.3125rem] font-semibold leading-tight"
             style={{ color: "#104B60" }}
           >
             {word}
@@ -119,13 +123,13 @@ const WordMiniSheet = ({
             ) : null}
             {/* AI 가 만든 풀이 신고 — 스토어 앱(공개판)에서만 보입니다(2026-11-14 P-05) */}
             {meaning && !saveDisabled ? (
-              <AiReportButton feature="word" input={word} output={meaning + (info ? " / " + info : "")} className="mt-1" />
+              <AiReportButton feature="word" input={word} output={meaning + (info ? " / " + info : "")} className="mt-1" hideNote />
             ) : null}
           </>
         )}
 
         <div className="mt-4 flex gap-2">
-          <div className="flex-1 min-w-0 flex overflow-hidden rounded-[14px] font-gothic text-[0.875rem] font-semibold">
+          <div className="flex-1 min-w-0 flex overflow-hidden rounded-[14px] font-gothic text-[0.8125rem] font-semibold">
             <button
               type="button"
               onClick={onSave}
@@ -134,7 +138,7 @@ const WordMiniSheet = ({
               style={
                 grey
                   ? { background: "#F1F4F5", color: "#9AA1A6" }
-                  : { background: TEAL, color: "#FFFFFF", opacity: saveDisabled ? 0.55 : 1 }
+                  : { background: TEAL, color: "#FFFFFF", opacity: saveDisabled ? 0.55 : 1, transition: FADE }
               }
             >
               {saved ? <Check size={15} strokeWidth={2.4} className="shrink-0" /> : <Plus size={15} strokeWidth={2.4} className="shrink-0" />}
@@ -155,7 +159,14 @@ const WordMiniSheet = ({
               style={
                 grey
                   ? { background: "#F1F4F5", color: "#9AA1A6", borderLeft: "1px solid #E3E7EA" }
-                  : { background: TEAL, color: "#FFFFFF", borderLeft: "1px solid rgba(255,255,255,0.3)" }
+                  : {
+                      background: TEAL,
+                      color: "#FFFFFF",
+                      borderLeft: "1px solid rgba(255,255,255,0.3)",
+                      // 색만 왼쪽 칸과 맞춥니다. 누르는 것은 막지 않습니다(위 설명)
+                      opacity: saveDisabled ? 0.55 : 1,
+                      transition: FADE,
+                    }
               }
             >
               <ChevronDown size={15} strokeWidth={2.4} />
@@ -177,7 +188,7 @@ const WordMiniSheet = ({
           <button
             type="button"
             onClick={onDictionary}
-            className="shrink-0 h-[40px] px-3.5 rounded-[14px] font-gothic text-[0.875rem] font-semibold"
+            className="shrink-0 h-[40px] px-3.5 rounded-[14px] font-gothic text-[0.8125rem] font-semibold"
             style={{ background: "#F1F4F5", color: "#1D1F1E" }}
           >
             사전에서 보기
