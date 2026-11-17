@@ -2286,7 +2286,8 @@ export default {
   // 오늘·내일 카드가 없으면 하나 만듭니다(CARD_AUTOGEN = "1" 일 때만).
   async scheduled(event, env, ctx) {
     await defer(ctx, flushReportNotice(env));
-    await defer(ctx, runCardJob(env, ctx));
+    // 카드 만들기는 몇 분 걸리므로 waitUntil(끝난 뒤 30초까지만 기다려 줌)에 맡기지 않고 여기서 끝까지 기다립니다.
+    try { await runCardJob(env, ctx); } catch (e) {}
   },
 };
 
