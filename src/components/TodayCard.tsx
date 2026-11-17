@@ -71,7 +71,7 @@ const TodayCard = ({ locked, onOpen, title }: Props) => {
           ) : null}
           {locked ? <Lock size={12} strokeWidth={2} className="text-[#A9B0B4]" /> : null}
         </span>
-        <span className="block font-gothic text-[1rem] font-bold leading-snug text-foreground break-keep">{card.title}</span>
+        <span className="block font-gothic text-[0.9375rem] font-bold leading-snug text-foreground break-keep">{card.title}</span>
         <span className="block mt-1 font-gothic text-[0.78125rem] leading-[1.5] text-[#4D575C] break-keep">{card.summary}</span>
         {card.phrase.id ? (
           <span className="block mt-2">
