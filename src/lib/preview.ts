@@ -24,7 +24,7 @@ const KNOWN_DBS = [
   "kata-bible-hl", "kata-bible-ko", "kata-devotions", "kata-dict-results", "kata-dict-images",
   "kata-lookup-words", "kata-map-places", "kata-materials", "kata-medali", "kata-news",
   "kata-percakapan", "kata-percakapan-audio", "kata-phrases", "kata-prayers",
-  "kata-sermon-audio", "kata-sermon-ink", "kata-sermons", "kata-stories", "kata-tips",
+  "kata-sermon-audio", "kata-sermon-ink", "kata-sermons", "kata-stories", "kata-daily-card",
   "kata-tts-audio",
 ];
 
