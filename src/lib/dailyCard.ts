@@ -230,6 +230,14 @@ export async function loadCardList(before?: string): Promise<{ items: DailyCardL
   }
 }
 
+/** base64 앞머리로 그림 형식을 알아봅니다 — Gemini 이미지는 JPEG 로 올 때가 많습니다(2026-11-17 첫 카드 실측). */
+function imageMimeOf(b64: string): string {
+  if (b64.indexOf("/9j/") === 0) return "image/jpeg";
+  if (b64.indexOf("iVBOR") === 0) return "image/png";
+  if (b64.indexOf("UklGR") === 0) return "image/webp";
+  return "image/png";
+}
+
 function base64ToBlob(b64: string, mime: string): Blob {
   const bin = atob(b64.trim());
   const bytes = new Uint8Array(bin.length);
@@ -248,7 +256,8 @@ export async function loadCardImageUrl(d: string): Promise<string | null> {
     try {
       const b64 = await getText("/card/img/" + d);
       if (!b64 || b64.length < 100) return null;
-      blob = base64ToBlob(b64, "image/png");
+      const clean = b64.trim();
+      blob = base64ToBlob(clean, imageMimeOf(clean));
       await idbPut(IMG_STORE, blob, d);
     } catch (e) {
       return null;
