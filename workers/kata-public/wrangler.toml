@@ -35,6 +35,10 @@ LIMITS_JSON = ""
 #   잘못 적으면 0 으로 보고 모두 막습니다 — 넣은 뒤 GET /admin/budget 으로 확인.
 #   시작값(2026-11-14): 전체 3,000 · 소리 1,000.
 AI_DAILY_BUDGET = '{"all":3000,"tts":1000}'
+# 오늘의 카드(인도네시아 이해) — "1" 이면 Cron 이 매시간 오늘·내일 카드가 있는지 보고 없으면 하나 만듭니다(2026-11-17).
+#   끄려면 "" 로. 이미 만든 카드는 그대로 보입니다. 카드를 Claude 로 확인하려면(선택) 비밀값 ANTHROPIC_API_KEY 를 넣습니다
+#   (없으면 Gemini 가 한 번 더 확인). 자세한 설명은 worker.js 의 "오늘의 카드" 부분.
+CARD_AUTOGEN = "1"
 
 [[kv_namespaces]]
 binding = "PUBLIC_KV"
@@ -53,6 +57,7 @@ class_name = "UsageCounter"
 tag = "v1"
 new_sqlite_classes = ["UsageCounter"]
 
-# 매시간 한 번 — 한 시간 넘게 묵은 신고 알림 묶음을 보냅니다(텔레그램 비밀값이 없으면 아무것도 하지 않음).
+# 매시간 한 번 — 한 시간 넘게 묵은 신고 알림 묶음을 보내고(텔레그램 비밀값이 없으면 아무것도 하지 않음),
+# 오늘·내일의 카드가 없으면 하나 만듭니다(CARD_AUTOGEN).
 [triggers]
 crons = ["17 * * * *"]
