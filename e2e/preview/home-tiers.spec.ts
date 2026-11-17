@@ -32,12 +32,15 @@ test("미리보기 패널에서 등급을 바꾸면 홈이 바로 바뀜", async
   await expectHomeMenu(page, HOME_EXPECTED.free);
 });
 
-test("무료 — 잠긴 줄을 누르면 안내가 뜨고 구독 화면으로", async ({ page }) => {
+test("무료 — 잠긴 줄을 누르면 바로 구독 화면으로, 안내는 그 화면 맨 위에서 내려왔다 올라감", async ({ page }) => {
   await setupPreview(page, { tier: "free" });
   await openApp(page, "");
   await homeRow(page, "단어장").click();
-  await expect(page.getByText("기본 단어장은 Plus 회원 기능입니다", { exact: true })).toBeVisible();
+  // 2026-11-17: 예전에는 홈에서 안내가 떠오른 뒤 0.7초 뒤 넘어갔다. 이제는 바로 넘어가고 안내는 구독 화면(Plus.tsx PlusNotice)에서.
   await expect.poll(() => appPath(page)).toBe("/plus");
+  const notice = page.getByRole("status").filter({ hasText: "기본 단어장은 Plus 회원 기능입니다" });
+  await expect(notice).toHaveCSS("opacity", "1");
+  await expect(notice).toHaveCSS("opacity", "0", { timeout: 8000 });
 });
 
 test("무료 — Plus 줄을 누르면 구독 화면으로", async ({ page }) => {
