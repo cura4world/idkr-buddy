@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { Lightbulb } from "lucide-react";
 import { loadCardImageUrl } from "@/lib/dailyCard";
 
+const EDGE_FADE = "radial-gradient(closest-side, #000 80%, transparent 100%)";
+
 interface Props {
   d: string;
   has: boolean; // 서버에 그림이 있는가 (카드의 img)
@@ -40,7 +42,11 @@ const DailyCardImage = ({ d, has, size, rounded = 12 }: Props) => {
 
   const box = { width: size, height: size, borderRadius: rounded };
   if (url) {
-    return <img src={url} alt="" className="block shrink-0 object-cover" style={box} draggable={false} />;
+    // 그림 바탕(크림)이 날마다 조금씩 다르고 JPEG 라 가장자리에 얼룩이 있습니다. 바깥 둘레를 흐리게 지워
+    // 카드 바탕(#F9F2E1)에 녹아들게 합니다 — 네모난 그림을 붙인 티가 나지 않게(2026-11-18 사용자 요청).
+    // 그림은 가운데에 있으므로(서버 그림 지시: 가운데 사물 하나) 안쪽 80% 는 그대로 보입니다.
+    const style = { ...box, maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE };
+    return <img src={url} alt="" className="block shrink-0 object-cover" style={style} draggable={false} />;
   }
   return (
     <span className="shrink-0 flex items-center justify-center bg-[#F6EEDD]" style={box} aria-hidden="true">
