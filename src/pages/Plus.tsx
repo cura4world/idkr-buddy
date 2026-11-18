@@ -4,7 +4,7 @@
 //   · 가격·체험은 Play 에서 받은 값만(src/lib/playOffers.ts). 정식 스토어 앱에서 아직 못 받았으면 가격 자리는
 //     "가격을 불러오는 중", 구독 버튼은 누를 수 없음. 고정 원화 가격은 미리보기 빌드의 대체값으로만 씀
 //   · 연간 카드는 실제 청구액("연 34,800원")을 크게, 월 환산("(월 2,900원)" = 연 가격 ÷ 12)을 작게
-//   · 버튼 바로 아래 첫 줄은 자동 결제 고지("해지 전까지 매년/매달 자동으로 결제됩니다.")
+//   · 버튼 바로 아래 첫 줄은 자동 결제 고지("Google Play에서 결제되며, 해지 전까지 매년/매달 자동으로 결제됩니다.")
 //   · 결제는 끝났는데 서버 확인이 아직이면 "결제는 완료되었습니다. 확인 중입니다." — 자동으로 다시 확인(billing.ts)
 //   · 이미 열린 계정(체험 중·Plus·Special·관리자)은 요금제 대신 "이용 중" 상자
 // 문구는 src/lib/plusCopy.ts, 등급은 src/lib/plan.ts.
@@ -565,17 +565,33 @@ const Plus = () => {
               {busy || verifying ? <Loader2 size={18} className="animate-spin" /> : null}
               {ctaLabel}
             </button>
+            {/* 결제 안내 — 줄마다 작은 점, 왼쪽 정렬(2026-11-18). 결제 확인 중·가격을 못 받았을 때의 상태 글은 예전처럼 가운데 */}
+            {!verifying && canBuy ? (
+              <ul
+                className={"m-0 p-0 w-full list-none flex flex-col " + gothic}
+                style={{ fontSize: "0.75rem", lineHeight: 1.55, color: C.gray, wordBreak: "keep-all", gap: 2 }}
+              >
+                {noteLines.map((l, i) => (
+                  <li key={i} className="flex" style={{ gap: 6 }}>
+                    <span aria-hidden="true" className="shrink-0">•</span>
+                    <span className="min-w-0">{l}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <p
               className={"m-0 text-center " + gothic}
               role={verifying ? "status" : undefined}
-              style={{ fontSize: "0.75rem", lineHeight: 1.55, color: C.gray, wordBreak: "keep-all" }}
+              style={{ fontSize: "0.75rem", lineHeight: 1.55, color: C.gray, wordBreak: "keep-all", display: !verifying && canBuy ? "none" : undefined }}
             >
-              {noteLines.map((l, i) => (
-                <span key={i}>
-                  {i > 0 ? <br /> : null}
-                  {l}
-                </span>
-              ))}
+              {!verifying && canBuy
+                ? null
+                : noteLines.map((l, i) => (
+                    <span key={i}>
+                      {i > 0 ? <br /> : null}
+                      {l}
+                    </span>
+                  ))}
               {!verifying && pricing.state === "failed" ? (
                 <>
                   {" "}
