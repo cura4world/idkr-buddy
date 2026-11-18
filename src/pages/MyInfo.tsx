@@ -90,6 +90,12 @@ const I_PHONE = (
 );
 const I_TRASH = <Ico d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />;
 const I_LOGOUT = <Ico d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />;
+const I_INFO = (
+  <Ico>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5M12 8h.01" />
+  </Ico>
+);
 const I_DOC = (
   <Ico>
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -825,8 +831,9 @@ const MyInfo = () => {
             label={publicLike ? "백업·새 폰으로 옮기기" : "새 폰으로 옮기기"}
             value={publicLike ? (backupAt > 0 ? "마지막 백업 " + dotDate(backupAt) : "백업 아직 없음") : undefined}
             onClick={onMoveRow}
-            last
           />
+          {/* 앱 정보(2026-11-18) — AI 사용 안내·사진 출처·약관을 한곳에 (AppInfo.tsx) */}
+          <Row icon={I_INFO} label="앱 정보" onClick={() => navigate("/about")} last />
         </Card>
         <Card style={{ overflow: "hidden" }}>
           <Row icon={I_TRASH} label="저장된 읽기 음성 비우기" onClick={() => setTtsConfirm(true)} last={!session} />
@@ -843,11 +850,8 @@ const MyInfo = () => {
           Kata kata {version} · <a href={TERMS_URL} className="underline-offset-2">이용약관</a> ·{" "}
           <a href={PRIVACY_URL} className="underline-offset-2">개인정보처리방침</a> ·{" "}
           {/* 사업자 정보(전자상거래법 제10조) — 약관 페이지 끝의 "사업자 정보" 칸으로 연결 */}
-          <a href={BUSINESS_INFO_URL} className="underline-offset-2">사업자 정보</a> ·{" "}
-          {/* 사진 출처(S55) — 지도 사진의 작가·라이선스는 여기 한곳에 모읍니다. 경로는 PhotoCredits.tsx 의 PHOTO_CREDITS_PATH */}
-          <button type="button" onClick={() => navigate("/about/photos")} className="underline-offset-2">
-            사진 출처
-          </button>
+          <a href={BUSINESS_INFO_URL} className="underline-offset-2">사업자 정보</a>
+          {/* 사진 출처는 2026-11-18 부터 설정 > 앱 정보 안에 있습니다(AppInfo.tsx) */}
         </p>
       </div>
 
