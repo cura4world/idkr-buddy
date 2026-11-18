@@ -123,7 +123,7 @@ const WordMiniSheet = ({
             ) : null}
             {/* AI 가 만든 풀이 신고 — 스토어 앱(공개판)에서만 보입니다(2026-11-14 P-05) */}
             {meaning && !saveDisabled ? (
-              <AiReportButton feature="word" input={word} output={meaning + (info ? " / " + info : "")} className="mt-1" hideNote />
+              <AiReportButton feature="word" input={word} output={meaning + (info ? " / " + info : "")} className="mt-1" />
             ) : null}
           </>
         )}
