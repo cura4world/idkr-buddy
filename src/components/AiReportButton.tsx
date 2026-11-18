@@ -2,6 +2,8 @@
 // "풀이가 이상합니다" — AI 가 만든 내용을 신고합니다 (Google Play 의 AI 생성 콘텐츠 정책 요건).
 // 스토어 앱(공개판)에서만 보입니다. 관리자판·회원판에서는 아무것도 그리지 않습니다.
 // 2026-11 게슈탈트 개선안: 주인공 버튼과 떨어진 본문 끝에, 작은 글자 버튼으로 둡니다.
+// 2026-11-18 사용자 요청: 결과마다 붙이던 "AI가 만든 내용입니다" 글자를 앱 전체에서 뺐습니다.
+//   AI 사용 안내는 내 정보 > 앱 정보(AppInfo.tsx)와 이용약관 제4조에 한 번 적습니다. 신고 단추는 Play 정책 요건이라 그대로 둡니다.
 
 import { useState } from "react";
 import { Flag, Loader2 } from "lucide-react";
@@ -18,15 +20,12 @@ interface Props {
   // 여는 단추의 글자. 기본은 "풀이가 이상합니다". 이야기 카드 뒷면만 "내용이 이상합니다"로 씁니다(2026-11-14 결정).
   // 화면 글자일 뿐이고, 서버로 보내는 신고 종류(feature)·사유 값은 그대로입니다.
   label?: string;
-  // "AI가 만든 내용입니다" 글자를 숨길지 (기본 false). 신고 단추는 그대로 남습니다(Play 정책의 요건은 신고 수단).
-  // 단어 미니 시트만 씁니다 — 작은 시트라 글자가 많다는 사용자 요청(2026-11-18).
-  hideNote?: boolean;
 }
 
 // 말투 규칙(11/10): "~해요" 대신 "~입니다". 시안(사전 안 4)의 버튼 문구 "풀이가 이상합니다"와 맞춥니다.
 const REASONS = ["뜻·번역이 틀립니다", "부적절한 내용입니다", "기타"];
 
-const AiReportButton = ({ feature, input, output, className, label = "풀이가 이상합니다", hideNote = false }: Props) => {
+const AiReportButton = ({ feature, input, output, className, label = "풀이가 이상합니다" }: Props) => {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -55,21 +54,13 @@ const AiReportButton = ({ feature, input, output, className, label = "풀이가 
     setBusy(false);
   };
 
-  // AI 가 만든 내용임을 결과 끝에 밝힙니다(Play 의 AI 생성 콘텐츠 정책. 출시 전 점검 P-24).
-  const AI_NOTE = "AI가 만든 내용입니다";
-
   if (sent) {
-    return (
-      <p className={"text-xs font-gothic text-muted-foreground " + (className || "")}>
-        {hideNote ? "신고를 보냈습니다" : AI_NOTE + " · 신고를 보냈습니다"}
-      </p>
-    );
+    return <p className={"text-xs font-gothic text-muted-foreground " + (className || "")}>신고를 보냈습니다</p>;
   }
 
   return (
     <div className={className || ""}>
       <div className="flex flex-wrap items-center gap-x-3">
-        {hideNote ? null : <span className="text-xs font-gothic text-muted-foreground">{AI_NOTE}</span>}
         <button
           type="button"
           onClick={() => setOpen(!open)}
