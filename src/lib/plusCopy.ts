@@ -83,28 +83,33 @@ export const CTA_CLOSE = "닫기";
 // ── 버튼 아래 안내 ───────────────────────────────────────────
 // 첫 줄은 언제나 자동 결제 고지입니다(Play 구독 정책 — 2026-11-14 출시 전 점검 B-07).
 
-/** "해지 전까지 매년 자동으로 결제됩니다." · 월간은 "매달" */
+// 2026-11-18 사용자 요청: 줄마다 작은 점을 붙여 왼쪽 정렬로(Plus.tsx), 해지·환불 안내를 분명하게.
+//   환불 문구는 이용약관 제5조와 맞춥니다 — "해지해도 이미 결제한 기간 끝까지 이용, 해지·환불은 Google Play 정책을 따름".
+//   그래서 "환불되지 않습니다"처럼 잘라 말하지 않고, 남은 기간 금액을 돌려주지 않는다고만 적습니다
+//   (Google Play 의 환불 요청 절차와 전자상거래법의 청약철회는 그대로 살아 있기 때문입니다).
+
+/** "Google Play에서 결제되며, 해지 전까지 매년 자동으로 결제됩니다." · 월간은 "매달" */
 export function noteAutoRenew(yearly: boolean): string {
-  return "해지 전까지 " + (yearly ? "매년" : "매달") + " 자동으로 결제됩니다.";
+  return "Google Play에서 결제되며, 해지 전까지 " + (yearly ? "매년" : "매달") + " 자동으로 결제됩니다.";
 }
+
+/** 해지·환불 안내 */
+export const NOTE_CANCEL =
+  "해지는 언제든 할 수 있으며, 결제한 기간이 끝날 때까지 이용할 수 있습니다. 남은 기간의 금액은 돌려드리지 않습니다.";
 
 /** 체험 가능(PW1). priceText 예: "연 34,800원" · "월 3,900원" (다른 통화는 Play 표기 그대로) */
 export function noteTrialLines(trialText: string, priceText: string, yearly: boolean): string[] {
   const won = priceText.slice(-1) === "원";
   return [
     noteAutoRenew(yearly),
-    trialText + " 체험이 끝나면 " + priceText + (won ? "이 결제되며," : " 결제가 시작되며,"),
-    "체험 중 언제든 Google Play에서 해지할 수 있습니다.",
+    trialText + " 체험이 끝나면 " + priceText + (won ? "이 결제됩니다." : " 결제가 시작됩니다.") + " 체험 중에 해지하면 결제되지 않습니다.",
+    NOTE_CANCEL,
   ];
 }
 
 /** 체험을 이미 쓴 계정(PW2). */
 export function noteNoTrialLines(yearly: boolean): string[] {
-  return [
-    noteAutoRenew(yearly),
-    "Google Play에서 결제되며, 언제든 해지할 수 있습니다.",
-    "무료 체험은 계정마다 한 번만 제공됩니다.",
-  ];
+  return [noteAutoRenew(yearly), NOTE_CANCEL, "무료 체험은 계정마다 한 번만 제공됩니다."];
 }
 
 /** Play 에서 가격을 받는 중·못 받았을 때 */
