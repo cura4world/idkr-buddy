@@ -155,7 +155,7 @@ const InsightCard = () => {
                     {card.d === kstToday() ? "오늘의 카드" : cardDateLabel(card.d)}
                   </span>
                 </div>
-                <h2 className="mt-2 font-gothic text-[1.0625rem] font-bold leading-snug text-foreground break-keep">{card.title}</h2>
+                <h2 className="mt-2 font-gothic text-[1rem] font-bold leading-snug text-foreground break-keep">{card.title}</h2>
               </div>
               <DailyCardImage d={card.d} has={card.img} size={96} rounded={14} />
             </div>
