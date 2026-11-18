@@ -16,7 +16,10 @@
 - **게시 필요(HQ → 홈페이지 세션)**: `docs/release/policy-final/terms.html`, `docs/release/policy-final/privacy.html`. 게시 전 naruve.app 판은 그 전 정본과 내용이 같았음(바이트 차이는 홈페이지가 넣는 파비콘 줄·Cloudflare Web Analytics 스크립트뿐 — 세 파일 모두 +743바이트).
 - 사업자 주소: Arga 결정으로 **"…와부읍 덕소로 270"까지만**(동·호수·아파트 이름 뺌, 영문도). 전자상거래법 표시 의무와의 위험은 알리고 받은 결정 — 나중에 사무실을 빌리면 그 주소로 옮긴다(사업자등록·Play 콘솔·약관 함께).
 - 배포: `main` `bd584e1..60c3dfb` Pages #787·#789 `success`. `release/public` `ea4a3ba..26419b1` 미리보기 #97 · E2E #27 `success`. 앱 사본 실주소(github.io)에서 새 주소·제4조 확인.
-- 게시용 정본 해시(sha256 앞 16자): privacy `291a52093985d356` · terms `77f60a89aed0afd3` · delete `1e14f3f4feff4e8f`(안 바뀜). HQ 에 게시 프롬프트 전달함(Arga 가 붙여 넣음).
+- 게시용 정본 해시(sha256 앞 16자): privacy `291a52093985d356` · terms `77f60a89aed0afd3` · delete `1e14f3f4feff4e8f`(안 바뀜).
+- **홈페이지 게시 완료(2026-11-18 오후)**: naruve-studio-site 세션이 `scripts/sync-legal.ps1` 로 옮김 — PR #24 `28f459b`, Cloudflare Pages 배포 `da66cbec` 성공, 기록 PR #25 `01e0049`.
+  게시본에서 홈페이지 추가분(머리 6줄 376바이트 + Cloudflare 가 내보낼 때 붙이는 분석 스크립트 367바이트)을 빼면 세 파일 모두 정본과 sha256 이 같다고 보고됨.
+  이쪽에서도 naruve.app 을 받아 다시 확인: terms·privacy 200, 아파트 이름 없음, 오늘의 카드·최종 수정 2026-11-18 있음, privacy `class="even"` 2개, 영문 "tips" 0개.
 
 ## 22차 — 카드 안쪽 머리·AI 안내 글자 정리·앱 정보 화면 (2026-11-18 낮, Arga 요청)
 
