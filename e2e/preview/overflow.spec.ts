@@ -26,6 +26,7 @@ const COMMON: Screen[] = [
   { path: "saved", lands: "/saved", sees: "내 단어장" },
   { path: "category/my-wordbook", lands: "/category/my-wordbook", sees: "내 단어장" },
   { path: "phrase/saved", lands: "/phrase/saved", sees: "" },
+  { path: "about", lands: "/about", sees: "AI로 만든 내용" },
   { path: "about/photos", lands: "/about/photos", sees: "" },
   { path: "percakapan", lands: "/percakapan", sees: "PERCAKAPAN" },
 ];
