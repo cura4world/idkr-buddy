@@ -31,6 +31,7 @@ import InsightCard from "./pages/InsightCard";
 import InsightCards from "./pages/InsightCards";
 import InsightGate from "./pages/InsightGate";
 import PhotoCredits from "./pages/PhotoCredits";
+import AppInfo from "./pages/AppInfo";
 import Percakapan from "./pages/Percakapan";
 import PercakapanCategory from "./pages/PercakapanCategory";
 import PercakapanRead from "./pages/PercakapanRead";
@@ -152,6 +153,7 @@ const App = () => (
           <Route path="/insight/card/:date" element={<InsightGate><InsightCard /></InsightGate>} />
           <Route path="/insight/cards" element={<InsightGate><InsightCards /></InsightGate>} />
           <Route path="/insight/tips" element={<Navigate to="/insight/cards" replace />} />
+          <Route path="/about" element={<AppInfo />} />
           <Route path="/about/photos" element={<PhotoCredits />} />
           <Route path="/percakapan" element={<Percakapan />} />
           <Route path="/percakapan/c/:id" element={<PercakapanCategory />} />
