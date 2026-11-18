@@ -137,22 +137,31 @@ const InsightCard = () => {
 
       {state === "ok" && card ? (
         <>
-          <div className="bg-[#F9F2E1] flex justify-center pt-4 pb-2">
-            <DailyCardImage d={card.d} has={card.img} size={150} rounded={0} />
+          {/* 머리 카드 — 꼬리표·제목(왼쪽)과 그림(오른쪽)을 크림 카드 하나에. 허브의 오늘의 카드와 같은 모양입니다.
+              2026-11-18 사용자 요청: 예전의 화면 폭 크림 띠는 그림에 비해 빈자리가 많아 휑해 보여서 바꿈 */}
+          <div className="px-4 pt-4">
+            <div
+              className="flex items-center gap-3 rounded-[18px] bg-[#F9F2E1] pl-4 pr-3 py-3.5"
+              style={CARD_SHADOW}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  {card.chip ? (
+                    <span className="inline-block font-gothic text-[0.71875rem] leading-none text-[#1E8A99] bg-[#E2F4F6] rounded-full px-2.5 py-[4px]">
+                      {card.chip}
+                    </span>
+                  ) : null}
+                  <span className="font-gothic text-[0.75rem] text-[#8A9398]">
+                    {card.d === kstToday() ? "오늘의 카드" : cardDateLabel(card.d)}
+                  </span>
+                </div>
+                <h2 className="mt-2 font-gothic text-[1.0625rem] font-bold leading-snug text-foreground break-keep">{card.title}</h2>
+              </div>
+              <DailyCardImage d={card.d} has={card.img} size={96} rounded={14} />
+            </div>
           </div>
 
           <div className="px-5 pt-4">
-            <div className="flex items-center gap-2">
-              {card.chip ? (
-                <span className="inline-block font-gothic text-[0.71875rem] leading-none text-[#1E8A99] bg-[#E2F4F6] rounded-full px-2.5 py-[4px]">
-                  {card.chip}
-                </span>
-              ) : null}
-              <span className="font-gothic text-[0.75rem] text-[#8A9398]">
-                {card.d === kstToday() ? "오늘의 카드" : cardDateLabel(card.d)}
-              </span>
-            </div>
-            <h2 className="mt-2.5 mb-3 font-gothic text-[1.125rem] font-bold leading-snug text-foreground break-keep">{card.title}</h2>
 
             <div>
               {card.body.map((p, i) => (
