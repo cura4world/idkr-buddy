@@ -1,5 +1,7 @@
 // src/components/AiReportButton.tsx
-// "풀이가 이상합니다" — AI 가 만든 내용을 신고합니다 (Google Play 의 AI 생성 콘텐츠 정책 요건).
+// "피드백 보내기" — AI 가 만든 내용을 신고합니다 (Google Play 의 AI 생성 콘텐츠 정책 요건).
+// 2026-11-19 사용자 결정: 예전 "풀이가 이상합니다"·"내용이 이상합니다"(이야기·오늘의 카드)를 모든 화면에서 "피드백 보내기" 하나로 통일.
+//   누르면 사유 3가지("부적절한 내용입니다" 포함)가 그대로 나오므로 Play 의 신고 수단 요건은 그대로 맞습니다.
 // 스토어 앱(공개판)에서만 보입니다. 관리자판·회원판에서는 아무것도 그리지 않습니다.
 // 2026-11 게슈탈트 개선안: 주인공 버튼과 떨어진 본문 끝에, 작은 글자 버튼으로 둡니다.
 // 2026-11-18 사용자 요청: 결과마다 붙이던 "AI가 만든 내용입니다" 글자를 앱 전체에서 뺐습니다.
@@ -17,15 +19,15 @@ interface Props {
   input: string;  // 사용자가 찾은 말·고른 주제
   output: string; // AI 가 만든 내용(앞부분이면 충분)
   className?: string;
-  // 여는 단추의 글자. 기본은 "풀이가 이상합니다". 이야기 카드 뒷면만 "내용이 이상합니다"로 씁니다(2026-11-14 결정).
+  // 여는 단추의 글자. 기본은 "피드백 보내기"이고 지금은 모든 화면이 기본값을 씁니다(2026-11-19).
   // 화면 글자일 뿐이고, 서버로 보내는 신고 종류(feature)·사유 값은 그대로입니다.
   label?: string;
 }
 
-// 말투 규칙(11/10): "~해요" 대신 "~입니다". 시안(사전 안 4)의 버튼 문구 "풀이가 이상합니다"와 맞춥니다.
+// 말투 규칙(11/10): "~해요" 대신 "~입니다".
 const REASONS = ["뜻·번역이 틀립니다", "부적절한 내용입니다", "기타"];
 
-const AiReportButton = ({ feature, input, output, className, label = "풀이가 이상합니다" }: Props) => {
+const AiReportButton = ({ feature, input, output, className, label = "피드백 보내기" }: Props) => {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -55,7 +57,7 @@ const AiReportButton = ({ feature, input, output, className, label = "풀이가 
   };
 
   if (sent) {
-    return <p className={"text-xs font-gothic text-muted-foreground " + (className || "")}>신고를 보냈습니다</p>;
+    return <p className={"text-xs font-gothic text-muted-foreground " + (className || "")}>피드백을 보냈습니다</p>;
   }
 
   return (
