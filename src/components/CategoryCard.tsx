@@ -5,7 +5,7 @@ import { CategoryTile } from "@/components/CategoryIcon";
 
 /* 단어장 한 줄 (시안: 단어장 폴더 · 추천안 / 내 단어장 · 추천안).
 
-   variant="folder"   — 기본 단어장 폴더의 한 줄. 묶음 색 타일 + 번호 + 이름 + 단어 수,
+   variant="folder"   — 기본 단어장 폴더의 한 줄. 묶음 색 타일 + 번호 + 이름(단어 수는 안 보임),
                          오른쪽에 "카드 | 퀴즈" 알약. 공용 단어장은 읽기 전용이라 편집 메뉴가 없습니다.
    variant="archived" — 내 단어장 안 "보관한 단어장" 한 줄. 색 타일 + 이름 + 단어 수 + ›.
                          이름 변경·삭제는 그 단어장 안의 ⋮ 메뉴에서 합니다.
@@ -73,9 +73,7 @@ export default function CategoryCard({ category, variant = "folder", tile = "#EE
               <span key={i}>{i > 0 ? "·" : ""}{i > 0 ? <wbr /> : null}{part}</span>
             ))}
           </span>
-          <span className="mt-0.5 block font-gothic text-[0.71875rem] text-[#646C72]">
-            <span className="font-word">{count}</span>단어
-          </span>
+          {/* 단어 수 줄은 2026-11-19 사용자 요청으로 뺌 — 이름이 한 줄에 들어가게. 개수는 단어장 안 맨 위에 크게 나옴 */}
         </span>
       </button>
 
