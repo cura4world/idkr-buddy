@@ -255,7 +255,6 @@ const InsightCard = () => {
                 feature="card"
                 input={card.d + " " + card.title}
                 output={[card.summary].concat(card.body).concat([card.phrase.id + " = " + card.phrase.ko]).join("\n")}
-                label="내용이 이상합니다"
               />
             </div>
           </div>
