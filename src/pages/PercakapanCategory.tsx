@@ -236,9 +236,7 @@ const PercakapanCategory = () => {
                     {s.titleId}
                   </p>
                 </div>
-                <span className="shrink-0 pl-1 font-gothic text-[0.75rem]" style={{ color: "#9AA1A6" }}>
-                  {s.lines.length}줄
-                </span>
+                {/* 줄 수("N줄") 표시는 2026-11-19 사용자 요청으로 뺌 — 모든 회화집 공통 */}
                 {locked ? (
                   <Lock size={14} strokeWidth={2} className="shrink-0" style={{ color: "#B7BDC1" }} />
                 ) : (
