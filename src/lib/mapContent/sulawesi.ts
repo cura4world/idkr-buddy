@@ -103,9 +103,9 @@ export const SULAWESI: MapContentTable = {
       "산 쪽은 코코아 산지입니다. 인도네시아가 한때 세계 3위 코코아 생산국이 된 데에는 이 일대의 몫이 컸습니다. 2021년 큰 지진이 이 도시를 흔들어 관공서와 병원이 무너지고 많은 사람이 집을 잃었습니다.",
     words: [
       {
-        word: "cokelat",
-        meaning: "초콜릿, 카카오",
-        example: "Pohon cokelat ditanam di perbukitan ini.",
+        word: "kakao",
+        meaning: "카카오",
+        example: "Pohon kakao ditanam di perbukitan ini.",
         exampleKo: "카카오나무가 이 언덕에서 재배됩니다.",
       },
       {
