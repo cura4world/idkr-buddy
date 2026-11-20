@@ -682,7 +682,7 @@ Arga 가 2026-11-14 밤에 콘솔에서 끝낸 것을 사실 그대로 적는다
   - L2-32 `juru selamat` → **`Juruselamat`**: 일반 낱말이 아니라 예수님을 가리키는 호칭이라 대문자·붙여 쓴다(TB 표기와 같고, 같은 단어장 4행 예문도 이미 이 표기). 공개판은 성경 단어장이 숨겨져 있어 관리자판·회원판만 바뀐다.
   - L1-25 `nomor dua belas A`: 그대로 — 회화 글은 소리 내어 읽는 글이라 숫자를 글자로 둔다. L3-73 `apa pun`: 그대로 — PUEBI·KBBI 표준은 띄어 쓴다.
 - **표제어가 바뀐 2개(vihara→wihara, juru selamat→Juruselamat)는 이전표 v5** — `HEADWORD_RENAMES_V5`, 표시 키 `kata-shared-ids-v5`(v3·v4 가 이미 돈 기기에서도 돌게 새 판), `LEGACY_WORD_RENAMES` 에도 같은 쌍. 그림 키도 `wihara` 로(그림은 표제어로 찾는다).
-  - 지도 내용(`mapContent/kalimantan.ts`·`baliNusa.ts`)에도 `vihara` 가 두 군데 있지만 검수 대상이 아니어서 이번에는 그대로 두었다.
+  - 지도 내용(`mapContent/kalimantan.ts`·`baliNusa.ts`)의 `vihara` 도 같은 날 Arga 결정으로 `wihara` 로 맞췄다(학습자가 두 표기를 보고 헷갈리지 않게). 사원 이름 `Brahmavihara-Arama` 는 고유 이름이라 그대로.
 - **⑤ 원어민이 보지 않은 것(맛보기 이야기 3편·오늘의 카드)은 그대로 둔다**(Arga 결정).
 - **환불 처리 방침: 기본은 "환불 + 권한 회수"**(Arga 확정, `05-arga-checklist.md` 6-(f)). 이유: "환불만"을 고르면 Play 가 만료일까지 이용 가능하다고 답해 돈을 돌려준 뒤에도 Plus 가 남는다. 회수를 고르면 서버가 하루 안에 무료로 내린다(바로 내려야 하면 KV 의 `ent:<uid>` 를 지움).
 - 홈 소제목 `Mengenal Indonesia · 인도네시아 알아가기` 는 폭 344px 이상·글자 115% 에서 들어가지만, **폭 320px·글자 115% 에서는 한국어 끝이 "…"로 줄어든다**(필요 279.6px / 자리 271px, Pretendard 실측). 인도네시아어(156.9px)는 다 보인다. 15장의 "좁으면 줄바꿈 대신 … 로 줄인다" 설계대로라 고치지 않았다.
