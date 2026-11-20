@@ -10,7 +10,7 @@ export const TRANSPORTASI: PercakapanScene[] = [
     roles: { A: "승객", B: "오토바이 기사" },
     voices: { A: "f", B: "m" },
     level: "중",
-    rev: 3,
+    rev: 4,
     lines: [
       { s: "A", id: "Halo, Bang. Grab atas nama Rina, ya?", ko: "여보세요, 기사님. 리나 이름으로 그랩 부른 거 맞죠?" },
       { s: "B", id: "Iya betul, Mbak. Saya sudah di depan minimarket.", ko: "네 맞아요. 편의점 앞에 있어요." },
@@ -23,7 +23,7 @@ export const TRANSPORTASI: PercakapanScene[] = [
       { s: "A", id: "Nggak apa-apa, saya buru-buru.", ko: "괜찮아요, 좀 급해서요." },
       { s: "B", id: "Siap. Kira-kira dua puluh menit sampai.", ko: "알겠습니다. 20분쯤이면 도착해요." },
       { s: "A", id: "Bang, tolong hati-hati ya.", ko: "기사님, 조심히 가주세요." },
-      { s: "B", id: "Tenang, Mbak. Saya hati-hati kok.", ko: "걱정 마세요. 조심히 갈게요." },
+      { s: "B", id: "Baik, Mbak.", ko: "네, 알겠습니다." },
       { s: "A", id: "Makasih ya, Bang.", ko: "감사해요, 기사님." },
     ],
   },
