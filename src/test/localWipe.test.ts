@@ -35,6 +35,7 @@ describe("이 폰의 단어장과 학습 기록 지우기", () => {
       "kata-shared-ids-v2": "1",
       "kata-shared-ids-v3": "1",
       "kata-shared-ids-v4": "1",
+      "kata-shared-ids-v5": "1",
       "kata-public-samples-cleared": "1",
       "sermon-base": "x",
       "bible-last-pos": "x",
