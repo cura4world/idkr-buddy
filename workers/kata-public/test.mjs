@@ -4,7 +4,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import worker, { __resetCachesForTest, UsageCounter } from "./worker.js";
+import worker, { __resetCachesForTest, __cardTopicForTest, __cardTablesForTest, UsageCounter } from "./worker.js";
 
 const ORIGIN = "https://cura4world.github.io";
 const CLIENT_ID = "web-client.apps.googleusercontent.com";
@@ -1881,5 +1881,189 @@ test("오늘의 카드: CARD_BACKFILL_FROM 이 있으면 오늘·내일 다음�
   assert.equal(seen.gen, 5);
   // 지난 날 카드는 바로 보임, 내일 것은 아직
   assert.deepEqual((await call(env, "GET", "/card/list")).data.items.map((e) => e.d), [kstToday(), kstToday(-1), kstToday(-2), kstToday(-3)]);
+  resetWorld();
+});
+
+// ── 횟수 제한(Rate Limiting 바인딩, 2026-11-20 B안) ──────────────────
+
+/** 가짜 바인딩 — 키(IP)마다 limit 번까지 success. throws 면 limit() 이 실패합니다. */
+function fakeLimiter(limit, { throws = false } = {}) {
+  const counts = new Map();
+  const rl = {
+    keys: [],
+    async limit({ key }) {
+      if (throws) throw new Error("binding broken");
+      rl.keys.push(key);
+      const n = (counts.get(key) || 0) + 1;
+      counts.set(key, n);
+      return { success: n <= limit };
+    },
+  };
+  return rl;
+}
+
+test("횟수 제한: /admin/* 는 IP 마다 RL_ADMIN 만큼만, 넘으면 429 RATE_LIMITED(CORS·Retry-After), 다른 경로는 세지 않음", async () => {
+  resetWorld();
+  const RL_ADMIN = fakeLimiter(2);
+  const RL_AUTH = fakeLimiter(1);
+  const env = makeEnv({ RL_ADMIN, RL_AUTH });
+  const ipA = { headers: { "x-admin-key": "wrong", "CF-Connecting-IP": "203.0.113.7" } };
+  assert.equal((await call(env, "GET", "/admin/budget", ipA)).status, 403);
+  assert.equal((await call(env, "GET", "/admin/budget", ipA)).status, 403);
+  const blocked = await call(env, "GET", "/admin/budget", ipA);
+  assert.equal(blocked.status, 429);
+  assert.equal(blocked.data.error, "RATE_LIMITED");
+  assert.equal(blocked.headers.get("retry-after"), "60");
+  assert.equal(blocked.headers.get("access-control-allow-origin"), ORIGIN);
+  // 맞는 키여도 그 IP 는 막힘, 다른 IP 는 통과
+  assert.equal((await call(env, "GET", "/admin/budget", { headers: { "x-admin-key": "admin-key", "CF-Connecting-IP": "203.0.113.7" } })).status, 429);
+  assert.equal((await call(env, "GET", "/admin/budget", { headers: { "x-admin-key": "admin-key", "CF-Connecting-IP": "198.51.100.9" } })).status, 200);
+  // /auth/* 는 RL_AUTH 로 따로 — 빈 본문 400 다음 429
+  const ipB = { body: {}, headers: { "CF-Connecting-IP": "198.51.100.20" } };
+  assert.equal((await call(env, "POST", "/auth/google", ipB)).status, 400);
+  const authBlocked = await call(env, "POST", "/auth/google", ipB);
+  assert.equal(authBlocked.status, 429);
+  assert.equal(authBlocked.data.error, "RATE_LIMITED");
+  // IP 머리글이 없으면 "unknown" 키
+  await call(env, "POST", "/auth/google", { body: {} });
+  assert.equal(RL_AUTH.keys[RL_AUTH.keys.length - 1], "unknown");
+  // 다른 경로는 바인딩을 부르지 않음
+  const before = RL_ADMIN.keys.length + RL_AUTH.keys.length;
+  await call(env, "GET", "/card/today");
+  await call(env, "GET", "/me");
+  await call(env, "GET", "/");
+  await call(env, "OPTIONS", "/admin/budget");
+  assert.equal(RL_ADMIN.keys.length + RL_AUTH.keys.length, before);
+  resetWorld();
+});
+
+test("횟수 제한: 바인딩이 없거나 limit() 이 실패하면 막지 않고 통과(시험·옛 설정 호환)", async () => {
+  resetWorld();
+  const none = makeEnv();
+  for (let i = 0; i < 15; i++) assert.equal((await call(none, "GET", "/admin/budget", ADMIN)).status, 200);
+  for (let i = 0; i < 35; i++) assert.equal((await call(none, "POST", "/auth/google", { body: {} })).status, 400);
+  const broken = makeEnv({ RL_ADMIN: fakeLimiter(0, { throws: true }), RL_AUTH: { limit: "not a function" } });
+  for (let i = 0; i < 5; i++) assert.equal((await call(broken, "GET", "/admin/budget", ADMIN)).status, 200);
+  assert.equal((await call(broken, "POST", "/auth/google", { body: {} })).status, 400);
+  resetWorld();
+});
+
+// ── 오늘의 카드: 시기별 주제·2028년 명절(2026-11-20) ──────────────────
+
+function daysBetween(from, to) {
+  const out = [];
+  for (let t = Date.parse(from + "T00:00:00Z"); t <= Date.parse(to + "T00:00:00Z"); t += DAY) out.push(new Date(t).toISOString().slice(0, 10));
+  return out;
+}
+
+test("카드 주제: 명절 당일 > 시기(major 사흘 중 이틀, minor 나흘 중 하루) > 일반 주제", () => {
+  // 명절 당일
+  const ev = __cardTopicForTest("2027-03-10", 0);
+  assert.equal(ev.kind, "event");
+  assert.equal(ev.chip, "르바란");
+  assert.equal(__cardTopicForTest("2027-03-10", 1).kind, "event"); // 다시 만들어도 명절 그대로
+  // 2027 라마단 중(르바란 준비 열흘 전까지, 명절 당일 없음) — 18일 중 12일이 시기 주제, 사흘마다 이틀
+  const ram = daysBetween("2027-02-09", "2027-02-26").map((d) => __cardTopicForTest(d, 0));
+  assert.equal(ram.filter((t) => t.kind === "season").length, 12);
+  for (let i = 0; i + 3 <= ram.length; i += 3) assert.equal(ram.slice(i, i + 3).filter((t) => t.kind === "season").length, 2);
+  for (const t of ram.filter((x) => x.kind === "season")) { assert.equal(t.chip, "라마단"); assert.equal(t.approx, true); }
+  // 르바란 준비(짧은 major)가 라마단(긴 major)보다 먼저
+  const prep = daysBetween("2027-02-28", "2027-03-04").map((d) => __cardTopicForTest(d, 0)).filter((t) => t.kind === "season");
+  assert.ok(prep.length >= 3);
+  for (const t of prep) assert.equal(t.chip, "르바란 준비");
+  // 2027-08-10 근처 — 독립기념일 달
+  const aug = daysBetween("2027-08-09", "2027-08-11").map((d) => __cardTopicForTest(d, 0));
+  assert.equal(aug.filter((t) => t.kind === "season" && t.chip === "8월 독립기념일").length, 2);
+  // minor(망고 제철 61일, 바틱의 날 하루 빼고) — 나흘에 하루꼴
+  const mango = daysBetween("2027-09-01", "2027-10-31").map((d) => __cardTopicForTest(d, 0));
+  const ms = mango.filter((t) => t.kind === "season").length;
+  assert.ok(ms >= 14 && ms <= 16, "mango season days " + ms);
+  // 평범한 날 — 어느 시기에도 없음
+  const plain = __cardTopicForTest("2027-06-20", 0);
+  assert.equal(plain.kind, "topic");
+  // 시기 날에 다시 만들면(attempt) 다음 힌트
+  const sd = ram.findIndex((t) => t.kind === "season");
+  const d0 = daysBetween("2027-02-09", "2027-02-26")[sd];
+  assert.notEqual(__cardTopicForTest(d0, 0).hint, __cardTopicForTest(d0, 1).hint);
+  assert.equal(__cardTopicForTest(d0, 0).hint, __cardTopicForTest(d0, 0).hint); // 같은 날 같은 결과
+  // 시기 안에서 힌트가 고르게 돈다 — 라마단 12일에 힌트 5개가 모두 나옴
+  assert.equal(new Set(ram.filter((t) => t.kind === "season").map((t) => t.hint)).size, 5);
+  // 우기 줄의 제철 과일 힌트는 꼬리표가 "제철 과일"
+  const rainy = daysBetween("2026-11-21", "2026-12-14").map((d) => __cardTopicForTest(d, 0)).filter((t) => t.kind === "season");
+  assert.ok(rainy.some((t) => t.chip === "우기"));
+  assert.ok(rainy.every((t) => t.chip === "우기" || t.chip === "제철 과일"));
+});
+
+test("카드 표: 2028년 줄(approx 표시), 날짜 형식·정렬·겹침 규칙, 2027년 줄 그대로, 금지 소재 없음", () => {
+  const { events, seasons } = __cardTablesForTest();
+  const DATE = new RegExp("^[0-9]{4}-[0-9]{2}-[0-9]{2}$");
+  for (const e of events) assert.ok(DATE.test(e.d) && !Number.isNaN(Date.parse(e.d)), e.d);
+  for (let i = 1; i < events.length; i++) assert.ok(events[i - 1].d < events[i].d, "events sorted/unique at " + events[i].d);
+  assert.equal(events.filter((e) => e.d.indexOf("2027-") === 0).length, 26); // 2027년 줄은 바꾸지 않음
+  const y28 = events.filter((e) => e.d.indexOf("2028-") === 0);
+  assert.equal(y28.length, 25);
+  const by = (d) => events.find((e) => e.d === d);
+  for (const d of ["2028-01-28", "2028-02-21", "2028-02-26", "2028-03-26", "2028-05-05", "2028-05-09", "2028-05-26", "2028-08-03", "2028-12-14"]) assert.equal(by(d).approx, true, d);
+  for (const d of ["2028-01-01", "2028-01-26", "2028-04-14", "2028-04-16", "2028-05-25", "2028-08-17", "2028-12-25"]) assert.ok(!by(d).approx, d);
+  assert.equal(__cardTopicForTest("2028-02-26", 0).approx, true);
+
+  for (let i = 0; i < seasons.length; i++) {
+    const s = seasons[i];
+    assert.ok(DATE.test(s.from) && DATE.test(s.to) && s.from <= s.to, s.from);
+    assert.ok(s.from >= "2026-11-21" && s.to <= "2028-12-31", s.from);
+    assert.ok(s.grade === "major" || s.grade === "minor");
+    assert.ok(Array.isArray(s.hints) && s.hints.length >= 1 && s.chip && s.name);
+    if (i > 0) assert.ok(seasons[i - 1].from <= s.from, "seasons sorted at " + s.from);
+  }
+  const len = (s) => Date.parse(s.to) - Date.parse(s.from);
+  for (let i = 0; i < seasons.length; i++) for (let j = i + 1; j < seasons.length; j++) {
+    const a = seasons[i], b = seasons[j];
+    if (a.grade !== b.grade || a.to < b.from || b.to < a.from) continue;
+    assert.notEqual(len(a), len(b), "same grade & length overlap: " + a.from + " / " + b.from);
+  }
+  // 재난·신앙 소재가 힌트에 없음(종교 시기는 생활 풍경만)
+  const BANNED = ["홍수", "재난", "사고", "교리", "신앙", "예배", "설교", "기도"];
+  for (const s of seasons) for (const h of s.hints) {
+    const text = typeof h === "string" ? h : h.hint;
+    for (const w of BANNED) assert.equal(text.indexOf(w), -1, w + " in " + text);
+  }
+});
+
+test("카드 주제: 전 기간(2026-11-21~2028-12-31)에 같은 시기 힌트가 이레 안에 되풀이되지 않고, 무딕은 명절 날에만", () => {
+  const days = daysBetween("2026-11-21", "2028-12-31");
+  const lastSeen = new Map();
+  let seasonDays = 0;
+  for (let i = 0; i < days.length; i++) {
+    const t = __cardTopicForTest(days[i], 0);
+    if (t.kind !== "season") continue;
+    seasonDays++;
+    if (lastSeen.has(t.hint)) assert.ok(i - lastSeen.get(t.hint) >= 7, "repeat within 7 days: " + days[i] + " " + t.hint);
+    lastSeen.set(t.hint, i);
+    assert.equal(t.hint.indexOf("무딕"), -1, days[i]);
+  }
+  assert.ok(seasonDays > 150, "season days " + seasonDays);
+  // 명절 당일이 가져간 날의 힌트를 건너뛰지 않음 — 2026 연말 힌트 넷이 모두 한 번씩
+  const ye = daysBetween("2026-12-15", "2026-12-31").map((d) => __cardTopicForTest(d, 0)).filter((t) => t.kind === "season" && t.chip === "연말");
+  assert.equal(new Set(ye.map((t) => t.hint)).size, ye.length);
+});
+
+test("카드 주제: 시기 날의 글 만들기 프롬프트에 시기 문맥·approx 규칙, 저장된 카드에 kind·season", async () => {
+  resetWorld();
+  const seen = cardWorld();
+  const env = makeEnv();
+  // 라마단 시기 주제가 되는 날을 고름
+  const d = daysBetween("2027-02-09", "2027-02-26").find((x) => __cardTopicForTest(x, 0).kind === "season");
+  const r = await call(env, "POST", "/admin/card/generate", { body: { date: d }, headers: { "x-admin-key": "admin-key" } });
+  assert.equal(r.status, 200);
+  assert.ok(seen.prompts[0].indexOf("이 시기(라마단 기간)에 인도네시아에서 볼 수 있는 생활 이야기") >= 0);
+  assert.ok(seen.prompts[0].indexOf("정확한 날짜를 단정하지 말고") >= 0);
+  const saved = JSON.parse(env.PUBLIC_KV.m.get("card:v1:" + d));
+  assert.equal(saved.kind, "season");
+  assert.equal(saved.season, "라마단 기간");
+  assert.equal(saved.event, null);
+  // 이미 있는 카드는 다시 만들지 않음(force 없이)
+  const again = await call(env, "POST", "/admin/card/generate", { body: { date: d }, headers: { "x-admin-key": "admin-key" } });
+  assert.equal(again.data.existed, true);
+  assert.equal(seen.gen, 1);
   resetWorld();
 });
