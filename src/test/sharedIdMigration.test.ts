@@ -12,8 +12,10 @@ import {
   LEGACY_WORD_RENAMES,
   HEADWORD_RENAMES_V3,
   HEADWORD_RENAMES_V4,
+  HEADWORD_RENAMES_V5,
   SHARED_ID_RENAME_KEY,
   SHARED_ID_RENAME_KEY_V4,
+  SHARED_ID_RENAME_KEY_V5,
   migrateRenamedHeadwordsOnce,
   upgradeRenamedWordId,
   SHARED_ID_MIGRATION_KEY,
@@ -252,6 +254,60 @@ describe("이전 표가 실제 CSV 와 맞는다", () => {
       expect(heads.indexOf(oldW) >= 0, oldW).toBe(false);
       expect(LEGACY_WORD_RENAMES[oldW]).toBe(newW);
     }
+  });
+
+  it("2026-11-20 원어민 검수 반영으로 바뀐 2개도 그 단어장 파일에 새 글자로만 있다", () => {
+    expect(HEADWORD_RENAMES_V5).toHaveLength(2);
+    for (const [cat, oldW, newW] of HEADWORD_RENAMES_V5) {
+      const file = files.find((f) => idOf(f) === cat);
+      expect(file, cat).toBeTruthy();
+      const heads = fs.readFileSync(path.join(dir, file as string), "utf-8").split("\n").map((l) => l.split(",")[0]);
+      expect(heads.indexOf(newW) >= 0, newW).toBe(true);
+      expect(heads.indexOf(oldW) >= 0, oldW).toBe(false);
+      expect(LEGACY_WORD_RENAMES[oldW]).toBe(newW);
+    }
+  });
+});
+
+describe("원어민 검수 반영으로 바뀐 표제어의 다시 외울 표시 옮기기 (v5, 2026-11-20)", () => {
+  const OLD_W = "shared_shared_32_장소·여행_vihara";
+  const NEW_W = "shared_shared_32_장소·여행_wihara";
+  const OLD_J = "shared_shared_35_성경_핵심어_juru selamat";
+  const NEW_J = "shared_shared_35_성경_핵심어_Juruselamat";
+  const OLD4 = "shared_shared_38_교리·신학_omnipresent";
+
+  it("v3·v4 가 이미 돈 기기(지금 두 분 폰)에서 v5 의 표시만 새 표제어로 옮긴다", () => {
+    const store = fakeStore({
+      [SHARED_ID_RENAME_KEY]: "1",
+      [SHARED_ID_RENAME_KEY_V4]: "1",
+      "kata-saved": JSON.stringify(["mine-1", OLD_W, OLD4, OLD_J, "shared_shared_32_장소·여행_bioskop"]),
+    });
+    expect(migrateRenamedHeadwordsOnce(store)).toBe(2);
+    // v4 는 이미 돈 판이라 그 표의 옛 ID 는 건드리지 않습니다
+    expect(JSON.parse(store.data["kata-saved"])).toEqual(["mine-1", NEW_W, OLD4, NEW_J, "shared_shared_32_장소·여행_bioskop"]);
+    expect(store.data[SHARED_ID_RENAME_KEY_V5]).toBe("1");
+    // 한 번만 돈다
+    store.data["kata-saved"] = JSON.stringify([OLD_W]);
+    expect(migrateRenamedHeadwordsOnce(store)).toBe(0);
+    expect(JSON.parse(store.data["kata-saved"])).toEqual([OLD_W]);
+  });
+
+  it("옛것과 새것이 함께 있으면 하나만 남기고, 처음 켜는 기기는 세 판을 한 번에 돈다", () => {
+    const store = fakeStore({ "kata-saved": JSON.stringify([NEW_J, OLD_J, OLD4]) });
+    expect(migrateRenamedHeadwordsOnce(store)).toBe(2);
+    expect(JSON.parse(store.data["kata-saved"])).toEqual([NEW_J, "shared_shared_38_교리·신학_omnipresen"]);
+    expect(store.data[SHARED_ID_RENAME_KEY]).toBe("1");
+    expect(store.data[SHARED_ID_RENAME_KEY_V4]).toBe("1");
+    expect(store.data[SHARED_ID_RENAME_KEY_V5]).toBe("1");
+  });
+
+  it("예전 백업의 ID(지금 번호 체계·번호를 바꾸기 전 체계 모두)도 새 표제어로 읽는다", () => {
+    expect(upgradeRenamedWordId(OLD_W)).toBe(NEW_W);
+    expect(upgradeRenamedWordId(OLD_J)).toBe(NEW_J);
+    expect(upgradeLegacyWordId(OLD_J, makeLegacyWordResolver(null))).toBe(NEW_J);
+    // 번호를 바꾸기 전(30 성경 핵심어·27 장소·여행)의 ID 는 번호와 표기가 함께 바뀝니다
+    expect(upgradeLegacyWordId("shared_shared_30_성경_핵심어_juru selamat", makeLegacyWordResolver(null))).toBe(NEW_J);
+    expect(upgradeLegacyWordId("shared_shared_27_장소·여행_vihara", makeLegacyWordResolver(null))).toBe(NEW_W);
   });
 });
 
