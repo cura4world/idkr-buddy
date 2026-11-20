@@ -115,7 +115,7 @@ export const KANTOR: PercakapanScene[] = [
     roles: { A: "손님", B: "사진관 직원" },
     voices: { A: "f", B: "m" },
     level: "중",
-    rev: 2,
+    rev: 3,
     lines: [
       { s: "A", id: "Mas, mau foto buat pasfoto.", ko: "증명사진 찍으려고요." },
       { s: "B", id: "Buat apa, Kak? Latarnya merah atau biru?", ko: "어디에 쓰실 거예요? 배경은 빨간색이에요, 파란색이에요?" },
@@ -125,7 +125,7 @@ export const KANTOR: PercakapanScene[] = [
       { s: "B", id: "Siap. Rambutnya dirapikan dulu, cerminnya di sana.", ko: "알겠어요. 머리 먼저 정리하세요, 거울은 저쪽에 있어요." },
       { s: "A", id: "Sekalian fotokopi ijazah ini lima lembar, bisa?", ko: "이 졸업장도 다섯 장 복사해 주실 수 있어요?" },
       { s: "B", id: "Bisa. Ijazahnya mau dilaminating juga?", ko: "돼요. 졸업장 코팅도 해 드릴까요?" },
-      { s: "A", id: "Jangan, nanti nggak bisa dilegalisasi.", ko: "아니요, 코팅하면 원본 인증을 못 받아요." },
+      { s: "A", id: "Jangan, nanti nggak bisa dilegalisir.", ko: "아니요, 코팅하면 원본 인증을 못 받아요." },
       { s: "B", id: "Betul juga. Totalnya tiga puluh lima ribu, ya, Kak.", ko: "맞아요. 다 해서 3만 5천이에요." },
     ],
   },
