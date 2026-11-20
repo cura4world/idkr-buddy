@@ -114,7 +114,7 @@ export const MASALAH: PercakapanScene[] = [
     roles: { A: "엄마", B: "경비원" },
     voices: { A: "f", B: "m" },
     level: "중",
-    rev: 2,
+    rev: 3,
     lines: [
       { s: "A", id: "Pak, tolong! Anak saya hilang.", ko: "아저씨, 도와주세요! 아이를 잃어버렸어요." },
       { s: "B", id: "Tenang dulu, Bu. Umurnya berapa?", ko: "일단 진정하세요. 아이가 몇 살이에요?" },
@@ -125,7 +125,7 @@ export const MASALAH: PercakapanScene[] = [
       { s: "A", id: "Di depan toko mainan, lantai dua, lima menit lalu.", ko: "2층 장난감 가게 앞에서요, 5분 전에요." },
       { s: "B", id: "Saya umumkan lewat pengeras suara, pintu keluar juga kami jaga.", ko: "안내 방송을 하고, 출입구도 지키도록 할게요." },
       { s: "A", id: "Namanya Juna. Tolong cepat, ya, Pak.", ko: "이름은 주나예요. 빨리 부탁드려요." },
-      { s: "B", id: "Bu, itu dia! Sudah ketemu sama satpam di lantai dua.", ko: "저기 있네요! 2층 경비원이 찾았대요." },
+      { s: "B", id: "Bu, itu dia! Sudah ditemukan satpam di lantai dua.", ko: "저기 있네요! 2층 경비원이 찾았대요." },
     ],
   },
 ];
