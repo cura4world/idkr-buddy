@@ -1,4 +1,13 @@
-# 원어민 검수 결과 반영안 (2026-11-19 작성 · 아직 앱에 반영하지 않음)
+# 원어민 검수 결과 반영안 (2026-11-19 작성 · **2026-11-20 앱에 반영 완료**)
+
+> **반영 완료(2026-11-20, Arga 결정 · 배경은 `DECISIONS.md` 22장)**
+> - ① 전부 반영 — 회화 6줄 + 한국어 뜻(03 장면 두 줄), 단어장 예문 15·뜻 4·표기 1(wihara), 홈 소제목 2, 지도 1(kakao).
+>   회화 장면 5개 `rev` +1(01 Perkenalan Pertama 없음→2 · 04 Beli Sayur di Pasar 2→3 · 05 Ngobrol sama Driver Ojol 3→4 · 12 Anak Hilang di Mal 2→3 · 15 Pasfoto dan Fotokopi Dokumen 2→3). 03 은 한국어만이라 그대로.
+> - ② 대안 4문장을 원어민 확인 없이 그대로 넣음(Arga 결정).
+> - ③ L2-75·76·77 표제어는 KBBI 그대로, 뜻 끝에 "(흔히 resleting·stroke·orangutan)". L2-32 → `Juruselamat`. L1-25·L3-73 그대로.
+> - 표제어 2개(vihara→wihara, juru selamat→Juruselamat)는 `sharedIdMigration.ts` 이전표 v5(`kata-shared-ids-v5`) + `LEGACY_WORD_RENAMES`, 그림 키 `wihara`.
+> - ⑤(맛보기 이야기 3편·오늘의 카드)는 그대로 둠.
+> - 아래 표의 "지금"은 반영 **전** 값이다.
 
 - 검수: 원어민 1명(2026-11-14, 학습지 "Belajar Bahasa Indonesia" 207문항 모두 답함). 다른 두 분은 답이 오지 않아 **이 한 분의 답으로 검수를 마친다(Arga 결정, 2026-11-19)**.
 - 학습지 문항 원본은 claude.ai 아티팩트 "Belajar Bahasa Indonesia"(11/14 판), 답 원문은 claude.ai 대화 "단어장·회화집 검수 정리"에 있다. 이름은 여기 적지 않는다(공개 저장소).
