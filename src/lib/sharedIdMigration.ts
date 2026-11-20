@@ -114,6 +114,9 @@ export const LEGACY_WORD_RENAMES: Record<string, string> = {
   "omnipresent": "omnipresen",
   "hamartologi": "hamartiologi",
   "otorisasi Alkitab": "otoritas Alkitab",
+  // 2026-11-20 원어민 검수 반영으로 바뀐 표기 — 아래 HEADWORD_RENAMES_V5 와 같은 쌍입니다
+  "vihara": "wihara",
+  "juru selamat": "Juruselamat",
 };
 
 // ── 2026-11-14: 표제어 표기만 고친 단어 (단어장 번호는 그대로) ─────────────────
@@ -161,6 +164,17 @@ export const HEADWORD_RENAMES_V4: [string, string, string][] = [
   ["shared_38_교리·신학", "otorisasi Alkitab", "otoritas Alkitab"],
 ];
 
+// ── 2026-11-20: 원어민 검수 결과를 반영하며 바뀐 표제어 ──────────────────────────
+// v4 까지 이미 돈 기기(두 분 폰·미리보기 APK)에서도 돌아야 해서 표시 키를 또 따로 둡니다.
+// wihara 는 KBBI 표준 표기, Juruselamat 은 예수님을 가리키는 호칭이라 대문자·붙여 씀(TB 와 같음).
+export const SHARED_ID_RENAME_KEY_V5 = "kata-shared-ids-v5";
+
+/** [단어장 ID, 옛 표제어, 새 표제어] */
+export const HEADWORD_RENAMES_V5: [string, string, string][] = [
+  ["shared_32_장소·여행", "vihara", "wihara"],
+  ["shared_35_성경_핵심어", "juru selamat", "Juruselamat"],
+];
+
 function renameMap(list: [string, string, string][]): Record<string, string> {
   const map: Record<string, string> = {};
   for (const r of list) {
@@ -171,7 +185,8 @@ function renameMap(list: [string, string, string][]): Record<string, string> {
 
 const RENAMED_V3 = renameMap(HEADWORD_RENAMES_V3);
 const RENAMED_V4 = renameMap(HEADWORD_RENAMES_V4);
-const RENAMED_WORD_IDS: Record<string, string> = { ...RENAMED_V3, ...RENAMED_V4 };
+const RENAMED_V5 = renameMap(HEADWORD_RENAMES_V5);
+const RENAMED_WORD_IDS: Record<string, string> = { ...RENAMED_V3, ...RENAMED_V4, ...RENAMED_V5 };
 
 /** 표기를 고친 공용 단어의 옛 ID 면 새 ID 를, 아니면 그대로 돌려줍니다. */
 export function upgradeRenamedWordId(id: string): string {
@@ -376,7 +391,8 @@ export function migrateSharedIdsOnce(store: KeyValueStore, seed: SeedLike | null
 
 /**
  * 판마다 한 번만 돕니다(2026-11-14). 표기를 고친 표제어의 "다시 외울 표시"를 새 ID 로 옮깁니다 —
- * v3 은 19개(3차 검수), v4 는 7개(11/13 검수 브랜치 병합). 이미 돈 판은 다시 돌지 않습니다.
+ * v3 은 19개(3차 검수), v4 는 7개(11/13 검수 브랜치 병합), v5 는 2개(2026-11-20 원어민 검수 반영).
+ * 이미 돈 판은 다시 돌지 않습니다.
  * 공용 단어 자체는 시드 동기화가 새 표기로 다시 깔므로 손대지 않습니다. 옮긴 표시 수를 돌려줍니다.
  */
 export function migrateRenamedHeadwordsOnce(store: KeyValueStore): number {
@@ -385,6 +401,7 @@ export function migrateRenamedHeadwordsOnce(store: KeyValueStore): number {
     const rounds: [string, Record<string, string>][] = [
       [SHARED_ID_RENAME_KEY, RENAMED_V3],
       [SHARED_ID_RENAME_KEY_V4, RENAMED_V4],
+      [SHARED_ID_RENAME_KEY_V5, RENAMED_V5],
     ];
     const pending = rounds.filter((r) => store.getItem(r[0]) !== "1");
     if (pending.length === 0) return 0;
