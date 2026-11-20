@@ -36,7 +36,7 @@ const WORDBOOKS_FREE: Screen = { path: "wordbooks", lands: "/plus", sees: "Plus"
 const WORDBOOKS_PLUS: Screen = { path: "wordbooks", lands: "/wordbooks", sees: "KOSAKATA" };
 
 const STAFF: Screen[] = [
-  { path: "", lands: "/", sees: "Firman hari ini" },
+  { path: "", lands: "/", sees: "Firman Hari Ini" },
   { path: "prayer", lands: "/prayer", sees: "DOA" },
   { path: "devotion", lands: "/devotion", sees: "SAAT TEDUH" },
   { path: "bible", lands: "/bible", sees: "" },
