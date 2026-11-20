@@ -226,6 +226,10 @@ test("AI 대리 호출: 허용·차단·한도·출력 상한", async () => {
   assert.equal(JSON.parse(sent.init.body).generationConfig.maxOutputTokens, 16384);
 
   assert.equal((await call(env, "POST", path("gemini-3.8-flash"), { token: t, body: textBody(), headers: { "x-kata-kind": "text" } })).data.error, "MODEL_NOT_ALLOWED");
+  // 2026-11-20: 구글이 막은 gemini-2.5-flash-lite 는 허용 목록에서 뺌
+  const gone = await call(env, "POST", path("gemini-2.5-flash-lite"), { token: t, body: textBody(), headers: { "x-kata-kind": "text" } });
+  assert.equal(gone.status, 403);
+  assert.equal(gone.data.error, "MODEL_NOT_ALLOWED");
   assert.equal((await call(env, "POST", path("gemini-3.8-flash"), { token: t, body: textBody(), headers: { "x-kata-kind": "news" } })).data.error, "KIND_NOT_ALLOWED");
   const withTools = Object.assign(textBody(), { tools: [{ google_search: {} }] });
   assert.equal((await call(env, "POST", path("gemini-3.1-flash-lite"), { token: t, body: withTools })).data.error, "TOOLS_NOT_ALLOWED");
