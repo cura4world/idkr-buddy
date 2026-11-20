@@ -482,7 +482,7 @@ export const BALI_NUSA: MapContentTable = {
       {
         word: "biksu",
         meaning: "승려 (불교)",
-        example: "Para biksu tinggal dan belajar di vihara ini.",
+        example: "Para biksu tinggal dan belajar di wihara ini.",
         exampleKo: "승려들이 이 사원에서 살며 공부합니다.",
       },
       {
