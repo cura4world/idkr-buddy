@@ -1193,7 +1193,7 @@ const Index = () => {
 
           {/* 문화 */}
           <section>
-            {sectionTitle("Kenali Indonesia", "인도네시아 알아가기")}
+            {sectionTitle("Mengenal Indonesia", "인도네시아 알아가기")}
             <div className={listBox} style={listStyle} data-fit-anchor="culture">
               <PubRow
                 tileBg="#FCE6D9"
@@ -1248,7 +1248,7 @@ const Index = () => {
               2026-11-13 사용자 요청: 설교문은 사용 빈도가 높아 신앙 첫 줄(오늘의 묵상 위)로 옮기고, 따로 있던 "설교" 구역은 없앴습니다. */}
           {staff ? (
             <section>
-              {sectionTitle("Firman hari ini", "오늘의 말씀")}
+              {sectionTitle("Firman Hari Ini", "오늘의 말씀")}
               <div className={listBox} style={listStyle}>
                 {tier === "admin" ? (
                   <PubRow
