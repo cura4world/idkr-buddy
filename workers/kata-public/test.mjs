@@ -1884,32 +1884,13 @@ test("오늘의 카드: CARD_BACKFILL_FROM 이 있으면 오늘·내일 다음�
   resetWorld();
 });
 
-// ── 횟수 제한(Rate Limiting 바인딩, 2026-11-20 B안) ──────────────────
+// ── 횟수 제한(Durable Object 로 셈, 2026-11-20) ──────────────────
 
-/** 가짜 바인딩 — 키(IP)마다 limit 번까지 success. throws 면 limit() 이 실패합니다. */
-function fakeLimiter(limit, { throws = false } = {}) {
-  const counts = new Map();
-  const rl = {
-    keys: [],
-    async limit({ key }) {
-      if (throws) throw new Error("binding broken");
-      rl.keys.push(key);
-      const n = (counts.get(key) || 0) + 1;
-      counts.set(key, n);
-      return { success: n <= limit };
-    },
-  };
-  return rl;
-}
-
-test("횟수 제한: /admin/* 는 IP 마다 RL_ADMIN 만큼만, 넘으면 429 RATE_LIMITED(CORS·Retry-After), 다른 경로는 세지 않음", async () => {
+test("횟수 제한: /admin/* 는 IP 마다 1분 10번, 넘으면 429 RATE_LIMITED(CORS·Retry-After), 1분 뒤 풀림, 다른 경로는 세지 않음", async () => {
   resetWorld();
-  const RL_ADMIN = fakeLimiter(2);
-  const RL_AUTH = fakeLimiter(1);
-  const env = makeEnv({ RL_ADMIN, RL_AUTH });
+  const env = makeEnv({ USAGE_DO: makeDO() });
   const ipA = { headers: { "x-admin-key": "wrong", "CF-Connecting-IP": "203.0.113.7" } };
-  assert.equal((await call(env, "GET", "/admin/budget", ipA)).status, 403);
-  assert.equal((await call(env, "GET", "/admin/budget", ipA)).status, 403);
+  for (let i = 0; i < 10; i++) assert.equal((await call(env, "GET", "/admin/budget", ipA)).status, 403, "try " + (i + 1));
   const blocked = await call(env, "GET", "/admin/budget", ipA);
   assert.equal(blocked.status, 429);
   assert.equal(blocked.data.error, "RATE_LIMITED");
@@ -1918,33 +1899,44 @@ test("횟수 제한: /admin/* 는 IP 마다 RL_ADMIN 만큼만, 넘으면 429 RA
   // 맞는 키여도 그 IP 는 막힘, 다른 IP 는 통과
   assert.equal((await call(env, "GET", "/admin/budget", { headers: { "x-admin-key": "admin-key", "CF-Connecting-IP": "203.0.113.7" } })).status, 429);
   assert.equal((await call(env, "GET", "/admin/budget", { headers: { "x-admin-key": "admin-key", "CF-Connecting-IP": "198.51.100.9" } })).status, 200);
-  // /auth/* 는 RL_AUTH 로 따로 — 빈 본문 400 다음 429
+  // 막힌 요청은 세지 않고, 1분 칸이 지나면 다시 통과
+  const st = env.USAGE_DO.objs.get("rl:admin:203.0.113.7").storage;
+  assert.equal(st.m.get("rl").n, 10);
+  assert.ok(st.alarmAt() > 0); // 지울 알람이 걸려 있음
+  clockOffset += 61 * 1000;
+  assert.equal((await call(env, "GET", "/admin/budget", ipA)).status, 403);
+  // 알람이 돌면 지난 칸이 지워짐(IP 의 기록이 남지 않음)
+  clockOffset += 3 * 60 * 1000;
+  await env.USAGE_DO.objs.get("rl:admin:203.0.113.7").obj.alarm();
+  assert.equal(st.m.has("rl"), false);
+  // /auth/* 는 따로 1분 30번 — 빈 본문 400 × 30 다음 429
   const ipB = { body: {}, headers: { "CF-Connecting-IP": "198.51.100.20" } };
-  assert.equal((await call(env, "POST", "/auth/google", ipB)).status, 400);
+  for (let i = 0; i < 30; i++) assert.equal((await call(env, "POST", "/auth/google", ipB)).status, 400);
   const authBlocked = await call(env, "POST", "/auth/google", ipB);
   assert.equal(authBlocked.status, 429);
   assert.equal(authBlocked.data.error, "RATE_LIMITED");
-  // IP 머리글이 없으면 "unknown" 키
+  // IP 머리글이 없으면 "unknown" 이름의 객체
   await call(env, "POST", "/auth/google", { body: {} });
-  assert.equal(RL_AUTH.keys[RL_AUTH.keys.length - 1], "unknown");
-  // 다른 경로는 바인딩을 부르지 않음
-  const before = RL_ADMIN.keys.length + RL_AUTH.keys.length;
+  assert.ok(env.USAGE_DO.objs.has("rl:auth:unknown"));
+  // 다른 경로는 횟수 제한 객체를 만들지 않음
+  const before = [...env.USAGE_DO.objs.keys()].filter((k) => k.indexOf("rl:") === 0).length;
   await call(env, "GET", "/card/today");
   await call(env, "GET", "/me");
   await call(env, "GET", "/");
   await call(env, "OPTIONS", "/admin/budget");
-  assert.equal(RL_ADMIN.keys.length + RL_AUTH.keys.length, before);
+  await call(env, "POST", "/report", { body: {} });
+  assert.equal([...env.USAGE_DO.objs.keys()].filter((k) => k.indexOf("rl:") === 0).length, before);
   resetWorld();
 });
 
-test("횟수 제한: 바인딩이 없거나 limit() 이 실패하면 막지 않고 통과(시험·옛 설정 호환)", async () => {
+test("횟수 제한: USAGE_DO 가 없거나 객체 호출이 실패하면 막지 않고 통과(이 장치 고장으로 관리자·로그인이 막히지 않게)", async () => {
   resetWorld();
   const none = makeEnv();
   for (let i = 0; i < 15; i++) assert.equal((await call(none, "GET", "/admin/budget", ADMIN)).status, 200);
   for (let i = 0; i < 35; i++) assert.equal((await call(none, "POST", "/auth/google", { body: {} })).status, 400);
-  const broken = makeEnv({ RL_ADMIN: fakeLimiter(0, { throws: true }), RL_AUTH: { limit: "not a function" } });
-  for (let i = 0; i < 5; i++) assert.equal((await call(broken, "GET", "/admin/budget", ADMIN)).status, 200);
-  assert.equal((await call(broken, "POST", "/auth/google", { body: {} })).status, 400);
+  const broken = makeEnv({ USAGE_DO: makeDO({ broken: true }) });
+  for (let i = 0; i < 15; i++) assert.equal((await call(broken, "GET", "/admin/budget", ADMIN)).status, 200);
+  for (let i = 0; i < 35; i++) assert.equal((await call(broken, "POST", "/auth/google", { body: {} })).status, 400);
   resetWorld();
 });
 
