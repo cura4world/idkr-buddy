@@ -48,47 +48,48 @@ const PICK = {
   // 관광지
   "Raja Ampat": ["Piaynemo, Raja Ampat (39660320633).jpg", "Pulau Piaynemo, Raja Ampat.jpg"], // 1번을 카르스트 섬 풍경으로(자동은 둘 다 물속)
   "Pulau Komodo": ["Komodo Island north aerial.jpg", "Komodo Dragon (01).jpg"], // 자동
-  "Bunaken": ["Bunaken.jpg", "Bunaken3.jpg"], // 자동
+  "Bunaken": ["Pantai Liang, Pulau Bunaken, Sulawesi (15032634628).jpg", "Pulau Bunaken & Pulau Manado Tua.jpg"], // 2026-11-20 Arga: 두 장 모두 해변·마을로(예전: 물속·바다)
   "Pulau Belitung": ["Berlayar di Semenanjung Belitung.jpg", "Pantai Tanjung Tinggi Belitung 02.jpg"], // 2번을 화강암 해변으로
   "Kuta": ["Kuta Beach (6924448550).jpg", "Kuta Square.JPG"], // 자동
   "Dataran Tinggi Dieng": ["Arjuna Temple Complex in the Dieng Plateau.jpg", "Pagi Candi Arjuna Dieng.jpg"], // 자동
-  "Tangkuban Perahu": ["Tangkuban Prahu.jpg", "Tangkuban Parahu.jpg"], // 자동 2번은 옛 흑백 사진
+  "Tangkuban Perahu": ["Tangkuban Prahu.jpg", "Tangkuban Perahu Java71.jpg"], // 2026-11-20 Arga: 2번을 1번(분화구 호수)과 다른 분화구 가장자리 풍경으로
   "Kepulauan Mentawai": ["Mentawai Uma.jpg", "Pantai Jati 1.jpg"], // 자동 1번은 항구 간판
-  "Krakatau": ["Anak Krakatau-2.JPG", "Anak Krakatau.jpg"], // 자동은 둘 다 18세기 판화(하나는 반다의 구눙 아피)
+  "Krakatau": ["Anak Krakatau-2.JPG", "Anak Krakatau Crater.JPG"], // 자동은 둘 다 18세기 판화. 2026-11-20 Arga: 2번을 1번(바다 너머 먼 원뿔)과 다른 구도로 — 분화구 꼭대기를 가까이(라카타 섬 사진은 구도가 1번과 같아 뺌)
   "Tanjung Puting": ["Orangutan at Tanjung Puting National Park (31266099698).jpg", "Landscape of theTanjung Puting National Park - Indonesia 2.jpg"], // 1번을 오랑우탄으로
   "Kepulauan Banda": ["BandaBesarIslandSeenFromFortBelgica.JPG", "Banda-0039.jpg"], // 자동
   "Sangiran": ["Java Man Statue at the Sangiran Early Man Site.jpg", "Sangiran Early Man Museum, Krikilan Cluster.jpg"], // 2번을 두개골 대신 박물관으로
-  "Muara Jambi": ["Candi Muaro Jambi di siang hari.jpg", "004 Main Building, Side View, Candi Tinggi 2 (39127443191).jpg"], // 자동
+  "Muara Jambi": ["Candi Muaro Jambi di siang hari.jpg"], // 자동. 2026-11-20 Arga: 2번 빼기 → 1장(EXACT)
   "Taman Nasional Lorentz": ["Taman Nasional Lorentz.jpg", "Wikiearth-Danau Habema Taman Nasional Lorentz.jpg"], // 자동 2번은 새(동물원 사진으로 보임)
   // 종교·역사
   "Banten Lama": ["Masjid agung banten lama.jpg", "Tampak Fondasi Ruang Dayang-Dayang Keraton Surosowan.jpg"], // 자동 2번은 메단의 모스크
   "Lasem": ["Oemah Batik Lasem.jpg", "Sarung batik tulis lasem premium tiga negeri.jpg"], // 자동은 둘 다 이란의 라셈
   "Muntilan": ["Kerkof Muntilan, Magelang, Jawa Tengah.jpg", "Makam Justinus Kardinal Darmoyuwono di Kerkof Muntilan 8.jpg"], // 판 리트 신부가 묻힌 가톨릭 묘지(자동은 석공예 가게·면사무소 간판)
   "Pulau Mansinam": ["Mansinam Jesus Statue.jpg", "Sumur Tua JL Van Hasselt 005.jpg"], // 자동
-  "Pulau Sabu": ["Boats at Raijua Pier 2022.jpg", "Tubular dress, Savu, Indonesia, early 20th century, cotton - Fernbank Museum of Natural History - DSC09979.JPG"], // 자동 1번은 플로레스 섬 해안. 사부 섬 풍경 사진은 찾지 못해 이웃 라이주아 섬 부두로
-  "Soe": ["Rumah Bulat.jpg", "Oelekam, Central Mollo, South Timor Tengah Regency, East Nusa Tenggara, Indonesia - panoramio.jpg"], // 자동
+  // 2026-11-20 Arga: 예전 두 장(라이주아 섬 부두·박물관 옷)은 사부 섬이 아님 → 사부 섬의 클라바 마자 지형·염전(사부 라이주아 군청 사진, 퍼블릭 도메인)
+  "Pulau Sabu": ["Kelabba Maja Sabu Raijua.jpg", "Salt evaporation pond in Sabu Island.jpg"],
+  "Soe": ["NASIONALISME.jpg", "Oelekam, Central Mollo, South Timor Tengah Regency, East Nusa Tenggara, Indonesia - panoramio.jpg"], // 2026-11-20 Arga: 1번을 마을(TTS 군 아마누반 텡아 오에에캄 마을의 둥근 집)로
   // 종족·문화
-  "Kampung Naga": ["Abdulrohmatt3.jpg", "DSC00029 Java Little Sundanais Traditional Village Kampung Naga (6219569245).jpg"], // 2번을 인물 사진 대신 마을 풍경으로
+  "Kampung Naga": ["Abdulrohmatt3.jpg", "Kampung Naga Java113.jpg"], // 2026-11-20 Arga: 2번을 1번(위에서 본 지붕)과 다른 마당·집 풍경으로
   "Pamekasan": ["Monumen Arek Lancor Pamekasan.jpg", "Karapan Sapi Madura.jpg"], // 2번을 묘지 안내판 대신 소 경주(마두라 문화)로
   "Takengon": ["Takengon.jpg", "Laut Tawar Lake.jpg"], // 자동
-  "Bone": ["Port of Bajoe, Bone, South Sulawesi 3 2012.jpg", "KMP Kotabumi at Port of Bajoe Bone South Sulawesi.jpg"], // 자동(바조에 항구). 부기스 왕국을 보여 주는 사진은 찾지 못함 — 약한 후보
+  "Bone": ["Port of Bajoe, Bone, South Sulawesi 3 2012.jpg", "KMP Kotabumi at Port of Bajoe Bone South Sulawesi.jpg"], // 자동(바조에 항구). 2026-11-20 Arga 요청(와탐포네 등 마을·도시)에 맞는 사진을 찾지 못해 그대로
   // 도시
   "Banjarmasin": ["Kota Banjarmasin.jpg", "Banjarmasin floating market, 2018.jpg"], // 자동 2번은 1859년 판화
-  "Surakarta": ["Pura Mangkunegaran Surakarta.jpg", "The front facade of Pasar Gedhe Hardjonagoro in 2019.jpg"], // 자동 2번은 음식 사진
+  "Surakarta": ["Pura Mangkunegaran Surakarta.jpg", "Solo Car Free Day 1.jpg"], // 2026-11-20 Arga: 2번을 도시 풍경(슬라멧 리야디 대로)으로
   "Bogor": ["Istana presiden republik Indonesia di Bogor.jpg", "Kebun Raya Bogor 19.jpg"], // 2번을 식물원으로
   "Serang": ["Great Mosque of Serang.jpg", "Cagar Alam Pulau Dua, Banten, 23042017.jpg"], // 자동
   "Tanjungpinang": ["Governors House.jpg", "Pulau Penyengat.jpg"], // 자동
   "Palangkaraya": ["Bundaran Besar Palangka Raya (baru).jpg", "Duta Mall Palangka Raya (20260117 145441).jpg"], // 자동
-  "Merauke": ["Tugu Lingkaran Brawijaya 969.jpg", "Melaleuca.Sp lahan basah TN Wasur.jpg"], // 자동 2번은 여러 장을 이어 붙인 사진
-  "Bima": ["Bima di atas bukit.jpg", "City of bima indonesia.jpg"], // 자동 2번은 인물 사진
+  "Merauke": ["Tugu Lingkaran Brawijaya 969.jpg", "Melaleuca.Sp lahan basah TN Wasur.jpg"], // 자동 2번은 여러 장을 이어 붙인 사진. 2026-11-20 Arga 요청(마을·도시)에 맞는 사진을 찾지 못해 그대로(관공서·모스크 건물뿐)
+  "Bima": ["Bima di atas bukit.jpg", "The scenery from the corner of the house in the village of Sambori, Bima, Nusa Tenggara Barat.jpg"], // 2026-11-20 Arga: 2번을 마을(삼보리)로
   "Singkawang": ["Tugu Naga Singkawang.jpg", "Bangunan Cagar Budaya Marga Tjhia.jpg"], // 자동
   "Bekasi": ["Kalimalang.jpg", "Bekasi Mall Night 2.jpg"], // 자동
-  "Tangerang": ["Azhom 2.jpg", "Boen Tek Bio.jpg"], // 2번을 박물관 실내 대신 사원 바깥 모습으로
+  "Tangerang": ["Azhom 2.jpg", "Tangerang, 1.jpg"], // 2026-11-20 Arga: 2번을 도시 풍경(시내를 내려다본 사진)으로
   "Sukabumi": ["Sukabumi Grand Mosque 2022 01.jpg", "Dago Pedestrian Zone, Sukabumi.jpg"], // 자동
   "Purwokerto": ["View of the General Gatot Subroto Monument.jpg", "Alun - Alun Purwokerto & Pendapa Si Panji dengan Latar belakang Gunung Slamet.jpg"], // 2번을 슬라멧 산이 보이는 광장으로
-  "Madiun": ["Kantor Pemerintahan Kota Madiun tahun 2020.jpg", "Area depan Eks Roemah Kapitein Tjina Njoo Swie Lian Madiun.jpg"], // 자동
+  "Madiun": ["Kantor Pemerintahan Kota Madiun tahun 2020.jpg"], // 자동. 2026-11-20 Arga: 2번 빼기 → 1장(EXACT)
   "Binjai": ["Binjai.jpg", "AmirHamzahHouse.jpg"], // 자동
-  "Yogyakarta": ["Jogja - Tugu Monument (2025) - img 06.jpg", "Eastern face of west gate, Taman Sari, Yogyakarta, 2014-04-24 (from 19 images).jpg"], // 자동 2번은 시내버스
+  "Yogyakarta": ["Jogja - Tugu Monument (2025) - img 06.jpg", "Malioboro Street, Yogyakarta.JPG"], // 2026-11-20 Arga: 2번을 말리오보로 거리로
 
   // ── 2026-11-16(13차): 옛 기록 사진뿐이라 화면에 0장이던 22곳. 자동 후보와 공용 검색 결과를 화면으로 보고 골랐습니다.
   //    "자동"이라고 적지 않은 줄은 자동 선택이 엉뚱해서(다른 도시의 모스크·공항·버스·시위·교회·옛 사진 등) 바꾼 것입니다.
@@ -191,6 +192,13 @@ const NONE = new Set([
   // 자동 선택은 이름에 Tugu 가 들어간 다른 성당의 기념비 사진이었습니다. 마을(캄풍 투구) 사진 RoemahToegoe1.jpg(CC BY 4.0),
   // Keroncong Tugu.jpg(CC BY-SA 4.0)는 있으나 교회를 보여 주지는 않아 넣지 않았습니다.
   "Gereja Tugu",
+]);
+
+// PICK 에 적은 장수가 정본이고 자동으로 채우지 않는 지점(2026-11-20, Arga 확인: 2번을 빼고 1장만 두기 등).
+// PICK 이 1장이면 1장, 빈 배열이면 0장. 지금 목록이 PICK 과 다르면 이 지점만 다시 씁니다(위키·공용 검색을 하지 않음).
+const EXACT = new Set([
+  "Muara Jambi",
+  "Madiun",
 ]);
 
 // 핀 id 를 그대로 쓰면 엉뚱한 문서에 걸리는 곳 (예전 src/lib/map.ts 의 표). mapContent 의 wiki 가 우선입니다.
@@ -465,7 +473,9 @@ async function main() {
     const visibleExisting = ex && ex.photos ? ex.photos.filter((ph) => !ARCHIVE.test(ph.file)) : [];
     // PICK 에 2장을 적은 지점은 PICK 이 정본입니다. 지금 목록이 PICK 의 앞 두 장과 다르면(사람이 PICK 을 바꿈) 다시 고릅니다.
     // PICK 이 1장뿐인 지점(숨바 섬 등)은 나머지를 자동으로 채웠으므로 이 규칙에 들지 않습니다(2026-11-16).
-    const pick2 = PICK[p.id] && PICK[p.id].length >= 2 ? PICK[p.id].slice(0, 2) : null;
+    // EXACT 지점은 PICK 의 장수(0~2장)가 그대로 정본입니다(2026-11-20).
+    const exact = EXACT.has(p.id);
+    const pick2 = exact ? (PICK[p.id] || []).slice(0, 2) : PICK[p.id] && PICK[p.id].length >= 2 ? PICK[p.id].slice(0, 2) : null;
     const pickChanged = !!pick2 && (ex && ex.photos ? ex.photos.map((ph) => ph.file) : []).join("|") !== pick2.join("|");
     if (pickChanged && ex && ex.photos) {
       // 다시 고르는 지점의 지금 사진은 "이미 쓴 사진"에서 뺍니다 — 같은 사진을 순서만 바꿔 다시 쓸 수 있게
@@ -487,7 +497,7 @@ async function main() {
     const hand = PICK[p.id] ? PICK[p.id].slice() : [];
     let names = hand.slice();
     try {
-      for (const n of await wikiCandidates(p.wiki)) if (!names.includes(n)) names.push(n);
+      if (!exact) for (const n of await wikiCandidates(p.wiki)) if (!names.includes(n)) names.push(n);
     } catch (e) {
       console.warn("위키 실패", p.id, e.message);
     }
@@ -500,7 +510,7 @@ async function main() {
     } catch (e) {
       console.warn("파일 정보 실패", p.id, e.message);
     }
-    if (infos.filter((i) => !used.has(i.file)).length < 2) {
+    if (!exact && infos.filter((i) => !used.has(i.file)).length < 2) {
       try {
         const more = (await commonsSearch(p.wiki + " " + (p.type === "city" ? "city" : ""))).filter(
           (n) => PHOTO.test(n) && !BAD.test(n) && !SKIP.has(n) && !names.includes(n)
