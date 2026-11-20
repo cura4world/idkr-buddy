@@ -111,7 +111,8 @@ const MAX_REQS_KEPT = 40;
 const REQ_RE = new RegExp("^[A-Za-z0-9]{8,40}$");
 const UNIT_RE = new RegExp("^[A-Za-z0-9._:\\-]{1,160}$");
 
-const TEXT_MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-2.5-flash-lite"];
+// 2026-11-20 Arga 결정: gemini-2.5-flash-lite 를 뺌 — 구글이 새 사용자에게 막은 모델(404)이라 허용해도 쓸 수 없음.
+const TEXT_MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite"];
 const TTS_MODELS = ["gemini-3.8-flash-lite-tts", "gemini-3.1-flash-tts-preview"];
 
 const SESSION_TTL_SEC = 60 * 24 * 3600;
@@ -1747,7 +1748,8 @@ const CARD_DATE_RE = new RegExp("^[0-9]{4}-[0-9]{2}-[0-9]{2}$");
 const CARD_YO_RE = new RegExp("(요|죠)([.!?…]+|$)");
 const CARD_FENCE_RE = new RegExp("```(json)?", "g");
 // 글: 앞의 것이 거절되면(없는 모델·일시 오류) 다음 것으로. 사용자 기능의 허용 목록(TEXT_MODELS)보다 앞에 조금 더 좋은 모델을 둡니다.
-const CARD_TEXT_MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-2.5-flash-lite"];
+// 2026-11-20: 맨 뒤 폴백 gemini-2.5-flash-lite 는 구글이 막은 모델이라 뺌(사용자 허용 목록과 같이).
+const CARD_TEXT_MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite"];
 const CARD_IMAGE_MODELS = ["gemini-3.1-flash-image", "gemini-2.5-flash-image"];
 const CARD_CLAUDE_MODEL = "claude-sonnet-5-5";
 
