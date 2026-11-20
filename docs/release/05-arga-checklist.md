@@ -145,13 +145,12 @@ keytool -genkeypair -v -keystore kata-store-upload.jks -alias upload -keyalg RSA
    - 시험: 비밀값을 넣은 뒤 앱(또는 심사용 계정)에서 아무 신고 1건 → 텔레그램에 "[Kata kata] 새 신고 1건"이 오는지. 시험 신고는 `…/admin/reports` 에서 보입니다.
 5. [x] 주소 확인: `https://kata-public.cura4world.workers.dev/` 를 열면 `{"ok":true,"service":"kata-public"}`
    - 주소가 다르면 `src/lib/account.ts` 의 `PUBLIC_BASE` 한 줄을 고칩니다
-5-1. [ ] **횟수 제한(2026-11-20, B안 — Worker 안의 Rate Limiting 바인딩)** — `wrangler.toml` 의 `[[ratelimits]]` 두 개, `npx wrangler deploy` 로 함께 켜집니다.
-   - 값: `/admin/*` 는 IP 하나당 1분에 10번(`RL_ADMIN`, namespace_id 1001), `/auth/*` 는 1분에 30번(`RL_AUTH`, 1002). 넘으면 `429 RATE_LIMITED`(1분 뒤 다시).
+5-1. [x] **횟수 제한(2026-11-20) — 사용량 카운터(Durable Object)로 셈** — 따로 켤 것 없음. `npx wrangler deploy` 에 함께 들어 있습니다.
+   - 값: `/admin/*` 는 IP 하나당 1분에 10번, `/auth/*` 는 1분에 30번(`worker.js` 의 `RATE_LIMITS`). 넘으면 `429 RATE_LIMITED`(1분 뒤 다시).
    - 관리자 키를 여러 번 틀리면 1분쯤 막힙니다 — 정상입니다. 1분 기다렸다 다시 하면 됩니다.
-   - 대시보드 WAF 규칙·도메인 이전은 하지 않습니다(결정). 지역마다 따로 세는 대략치이고, 막힌 요청도 Worker 요청 수(무료 하루 10만)에는 들어갑니다(`DECISIONS.md` 23장).
-   - 바인딩은 대시보드에 보이지 않습니다. 확인은 Worker 의 Logs 에서 429 를 봅니다.
-   - ⚠ 2026-11-20 배포 직후 실서버에서 여러 번 몰아 보내도 **429 가 나오지 않았습니다**(장치는 오류 없이 "통과"만 돌려줌). 지금은 막아 준다고 믿지 마세요. 다시 확인하거나 Durable Object 방식으로 바꿀지는 `DECISIONS.md` 23장.
-   - namespace_id 1001·1002 는 계정 안에서 유일해야 합니다 — 다른 Worker 에 횟수 제한을 넣을 때는 다른 숫자를 씁니다.
+   - 대시보드 WAF 규칙·도메인 이전은 하지 않습니다(결정). 막힌 요청도 Worker 요청 수(무료 하루 10만)에는 들어갑니다.
+   - 실서버 확인(2026-11-20, 버전 `9d149b56`): 로그인 30번 다음 429, 관리자 10번 다음 429, 1분 뒤 풀림.
+   - 처음 넣었던 Cloudflare Rate Limiting 바인딩은 실서버에서 막지 않아 뺐습니다(`DECISIONS.md` 23장).
 6. [ ] ⚠ **Cloud Run 호출 형식 대조** — 저는 kata-sermon Worker 소스를 볼 수 없어서, 결정 기록에 적힌 대로
    `POST AI_PROXY_URL` + 헤더 `x-kata-proxy`(비밀)·`x-kata-model`(모델) + 본문 그대로로 만들었습니다.
    kata-sermon 의 `/ai/gemini` 처리부와 다르면 `worker.js` 의 `handleAi` 안 `tfetch(env.AI_PROXY_URL, …)` 부분만 맞추면 됩니다.
