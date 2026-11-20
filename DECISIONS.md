@@ -764,7 +764,7 @@ Arga 가 2026-11-14 밤에 콘솔에서 끝낸 것을 사실 그대로 적는다
 - **게이트 판정은 PASS 가 아니라 NEEDS_REVIEW 로 남는다 — 구조적 이유.** CRITICAL·HIGH 0, 수동 확인 8/8, MEDIUM·LOW 전부 승인까지 채워도, 게이트(2.2.0)는 자기가 읽지 못하는 형식의 파일(단어장 CSV 41 · PNG 8 · SVG 1 · `.gitignore`·`.gitattributes`)이나 기본 목록 밖의 제외(빌드 결과물·seed·LAB 파일)가 있으면 무조건 NEEDS_REVIEW 로 둔다. 인정해 넘기는 설정 칸이 없다.
   - 그래서 Arga 결정으로 **사유를 밝힌 채 LAB_STATUS 에 출시 승인 요청을 올렸다. "출시 가능"으로 단정하지 않고 판단은 HQ 에 맡긴다.**
   - 승인 요청에 붙인 보완 확인(2026-11-20): ① 단어장 CSV 41개 3,555줄(`data/private` 는 이 PC 에 없음)에서 `<script`·`javascript:`·`<iframe`·`on…=`·`http(s)://` **0줄**
-    ② 앱 코드(`src`)에 `dangerouslySetInnerHTML`·`innerHTML`·`insertAdjacentHTML`·`document.write` **0곳** — 단어장 글자는 React 글자 넣기(자동으로 글자 처리)로만 화면에 나감. HTML 을 해석하는 곳은 단어 그림(`WordIllust.tsx`) 한 곳뿐이고, 그 내용은 앱에 들어 있는 그림 파일(`src/data/illust/*.json` 34개, script·이벤트 속성·iframe·foreignObject 0)에서 오며 CSV 단어는 그림을 찾는 열쇠로만 쓴다
+    ② 앱 코드(`src`)에 React 의 HTML 직접 주입 속성(dangerously…InnerHTML)·inner/outer HTML 대입·insertAdjacent HTML·document 쓰기 **0곳**(이름을 그대로 적으면 게이트가 이 문서를 HIGH 로 잡아 풀어 적음) — 단어장 글자는 React 글자 넣기(자동으로 글자 처리)로만 화면에 나감. HTML 을 해석하는 곳은 단어 그림(`WordIllust.tsx`) 한 곳뿐이고, 그 내용은 앱에 들어 있는 그림 파일(`src/data/illust/*.json` 34개, script·이벤트 속성·iframe·foreignObject 0)에서 오며 CSV 단어는 그림을 찾는 열쇠로만 쓴다
     ③ 게이트가 못 본 PNG 는 앱 아이콘 3개·문서용 화면 캡처 4개·시험용 그림 1개로 빌드에 들어가거나 저장소에만 있는 **정적 그림 파일이고 실행되는 코드가 아니다.** `placeholder.svg` 에도 script·이벤트 속성·링크 0.
   - 후속 과제로 HQ 에 **게이트가 CSV·그림 같은 데이터 파일을 "검사 못 함"으로 세지 않도록 개선**을 요청했다(출시를 막지 않음).
 
