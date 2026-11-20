@@ -2469,9 +2469,10 @@ async function enforceRateLimit(request, env, path) {
   let ok = true;
   try {
     const r = await rl.limit({ key: ip });
-    ok = !(r && r.success === false);
-  } catch (e) {
+    ok = !(r && r.success === false);  } catch (e) {
     ok = true;
+    // 통과시키되 Worker 로그(wrangler tail·Workers Logs)에는 남깁니다 — 바인딩이 조용히 안 도는 것을 알아챌 수 있게.
+    try { console.log("rate-limit check failed: " + String(e && e.message ? e.message : e).slice(0, 200)); } catch (e2) {}
   }
   if (!ok) throw new HttpError(429, "RATE_LIMITED", { retryAfter: RATE_LIMIT_RETRY_SEC });
 }
