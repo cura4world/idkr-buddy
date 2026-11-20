@@ -1725,7 +1725,8 @@ async function handleAdminBudget(request, env) {
 // ── 오늘의 카드 (인도네시아 이해 맨 위, 2026-11-17) ─────────────────
 //
 // 서버가 하루에 한 장 만들어 모든 사용자가 같이 봅니다(사용자마다 만들지 않음). 결정 문서 ⑥.
-//   1) 주제 고르기 — 그날이 명절·기념일(CARD_EVENTS)이면 그 주제, 아니면 일반 주제를 날짜로 돌려 가며
+//   1) 주제 고르기 — 그날이 명절·기념일(CARD_EVENTS)이면 그 주제, 명절 앞뒤·계절 시기(CARD_SEASONS)면 며칠에 한 번 그 시기 주제,
+//      아니면 일반 주제를 날짜로 돌려 가며(2026-11-20 시기 추가)
 //   2) 글 만들기(Gemini) → 3) 확인(ANTHROPIC_API_KEY 가 있으면 Claude, 없으면 Gemini 가 한 번 더) → 고친 판이 있으면 그것을 씀
 //   4) 그림 만들기(Gemini 이미지, 파스텔 플랫 고정) → 5) 그림 확인(글자·사람·여러 물건이 없는지). 두 번 다 실패하면 그림 없이 냄
 // 만드는 때: Cron(매시간)이 오늘·내일 카드가 없으면 하나씩 만듭니다(변수 CARD_AUTOGEN = "1" 일 때만).
@@ -1776,7 +1777,18 @@ const CARD_TOPICS = [
 ];
 
 // 명절·기념일 — 그날 카드의 주제가 됩니다. 이슬람력 명절은 해마다 날짜가 바뀌므로 정부 발표(SKB 3 Menteri)를 보고 해마다 넣습니다.
-// 2027년은 SKB 1205·3·2 Tahun 2026(2026-09 발표) 기준. 2028년 날짜는 2027년 가을 발표 뒤에 덧붙입니다.
+// 2027년은 SKB 1205·3·2 Tahun 2026(2026-09 발표) 기준.
+// 2028년은 정부 발표 전이라 예상 날짜로 넣었습니다(2026-11-20). 고정일(양력 기념일)과 계산일(임렉·성금요일·부활절·승천일)은 확정,
+//   이슬람력·녀삐·와이삭은 approx. 출처:
+//   - 이슬람력 1449~1450 H: 무함마디야 KHGT https://khgt.muhammadiyah.or.id/calendar-download?year=1449&mode=hijriah
+//     (1 Ramadan 2028-01-28 · 1 Syawal 2028-02-26 · 10 Zulhijah 2028-05-05) 와
+//     https://www.al-habib.info/islamic-calendar/global/global-islamic-calendar-year-2028-ce.htm
+//     (1 Muharam 1450 = 2028-05-25 · 12 Rabiulawal = 2028-08-03 · 27 Rajab = 2028-12-14, 1 Syawal 은 2028-02-27 로 하루 다름)
+//   - 휴일 목록(교차 확인): https://hari.co.id/libur-nasional/2028/ · https://kalenderbali.org/liburnasional.php?tahun=2028
+//     · http://kalenderindonesia.com/libur/masehi/2028 (이슬람 새해 2028-05-26) · https://husniadil.com/calendar/2028/imlek/ (임렉 2028-01-26)
+//   - 부활절 계열: https://publicholidays.co.id/?p=144 (성금요일 2028-04-14 · 부활절 04-16) · https://publicholidays.co.id/?p=39 (승천일 05-25)
+//   - 이슬람 새해는 출처마다 5월 25일·26일로 갈리고 25일이 승천일과 겹쳐 26일(approx)에 두었습니다. 녀삐 3월 26일·와이삭 5월 9일은 대다수 출처의 예상일.
+// ⚠ 2027년 9~10월 SKB(2028년 공휴일) 발표 뒤 2028년 approx 날짜를 공식값으로 바꾸고 approx 를 뺍니다. 2029년 줄도 그때 덧붙입니다.
 // approx: 날짜가 정부 판정(sidang isbat)으로 정해져 하루 이틀 달라질 수 있는 것 — 글에 정확한 날짜를 단정하지 않게 합니다.
 const CARD_EVENTS = [
   { d: "2026-10-28", chip: "청년 맹세의 날", name: "Hari Sumpah Pemuda (1928년 청년 맹세 기념일)" },
@@ -1811,6 +1823,143 @@ const CARD_EVENTS = [
   { d: "2027-12-22", chip: "어머니의 날", name: "Hari Ibu (인도네시아 어머니의 날)" },
   { d: "2027-12-25", chip: "성탄절", name: "Hari Natal (성탄절, 국가 공휴일)" },
   { d: "2027-12-26", chip: "이스라 미으라즈", name: "Isra Mikraj (이슬람 기념일, 국가 공휴일)" },
+  // ── 2028년 (정부 발표 전 예상 — 위 주석의 출처, approx 는 SKB 발표 뒤 고침) ──
+  { d: "2028-01-01", chip: "새해", name: "Tahun Baru Masehi (양력 새해, 국가 공휴일)" },
+  { d: "2028-01-26", chip: "임렉(설날)", name: "Tahun Baru Imlek (중국계 설날, 국가 공휴일)" },
+  { d: "2028-01-28", chip: "라마단", name: "Awal Ramadan (라마단 금식 기간이 시작되는 무렵)", approx: true },
+  { d: "2028-02-21", chip: "무딕", name: "Mudik (르바란을 앞둔 귀향 행렬)", approx: true },
+  { d: "2028-02-26", chip: "르바란", name: "Idulfitri / Lebaran (라마단을 마친 명절, 국가 공휴일)", approx: true },
+  { d: "2028-03-26", chip: "녀삐", name: "Hari Raya Nyepi (발리 힌두교 새해, 고요의 날, 국가 공휴일)", approx: true },
+  { d: "2028-04-14", chip: "성금요일", name: "Wafat Yesus Kristus (성금요일, 국가 공휴일)" },
+  { d: "2028-04-16", chip: "부활절", name: "Paskah (부활절, 국가 공휴일)" },
+  { d: "2028-04-21", chip: "까르띠니의 날", name: "Hari Kartini (여성 교육 선구자 까르띠니 기념일)" },
+  { d: "2028-05-01", chip: "노동절", name: "Hari Buruh (노동절, 국가 공휴일)" },
+  { d: "2028-05-02", chip: "교육의 날", name: "Hari Pendidikan Nasional (교육의 날)" },
+  { d: "2028-05-05", chip: "이둘아드하", name: "Iduladha (희생제, 국가 공휴일)", approx: true },
+  { d: "2028-05-09", chip: "와이삭", name: "Hari Raya Waisak (석가 탄신일, 국가 공휴일)", approx: true },
+  { d: "2028-05-25", chip: "승천일", name: "Kenaikan Yesus Kristus (예수 승천일, 국가 공휴일)" },
+  { d: "2028-05-26", chip: "이슬람 새해", name: "Tahun Baru Islam (이슬람력 새해, 국가 공휴일)", approx: true },
+  { d: "2028-06-01", chip: "빤짜실라", name: "Hari Lahir Pancasila (건국 이념 빤짜실라 탄생일, 국가 공휴일)" },
+  { d: "2028-08-03", chip: "마울리드", name: "Maulid Nabi (예언자 무함마드 탄신일, 국가 공휴일)", approx: true },
+  { d: "2028-08-17", chip: "독립기념일", name: "Hari Kemerdekaan (1945년 8월 17일 독립 선언, 국가 공휴일)" },
+  { d: "2028-10-02", chip: "바틱의 날", name: "Hari Batik Nasional (바틱의 날)" },
+  { d: "2028-10-28", chip: "청년 맹세의 날", name: "Hari Sumpah Pemuda (1928년 청년 맹세 기념일)" },
+  { d: "2028-11-10", chip: "영웅의 날", name: "Hari Pahlawan (영웅의 날, 1945년 수라바야 전투 기념)" },
+  { d: "2028-11-25", chip: "교사의 날", name: "Hari Guru Nasional (교사의 날)" },
+  { d: "2028-12-14", chip: "이스라 미으라즈", name: "Isra Mikraj (이슬람 기념일, 국가 공휴일)", approx: true },
+  { d: "2028-12-22", chip: "어머니의 날", name: "Hari Ibu (인도네시아 어머니의 날)" },
+  { d: "2028-12-25", chip: "성탄절", name: "Hari Natal (성탄절, 국가 공휴일)" },
+];
+
+// 시기(계절·명절 앞뒤) — 2026-11-20 Arga 결정. 명절 당일이 아닌 날에도 그 무렵의 생활 이야기가 나오게 합니다.
+//   우선순위: 명절 당일(CARD_EVENTS) > major 시기 > minor 시기 > 일반 주제(CARD_TOPICS).
+//   섞기: major 시기는 사흘 중 이틀, minor 시기는 나흘 중 하루만 시기 주제이고 나머지 날은 일반 주제(날짜로 정해져 다시 만들어도 같음).
+//   겹치면 major 가 먼저, 같은 등급끼리는 기간이 짧은 쪽(명절에 묶인 시기)이 먼저. 같은 등급·같은 길이로 겹치는 줄은 두지 않습니다(시험이 봄).
+//   이슬람력 기간은 계산하지 않고 날짜를 그대로 적었습니다(읽기 쉽게). 2028년 이슬람력 기간은 위 CARD_EVENTS 의 예상일 기준이라 approx.
+//   우기와 제철 과일은 서로 겹치면 짧은 과일 쪽이 늘 이겨 우기가 사라지므로, 한 줄로 합치고 힌트마다 꼬리표(chip)를 따로 달았습니다.
+//   종교 관련 시기는 생활 풍경만, 우기는 재난·홍수 이야기를 넣지 않습니다(글 만들기·확인 프롬프트의 규칙도 그대로).
+const SEASON_RAIN = [
+  "우기에 쓰는 비옷(jas hujan)과 오토바이를 타며 비를 피하는 풍경",
+  "비 오는 오후에 즐겨 먹는 고렝안(튀김 간식)",
+  "웨당 자헤 — 몸을 데우는 생강차",
+  "비 오는 날 찾는 따뜻한 국물 음식(바소·소토)",
+  "오후에 갑자기 쏟아지는 소나기와 비를 피해 기다리는 생활 습관",
+];
+const SEASON_DURIAN = [
+  { chip: "제철 과일", hint: "두리안 — 우기에 제철을 맞는 과일과 두리안을 파는 노점" },
+  { chip: "제철 과일", hint: "람부탄 — 길가에 다발로 쌓아 파는 제철 과일" },
+];
+const SEASON_MANGO_ONE = [{ chip: "제철 과일", hint: "망고 — 제철 망고의 여러 품종과 먹는 법" }];
+// 9~10월(건기 끝·망고 철) — 힌트가 하나뿐이면 같은 글이 나흘마다 되풀이되므로 망고와 건기 생활을 섞습니다(2026-11-20 QA).
+const SEASON_DRY_MANGO = [
+  { chip: "제철 과일", hint: "망고 — 아루마니스·마날라기·그동 긴추 같은 망고 품종" },
+  { chip: "건기", hint: "건기 하늘을 수놓는 연날리기(layang-layang) 풍경" },
+  { chip: "제철 과일", hint: "루작 — 덜 익은 망고 같은 과일을 매콤달콤한 양념에 찍어 먹는 간식" },
+  { chip: "건기", hint: "건기에 많이 찾는 시원한 음료(에스 클라파 무다·에스 테 마니스)" },
+  { chip: "제철 과일", hint: "망고 산지 길가에 늘어선 망고 노점 풍경" },
+];
+const SEASON_YEAR_END = [
+  "연말 휴가철 — 쇼핑몰 장식과 연말 할인 풍경",
+  "성탄 공휴일과 연말 연휴에 사람들이 이동하고 쉬는 모습(공휴일과 생활 풍경만)",
+  "연말 거리에서 파는 트롬펫(종이 나팔)과 새해맞이 준비 풍경",
+  "연말 연휴에 많이 찾는 국내 여행지 풍경",
+];
+
+/** 두 힌트 목록을 번갈아 섞습니다(우기 하나, 과일 하나 …) — 과일 힌트가 목록 끝에 몰려 안 나오는 일이 없게. */
+function interleaveHints(a, b) {
+  const out = [];
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if (i < a.length) out.push(a[i]);
+    if (i < b.length) out.push(b[i]);
+  }
+  return out;
+}
+const SEASON_RAMADAN = [
+  "사후르 — 해 뜨기 전 새벽에 먹는 식사와 사후르를 알리며 동네를 도는 풍경",
+  "응아부부릿 — 해 질 녘 금식이 끝나기를 기다리며 시간을 보내는 모습",
+  "탁질 — 금식을 마칠 때 먹는 달콤한 간식과 음료(콜락·에스 부아 등)",
+  "부카 버르사마 — 직장·친구·이웃이 함께 모여 저녁을 먹는 자리",
+  "라마단 시장 — 오후에 길가에 서는 간식 노점",
+];
+// 무딕은 명절 표(CARD_EVENTS)에 따로 하루가 있어 여기서는 뺐습니다(열흘 안에 세 번 나오지 않게).
+const SEASON_LEBARAN_PREP = [
+  "명절 선물 꾸러미(parsel·hampers)를 주고받는 풍습",
+  "크투팟 — 어린 야자잎(자누르)을 엮은 주머니에 쌀을 넣고 오래 삶는 명절 음식",
+  "나스타르 같은 명절 과자(쿠에 크링)를 굽고 나누는 풍습",
+  "THR — 명절 전에 받는 상여금 문화",
+  "명절에 입을 새 옷을 장만하는 시장·쇼핑몰 풍경",
+];
+const SEASON_LEBARAN_AFTER = [
+  "할랄 비할랄 — 명절 뒤 직장·동네에서 서로 용서를 구하며 모이는 자리",
+  "실라투라흐미 — 친척·이웃 집을 돌며 인사하는 방문",
+  "오포르 아얌·른당 같은 명절 상차림",
+  "아루스 발릭 — 고향에서 도시로 돌아오는 귀경 행렬",
+  "'Mohon maaf lahir dan batin' 같은 명절 인사말",
+];
+const SEASON_AGUSTUS = [
+  "빤짯 삐낭(panjat pinang) — 기름 바른 장대 꼭대기의 선물을 향해 오르는 놀이",
+  "자루 달리기(balap karung) 같은 8월 17일 동네 경기",
+  "크루푹 먹기 대회 — 줄에 매단 과자를 손을 쓰지 않고 먹는 놀이",
+  "붉은색·흰색 깃발과 장식으로 골목을 꾸미는 풍경",
+  "동네 잔치와 행진 같은 아구스투산 행사",
+];
+const SEASON_IDULADHA = [
+  "이둘아드하를 앞두고 길가에 서는 소·염소 시장 풍경",
+  "여러 집이 돈을 모아 함께 소·염소를 사는 풍습(patungan)",
+];
+const SEASON_IMLEK = [
+  "앙파오 — 붉은 봉투에 담아 주는 새해 용돈",
+  "바롱사이 — 임렉 무렵 거리에서 보는 사자춤",
+  "쿠에 크란장 — 임렉 무렵 먹는 찹쌀 떡",
+  "짭고메(정월 대보름) 무렵의 붉은 등불 장식과 론통 짭고메 같은 음식",
+];
+
+/** { from, to(끝 날짜 포함), grade: major|minor, chip, name, hints: [글 또는 {chip, hint}], approx } — 시작 날짜 순 */
+const CARD_SEASONS = [
+  { from: "2026-11-21", to: "2026-12-31", grade: "minor", chip: "우기", name: "우기와 제철 과일", hints: interleaveHints(SEASON_RAIN, SEASON_DURIAN.concat(SEASON_MANGO_ONE)) },
+  { from: "2026-12-15", to: "2026-12-31", grade: "minor", chip: "연말", name: "연말", hints: SEASON_YEAR_END },
+  { from: "2027-01-01", to: "2027-02-28", grade: "minor", chip: "우기", name: "우기와 제철 과일", hints: interleaveHints(SEASON_RAIN, SEASON_DURIAN) },
+  { from: "2027-01-30", to: "2027-02-20", grade: "minor", chip: "임렉", name: "임렉(중국계 설날)부터 짭고메까지", hints: SEASON_IMLEK },
+  { from: "2027-02-08", to: "2027-03-09", grade: "major", chip: "라마단", name: "라마단 기간", hints: SEASON_RAMADAN, approx: true },
+  { from: "2027-02-28", to: "2027-03-09", grade: "major", chip: "르바란 준비", name: "르바란을 앞둔 열흘", hints: SEASON_LEBARAN_PREP },
+  { from: "2027-03-01", to: "2027-03-31", grade: "minor", chip: "우기", name: "우기", hints: SEASON_RAIN },
+  { from: "2027-03-11", to: "2027-03-17", grade: "major", chip: "르바란", name: "르바란 뒤 한 주", hints: SEASON_LEBARAN_AFTER },
+  { from: "2027-05-12", to: "2027-05-16", grade: "minor", chip: "이둘아드하", name: "이둘아드하를 앞둔 며칠", hints: SEASON_IDULADHA },
+  { from: "2027-08-01", to: "2027-08-31", grade: "major", chip: "8월 독립기념일", name: "8월 독립기념일 달(아구스투산)", hints: SEASON_AGUSTUS },
+  { from: "2027-09-01", to: "2027-10-31", grade: "minor", chip: "건기", name: "건기 끝과 망고 제철", hints: SEASON_DRY_MANGO },
+  { from: "2027-11-01", to: "2027-12-31", grade: "minor", chip: "우기", name: "우기와 제철 과일", hints: interleaveHints(SEASON_RAIN, SEASON_DURIAN.concat(SEASON_MANGO_ONE)) },
+  { from: "2027-12-15", to: "2027-12-31", grade: "minor", chip: "연말", name: "연말", hints: SEASON_YEAR_END },
+  { from: "2028-01-01", to: "2028-02-29", grade: "minor", chip: "우기", name: "우기와 제철 과일", hints: interleaveHints(SEASON_RAIN, SEASON_DURIAN) },
+  { from: "2028-01-19", to: "2028-02-09", grade: "minor", chip: "임렉", name: "임렉(중국계 설날)부터 짭고메까지", hints: SEASON_IMLEK },
+  { from: "2028-01-28", to: "2028-02-25", grade: "major", chip: "라마단", name: "라마단 기간", hints: SEASON_RAMADAN, approx: true },
+  { from: "2028-02-16", to: "2028-02-25", grade: "major", chip: "르바란 준비", name: "르바란을 앞둔 열흘", hints: SEASON_LEBARAN_PREP, approx: true },
+  { from: "2028-02-27", to: "2028-03-04", grade: "major", chip: "르바란", name: "르바란 뒤 한 주", hints: SEASON_LEBARAN_AFTER, approx: true },
+  { from: "2028-03-01", to: "2028-03-31", grade: "minor", chip: "우기", name: "우기", hints: SEASON_RAIN },
+  { from: "2028-04-30", to: "2028-05-04", grade: "minor", chip: "이둘아드하", name: "이둘아드하를 앞둔 며칠", hints: SEASON_IDULADHA, approx: true },
+  { from: "2028-08-01", to: "2028-08-31", grade: "major", chip: "8월 독립기념일", name: "8월 독립기념일 달(아구스투산)", hints: SEASON_AGUSTUS },
+  { from: "2028-09-01", to: "2028-10-31", grade: "minor", chip: "건기", name: "건기 끝과 망고 제철", hints: SEASON_DRY_MANGO },
+  { from: "2028-11-01", to: "2028-12-31", grade: "minor", chip: "우기", name: "우기와 제철 과일", hints: interleaveHints(SEASON_RAIN, SEASON_DURIAN.concat(SEASON_MANGO_ONE)) },
+  { from: "2028-12-15", to: "2028-12-31", grade: "minor", chip: "연말", name: "연말", hints: SEASON_YEAR_END },
 ];
 
 function cardKey(d) { return "card:" + CARD_VER + ":" + d; }
@@ -1819,12 +1968,52 @@ function cardRunsKey(d) { return "card:runs:" + d; }
 function addDays(d, n) { return new Date(Date.parse(d + "T00:00:00Z") + n * 86400000).toISOString().slice(0, 10); }
 function dayNumber(d) { return Math.floor(Date.parse(d + "T00:00:00Z") / 86400000); }
 
-/** 그날의 주제. attempt 가 늘면 일반 주제는 다음 것으로(명절은 그대로). */
+const CARD_EVENT_DATES = new Set(CARD_EVENTS.map((e) => e.d));
+
+function seasonLength(s) { return dayNumber(s.to) - dayNumber(s.from); }
+
+/** 그날 걸쳐 있는 시기 가운데 하나 — major 먼저, 같은 등급이면 짧은 것, 그래도 같으면 먼저 시작한 것. 없으면 null. */
+function cardSeasonFor(d) {
+  let best = null;
+  for (const s of CARD_SEASONS) {
+    if (d < s.from || d > s.to) continue;
+    if (!best) { best = s; continue; }
+    const rank = (x) => (x.grade === "major" ? 0 : 1);
+    if (rank(s) !== rank(best)) { if (rank(s) < rank(best)) best = s; continue; }
+    if (seasonLength(s) < seasonLength(best)) best = s;
+  }
+  return best;
+}
+
+/** 시기 주제를 쓰는 날인가 — major 는 사흘 중 이틀, minor 는 나흘 중 하루(날짜 번호로 정함). */
+function seasonDayOn(s, n) {
+  return s.grade === "major" ? ((n % 3) + 3) % 3 !== 2 : ((n % 4) + 4) % 4 === 0;
+}
+
+/** 그날의 주제. attempt 가 늘면 일반 주제·시기 힌트는 다음 것으로(명절은 그대로). */
 function cardTopicFor(d, attempt) {
+  const a = attempt || 0;
   const ev = CARD_EVENTS.find((e) => e.d === d);
   if (ev) return { kind: "event", chip: ev.chip, hint: ev.name, approx: !!ev.approx };
+  const s = cardSeasonFor(d);
+  const day = dayNumber(d);
+  if (s && seasonDayOn(s, day)) {
+    // 이 시기 안에서 앞서 실제로 이 시기 주제였던 날 수만큼 힌트를 넘겨, 힌트가 고르게 돌아가게 합니다.
+    // (명절 당일이나 더 앞선 시기가 가져간 날은 세지 않습니다 — 세면 그날 몫의 힌트가 건너뛰어집니다. 2026-11-20 QA)
+    let k = 0;
+    for (let n = dayNumber(s.from); n < day; n++) {
+      if (!seasonDayOn(s, n)) continue;
+      const nd = new Date(n * 86400000).toISOString().slice(0, 10);
+      if (CARD_EVENT_DATES.has(nd) || cardSeasonFor(nd) !== s) continue;
+      k++;
+    }
+    const h = s.hints[(k + a) % s.hints.length];
+    const hint = typeof h === "string" ? h : h.hint;
+    const chip = typeof h === "string" ? s.chip : h.chip || s.chip;
+    return { kind: "season", chip, hint, name: s.name, grade: s.grade, approx: !!s.approx };
+  }
   const n = CARD_TOPICS.length;
-  const t = CARD_TOPICS[(((dayNumber(d) + (attempt || 0)) % n) + n) % n];
+  const t = CARD_TOPICS[(((day + a) % n) + n) % n];
   return { kind: "topic", chip: t.chip, hint: t.hint, approx: false };
 }
 
@@ -1874,7 +2063,11 @@ function cardGenPrompt(d, topic, recentTitles) {
     (topic.kind === "event"
       ? "오늘의 주제(명절·기념일): " + topic.hint + "\n" +
         (topic.approx ? "이 날짜는 정부 판정으로 하루 이틀 달라질 수 있습니다. 글에 정확한 날짜를 단정하지 말고 '이 무렵'으로 씁니다.\n" : "")
-      : "오늘의 분야: " + topic.chip + " — " + topic.hint + " (그 안에서 구체적인 소재 하나를 고릅니다)\n") +
+      : topic.kind === "season"
+        ? "오늘의 주제(시기): 이 시기(" + topic.name + ")에 인도네시아에서 볼 수 있는 생활 이야기 — " + topic.hint + "\n" +
+          "명절 당일 이야기가 아니라 이 무렵의 생활 풍경으로 씁니다.\n" +
+          (topic.approx ? "이 시기의 날짜는 정부 판정에 따라 며칠 달라질 수 있습니다. 시작일·끝일 같은 정확한 날짜를 단정하지 말고 '이 무렵'으로 씁니다.\n" : "")
+        : "오늘의 분야: " + topic.chip + " — " + topic.hint + " (그 안에서 구체적인 소재 하나를 고릅니다)\n") +
     "\n출력 형식:\n" +
     "{\n" +
     '  "chip": "카드 위 작은 꼬리표, 한국어 2~8자 (예: ' + topic.chip + ')",\n' +
@@ -1900,6 +2093,10 @@ function cardReviewPrompt(d, topic, card) {
   return (
     "다음은 인도네시아어를 배우는 한국 사람용 앱의 '오늘의 인도네시아' 카드(" + d + ")입니다. 출판 전에 검수합니다.\n" +
     (topic.kind === "event" ? "주제(명절·기념일): " + topic.hint + "\n" : "") +
+    (topic.kind === "season"
+      ? "주제(시기): " + topic.name + " — " + topic.hint + "\n" +
+        (topic.approx ? "이 시기의 날짜는 정확히 정해지지 않았습니다. 글이 정확한 날짜를 단정하면 '이 무렵'으로 고칩니다.\n" : "")
+      : "") +
     "\n카드(JSON):\n" + JSON.stringify(card) + "\n\n" +
     "확인할 것:\n" +
     "1. 인도네시아에 관한 사실이 정확한가 (숫자·연도·유래·지역·관습). 확실하지 않은 내용은 빼거나 '~라는 이야기가 전해집니다'로 바꿉니다.\n" +
@@ -2083,6 +2280,8 @@ async function generateCard(env, d, ctx) {
       v: 1, d, chip: card.chip || topic.chip, title: card.title, summary: card.summary, body: card.body,
       phrase: card.phrase, words: card.words, image: card.image, img: false,
       event: topic.kind === "event" ? topic.hint : null,
+      // 주제 종류(event·season·topic)와 시기 이름 — 앱은 쓰지 않고(꼬리표 글자만 씀) 관리자 확인용입니다(2026-11-20).
+      kind: topic.kind, season: topic.kind === "season" ? topic.name : null,
       gen: gen.model, review: { by: reviewer, fixed, problems }, at: Date.now(),
     };
   }
@@ -2250,12 +2449,41 @@ async function handleAdminCardDelete(request, env) {
   return json(request, { ok: true });
 }
 
+// ── 횟수 제한 (Rate Limiting 바인딩, 2026-11-20 Arga 결정 B안) ─────────────
+// /admin/* 는 RL_ADMIN(1분 10번), /auth/* 는 RL_AUTH(1분 30번)으로 IP 마다 셉니다(wrangler.toml [[ratelimits]]).
+// 관리자 키 맞히기·로그인 두드리기를 늦추는 것이 목적입니다. 다른 경로(/me·/ai·/card·/billing·/report)는 세지 않습니다.
+// 지역마다 따로 세는 대략치라 정확히 11번째에 막히지 않을 수 있습니다. 바인딩이 없거나 limit() 이 실패하면 통과시킵니다
+// (시험·옛 설정 호환 — 이 장치가 고장 나서 관리자·로그인이 막히는 일이 없게).
+const RATE_LIMIT_RETRY_SEC = 60;
+
+function rateLimiterFor(env, path) {
+  if (path.indexOf("/admin/") === 0) return env.RL_ADMIN;
+  if (path.indexOf("/auth/") === 0) return env.RL_AUTH;
+  return null;
+}
+
+async function enforceRateLimit(request, env, path) {
+  const rl = rateLimiterFor(env, path);
+  if (!rl || typeof rl.limit !== "function") return;
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  let ok = true;
+  try {
+    const r = await rl.limit({ key: ip });
+    ok = !(r && r.success === false);
+  } catch (e) {
+    ok = true;
+  }
+  if (!ok) throw new HttpError(429, "RATE_LIMITED", { retryAfter: RATE_LIMIT_RETRY_SEC });
+}
+
 async function route(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
 
   if (method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
+
+  await enforceRateLimit(request, env, path);
 
   if (method === "GET" && path === "/") return json(request, { ok: true, service: "kata-public" });
   if (method === "POST" && path === "/auth/google") return handleAuthGoogle(request, env);
@@ -2292,6 +2520,7 @@ export default {
         const res = json(request, Object.assign({ error: e.code }, e.extra || {}), e.status);
         // 서버가 일부러 멈춘 것(AI_PAUSED·하루 상한)임을 앱이 알 수 있게 — 앱은 이때 다른 모델로 다시 부르지 않습니다.
         if (e.code === "SERVICE_PAUSED") res.headers.set("x-kata-paused", "1");
+        if (e.code === "RATE_LIMITED") res.headers.set("Retry-After", String(RATE_LIMIT_RETRY_SEC));
         return res;
       }
       return json(request, { error: "SERVER_ERROR" }, 500);
@@ -2415,6 +2644,10 @@ export class UsageCounter {
 }
 
 // 테스트에서 캐시를 비우기 위한 내부 함수 (운영에서는 쓰지 않음)
+/** 시험용 — 날짜별 주제 판정과 표(오늘의 카드). 배포에는 영향이 없습니다. */
+export function __cardTopicForTest(d, attempt) { return cardTopicFor(d, attempt); }
+export function __cardTablesForTest() { return { events: CARD_EVENTS, seasons: CARD_SEASONS, topics: CARD_TOPICS }; }
+
 export function __resetCachesForTest() {
   jwksCache = null;
   playTokenCache = null;
