@@ -36,9 +36,9 @@ export const KALIMANTAN: MapContentTable = {
       "정월 대보름 무렵 열리는 행사가 이 도시의 얼굴입니다. 무당들이 칼날 위에 앉은 가마를 타고 거리를 도는데, 볼과 몸에 쇠꼬챙이를 꿴 채 지나갑니다. 인도네시아 각지와 이웃 나라에서 이 광경을 보러 옵니다.",
     words: [
       {
-        word: "vihara",
+        word: "wihara",
         meaning: "불교 사원",
-        example: "Ada ratusan vihara di kota kecil ini.",
+        example: "Ada ratusan wihara di kota kecil ini.",
         exampleKo: "이 작은 도시에 수백 개의 불교 사원이 있습니다.",
       },
       {
