@@ -2,7 +2,7 @@
 //
 // 기대값은 src/pages/Index.tsx 의 `if (storeApp)` 쪽과 src/lib/plan.ts 에서 옮겼습니다.
 //   plus  = tier !== "free"                    → 단어장·회화집·인도네시아 이해의 자물쇠가 풀리고 Plus 줄이 사라짐
-//   staff = tier === "special" || "admin"      → 뉴스 줄 + "Firman hari ini"(신앙) 구역이 보임
+//   staff = tier === "special" || "admin"      → 뉴스 줄 + "Firman Hari Ini"(신앙) 구역이 보임
 //   tier === "admin"                           → 신앙 구역 첫 줄에 설교문
 //   서버 등급 review(심사용)는 getTier() 가 "plus" 로 돌려주므로 Plus 와 같은 홈입니다.
 
@@ -73,8 +73,8 @@ export async function expectHomeMenu(page: Page, e: HomeExpected): Promise<void>
   await expect(page.getByText("BAHASA HARI INI", { exact: true })).toBeVisible();
   // 구역 제목
   await expect(page.getByText("Ayo belajar!", { exact: true })).toBeVisible();
-  await expect(page.getByText("Kenali Indonesia", { exact: true })).toBeVisible();
-  await expect(page.getByText("Firman hari ini", { exact: true })).toHaveCount(e.faithSection ? 1 : 0);
+  await expect(page.getByText("Mengenal Indonesia", { exact: true })).toBeVisible();
+  await expect(page.getByText("Firman Hari Ini", { exact: true })).toHaveCount(e.faithSection ? 1 : 0);
 
   for (const t of e.locked) {
     const row = homeRow(page, t);
