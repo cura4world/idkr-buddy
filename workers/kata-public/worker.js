@@ -2449,32 +2449,53 @@ async function handleAdminCardDelete(request, env) {
   return json(request, { ok: true });
 }
 
-// ── 횟수 제한 (Rate Limiting 바인딩, 2026-11-20 Arga 결정 B안) ─────────────
-// /admin/* 는 RL_ADMIN(1분 10번), /auth/* 는 RL_AUTH(1분 30번)으로 IP 마다 셉니다(wrangler.toml [[ratelimits]]).
+// ── 횟수 제한 (2026-11-20 Arga 결정 — Durable Object 로 셈) ─────────────
+// /admin/* 는 IP 하나당 1분 10번, /auth/* 는 1분 30번. 넘으면 429 RATE_LIMITED.
 // 관리자 키 맞히기·로그인 두드리기를 늦추는 것이 목적입니다. 다른 경로(/me·/ai·/card·/billing·/report)는 세지 않습니다.
-// 지역마다 따로 세는 대략치라 정확히 11번째에 막히지 않을 수 있습니다. 바인딩이 없거나 limit() 이 실패하면 통과시킵니다
-// (시험·옛 설정 호환 — 이 장치가 고장 나서 관리자·로그인이 막히는 일이 없게).
+// 처음에는 Cloudflare 의 Rate Limiting 바인딩(B안)으로 했지만 실서버에서 50번을 몰아 보내도 한 번도 막지 않아(매번 success),
+// 이미 쓰는 사용량 카운터(USAGE_DO)에 IP 마다 객체 하나("rl:admin:<IP>")를 두고 정확히 셉니다(DECISIONS 23장).
+//   - 1분 고정 칸: 그 1분 안에 한도까지만 통과, 막힌 요청은 세지 않음. 칸 경계에서는 잠깐 두 배까지 지나갈 수 있습니다.
+//   - 객체에는 {칸 시작 시각, 횟수}만 두고, 2분 뒤 알람이 지웁니다(IP 는 객체 이름에만 쓰이고 저장되지 않음).
+//   - USAGE_DO 가 없거나 객체 호출이 실패하면 통과시킵니다(이 장치 고장으로 관리자·로그인이 막히지 않게). 실패는 로그에 1분에 한 줄.
 const RATE_LIMIT_RETRY_SEC = 60;
+const RATE_LIMITS = {
+  admin: { limit: 10, periodMs: 60000 },
+  auth: { limit: 30, periodMs: 60000 },
+};
 
-function rateLimiterFor(env, path) {
-  if (path.indexOf("/admin/") === 0) return env.RL_ADMIN;
-  if (path.indexOf("/auth/") === 0) return env.RL_AUTH;
-  return null;
+function rateGroupFor(path) {
+  if (path.indexOf("/admin/") === 0) return "admin";
+  if (path.indexOf("/auth/") === 0) return "auth";
+  return "";
 }
 
 async function enforceRateLimit(request, env, path) {
-  const rl = rateLimiterFor(env, path);
-  if (!rl || typeof rl.limit !== "function") return;
+  const group = rateGroupFor(path);
+  if (!group) return;
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const stub = usageStub(env, "rl:" + group + ":" + ip);
+  if (!stub) return;
   let ok = true;
   try {
-    const r = await rl.limit({ key: ip });
-    ok = !(r && r.success === false);  } catch (e) {
+    const out = await doCall(stub, { op: "rate-hit", p: Object.assign({ now: Date.now() }, RATE_LIMITS[group]) });
+    ok = !(out && out.ok === false);
+  } catch (e) {
     ok = true;
-    // 통과시키되 Worker 로그(wrangler tail·Workers Logs)에는 남깁니다 — 바인딩이 조용히 안 도는 것을 알아챌 수 있게.
-    try { console.log("rate-limit check failed: " + String(e && e.message ? e.message : e).slice(0, 200)); } catch (e2) {}
+    logDoFailure(e);
   }
   if (!ok) throw new HttpError(429, "RATE_LIMITED", { retryAfter: RATE_LIMIT_RETRY_SEC });
+}
+
+/** 객체 안에서 — 이번 1분 칸의 횟수가 한도보다 적으면 하나 더하고 통과, 아니면 막음(막힌 것은 세지 않음). */
+async function rateHitCore(store, p) {
+  const limit = Math.max(1, Number(p.limit) || 1);
+  const periodMs = Math.max(1000, Number(p.periodMs) || 60000);
+  const w = Math.floor(p.now / periodMs) * periodMs;
+  const cur = (await store.get("rl")) || {};
+  const n = cur.w === w ? Number(cur.n) || 0 : 0;
+  if (n >= limit) return { ok: false, n, limit };
+  await store.put("rl", { w, n: n + 1, p: periodMs });
+  return { ok: true, n: n + 1, limit };
 }
 
 async function route(request, env, ctx) {
@@ -2595,6 +2616,10 @@ export class UsageCounter {
         out = await budgetRefundCore(store, msg.t);
       } else if (msg.op === "budget-read") {
         out = await store.get(msg.key);
+      } else if (msg.op === "rate-hit") {
+        out = await rateHitCore(store, msg.p);
+        // 칸이 끝나고 1분 뒤 지우게 — 쓰지 않는 IP 의 칸이 남지 않도록
+        try { if ((await this.storage.getAlarm()) == null) await this.storage.setAlarm(msg.p.now + 2 * (Number(msg.p.periodMs) || 60000)); } catch (e) {}
       } else {
         return doJson({ err: { status: 400, code: "BAD_REQUEST" } });
       }
@@ -2630,6 +2655,7 @@ export class UsageCounter {
       if (key.indexOf("usem:") === 0) { if (key.slice(-7) < keepMonth) dead.push(key); }
       else if (key.indexOf("use:") === 0 || key.indexOf("budget:") === 0) { if (key.slice(-10) < keepDay) dead.push(key); }
       else if (key.indexOf("uset:") === 0) { if (v && v.at && nowMs - v.at > TRIAL_TOTAL_TTL_SEC * 1000) dead.push(key); }
+      else if (key === "rl") { if (!v || nowMs >= (Number(v.w) || 0) + 2 * (Number(v.p) || 60000)) dead.push(key); } // 횟수 제한 칸
     });
     for (const key of dead) await this.storage.delete(key);
     return all.size - dead.length; // 남은 칸 수
@@ -2644,11 +2670,11 @@ export class UsageCounter {
   }
 }
 
-// 테스트에서 캐시를 비우기 위한 내부 함수 (운영에서는 쓰지 않음)
 /** 시험용 — 날짜별 주제 판정과 표(오늘의 카드). 배포에는 영향이 없습니다. */
 export function __cardTopicForTest(d, attempt) { return cardTopicFor(d, attempt); }
 export function __cardTablesForTest() { return { events: CARD_EVENTS, seasons: CARD_SEASONS, topics: CARD_TOPICS }; }
 
+// 테스트에서 캐시를 비우기 위한 내부 함수 (운영에서는 쓰지 않음)
 export function __resetCachesForTest() {
   jwksCache = null;
   playTokenCache = null;
