@@ -30,6 +30,7 @@ describe("이 폰의 단어장과 학습 기록 지우기", () => {
       "app-wide-mode": "1",
       "tts-voice": "Kore",
       "story-difficulty": "mid",
+      "story-category": "food",
       "quiz-speak": "1",
       "kata-preview-tier": "plus",
       "kata-shared-ids-v2": "1",
