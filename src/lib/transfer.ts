@@ -71,6 +71,7 @@ const SETTING_KEYS = [
   "app-wide-mode",
   "tts-voice",
   "story-difficulty",
+  "story-category",
   "quiz-speak",
   "cocokkan-level",
   "bible-view-set",
