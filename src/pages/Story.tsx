@@ -5,7 +5,7 @@ import { goBackOr } from "@/lib/nav";
 import { ArrowLeft, Volume2, Loader2, BookOpen, Lock, Lightbulb, Maximize2, Minimize2 } from "lucide-react";
 import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
-import { generateStory, quickLookupWord, StoryDifficulty } from "@/lib/story";
+import { generateStory, quickLookupWord, StoryDifficulty, StoryTopicKey, isStoryTopicKey } from "@/lib/story";
 import { normalizeHeadword } from "@/lib/dictionary";
 import { saveStory, listStories, StoryRecord } from "@/lib/storyStore";
 import { STORY_SAMPLES, isSampleStory } from "@/data/storySamples";
@@ -15,6 +15,7 @@ import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveT
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import WordMiniSheet from "@/components/WordMiniSheet";
 import LevelCircles from "@/components/LevelCircles";
+import StoryTopicGrid from "@/components/StoryTopicGrid";
 import PlusLockBox from "@/components/PlusLockBox";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
@@ -32,6 +33,8 @@ import { lastQuotaNotice } from "@/lib/aiProxy";
 import { isBackCloseEntry } from "@/hooks/useBackClose";
 
 const DIFF_KEY = "story-difficulty";
+// 마지막에 고른 이야기 주제 칸 (처음에는 랜덤 "all") — 2026-11-22 사용자 결정
+const TOPIC_KEY = "story-category";
 // 서버가 "오늘 한도를 다 썼다"고 알려 준 날 (한국 시간 기준 "YYYY-MM-DD")
 const QUOTA_DAY_KEY = "story-quota-day";
 // 그때 서버가 알려 준 안내 문장(오늘/이번 달 구분이 들어 있음) — 버튼 아래에 그 문장을 그대로 씁니다(출시 전 점검 A-07)
@@ -125,6 +128,11 @@ const Story = () => {
     let v: string | null = null;
     try { v = localStorage.getItem(DIFF_KEY); } catch (e) {}
     return v === "하" || v === "중" || v === "상" ? v : "중";
+  });
+  const [topic, setTopic] = useState<StoryTopicKey>(() => {
+    let v: string | null = null;
+    try { v = localStorage.getItem(TOPIC_KEY); } catch (e) {}
+    return isStoryTopicKey(v) ? v : "all";
   });
   const [generating, setGenerating] = useState(false);
   const [current, setCurrent] = useState<StoryRecord | null>(null);
@@ -405,6 +413,11 @@ const Story = () => {
     try { localStorage.setItem(DIFF_KEY, d); } catch {}
   };
 
+  const pickTopic = (t: StoryTopicKey) => {
+    setTopic(t);
+    try { localStorage.setItem(TOPIC_KEY, t); } catch {}
+  };
+
   // ---------- 오늘 더 불러올 수 있는가 ----------
   // 새 이야기 불러오기는 Plus 전용입니다(2026-11-16 사용자 결정 — 예전 무료 하루 1편을 없앰).
   // 무료 사용자에게는 불러오기 대신 Plus 안내와 맛보기 이야기 3편(STORY_SAMPLES)이 보입니다.
@@ -425,8 +438,9 @@ const Story = () => {
     }
     setGenerating(true);
     try {
-      const recent = stories.slice(0, 10).map((s) => s.titleKo || s.title);
-      const data = await generateStory(difficulty, recent);
+      // 최근 이야기(새것부터): 같은 주제 안의 제목 중복을 피하고, 랜덤일 때 같은 주제가 이어지지 않게 씁니다
+      const recent = stories.slice(0, 60).map((s) => ({ category: s.category, title: s.titleKo || s.title }));
+      const data = await generateStory(difficulty, topic, recent);
       const rec = await saveStory(data);
       // 만드는 사이에 이 화면을 떠났으면 저장만 해 두고 끝냅니다(카드 열기·히스토리 쌓기 없음).
       // 이야기는 저장되어 있어 다음에 이야기 화면을 열면 목록 맨 위에 있습니다.
@@ -840,7 +854,7 @@ const Story = () => {
           <>
             <PlusLockBox
               title="매일 새 이야기 읽고 듣기"
-              lines={["난이도를 골라 불러오고", "음성으로 들을 수 있습니다"]}
+              lines={["주제와 난이도를 골라 불러오고", "음성으로 들을 수 있습니다"]}
               onClick={goPaywall}
             />
             <p className="mt-3.5 mx-1 font-gothic text-[0.8125rem] font-bold tracking-[0.02em]" style={{ color: "#3B4245" }}>
@@ -874,21 +888,21 @@ const Story = () => {
             >
               <BookArt />
             </span>
-            {/* 2026-11-12: 하/중/상을 제목 오른쪽으로 옮기면서 안내 문구를 짧게 바꿔 한 줄로 다시 넣었습니다.
-                S21(360px) 폭에서 한 줄에 들어가도록 글자 10px·자간 살짝 좁힘, 넘치면 줄바꿈 대신 말줄임 */}
             {/* 제목은 자르지 않습니다(U-05): 글자를 키워 자리가 모자라면 낱말 사이에서 두 줄로 꺾입니다("오늘의 / 이야기").
-                글자 크기는 그대로이고, 말줄임은 아래 안내 문구에만 둡니다 */}
-            <span className="flex-1 min-w-0">
-              <span className="block break-keep text-[0.96875rem] font-semibold" style={{ color: C.txt }}>오늘의 이야기</span>
-              <span className="block mt-[4px] truncate font-gothic text-[0.65625rem] tracking-[-0.02em]" style={{ color: C.sub }}>
-                난이도를 고르고 불러오세요
-              </span>
+                2026-11-22: 제목 아래 안내 줄을 빼고, 안내는 주제 격자 위 가운데 줄로 옮겼습니다(제목은 책 그림 가운데 높이) */}
+            <span className="flex-1 min-w-0 block break-keep text-[0.96875rem] font-semibold" style={{ color: C.txt }}>
+              오늘의 이야기
             </span>
             {/* 하/중/상은 2026-11-12 사용자 요청으로 제목 오른쪽 빈자리로 옮겼습니다 */}
             <span className="shrink-0">
               <LevelCircles value={difficulty} onChange={pickDifficulty} variant="inline" disabled={generating} />
             </span>
           </div>
+          {/* 2026-11-22 사용자 결정(시안 "B안 수정"): 가운데 안내 줄 + 주제 10칸(5×2). 위·아래 간격은 14px 로 같게 */}
+          <p className="my-3.5 text-center break-keep font-gothic text-[0.71875rem] tracking-[-0.01em]" style={{ color: C.sub }}>
+            난이도와 주제를 고르고 이야기를 불러오세요
+          </p>
+          <StoryTopicGrid value={topic} onChange={pickTopic} disabled={generating} />
           <button
             onClick={handleGenerate}
             disabled={generating || blocked}
