@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { addWord, getCategories } from "@/lib/store";
 import { fillWordWithGemini, hasGeminiApiKey } from "@/lib/gemini";
-import { ChevronDown, Loader2, Plus } from "lucide-react";
+import { Check, ChevronDown, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useBackClose } from "@/hooks/useBackClose";
 import { aiErrorToast } from "@/lib/aiErrors";
@@ -26,6 +26,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
   const [example, setExample] = useState("");
   const [exampleMeaning, setExampleMeaning] = useState("");
   const [categoryId, setCategoryId] = useState(categoryIdProp || defaultCategoryId || "");
+  const [pickOpen, setPickOpen] = useState(false);
   const [filling, setFilling] = useState(false);
   const [filled, setFilled] = useState<{ word: string; text: string } | null>(null);
   // 공개판(스토어 앱)의 무료·Plus 에게는 직접 만든 단어장만 보입니다(내 단어장 포함).
@@ -43,6 +44,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
     if (open) {
       setCategoryId(categoryIdProp || defaultCategoryId || "");
       setFilled(null);
+      setPickOpen(false);
     }
   }, [open, categoryIdProp, defaultCategoryId]);
 
@@ -194,31 +196,57 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
 
       <div>
         <FormLabel>단어장</FormLabel>
-        <div className={"relative " + FORM_FIELD_CLASS} style={{ minHeight: 44 }}>
+        {/* 단어장 고르기: 안드로이드 기본 선택창은 글자 크기를 바꿀 수 없어 직접 만든 목록으로(2026-11-23 E-4 · D6①).
+            누르면 이 칸 아래로 목록이 펼쳐지고, 글자는 '어디에 담을까요?' 시트와 같은 크기(0.75rem)입니다. */}
+        <button
+          type="button"
+          onClick={() => setPickOpen((v) => !v)}
+          aria-expanded={pickOpen}
+          className={"relative w-full text-left " + FORM_FIELD_CLASS}
+          style={{ minHeight: 44 }}
+        >
           {selectedCat ? (
             <span className="shrink-0 flex items-center text-[1rem] leading-none" aria-hidden="true">
               <CategoryGlyph value={selectedCat.emoji} size={17} />
             </span>
           ) : null}
-          <select
-            value={pickedId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className={FORM_INPUT_CLASS + " appearance-none pr-6 font-body"}
-            style={{ color: FORM_C.txt }}
-          >
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <span className={FORM_INPUT_CLASS + " truncate pr-6 font-body"} style={{ color: FORM_C.txt }}>
+            {selectedCat ? selectedCat.name : ""}
+          </span>
           <ChevronDown
             size={18}
             strokeWidth={2}
-            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2"
+            className={"pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 transition-transform " + (pickOpen ? "rotate-180" : "")}
             style={{ color: FORM_C.sub }}
           />
-        </div>
+        </button>
+        {pickOpen ? (
+          <div
+            role="listbox"
+            aria-label="단어장"
+            className="mt-1.5 max-h-[40vh] overflow-y-auto rounded-[14px] border-[1.5px] bg-white"
+            style={{ borderColor: FORM_C.line }}
+          >
+            {categories.map((c, i) => {
+              const on = c.id === pickedId;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  role="option"
+                  aria-selected={on}
+                  onClick={() => { setCategoryId(c.id); setPickOpen(false); }}
+                  className={"flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left active:bg-muted/60 " + (i > 0 ? "border-t" : "")}
+                  style={{ borderColor: "#EEF1F3", background: on ? FORM_C.tealBg : undefined }}
+                >
+                  <span className="shrink-0 flex items-center" aria-hidden="true"><CategoryGlyph value={c.emoji} size={15} /></span>
+                  <span className="min-w-0 flex-1 truncate font-body text-[0.75rem]" style={{ color: FORM_C.txt }}>{c.name}</span>
+                  {on ? <Check size={14} className="shrink-0" style={{ color: FORM_C.teal }} /> : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </FormSheet>
   );
