@@ -6,7 +6,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, ChevronDown, ChevronRight, Loader2, Lock, MessagesSquare, Plus, RotateCcw } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Loader2, MessagesSquare, Plus, RotateCcw } from "lucide-react";
+import LockMark from "@/components/LockMark";
+import { openPlusLock } from "@/lib/plusLock";
+import { LOCK_TITLE_PERCAKAPAN_MAKE } from "@/lib/tasteAccess";
 import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import {
@@ -22,8 +25,7 @@ import {
   PERCAKAPAN_LEVELS,
 } from "@/lib/percakapan";
 import type { PercakapanCategory, PercakapanLevel } from "@/lib/percakapan";
-import { builtinScenesOf } from "@/data/percakapan";
-import { usePlan, PAYWALL_PATH, paywallNotice } from "@/lib/plan";
+import { usePlan } from "@/lib/plan";
 import { isStoreApp } from "@/lib/platform";
 import LevelCircles from "@/components/LevelCircles";
 import FormSheet, { FORM_FIELD_CLASS, FormLabel, FormPrimaryButton } from "@/components/FormSheet";
@@ -34,7 +36,6 @@ import { useBackClose } from "@/hooks/useBackClose";
 
 const RESTORE_ASKED_KEY = "percakapan-restore-asked";
 const NEW_CAT = "__new__";
-const LOCK_TEXT = "회화집은 Plus 회원 기능입니다";
 
 // mineOnly: 이 등급에 가려진 폴더(교회와 신앙)인데 직접 만든 대화가 있어 그 대화만 센 줄(percakapan.ts listCategories, D-21)
 type CatRow = PercakapanCategory & { count: number; mineOnly?: boolean };
@@ -174,14 +175,10 @@ const Percakapan = () => {
     };
   }, []);
 
-  // 잠긴 기능: 안내를 띄우고 구독 화면으로 (setState 없이 이동만)
-  const goLocked = () => {
-    navigate(PAYWALL_PATH, paywallNotice(LOCK_TEXT));
-  };
-
   const openMake = () => {
+    // 무료: 대화 만들기는 잠김 — 공용 안내 창(2026-11-23 맛보기·D3)
     if (!plan.plus) {
-      goLocked();
+      openPlusLock(LOCK_TITLE_PERCAKAPAN_MAKE);
       return;
     }
     setName("");
@@ -195,14 +192,8 @@ const Percakapan = () => {
   };
 
   const openCat = (c: CatRow) => {
-    // 무료: 기본 회화집은 잠겨 있고, 직접 만든 회화집이 든 폴더만 열립니다.
-    if (!plan.plus) {
-      const mine = c.custom || c.mineOnly ? c.count : c.count - builtinScenesOf(c.id).length;
-      if (mine <= 0) {
-        goLocked();
-        return;
-      }
-    }
+    // 무료도 모든 주제에 들어가 장면 목록을 봅니다(2026-11-23 맛보기). 열리는 장면은 '인사와 기본'의
+    // 01 처음 만나 인사와 직접 만든 대화뿐이고, 나머지 장면에는 자물쇠가 붙습니다(PercakapanCategory).
     navigate("/percakapan/c/" + c.id);
   };
 
@@ -352,7 +343,7 @@ const Percakapan = () => {
           }
           style={{ background: C.tealBg, color: C.teal }}
         >
-          {plan.plus ? <Plus size={15} strokeWidth={2.4} className="shrink-0" /> : <Lock size={13} strokeWidth={2.2} className="shrink-0" />}
+          {plan.plus ? <Plus size={15} strokeWidth={2.4} className="shrink-0" /> : <LockMark size={13} color={C.teal} />}
           {makeCompact ? null : <span ref={makeLabelRef} className="whitespace-nowrap">대화 만들기</span>}
         </button>
       </header>
@@ -377,7 +368,6 @@ const Percakapan = () => {
         {cats.length > 0 ? (
           <div className="overflow-hidden" style={CARD_STYLE}>
             {cats.map((c, i) => {
-              const locked = !plan.plus && (c.custom || c.mineOnly ? c.count : c.count - builtinScenesOf(c.id).length) <= 0;
               return (
                 <button
                   key={c.id}
@@ -401,11 +391,7 @@ const Percakapan = () => {
                     <span className="block mt-px truncate font-word text-[0.75rem]" style={{ color: C.sub }}>{c.titleId}</span>
                   </span>
                   <span className="shrink-0 font-gothic text-[0.78125rem]" style={{ color: C.mute }}>{c.count}개</span>
-                  {locked ? (
-                    <Lock size={14} strokeWidth={2} className="shrink-0" style={{ color: "#B7BDC1" }} />
-                  ) : (
-                    <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#B7BDC1" }} />
-                  )}
+                  <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#B7BDC1" }} />
                 </button>
               );
             })}
