@@ -63,6 +63,7 @@ import HiddenInPublic from "@/components/HiddenInPublic";
 import { installStoreTtsShim } from "@/lib/storeTtsShim";
 import PreviewPanel from "@/components/PreviewPanel";
 import LocalWipeDialog from "@/components/LocalWipeDialog";
+import PlusLockSheet from "@/components/PlusLockSheet";
 import { isPreview } from "@/lib/preview";
 
 const queryClient = new QueryClient();
@@ -177,6 +178,8 @@ const App = () => (
         </Routes>
         {/* 공개판 하단 탭 — 홈·내 단어장·게임·내 정보 네 화면에서만 스스로 나타납니다 */}
         <BottomTabs />
+        {/* 잠긴 항목을 누르면 뜨는 공용 안내 창 — openPlusLock(제목) (2026-11-23 맛보기·D3) */}
+        <PlusLockSheet />
         </LoginGate>
         </WebGate>
         {/* 계정 삭제 직후 "이 폰의 단어장도 지울까요?" — 삭제하면 로그인 화면으로 바뀌므로 LoginGate 바깥에 둡니다 (D-10) */}
