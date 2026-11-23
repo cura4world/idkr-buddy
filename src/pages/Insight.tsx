@@ -3,17 +3,21 @@
 //   · 지도 카드 (실제 지도 모양, 밝은 색·작게 — 2026-11-18)
 //   · 맨 위에 오늘의 카드(2026-11-17, components/TodayCard.tsx) — 서버가 하루 한 장
 //   · 개관 / 종족 / 종교 / (관리자판: 기독교) / 역사 / 지난 카드 모아 보기 — 차분한 색 타일 목록
-//   · 공개판 무료 사용자: 메뉴는 보이되 잠기고, 위에 귤색 안내 상자. 누르면 구독 화면(PAYWALL_PATH)
+//   · 공개판 무료 사용자: 허브와 맨 위 오늘의 카드(그림·제목)는 보이고, 카드 안·다른 메뉴·지도는 잠김(작은 자물쇠).
+//     누르면 공용 안내 창(openPlusLock — 2026-11-23 맛보기·D3). 위에 귤색 안내 상자(누르면 구독 화면)
 //   · 하위 화면과 /map 은 App.tsx 에서 InsightGate 로 한 번 더 막습니다(주소로 바로 들어오는 경우)
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import { isStoreApp } from "@/lib/platform";
 import { PAYWALL_PATH, usePlan } from "@/lib/plan";
+import LockMark from "@/components/LockMark";
+import { openPlusLock } from "@/lib/plusLock";
+import { LOCK_TITLE_CARD, LOCK_TITLE_INSIGHT, LOCK_TITLE_MAP } from "@/lib/tasteAccess";
 import PlusLockBox from "@/components/PlusLockBox";
 import TodayCard from "@/components/TodayCard";
 import { INDONESIA_PATH, NEIGHBOR_SHAPES } from "@/lib/mapData";
-import { ArrowLeft, Globe, Landmark, Users, Cross, Hourglass, CalendarDays, ChevronRight, Lock } from "lucide-react";
+import { ArrowLeft, Globe, Landmark, Users, Cross, Hourglass, CalendarDays, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface RowItem {
@@ -32,7 +36,7 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 const CARD_SHADOW = { boxShadow: "0 1px 3px rgba(16,40,50,0.06)" };
 
 const Rows = ({ items, locked, go }: { items: RowItem[]; locked: boolean; go: (to: string) => void }) => (
-  <div className="bg-card rounded-[18px] overflow-hidden" style={{ ...CARD_SHADOW, opacity: locked ? 0.72 : 1 }}>
+  <div className="bg-card rounded-[18px] overflow-hidden" style={CARD_SHADOW}>
     {items.map((it, i) => {
       const Icon = it.icon;
       return (
@@ -56,7 +60,7 @@ const Rows = ({ items, locked, go }: { items: RowItem[]; locked: boolean; go: (t
             <span className="block mt-px font-word text-[0.6875rem] text-[#646C72] truncate">{it.sub}</span>
           </span>
           {locked ? (
-            <Lock size={16} strokeWidth={2} className="shrink-0 text-[#A9B0B4]" />
+            <LockMark size={15} />
           ) : (
             <ChevronRight size={16} strokeWidth={2} className="shrink-0 text-[#B7BDC1]" />
           )}
@@ -91,7 +95,7 @@ const MapCard = ({ locked, onClick }: { locked: boolean; onClick: () => void }) 
     type="button"
     onClick={onClick}
     className="block w-full text-left rounded-[18px] overflow-hidden bg-card active:opacity-90"
-    style={{ ...CARD_SHADOW, opacity: locked ? 0.8 : 1 }}
+    style={CARD_SHADOW}
   >
     <MiniMap />
     <span className="flex items-center gap-3 pt-3 pb-3.5 pl-4 pr-3.5">
@@ -106,7 +110,7 @@ const MapCard = ({ locked, onClick }: { locked: boolean; onClick: () => void }) 
       </span>
       <span className="w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0" style={{ background: "#E2F1EC" }}>
         {locked ? (
-          <Lock size={15} strokeWidth={2} className="text-[#2C6D63]" />
+          <LockMark size={14} />
         ) : (
           <ChevronRight size={16} strokeWidth={2.2} className="text-[#2C6D63]" />
         )}
@@ -131,7 +135,14 @@ const Insight = () => {
   const { plus, staff } = usePlan();
   const locked = !plus;
 
-  const go = (to: string) => navigate(locked ? PAYWALL_PATH : to);
+  // 무료: 잠긴 메뉴를 누르면 공용 안내 창(곧바로 구독 화면으로 보내지 않음 — 2026-11-23)
+  const go = (to: string) => {
+    if (!locked) {
+      navigate(to);
+      return;
+    }
+    openPlusLock(to.indexOf("/insight/card/") === 0 ? LOCK_TITLE_CARD : to === "/map" ? LOCK_TITLE_MAP : LOCK_TITLE_INSIGHT);
+  };
 
   const overview: RowItem[] = [
     { icon: Globe, bg: "#E4EEF6", fg: "#2B5F86", title: "인도네시아 개관", sub: "Ikhtisar", to: "/insight/overview" },
