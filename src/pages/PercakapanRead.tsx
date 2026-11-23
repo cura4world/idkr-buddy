@@ -213,9 +213,19 @@ const PercakapanRead = () => {
     return percakapanAudioPlayer.subscribe((s) => setSnap(s));
   }, []);
 
-  // 화면을 벗어나면 소리를 끕니다
+  // 화면을 벗어나면 소리를 끄고, 앱이 숨겨지면(폰 홈 버튼) 일시 정지합니다 — 돌아와 "이어 듣기"(2026-11-23 Arga 17, D8).
+  // 아직 준비 중이면 일시 정지할 소리가 없으므로 취소합니다.
   useEffect(() => {
+    const onVis = () => {
+      try {
+        if (document.visibilityState !== "hidden") return;
+        if (percakapanAudioPlayer.getSnapshot().state === "loading") percakapanAudioPlayer.stop();
+        else percakapanAudioPlayer.pause();
+      } catch (e) {}
+    };
+    document.addEventListener("visibilitychange", onVis);
     return () => {
+      document.removeEventListener("visibilitychange", onVis);
       try {
         percakapanAudioPlayer.stop();
       } catch (e) {}
@@ -428,7 +438,7 @@ const PercakapanRead = () => {
     ? snap.state === "loading"
       ? "준비 중..."
       : snap.state === "playing"
-      ? "일시정지"
+      ? "일시 정지" // 2026-11-23 지시서 표기대로 띄어 씀(이야기 듣기와 같게)
       : snap.state === "paused"
       ? "이어 듣기"
       : "전체 듣기"
