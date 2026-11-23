@@ -16,4 +16,24 @@ export interface TasteAudio {
   lines: string[];
 }
 
-export const TASTE_AUDIO: TasteAudio | null = null;
+export const TASTE_AUDIO: TasteAudio | null = {
+  "sceneId": "dasar-kenalan",
+  "rev": 2,
+  "lineCount": 13,
+  "all": "audio/taste/dasar-kenalan-r2/all.wav",
+  "lines": [
+    "audio/taste/dasar-kenalan-r2/line-01.wav",
+    "audio/taste/dasar-kenalan-r2/line-02.wav",
+    "audio/taste/dasar-kenalan-r2/line-03.wav",
+    "audio/taste/dasar-kenalan-r2/line-04.wav",
+    "audio/taste/dasar-kenalan-r2/line-05.wav",
+    "audio/taste/dasar-kenalan-r2/line-06.wav",
+    "audio/taste/dasar-kenalan-r2/line-07.wav",
+    "audio/taste/dasar-kenalan-r2/line-08.wav",
+    "audio/taste/dasar-kenalan-r2/line-09.wav",
+    "audio/taste/dasar-kenalan-r2/line-10.wav",
+    "audio/taste/dasar-kenalan-r2/line-11.wav",
+    "audio/taste/dasar-kenalan-r2/line-12.wav",
+    "audio/taste/dasar-kenalan-r2/line-13.wav"
+  ]
+};
