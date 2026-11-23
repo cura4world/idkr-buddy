@@ -16,7 +16,7 @@ import {
   signOut,
   PublicSession,
 } from "@/lib/account";
-import { manageSubscription } from "@/lib/billing";
+import { isPaidPlan, manageSubscription } from "@/lib/billing";
 import { askLocalWipe } from "@/lib/localWipe";
 import { DELETE_ACCOUNT_URL, PRIVACY_URL, TERMS_URL } from "@/lib/platform";
 
@@ -38,7 +38,7 @@ const AccountSection = ({ onGo }: Props) => {
   }, []);
 
   if (!session) return null;
-  const plus = (session.plan.tier === "plus" || session.plan.tier === "trial") && session.plan.until > Date.now();
+  const plus = isPaidPlan(session.plan); // (예전 체험 응답 tier "trial" 도 만료 시각까지 포함)
 
   const handleSignOut = async () => {
     if (busy) return;
