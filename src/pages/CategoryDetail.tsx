@@ -17,7 +17,8 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Copy, Trash2, X, ChevronDown, ChevronUp, FileSpreadsheet, FolderPlus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { isStoreApp } from "@/lib/platform";
-import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { usePlan } from "@/lib/plan";
+import { canOpenWordbook } from "@/lib/tasteAccess";
 import { GROUP_STYLES, GroupKey, groupOf, bookTitle, bookNumberText, displayMeaning } from "@/lib/wordbookGroups";
 import { loadIllustBook, hasIllustBook, IllustScene } from "@/lib/illust";
 import { CategoryTile } from "@/components/CategoryIcon";
@@ -912,11 +913,11 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
     );
   }
 
-  // 기본 단어장 잠금: 무료는 구독 화면으로, 성경과 신앙은 관리자·Special Member 만.
-  // (스토어 앱 밖에서는 등급이 늘 관리자라 지금처럼 모두 열림)
+  // 기본 단어장 잠금: 무료는 맛보기(01 인사·기본 표현)만 — 잠긴 단어장 주소로 바로 오면 단어장 목록으로(2026-11-23).
+  // 성경과 신앙은 관리자·Special Member 만. (스토어 앱 밖에서는 등급이 늘 관리자라 지금처럼 모두 열림)
   const sharedAll = categories.filter((c) => c.isShared);
   const group: GroupKey = category.isShared ? groupOf(category, sharedAll) : "other";
-  if (category.isShared && !plan.plus) return <Navigate to={PAYWALL_PATH} replace />;
+  if (category.isShared && !canOpenWordbook(category, plan.plus)) return <Navigate to="/wordbooks" replace />;
   if (category.isShared && group === "faith" && !plan.staff) return <Navigate to="/wordbooks" replace />;
 
   const draggingWord = draggingIndex !== null ? words[draggingIndex] : null;
