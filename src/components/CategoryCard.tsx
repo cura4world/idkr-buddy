@@ -2,6 +2,9 @@ import { useNavigate } from "react-router-dom";
 import { Category, getWordCount } from "@/lib/store";
 import { bookNumberText, bookTitle } from "@/lib/wordbookGroups";
 import { CategoryTile } from "@/components/CategoryIcon";
+import LockMark from "@/components/LockMark";
+import { openPlusLock } from "@/lib/plusLock";
+import { LOCK_TITLE_WORDBOOK } from "@/lib/tasteAccess";
 
 /* 단어장 한 줄 (시안: 단어장 폴더 · 추천안 / 내 단어장 · 추천안).
 
@@ -17,9 +20,14 @@ interface CategoryCardProps {
   /** 타일 바탕색 (묶음 색 / 보관 단어장은 차례로 돌아가는 색) */
   tile?: string;
   last?: boolean;
+  /**
+   * 무료 사용자에게 잠긴 기본 단어장(02~, 2026-11-23 맛보기). 이름은 그대로 보이고 오른쪽 "카드 | 퀴즈" 대신 작은 자물쇠.
+   * 줄을 누르면 공용 안내 창(openPlusLock)이 뜹니다 — 구독 화면으로 곧바로 보내지 않습니다.
+   */
+  locked?: boolean;
 }
 
-export default function CategoryCard({ category, variant = "folder", tile = "#EEF1F3", last }: CategoryCardProps) {
+export default function CategoryCard({ category, variant = "folder", tile = "#EEF1F3", last, locked = false }: CategoryCardProps) {
   const navigate = useNavigate();
   const count = getWordCount(category.id);
   const rowBorder = last ? "" : " border-b border-[#EEF1F3]";
@@ -48,6 +56,7 @@ export default function CategoryCard({ category, variant = "folder", tile = "#EE
 
   const num = bookNumberText(category.name);
   const title = bookTitle(category.name);
+  const lockTap = () => openPlusLock(LOCK_TITLE_WORDBOOK);
 
   return (
     <div
@@ -56,8 +65,9 @@ export default function CategoryCard({ category, variant = "folder", tile = "#EE
     >
       <button
         type="button"
-        onClick={() => navigate("/category/" + category.id)}
+        onClick={locked ? lockTap : () => navigate("/category/" + category.id)}
         className="flex flex-1 min-w-0 items-center gap-3 text-left"
+        aria-label={locked ? title + " (잠김)" : undefined}
       >
         <CategoryTile value={category.emoji} fallbackBg={tile} className="w-10 h-10 rounded-xl" iconSize={20} emojiClassName="text-[1.1875rem]" />
         <span className="flex-1 min-w-0">
@@ -77,6 +87,16 @@ export default function CategoryCard({ category, variant = "folder", tile = "#EE
         </span>
       </button>
 
+      {locked ? (
+        <button
+          type="button"
+          onClick={lockTap}
+          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full active:bg-[#F1F4F5]"
+          aria-label="잠김 — Plus 안내 보기"
+        >
+          <LockMark size={15} />
+        </button>
+      ) : (
       <span className="shrink-0 h-9 rounded-full bg-[#F1F4F5] flex items-center font-gothic text-[0.78125rem] font-semibold text-[#2C6D63]">
         <button
           type="button"
@@ -94,6 +114,7 @@ export default function CategoryCard({ category, variant = "folder", tile = "#EE
           퀴즈
         </button>
       </span>
+      )}
     </div>
   );
 }
