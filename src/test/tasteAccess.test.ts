@@ -1,5 +1,9 @@
+/// <reference types="node" />
 // 무료 맛보기 범위 (2026-11-23 7일 체험 폐지 → 메뉴별 맛보기)
+import fs from "node:fs";
 import { describe, expect, it } from "vitest";
+import { hasBundledAudio } from "@/lib/percakapanAudio";
+import { TASTE_AUDIO } from "@/data/tasteAudio";
 import { canOpenScene, canOpenWordbook, isTasteScene, isTasteWordbook, TASTE_SCENE_ID } from "@/lib/tasteAccess";
 import { DASAR } from "@/data/percakapan/01-dasar";
 
@@ -30,6 +34,17 @@ describe("맛보기 회화 장면", () => {
     expect(DASAR[0].id).toBe(TASTE_SCENE_ID);
     expect(DASAR[0].title).toBe("처음 만나 인사");
     expect(DASAR[0].cat).toBe("dasar");
+  });
+
+  it("맛보기 장면의 음성 파일 목록이 지금 장면(rev·줄 수)과 맞고, 파일이 실제로 있다", () => {
+    expect(hasBundledAudio(DASAR[0])).toBe(true);
+    expect(hasBundledAudio(DASAR[1])).toBe(false);
+    expect(TASTE_AUDIO && TASTE_AUDIO.lines.length).toBe(DASAR[0].lines.length);
+    for (const rel of [TASTE_AUDIO!.all].concat(TASTE_AUDIO!.lines)) {
+      expect(fs.existsSync("public/" + rel), rel).toBe(true);
+    }
+    // 대사를 고쳐 rev 가 오르면 옛 파일을 쓰지 않음
+    expect(hasBundledAudio({ ...DASAR[0], rev: (DASAR[0].rev || 0) + 1 })).toBe(false);
   });
 
   it("무료는 맛보기 장면과 내가 만든 장면만, Plus 는 모두", () => {
