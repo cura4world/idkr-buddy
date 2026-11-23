@@ -1,6 +1,7 @@
 // src/lib/plusCopy.ts
 // Kata kata Plus 구독 화면(PW1·PW2 시안) 문구를 한곳에 모읍니다.
-// 시안: 저장소 밖 design-boards/PW1-Trial(체험 가능)·PW2-NoTrial(체험을 이미 쓴 계정).
+// 시안: 저장소 밖 design-boards/PW2-NoTrial. 7일 무료 체험은 2026-11-23 Arga 결정으로 없앴습니다(메뉴별 맛보기로 바꿈) —
+// 체험 문구(PW1)는 모두 걷어냈습니다.
 // 한도 숫자(예: "하루 5편")는 kata-public Worker 의 DEFAULT_LIMITS 와 같아야 합니다 — 한쪽을 바꾸면 같이 고칩니다.
 // 말투: 안내는 "~입니다", 버튼은 명사형. "~해요" 를 쓰지 않습니다.
 
@@ -51,8 +52,6 @@ export const PLAN_MONTHLY_SUB = "매달 결제";
  */
 export const FALLBACK_YEARLY_WON = 34800;
 export const FALLBACK_MONTHLY_WON = 3900;
-/** 미리보기 빌드의 대체 체험 기간. 정식 스토어 앱은 Play 제안의 freeTrialPeriod 만 씁니다. */
-export const FALLBACK_TRIAL_TEXT = "7일";
 
 export function wonText(n: number): string {
   return n.toLocaleString("ko-KR") + "원";
@@ -72,9 +71,6 @@ export function discountBadge(percent: number): string {
 
 // ── 버튼 ─────────────────────────────────────────────────────
 
-export function ctaTrial(trialText: string): string {
-  return trialText + " 무료로 시작하기";
-}
 export const CTA_YEARLY = "연간 구독 시작하기";
 export const CTA_MONTHLY = "월간 구독 시작하기";
 export const CTA_MANAGE = "구독 관리 (Google Play)";
@@ -97,19 +93,9 @@ export function noteAutoRenew(yearly: boolean): string {
 export const NOTE_CANCEL =
   "해지는 언제든 할 수 있으며, 결제한 기간이 끝날 때까지 이용할 수 있습니다. 남은 기간의 금액은 돌려드리지 않습니다.";
 
-/** 체험 가능(PW1). priceText 예: "연 34,800원" · "월 3,900원" (다른 통화는 Play 표기 그대로) */
-export function noteTrialLines(trialText: string, priceText: string, yearly: boolean): string[] {
-  const won = priceText.slice(-1) === "원";
-  return [
-    noteAutoRenew(yearly),
-    trialText + " 체험이 끝나면 " + priceText + (won ? "이 결제됩니다." : " 결제가 시작됩니다.") + " 체험 중에 해지하면 결제되지 않습니다.",
-    NOTE_CANCEL,
-  ];
-}
-
-/** 체험을 이미 쓴 계정(PW2). */
-export function noteNoTrialLines(yearly: boolean): string[] {
-  return [noteAutoRenew(yearly), NOTE_CANCEL, "무료 체험은 계정마다 한 번만 제공됩니다."];
+/** 구독 버튼 아래 안내 — 자동 결제 고지 + 해지·환불 */
+export function notePlanLines(yearly: boolean): string[] {
+  return [noteAutoRenew(yearly), NOTE_CANCEL];
 }
 
 /** Play 에서 가격을 받는 중·못 받았을 때 */
@@ -132,10 +118,7 @@ export function canceledUntilText(dateText: string): string {
 }
 
 // ── 잠금 상자·홈의 Plus 버튼 둘째 줄 ─────────────────────────
-/** Play 체험 제안이 있을 때만 "7일 무료 체험", 없으면 "자세히 보기" */
-export function lockButtonSub(trialText: string): string {
-  return trialText ? trialText + " 무료 체험" : "자세히 보기";
-}
+export const LOCK_BUTTON_SUB = "자세히 보기";
 
 export const NOTE_AI_VOICE = "읽기 음성은 AI가 만든 인도네시아어 음성입니다.";
 
@@ -145,10 +128,9 @@ export const LINK_RESTORE = "구독 복원";
 export const LINK_TERMS = "이용약관";
 export const LINK_PRIVACY = "개인정보처리방침";
 
-// ── 이미 열려 있는 계정 (구독 중·체험 중·Special·관리자) ───────
+// ── 이미 열려 있는 계정 (구독 중·Special·관리자) ───────
 
 export const STATE_PLUS = "Plus 이용 중";
-export const STATE_TRIAL = "Plus 무료 체험 중";
 export const STATE_SPECIAL = "Special Member";
 export const STATE_ADMIN = "관리자";
 export const STATE_STAFF_SUB = "모든 기능이 열려 있습니다";
@@ -157,23 +139,18 @@ export const STATE_STAFF_SUB = "모든 기능이 열려 있습니다";
 export const STATE_REVIEW_SUB = "심사용 계정";
 
 /** autoRenew 가 false 면 Play 에서 해지한 구독입니다 — 다음 결제가 없으므로 "자동 갱신"이라고 하지 않습니다(B-09). */
-export function stateUntilText(dateText: string, trial: boolean, autoRenew = true): string {
+export function stateUntilText(dateText: string, autoRenew = true): string {
   if (!autoRenew) return canceledUntilText(dateText);
-  return trial ? dateText + "까지 체험 · 끝나면 자동으로 구독됩니다" : dateText + "까지 · 자동 갱신";
+  return dateText + "까지 · 자동 갱신";
 }
-
-/** 체험 가능할 때 구독 화면에 덧붙이는 한 줄 — 체험 한도는 Plus 의 절반입니다(서버 TRIAL_HALF_KINDS, B-10). */
-export const NOTE_TRIAL_HALF = "체험 중에는 이야기 불러오기·대화 만들기·듣기 횟수가 절반입니다.";
 
 // ── 알림 ─────────────────────────────────────────────────────
 
 export const TOAST_STARTED = "Plus가 시작되었습니다. 고맙습니다";
-export const TOAST_TRIAL_STARTED = "무료 체험이 시작되었습니다. 모든 기능이 열렸습니다";
 export const TOAST_PENDING = "결제가 확인되면 Plus가 켜집니다";
 /** 결제는 끝났는데 서버 확인이 실패 — 자동으로 다시 확인합니다(billing.ts). */
 export const TOAST_VERIFYING = "결제는 완료되었습니다. 확인 중입니다.";
 export const TOAST_VERIFIED = "결제가 확인되었습니다. Plus가 시작되었습니다";
-export const TOAST_VERIFIED_TRIAL = "결제가 확인되었습니다. 무료 체험이 시작되었습니다";
 /** 이 기기의 구독이 다른 앱 계정에 묶여 있을 때 (서버 403 ACCOUNT_MISMATCH · 409 PURCHASE_OWNED_BY_OTHER) */
 export const TOAST_OTHER_ACCOUNT = "이 구독은 다른 Google 계정으로 로그인했을 때 산 것입니다. 그 계정으로 로그인해 주세요";
 export const TOAST_RESTORE_RETRY = "구독을 확인하지 못했습니다. 인터넷을 확인하고 다시 눌러 주세요";
