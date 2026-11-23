@@ -23,6 +23,7 @@ import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveT
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import AiReportButton from "@/components/AiReportButton";
 import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
+import { ttsPlayer } from "@/lib/tts";
 import { lastQuotaNotice } from "@/lib/aiProxy";
 import { publicAiErrorText } from "@/lib/aiErrors";
 import { isStoreApp } from "@/lib/platform";
@@ -84,6 +85,23 @@ function latinSpans(text: string, sizeClass?: string): React.ReactNode[] {
   );
 }
 
+/**
+ * 설명 조각 둘 이상을 잇습니다 — 앞 조각이 문장부호로 끝나면 띄어쓰기로, 아니면 쉼표로.
+ * 예전에는 늘 ", " 로 이어 "통칭함., 식료품이나"처럼 마침표 뒤에 쉼표가 붙었습니다(2026-11-23 Arga 7).
+ * 화면에서 잇으므로 이미 저장된 사전 결과에도 적용됩니다.
+ */
+const END_PUNCT_RE = new RegExp("[.!?。…]$");
+function joinNotes(parts: (string | undefined | null)[]): string {
+  let out = "";
+  parts.forEach((raw) => {
+    const t = String(raw || "").trim();
+    if (!t) return;
+    if (!out) out = t;
+    else out += (END_PUNCT_RE.test(out) ? " " : ", ") + t;
+  });
+  return out;
+}
+
 // 시안의 스피커는 소리 물결이 하나인 모양(Volume1)입니다.
 const SpeakIcon = ({ size }: { size: number }) => <Volume1 size={size} strokeWidth={2} />;
 
@@ -104,12 +122,17 @@ const RelatedCard = ({ it, title, bg, fg }: { it: DictRelatedItem; title: string
     >
       {title}
     </span>
-    <div className="mt-1 flex min-w-0 items-baseline gap-2">
-      <p className="m-0 break-words font-word text-[1.125rem] font-semibold text-[#104B60]">{it.word}</p>
-      <p className="m-0 min-w-0 flex-1 break-words font-gothic text-[0.8125rem] text-[#5E5D57]">{it.meaning}</p>
+    {/* 표제어가 길면(예: seburuk-buruknya) 뜻 칸이 좁아져 한 글자씩 꺾이던 것 — 2026-11-23 Arga 6.
+        표제어와 뜻을 한 칸에서 흘려 쓰고(flex-wrap), 뜻은 최소 7em 을 지켜 모자라면 표제어 아래 줄 처음부터 씁니다.
+        스피커 자리는 오른쪽 그대로. */}
+    <div className="mt-1 flex min-w-0 items-start gap-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <p className="m-0 min-w-0 max-w-full break-words font-word text-[1.125rem] font-semibold text-[#104B60]">{it.word}</p>
+        <p className="m-0 min-w-[7em] flex-1 break-words font-gothic text-[0.8125rem] text-[#5E5D57]">{it.meaning}</p>
+      </div>
       <button
         onClick={() => speak(it.word, "id")}
-        className="-my-2 -mr-2 flex h-8 w-8 shrink-0 items-center justify-center self-center text-[#1F4F4A]"
+        className="-mt-1 -mb-2 -mr-2 flex h-8 w-8 shrink-0 items-center justify-center self-start text-[#1F4F4A]"
         title="발음 듣기"
         aria-label="발음 듣기"
       >
@@ -137,27 +160,51 @@ const HeroCard = ({ children }: { children: React.ReactNode }) => (
   <section className="rounded-[20px] bg-[#E2F1EC] px-5 pb-[18px] pt-5">{children}</section>
 );
 
-const HeroSpeaker = ({ onClick, title }: { onClick: () => void; title: string }) => (
-  <button
-    onClick={onClick}
-    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#2C6D63]"
-    title={title}
-    aria-label={title}
-  >
-    <SpeakIcon size={19} />
-  </button>
-);
+/**
+ * 이 글의 읽기 음성을 준비하는 중인가 (2026-11-23 내부 테스트 C-6·D-4).
+ * 스토어 앱에서 예문·문장은 storeTtsShim 이 "say:"+글 키로 ttsPlayer(Gemini 음성)를 부릅니다 — 몇 초 걸리는데
+ * 화면에 아무 변화가 없어 여러 번 누르게 되었습니다. ttsPlayer 의 상태를 읽기만 합니다(tts.ts·PlayButton.tsx 는 그대로).
+ * 낱말은 폰 내장 음성이라 바로 나오므로 이 표시가 뜨지 않습니다.
+ */
+function useSpeakLoading(text: string | undefined): boolean {
+  const key = "say:" + String(text || "").trim();
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!text) return;
+    return ttsPlayer.subscribe((s) => setBusy(s.state === "loading" && s.key === key));
+  }, [key, text]);
+  return busy;
+}
 
-const RowSpeaker = ({ onClick, title }: { onClick: () => void; title: string }) => (
-  <button
-    onClick={onClick}
-    className="-mr-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center text-[#1F4F4A]"
-    title={title}
-    aria-label={title}
-  >
-    <SpeakIcon size={16} />
-  </button>
-);
+const HeroSpeaker = ({ onClick, title, text }: { onClick: () => void; title: string; text?: string }) => {
+  const busy = useSpeakLoading(text);
+  return (
+    <button
+      onClick={() => { if (!busy) onClick(); }}
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#2C6D63]"
+      title={title}
+      aria-label={busy ? title + " (준비 중)" : title}
+      aria-busy={busy}
+    >
+      {busy ? <Loader2 size={18} className="animate-spin" /> : <SpeakIcon size={19} />}
+    </button>
+  );
+};
+
+const RowSpeaker = ({ onClick, title, text }: { onClick: () => void; title: string; text?: string }) => {
+  const busy = useSpeakLoading(text);
+  return (
+    <button
+      onClick={() => { if (!busy) onClick(); }}
+      className="-mr-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center text-[#1F4F4A]"
+      title={title}
+      aria-label={busy ? title + " (준비 중)" : title}
+      aria-busy={busy}
+    >
+      {busy ? <Loader2 size={15} className="animate-spin" /> : <SpeakIcon size={16} />}
+    </button>
+  );
+};
 
 // 예문 한 줄 (번호 · 인니어 · 한국어 · 스피커)
 // 예문 앞 번호는 2026-11-11 사용자 요청으로 뺐습니다
@@ -167,7 +214,7 @@ const ExampleRow = ({ id, ko }: { id: string; ko: string }) => (
       <p className="m-0 break-words font-word text-[1rem] leading-[1.45]">{id}</p>
       {ko ? <p className="m-0 break-words text-[0.8125rem] leading-[1.5] text-[#5E5D57]">{ko}</p> : null}
     </div>
-    <RowSpeaker onClick={() => speak(id, "id")} title="예문 듣기" />
+    <RowSpeaker onClick={() => speak(id, "id")} title="예문 듣기" text={id} />
   </div>
 );
 
@@ -513,6 +560,13 @@ const Dictionary = () => {
     }
   };
 
+  // 결과가 나온 뒤 검색창을 다시 누르면 방금 찾은 말을 지워 빈 칸으로(2026-11-23 Arga 8 — 이전 검색어는 최근 검색 목록에 남음).
+  // 오류 화면에서는 지우지 않습니다(고쳐 쓰려는 것이므로). 결과가 떠 있는 동안 찾은 말을 보여 주는 것(QA Q10)은 그대로.
+  const tapSearchBox = () => {
+    if (!isHome && !error && lastTerm && query.trim() === lastTerm) setQuery("");
+    openHistoryPanel();
+  };
+
   const closeHistoryPanel = () => {
     if (!histOpenRef.current) return;
     histOpenRef.current = false;
@@ -708,14 +762,38 @@ const Dictionary = () => {
     if (lpTimer.current) { clearTimeout(lpTimer.current); lpTimer.current = null; }
   };
 
-  const startLongPress = (term: string) => {
+  // 손가락이 조금 떨려도(10px 안) 길게 누르기를 취소하지 않습니다(2026-11-23 C-8 — 예전에는 조금만 움직여도 취소).
+  const lpStartRef = useRef<{ x: number; y: number } | null>(null);
+  const lpTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches && e.touches[0];
+    lpStartRef.current = t ? { x: t.clientX, y: t.clientY } : null;
+  };
+  const lpTouchMove = (e: React.TouchEvent) => {
+    const s = lpStartRef.current;
+    const t = e.touches && e.touches[0];
+    if (!s || !t) return;
+    if (Math.abs(t.clientX - s.x) > 10 || Math.abs(t.clientY - s.y) > 10) cancelLongPress();
+  };
+
+  const startLongPress = (term: string, onFire?: (term: string) => void) => {
     cancelLongPress();
     lpFiredRef.current = false;
     lpTimer.current = window.setTimeout(() => {
+      lpTimer.current = null;
       lpFiredRef.current = true;
-      setDeleteTarget(term);
+      if (onFire) onFire(term);
+      else setDeleteTarget(term);
       try { (navigator as any).vibrate?.(15); } catch (e) {}
     }, 600);
+  };
+
+  // 결과 화면의 떠 있는 최근 검색 목록: 길게 누르면 그 항목을 바로 지웁니다(2026-11-23 C-8).
+  // 이 목록은 뒤로가기 칸을 하나 쌓고 있어, 그 위에 확인 창을 또 쌓으면 목록이 닫히며 창까지 엉킵니다 — 그래서 확인 없이 지우고 알림만.
+  // 누르고 있는 동안은 입력창이 포커스를 잃어도 목록을 닫지 않습니다(예전에는 이것 때문에 목록만 닫혔음).
+  const dropHoldRef = useRef(false);
+  const deleteHistoryNow = (term: string) => {
+    setHistory(removeHistory(term));
+    toast("검색 기록을 삭제했습니다");
   };
 
   const confirmDeleteHistory = () => {
@@ -828,11 +906,13 @@ const Dictionary = () => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
-              onFocus={openHistoryPanel}
+              onFocus={tapSearchBox}
               // 뒤로가기로 닫은 뒤에도 입력창은 포커스를 유지합니다.
               // 그때는 onFocus 가 안 떠므로 탭 자체로도 다시 열어줍니다.
-              onClick={openHistoryPanel}
+              onClick={tapSearchBox}
               onBlur={() => {
+                // 목록 항목을 길게 누르는 중이면 닫지 않습니다(C-8)
+                if (dropHoldRef.current) return;
                 // 목록을 탭할 때 먼저 닫히지 않도록 잠깐 기다립니다.
                 histHideTimer.current = window.setTimeout(() => closeHistoryPanel(), 160);
               }}
@@ -879,12 +959,24 @@ const Dictionary = () => {
               <button
                 key={term + i}
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => { closeHistoryPanel(); handleSearch(term); }}
+                onMouseDown={(e) => { e.preventDefault(); startLongPress(term, deleteHistoryNow); }}
+                onMouseUp={cancelLongPress}
+                onMouseLeave={cancelLongPress}
+                onTouchStart={(e) => { dropHoldRef.current = true; lpTouchStart(e); startLongPress(term, deleteHistoryNow); }}
+                onTouchMove={lpTouchMove}
+                onTouchEnd={() => { cancelLongPress(); dropHoldRef.current = false; }}
+                onTouchCancel={() => { cancelLongPress(); dropHoldRef.current = false; }}
+                onContextMenu={(e) => e.preventDefault()}
+                onClick={() => {
+                  if (lpFiredRef.current) { lpFiredRef.current = false; return; } // 길게 눌러 지운 뒤의 click
+                  closeHistoryPanel();
+                  handleSearch(term);
+                }}
                 className={
-                  "w-full flex items-center gap-2.5 px-4 py-2.5 text-left active:bg-muted/60 transition-colors " +
+                  "w-full flex items-center gap-2.5 px-4 py-2.5 text-left active:bg-muted/60 transition-colors select-none " +
                   (i === arr.length - 1 ? "" : "border-b border-border")
                 }
+                style={{ WebkitTouchCallout: "none" } as React.CSSProperties}
               >
                 <Search size={14} className="shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate text-[0.875rem] text-foreground/80">{term}</span>
@@ -959,8 +1051,8 @@ const Dictionary = () => {
                             if (lpFiredRef.current) { lpFiredRef.current = false; return; }
                             handleSearch(h);
                           }}
-                          onTouchStart={() => startLongPress(h)}
-                          onTouchMove={cancelLongPress}
+                          onTouchStart={(e) => { lpTouchStart(e); startLongPress(h); }}
+                          onTouchMove={lpTouchMove}
                           onTouchEnd={cancelLongPress}
                           onMouseDown={() => startLongPress(h)}
                           onMouseUp={cancelLongPress}
@@ -991,7 +1083,7 @@ const Dictionary = () => {
                 <p className="m-0 min-w-0 break-words font-word text-[1.09375rem] font-semibold leading-[1.6] text-[#104B60]">
                   {renderTappableSentence(chunkedSentence(idSentence))}
                 </p>
-                <HeroSpeaker onClick={() => speak(idSentence.original, "id")} title="문장 듣기" />
+                <HeroSpeaker onClick={() => speak(idSentence.original, "id")} title="문장 듣기" text={idSentence.original} />
               </div>
               {idSentence.translation ? (
                 <p className="m-0 mt-2 break-words text-[0.9375rem] leading-[1.6] text-[#2E3E3A]">
@@ -1047,7 +1139,7 @@ const Dictionary = () => {
                         <p className="m-0 min-w-0 break-words font-word text-[1rem] leading-[1.45]">
                           {idSentence.natural.id}
                         </p>
-                        <RowSpeaker onClick={() => speak(idSentence.natural.id, "id")} title="발음 듣기" />
+                        <RowSpeaker onClick={() => speak(idSentence.natural.id, "id")} title="발음 듣기" text={idSentence.natural.id} />
                       </div>
                       {idSentence.natural.ko && (
                         <p className="m-0 mt-1 break-words text-[0.8125rem] leading-[1.5] text-[#5E5D57]">
@@ -1121,7 +1213,7 @@ const Dictionary = () => {
                     {/* 뜻(예: 과일 사과)은 2026-11-11 사용자 요청으로 한 단계 작게(15 → 13.5px) */}
                     <p className="m-0 break-words pl-6 text-[0.84375rem] font-semibold">{c.meaning}</p>
                     {(c.nuance || c.situation) && (
-                      <p className="m-0 break-words pl-6 font-gothic text-[0.8125rem] leading-[1.6] text-[#5E5D57]">{[c.nuance, c.situation].filter(Boolean).join(", ")}</p>
+                      <p className="m-0 break-words pl-6 font-gothic text-[0.8125rem] leading-[1.6] text-[#5E5D57]">{joinNotes([c.nuance, c.situation])}</p>
                     )}
                     {c.example && (
                       <div className="mt-1.5 flex min-w-0 items-start gap-2 pl-6">
@@ -1129,7 +1221,7 @@ const Dictionary = () => {
                           <p className="m-0 break-words font-word text-[0.9375rem] leading-[1.45]">{c.example}</p>
                           {c.exampleKo && <p className="m-0 break-words text-[0.8125rem] leading-[1.5] text-[#5E5D57]">{c.exampleKo}</p>}
                         </div>
-                        <RowSpeaker onClick={() => speak(c.example, "id")} title="예문 듣기" />
+                        <RowSpeaker onClick={() => speak(c.example, "id")} title="예문 듣기" text={c.example} />
                       </div>
                     )}
                   </div>
@@ -1157,11 +1249,7 @@ const Dictionary = () => {
             </HeroCard>
             <BodyCard>
               {/* 말끝이 애매한 문장(음성 입력 등)은 평서문 두 줄 + 의문문 한 줄 (2026-11-17, 예전 "?" 토글 대신) */}
-              {koSentence.question ? (
-                <p className="m-0 font-gothic text-[0.75rem] leading-[1.5] text-[#6B7479] break-keep">
-                  말끝만으로는 평서문인지 의문문인지 알 수 없어 둘 다 보여 줍니다.
-                </p>
-              ) : null}
+              {/* "말끝만으로는 … 둘 다 보여 줍니다" 안내 한 줄은 2026-11-23 Arga 9 로 뺌(세 줄 결과는 그대로) */}
               {[
                 { label: koSentence.question ? "평서문 · 구어체" : "구어체", bg: "#DDF0EA", fg: "#245A51", v: koSentence.casual },
                 { label: koSentence.question ? "평서문 · 문어체" : "문어체", bg: "#DCEAF6", fg: "#24506F", v: koSentence.formal },
@@ -1177,7 +1265,7 @@ const Dictionary = () => {
                     </span>
                     <div className="flex min-w-0 items-start gap-2">
                       <p className="m-0 min-w-0 flex-1 break-words font-word text-[1.0625rem] font-semibold leading-[1.5] text-[#104B60]">{row.v.id}</p>
-                      <RowSpeaker onClick={() => speak(row.v.id, "id")} title="문장 듣기" />
+                      <RowSpeaker onClick={() => speak(row.v.id, "id")} title="문장 듣기" text={row.v.id} />
                     </div>
                   </section>
                 ) : null
@@ -1228,7 +1316,7 @@ const Dictionary = () => {
               <HeroCard>
                 <div className="flex min-w-0 items-center justify-between gap-2">
                   <h2 className="m-0 min-w-0 break-words font-word text-[1.5rem] font-semibold leading-[1.25] text-[#104B60]">{result.word}</h2>
-                  <HeroSpeaker onClick={() => speak(result.word, "id")} title="발음 듣기" />
+                  <HeroSpeaker onClick={() => speak(result.word, "id")} title="발음 듣기" text={result.word} />
                 </div>
                 <p className="m-0 mt-2 break-words text-[0.90625rem] font-semibold">{result.meaning}</p>
                 {result.meaningDetail && (
