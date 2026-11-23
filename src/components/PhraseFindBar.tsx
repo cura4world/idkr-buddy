@@ -17,10 +17,12 @@ interface Props {
 export default function PhraseFindBar({ phrase, onFind, hidden, widthClass }: Props) {
   if (!phrase || hidden) return null;
   return (
-    // 하단 탭 막대가 있는 화면에서는 막대 위에 뜹니다 — 예전에는 bottom 0 이라 탭 이름·아이콘을 가렸습니다(출시 전 점검 U-03)
+    // 하단 탭 막대가 있는 화면에서는 막대 위에 뜹니다 — 예전에는 bottom 0 이라 탭 이름·아이콘을 가렸습니다(출시 전 점검 U-03).
+    // 기준은 늘 탭 막대 높이(--kata-tabbar-h). 글자를 고르는 동안에는 키보드가 없으므로 "입력 중" 값(--kata-tabbar-float)을
+    // 따를 이유가 없고, 그 값이 잘못 0 이 되면 막대가 탭 자리까지 내려갔습니다(2026-11-23 D-3).
     <div
       className="fixed left-0 right-0 z-40 px-4 pb-5 pt-6 pointer-events-none bg-gradient-to-t from-background via-background/90 to-transparent"
-      style={{ bottom: "var(--kata-tabbar-float, 0px)" }}
+      style={{ bottom: "var(--kata-tabbar-h, 0px)" }}
     >
       <button
         onClick={onFind}
