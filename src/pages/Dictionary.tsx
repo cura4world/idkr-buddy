@@ -124,14 +124,10 @@ const RelatedCard = ({ it, title, bg, fg }: { it: DictRelatedItem; title: string
     >
       {title}
     </span>
-    {/* 표제어가 길면(예: seburuk-buruknya) 뜻 칸이 좁아져 한 글자씩 꺾이던 것 — 2026-11-23 Arga 6.
-        표제어와 뜻을 한 칸에서 흘려 쓰고(flex-wrap), 뜻은 최소 7em 을 지켜 모자라면 표제어 아래 줄 처음부터 씁니다.
-        스피커 자리는 오른쪽 그대로. */}
+    {/* 1줄: 표제어 + 오른쪽 스피커, 2줄: 뜻(카드 폭 전체). 뜻 길이와 상관없이 늘 아랫줄 — 2026-11-24 Arga.
+        (예전에는 짧으면 옆, 길면 아래로 흘렸는데 meneguk 처럼 옆에서 좁게 접혀 보기 불편했음) */}
     <div className="mt-1 flex min-w-0 items-start gap-2">
-      <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <p className="m-0 min-w-0 max-w-full break-words font-word text-[1.125rem] font-semibold text-[#104B60]">{it.word}</p>
-        <p className="m-0 min-w-[7em] flex-1 break-words font-gothic text-[0.8125rem] text-[#5E5D57]">{it.meaning}</p>
-      </div>
+      <p className="m-0 min-w-0 flex-1 break-words font-word text-[1.125rem] font-semibold text-[#104B60]">{it.word}</p>
       <button
         onClick={() => speak(it.word, "id")}
         className="-mt-1 -mb-2 -mr-2 flex h-8 w-8 shrink-0 items-center justify-center self-start text-[#1F4F4A]"
@@ -141,6 +137,9 @@ const RelatedCard = ({ it, title, bg, fg }: { it: DictRelatedItem; title: string
         <SpeakIcon size={15} />
       </button>
     </div>
+    {it.meaning ? (
+      <p className="m-0 break-words font-gothic text-[0.8125rem] text-[#5E5D57]">{it.meaning}</p>
+    ) : null}
     {it.example ? (
       <p className="m-0 mt-1.5 break-words font-word text-[0.9375rem] leading-[1.45]">{it.example}</p>
     ) : null}
