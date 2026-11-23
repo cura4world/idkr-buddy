@@ -5,10 +5,10 @@
 import { Page } from "@playwright/test";
 import { test, expect, setupPreview, openApp, appPath, FONT_STEP_100, FONT_STEP_115 } from "../fixtures";
 import {
-  CTA_CLOSE, CTA_MONTHLY, CTA_YEARLY, FALLBACK_MONTHLY_WON, FALLBACK_TRIAL_TEXT, FALLBACK_YEARLY_WON,
-  LINK_PRIVACY, LINK_RESTORE, LINK_TERMS, NOTE_AI_VOICE, NOTE_TRIAL_HALF, PLAN_MONTHLY_LABEL, PLAN_YEARLY_LABEL,
-  PLUS_PERKS, PLUS_TITLE, STATE_ADMIN, STATE_PLUS, STATE_SPECIAL, STATE_TRIAL, TOAST_PREVIEW,
-  ctaTrial, discountBadge, noteNoTrialLines, noteTrialLines, perMonthNote, wonText,
+  CTA_CLOSE, CTA_MONTHLY, CTA_YEARLY, FALLBACK_MONTHLY_WON, FALLBACK_YEARLY_WON,
+  LINK_PRIVACY, LINK_RESTORE, LINK_TERMS, NOTE_AI_VOICE, PLAN_MONTHLY_LABEL, PLAN_YEARLY_LABEL,
+  PLUS_PERKS, PLUS_TITLE, STATE_ADMIN, STATE_PLUS, STATE_SPECIAL, TOAST_PREVIEW,
+  discountBadge, notePlanLines, perMonthNote, wonText,
 } from "../../src/lib/plusCopy";
 import { PRIVACY_URL, TERMS_URL } from "../../src/lib/platform";
 
@@ -21,7 +21,8 @@ function plans(page: Page) {
   return page.getByRole("radiogroup", { name: "요금제" });
 }
 
-test("무료 · 체험 가능 — 대체 가격과 체험 버튼", async ({ page }) => {
+// 7일 무료 체험은 2026-11-23 폐지 — 체험 버튼·체험 안내·"체험 중 절반"이 어디에도 없어야 합니다.
+test("무료 — 대체 가격과 구독 버튼, 체험 문구 없음", async ({ page }) => {
   await setupPreview(page, { tier: "free" });
   await openApp(page, "plus");
 
@@ -42,44 +43,29 @@ test("무료 · 체험 가능 — 대체 가격과 체험 버튼", async ({ page
   await expect(yearly).toHaveAttribute("aria-checked", "true");
   await expect(monthly).toHaveAttribute("aria-checked", "false");
 
-  const cta = page.getByRole("button", { name: ctaTrial(FALLBACK_TRIAL_TEXT), exact: true });
+  const cta = page.getByRole("button", { name: CTA_YEARLY, exact: true });
   await expect(cta).toBeVisible();
   await expect(cta).toBeEnabled();
-  // 버튼 아래: 자동 결제 고지 + 체험 뒤 결제 금액
-  for (const line of noteTrialLines(FALLBACK_TRIAL_TEXT, YEARLY, true)) await expect(page.getByText(line)).toBeVisible();
-  await expect(page.getByText(NOTE_TRIAL_HALF)).toBeVisible();
+  // 버튼 아래: 자동 결제 고지 + 해지·환불
+  for (const line of notePlanLines(true)) await expect(page.getByText(line)).toBeVisible();
   await expect(page.getByText(NOTE_AI_VOICE)).toBeVisible();
+  // 체험 문구는 어디에도 없음
+  await expect(page.getByText(new RegExp("체험"))).toHaveCount(0);
 
-  // 월간을 고르면 안내의 금액이 월 가격으로 바뀝니다
+  // 월간을 고르면 버튼과 고지가 월간으로 바뀝니다
   await monthly.click();
   await expect(monthly).toHaveAttribute("aria-checked", "true");
-  for (const line of noteTrialLines(FALLBACK_TRIAL_TEXT, MONTHLY, false)) await expect(page.getByText(line)).toBeVisible();
+  await expect(page.getByRole("button", { name: CTA_MONTHLY, exact: true })).toBeVisible();
+  for (const line of notePlanLines(false)) await expect(page.getByText(line)).toBeVisible();
+  const ctaMonthly = page.getByRole("button", { name: CTA_MONTHLY, exact: true });
 
   // 미리보기에서는 결제하지 않습니다
-  await cta.click();
+  await ctaMonthly.click();
   await expect(page.getByText(TOAST_PREVIEW)).toBeVisible();
   expect(appPath(page)).toBe("/plus");
 });
 
-test("무료 · 체험을 이미 쓴 계정 — 바로 구독 버튼", async ({ page }) => {
-  await setupPreview(page, { tier: "free", trialUsed: true });
-  await openApp(page, "plus");
-
-  await expect(page.getByRole("button", { name: CTA_YEARLY, exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: ctaTrial(FALLBACK_TRIAL_TEXT), exact: true })).toHaveCount(0);
-  for (const line of noteNoTrialLines(true)) await expect(page.getByText(line)).toBeVisible();
-  await expect(page.getByText(NOTE_TRIAL_HALF)).toHaveCount(0);
-
-  await plans(page).getByRole("radio").nth(1).click();
-  await expect(page.getByRole("button", { name: CTA_MONTHLY, exact: true })).toBeVisible();
-  for (const line of noteNoTrialLines(false)) await expect(page.getByText(line)).toBeVisible();
-  // 가격은 체험 여부와 무관하게 같습니다
-  await expect(page.getByText(YEARLY, { exact: true })).toBeVisible();
-  await expect(page.getByText(MONTHLY, { exact: true })).toBeVisible();
-});
-
-const ENTITLED: { tier: "trial" | "plus" | "special" | "admin"; title: string }[] = [
-  { tier: "trial", title: STATE_TRIAL },
+const ENTITLED: { tier: "plus" | "special" | "admin"; title: string }[] = [
   { tier: "plus", title: STATE_PLUS },
   { tier: "special", title: STATE_SPECIAL },
   { tier: "admin", title: STATE_ADMIN },
@@ -146,7 +132,7 @@ for (const s of SIZES) {
     }
 
     // 구독 버튼도 끝까지 내린 화면에서 탭 막대 위에 온전히 보입니다
-    const cta = page.getByRole("button", { name: ctaTrial(FALLBACK_TRIAL_TEXT), exact: true });
+    const cta = page.getByRole("button", { name: CTA_YEARLY, exact: true });
     const cb = await cta.boundingBox();
     expect(cb).not.toBeNull();
     if (cb) expect(cb.y + cb.height).toBeLessThanOrEqual(navTop);
