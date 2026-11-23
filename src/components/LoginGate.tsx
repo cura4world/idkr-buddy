@@ -16,12 +16,24 @@ import {
   SESSION_EXPIRED_TEXT,
   PublicSession,
 } from "@/lib/account";
-import { autoRestoreOnce, onVerifyEvent, resumeVerifyIfNeeded, retryVerifyNow } from "@/lib/billing";
+import {
+  autoRestoreOnce,
+  billingLog,
+  isLapsedPaidPlan,
+  onVerifyEvent,
+  resumeVerifyIfNeeded,
+  retryVerifyNow,
+  takeManageReturn,
+} from "@/lib/billing";
+import { createExpiryWatcher } from "@/lib/planExpiry";
 import { isPreview } from "@/lib/preview";
 import { isOtherAccountCode, TOAST_OTHER_ACCOUNT, TOAST_VERIFIED, TOAST_VERIFIED_TRIAL } from "@/lib/plusCopy";
 
 // 화면이 다시 보일 때 서버에서 등급을 새로 받는 최소 간격 (2026-11-14 출시 전 점검 C-13)
 const REFRESH_GAP_MS = 10 * 60 * 1000;
+// "유료였는데 만료 시각이 지남"·"구독 관리 화면에서 돌아옴"일 때는 10분을 기다리지 않습니다. 다만 화면이 연달아
+// 보였다 숨었다 할 때 Play·서버를 두드리지 않게 이 간격 안에서는 한 번만(2026-11-23 내부 테스트 1장 A·F).
+const FORCED_GAP_MS = 30 * 1000;
 
 const SignInScreen = () => {
   const [busy, setBusy] = useState(false);
@@ -98,9 +110,41 @@ const LoginGate = ({ children }: { children: React.ReactNode }) => {
       refreshMe().catch(() => {}).finally(() => autoRestoreOnce(again));
     };
 
+    // 구매를 강제로 다시 확인하고(서버가 Play 에 바로 물음) 그다음 등급을 새로 받습니다.
+    // 서버의 /me 는 이용 중인 구독을 하루에 한 번·만료 뒤 한 시간에 한 번만 Play 에 묻기 때문에, /me 만으로는
+    // 갱신·해지가 늦게 반영됩니다. 구매 확인(/billing/verify)은 부를 때마다 Play 에 묻습니다.
+    let lastForcedAt = 0;
+    const forceRecheck = (reason: string): Promise<void> => {
+      if (!getSession()) return Promise.resolve();
+      lastForcedAt = Date.now();
+      lastRefreshAt = lastForcedAt;
+      const before = getSession();
+      billingLog({ reason, step: "recheck", until: before ? before.plan.until : 0, tier: before ? before.plan.tier : "none" });
+      return autoRestoreOnce(true, { force: true, reason })
+        .then(() => refreshMe().catch(() => null))
+        .then(() => {
+          const after = getSession();
+          billingLog({ reason, step: "recheck-done", until: after ? after.plan.until : 0, tier: after ? after.plan.tier : "none" });
+        });
+    };
+
+    // 유료 등급의 만료 시각 + 3초에 다시 확인하는 시계(src/lib/planExpiry.ts). 세션이 바뀔 때마다 다시 맞춥니다.
+    const watcher = createExpiryWatcher({
+      now: () => Date.now(),
+      setTimer: (fn, ms) => setTimeout(fn, ms),
+      clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+      getPlan: () => {
+        const s = getSession();
+        return s && s.plan ? { tier: String(s.plan.tier), until: Number(s.plan.until) || 0 } : null;
+      },
+      recheck: (reason) => forceRecheck(reason),
+    });
+    const offWatch = onSessionChange(() => watcher.sync());
+
     // 앱이 켜질 때 한 번. 지난번에 끝내지 못한 "결제 확인 중"이 있으면 이어 갑니다.
     refresh(false);
     resumeVerifyIfNeeded();
+    watcher.sync();
 
     // 로그인 직후(다른 계정으로 다시 로그인한 경우 포함)에도 구매를 다시 확인합니다.
     const offRestore = onSessionChange((s) => {
@@ -117,6 +161,14 @@ const LoginGate = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       retryVerifyNow();
+      // Play 구독 관리 화면(해지 등)에서 돌아왔거나, 유료였는데 만료 시각이 지났으면 10분을 기다리지 않고 바로 확인합니다.
+      const manage = takeManageReturn();
+      const s = getSession();
+      const lapsed = !!s && isLapsedPaidPlan(s.plan);
+      if ((manage || lapsed) && Date.now() - lastForcedAt >= FORCED_GAP_MS) {
+        forceRecheck(manage ? "manage-return" : "visible-lapsed").catch(() => {});
+        return;
+      }
       if (Date.now() - lastRefreshAt >= REFRESH_GAP_MS) refresh(true);
     };
     document.addEventListener("visibilitychange", onVisible);
@@ -130,6 +182,8 @@ const LoginGate = ({ children }: { children: React.ReactNode }) => {
 
     return () => {
       off();
+      offWatch();
+      watcher.stop();
       offRestore();
       offVerify();
       document.removeEventListener("visibilitychange", onVisible);
