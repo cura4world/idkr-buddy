@@ -6,7 +6,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Lock, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, X } from "lucide-react";
+import LockMark from "@/components/LockMark";
+import { openPlusLock } from "@/lib/plusLock";
+import { canOpenScene, LOCK_TITLE_SCENE } from "@/lib/tasteAccess";
 import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import {
@@ -17,10 +20,9 @@ import {
   isCategoryVisible,
 } from "@/lib/percakapan";
 import type { PercakapanCategory, PercakapanScene } from "@/lib/percakapan";
-import { usePlan, PAYWALL_PATH, paywallNotice } from "@/lib/plan";
+import { usePlan } from "@/lib/plan";
 import { useBackClose } from "@/hooks/useBackClose";
 
-const LOCK_TEXT = "회화집은 Plus 회원 기능입니다";
 const CARD_STYLE = { background: "#FFFFFF", borderRadius: 18, boxShadow: "0 1px 3px rgba(16,40,50,0.06)" };
 
 const PercakapanCategory = () => {
@@ -63,14 +65,7 @@ const PercakapanCategory = () => {
     navigate("/percakapan", { replace: true });
   }, [catId, plan.tier, loaded, scenes, navigate]);
 
-  // 공개판 무료가 주소로 바로 들어온 경우(QA Q11): 목록 화면과 같이 구독 화면으로 보냅니다.
-  // 직접 만든 회화집이 든 폴더는 그대로 열립니다(구독 취소 뒤에도 내 회화 글은 계속 — 결정 문서).
-  // setState 없이 이동만 합니다(CLAUDE.md).
-  useEffect(() => {
-    if (!loaded || plan.plus) return;
-    if (scenes.some((s) => s.custom)) return;
-    navigate(PAYWALL_PATH, paywallNotice(LOCK_TEXT, true));
-  }, [loaded, scenes, plan.plus, navigate]);
+  // (2026-11-23 맛보기) 무료도 장면 목록을 봅니다 — 예전에는 구독 화면으로 보냈습니다. 잠긴 장면에는 자물쇠.
 
   useEffect(() => {
     if (!catId) return;
@@ -129,8 +124,9 @@ const PercakapanCategory = () => {
       firedRef.current = false;
       return;
     }
-    if (!plan.plus && !s.custom) {
-      navigate(PAYWALL_PATH, paywallNotice(LOCK_TEXT));
+    // 무료: 맛보기 장면(01 처음 만나 인사)과 직접 만든 대화만 열림. 나머지는 공용 안내 창(D3)
+    if (!canOpenScene(s, plan.plus)) {
+      openPlusLock(LOCK_TITLE_SCENE);
       return;
     }
     navigate("/percakapan/" + s.id);
@@ -193,11 +189,10 @@ const PercakapanCategory = () => {
       </header>
 
       <div className="px-4 pt-4 pb-6">
-        {/* 무료 + 직접 만든 회화집 없음: 곧 구독 화면으로 넘어가므로 목록을 그리지 않습니다(잠긴 목록이 잠깐 비치지 않게) */}
-        {!plan.plus && !scenes.some((s) => s.custom) ? null : scenes.length > 0 ? (
+        {scenes.length > 0 ? (
           <div className="overflow-hidden" style={CARD_STYLE}>
             {scenes.map((s, i) => {
-              const locked = !plan.plus && !s.custom;
+              const locked = !canOpenScene(s, plan.plus);
               return (
               <button
                 key={s.id}
@@ -238,7 +233,7 @@ const PercakapanCategory = () => {
                 </div>
                 {/* 줄 수("N줄") 표시는 2026-11-19 사용자 요청으로 뺌 — 모든 회화집 공통 */}
                 {locked ? (
-                  <Lock size={14} strokeWidth={2} className="shrink-0" style={{ color: "#B7BDC1" }} />
+                  <LockMark size={14} />
                 ) : (
                   <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#B7BDC1" }} />
                 )}
