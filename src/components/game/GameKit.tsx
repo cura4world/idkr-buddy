@@ -506,6 +506,8 @@ export interface ResultRow {
   meaning: string;
   source: ResultSource;
   correct: boolean;
+  /** 출처 알약 앞에 붙는 작은 꼬리표(선택). 단어 받기의 "새 단어"(2026-11-23) — 없으면 예전과 같음 */
+  tag?: string;
 }
 
 interface ResultProps {
@@ -587,6 +589,14 @@ export const GameResult = ({ label, value, best, bestText, gained, floatOn, star
                   {r.meaning}
                 </span>
               </span>
+              {r.tag ? (
+                <span
+                  className="shrink-0 h-6 px-[9px] rounded-xl flex items-center font-gothic text-[10.5px] font-semibold"
+                  style={{ background: "#E2F1EC", color: G.teal }}
+                >
+                  {r.tag}
+                </span>
+              ) : null}
               <span
                 className="shrink-0 h-6 px-[9px] rounded-xl flex items-center font-gothic text-[10.5px] font-medium"
                 style={{ background: G.soft, color: G.sub }}
