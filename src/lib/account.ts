@@ -336,7 +336,14 @@ export async function deleteAccount(): Promise<{ hadSubscription: boolean }> {
 }
 
 /** AI 결과 신고 (Play 의 AI 생성 콘텐츠 정책). */
-export async function sendAiReport(r: { feature: string; input: string; output: string; reason: string }): Promise<void> {
+export async function sendAiReport(r: {
+  feature: string;
+  input: string;
+  output: string;
+  reason: string;
+  /** 같은 대상 표식 — 예: "dictionary:<sha256 64자>". 서버가 같은 대상 신고를 세어 3번째에 알림(2026-11-23 12장 B) */
+  target?: string;
+}): Promise<void> {
   const res = await call("/report", "POST", r);
   if (!res.ok) throw new Error(await errorCode(res));
 }
