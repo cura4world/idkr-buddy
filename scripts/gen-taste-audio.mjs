@@ -17,7 +17,7 @@
 // 호출 수: 전체 1 + 문장 13 = 14번(실패한 요청은 2번까지 다시).
 
 import { build } from "esbuild";
-import { mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
@@ -136,7 +136,10 @@ async function tts(body, label) {
         signal: ctrl.signal,
       });
       if (!res.ok) {
-        console.error("  " + label + ": HTTP " + res.status + (attempt < 2 ? " — 다시 시도" : ""));
+        // 429 = 분당 호출 한도 — 기다렸다 다시(30초, 60초). 바로 다시 부르면 또 429 입니다(2026-11-23 실제로 겪음).
+        const wait = res.status === 429 ? 30000 * (attempt + 1) : 0;
+        console.error("  " + label + ": HTTP " + res.status + (attempt < 2 ? " — " + (wait ? wait / 1000 + "초 뒤 " : "") + "다시 시도" : ""));
+        if (wait && attempt < 2) await new Promise((r) => setTimeout(r, wait));
         continue;
       }
       const data = await res.json();
@@ -172,17 +175,36 @@ if (!GO) {
 }
 mkdirSync(dirAbs, { recursive: true });
 
+// 이미 만든 파일(같은 rev 폴더에 있고 WAV 머리가 맞는 것)은 다시 부르지 않습니다 — 중간에 멈췄다 이어 돌릴 때 비용을 아낍니다.
+// 처음부터 다시 만들려면 그 폴더를 지우고 돌립니다.
+function existing(name) {
+  try {
+    const b = readFileSync(join(dirAbs, name));
+    return b.length > 1000 && b.slice(0, 4).toString("ascii") === "RIFF" ? b : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 const files = { all: dirRel + "/all.wav", lines: [] };
-const all = await tts(sceneBody(scene), "전체 듣기");
-writeFileSync(join(dirAbs, "all.wav"), all);
-console.log("  all.wav " + Math.round(all.length / 1024) + " KB");
+let all = existing("all.wav");
+if (all) console.log("  all.wav 이미 있음 " + Math.round(all.length / 1024) + " KB");
+else {
+  all = await tts(sceneBody(scene), "전체 듣기");
+  writeFileSync(join(dirAbs, "all.wav"), all);
+  console.log("  all.wav " + Math.round(all.length / 1024) + " KB");
+}
 for (let i = 0; i < scene.lines.length; i++) {
   const l = scene.lines[i];
   const name = "line-" + String(i + 1).padStart(2, "0") + ".wav";
-  const buf = await tts(lineBody(l.id, speakerNameOf(scene, l.s)), name);
-  writeFileSync(join(dirAbs, name), buf);
+  let buf = existing(name);
+  if (buf) console.log("  " + name + " 이미 있음 " + Math.round(buf.length / 1024) + " KB");
+  else {
+    buf = await tts(lineBody(l.id, speakerNameOf(scene, l.s)), name);
+    writeFileSync(join(dirAbs, name), buf);
+    console.log("  " + name + " " + Math.round(buf.length / 1024) + " KB");
+  }
   files.lines.push(dirRel + "/" + name);
-  console.log("  " + name + " " + Math.round(buf.length / 1024) + " KB");
 }
 
 const ts =
