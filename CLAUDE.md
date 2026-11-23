@@ -83,9 +83,10 @@
 - **APK 는 공개 릴리스에 올리지 않는다 — Actions 산출물로만**(14일 보관). 받는 주소가 고정된 공개 릴리스
   (`latest`·`preview-latest`)는 로그인·결제 없이 누구나 앱을 받는 길이라 2026-11-14 에 지웠다. 워크플로에
   `gh release create`·`action-gh-release`·태그 push 를 다시 넣지 말 것. 보존본은 저장소 밖 `../apk-backup/`
-- **가격·체험 기간을 고정 글자로 쓰지 말 것** — 화면의 금액·"7일" 은 `src/lib/playOffers.ts` 가 주는 Play 값만 쓴다
+- **가격을 고정 글자로 쓰지 말 것** — 화면의 금액은 `src/lib/playOffers.ts` 가 주는 Play 값만 쓴다
   (`usePlusPricing()`). 월 환산은 Play 연 가격 ÷ 12 로 계산한다. 고정값(`plusCopy.ts` 의 `FALLBACK_*`)은 미리보기 빌드의
-  대체값일 뿐이다. 화면의 금액이 실제 청구액과 달라지면 Play 정책 위반이다
+  대체값일 뿐이다. 화면의 금액이 실제 청구액과 달라지면 Play 정책 위반이다.
+  7일 무료 체험은 2026-11-23 폐지됐다 — Play 의 체험 제안을 고르지 않고, 무료 범위는 `src/lib/tasteAccess.ts`(메뉴별 맛보기) 한 곳에서 정한다
 
 ## 필수 패턴
 - 모든 `speechSynthesis` 호출은 optional chaining + try/catch로 감싼다 (WebView에서 `undefined`일 수 있음)
@@ -226,7 +227,9 @@ src/
   퍼즐 정답 동결본(맨 끝에만 붙임) · lib/mapPhotos.ts 지도 사진 고정 목록(scripts/build-map-photos.mjs, Actions 에서 생성) ·
   hooks/useBackClose.ts 창·시트 뒤로가기 닫기 · components/BottomTabs·PlusLockBox·PreviewPanel·WordIllust·LevelCircles·WordMiniSheet ·
   components/WebGate.tsx 스토어 앱이 아니고 회원키·예전 설정도 없는 방문자에게 앱 대신 보이는 안내 화면(회원키 입력 포함, 2026-11-14) ·
-  components/ErrorBoundary.tsx 화면 오류 시 흰 화면 대신 "다시 열기" · lib/playOffers.ts Play 가격·체험 제안(가격을 보이는 곳은 모두 이것을 씀) ·
+  components/ErrorBoundary.tsx 화면 오류 시 흰 화면 대신 "다시 열기" · lib/playOffers.ts Play 가격(가격을 보이는 곳은 모두 이것을 씀, 체험 제안은 고르지 않음) ·
+  lib/tasteAccess.ts 무료 맛보기 범위 + lib/plusLock.ts·components/PlusLockSheet.tsx 잠긴 항목 공용 안내 창 + components/LockMark.tsx 공용 자물쇠 ·
+  lib/planExpiry.ts 유료 등급 만료 순간 재확인 시계 · lib/dictCorrections.ts 사전 결과 정정 목록(public/dict-corrections.json) ·
   components/FormSheet.tsx 입력 시트 공용 디자인(회화집 만들기·단어 추가·단어장 만들기·CSV·이름 변경·추가하기는 이것을 씀) ·
   components/CategoryIcon.tsx 단어장 아이콘을 그리는 한 곳 + lib/categoryIcon.ts 저장 형태 `Category.emoji` = 옛 이모지 또는 `icon:<lucide 이름>:<색키>`
   (단어장 아이콘을 그릴 때 `{cat.emoji}` 를 직접 쓰지 말 것 — CategoryTile/CategoryGlyph 로) ·
