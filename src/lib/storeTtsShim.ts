@@ -43,7 +43,8 @@ function notifyFailed(): void {
   const now = Date.now();
   if (now - failShownAt < 4000 || quotaNoticeWithin(4000)) return;
   failShownAt = now;
-  try { toast("음성을 불러오지 못했습니다. 잠시 뒤 다시 시도하세요"); } catch (e) {}
+  // 두 문장 사이 줄바꿈(2026-11-23 J-9 — 알림은 white-space: pre-line)
+  try { toast("음성을 불러오지 못했습니다.\n잠시 뒤 다시 시도하세요"); } catch (e) {}
 }
 
 function speakGemini(t: string): void {
