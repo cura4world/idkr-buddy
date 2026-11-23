@@ -35,7 +35,9 @@ const ROUND_Q = 10;
 const MIN_Q = 4;
 const CHOICES = 4;
 const NEXT_MS = 1300;           // 고른 뒤 다음 문제로 넘어가기까지
-const AUDIO_WAIT_MS = 12000;    // 소리를 이만큼 기다려도 안 오면 글자로 대신합니다
+// 소리를 이만큼 기다려도 안 오면 글자로 대신합니다. 12초 → 25초(2026-11-23 J-6): 첫 진입에는 서버·음성 쪽이 깨어나느라
+// 12초를 넘기곤 해 "뜻을 보고 고르세요"가 떴고, 나갔다 들어오면(그사이 끝난 소리가 저장돼) 바로 나왔습니다.
+const AUDIO_WAIT_MS = 25000;
 const SLOW_RATE = 0.7;
 
 type Phase = "loading" | "empty" | "ready" | "playing" | "done";
@@ -107,7 +109,8 @@ const GameDengar = () => {
 
   const questionsRef = useRef<Question[]>([]);
   const answersRef = useRef<{ p: PoolWord; correct: boolean }[]>([]);
-  const urlsRef = useRef(new Map<string, string | null>());   // 단어 → 소리 주소 (null = 실패)
+  const urlsRef = useRef(new Map<string, string | null>());   // 단어 → 소리 주소 (null = 기기에 없음 — 오프라인 확인 결과)
+  const lastRoundRef = useRef<Set<string>>(new Set());        // 직전 판에 낸 단어(다음 판에서 뒤로 미룸)
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const scoreRef = useRef(0);
   const finishedRef = useRef(false);
@@ -132,12 +135,28 @@ const GameDengar = () => {
     audioRef.current = null;
   };
 
+  // 같은 단어의 소리 요청이 이미 나가 있으면 그것을 함께 기다립니다(한 번만 받음 — 발음 한도·비용).
+  // 기다림이 끝나도(시간 초과) 요청 자체는 계속 가므로, "없음"을 기억하지 않습니다 — 예전에는 시간 초과의 null 을 기억해
+  // "소리 다시 불러오기"를 눌러도 다시 부르지 않았고, 늦게 도착한 소리도 그 판에서는 쓰지 못했습니다(2026-11-23 J-6).
+  const pendingRef = useRef<Map<string, Promise<string | null>>>(new Map());
   const ensureUrl = useCallback(async (word: string): Promise<string | null> => {
     const m = urlsRef.current;
-    if (m.has(word)) return m.get(word) || null;
-    const url = await withTimeout(getSayAudioUrl(word, { cacheOnly: isOffline() }), AUDIO_WAIT_MS, null);
-    m.set(word, url);
-    return url;
+    const have = m.get(word);
+    if (have) return have;
+    let job = pendingRef.current.get(word);
+    if (!job) {
+      job = getSayAudioUrl(word, { cacheOnly: isOffline() })
+        .then((u) => {
+          if (u) m.set(word, u);
+          return u;
+        })
+        .catch(() => null)
+        .finally(() => {
+          pendingRef.current.delete(word);
+        });
+      pendingRef.current.set(word, job);
+    }
+    return withTimeout(job, AUDIO_WAIT_MS, null);
   }, []);
 
   // 소리 내기. 저장된(또는 새로 만든) 음성이 있으면 그것을, 없으면 폰 음성(관리자판)을 씁니다.
@@ -173,6 +192,15 @@ const GameDengar = () => {
       const ok = !!url || nativeVoice();
       setSound(ok ? "ready" : "failed");
       if (autoPlay && ok) play(q.answer.word, false);
+      // 기다림은 끝났지만 요청이 아직 가는 중이면, 도착하는 대로 이 문제의 소리를 켭니다(같은 문제를 보고 있을 때만)
+      if (!ok) {
+        const late = pendingRef.current.get(q.answer.word);
+        if (late) {
+          late.then((u) => {
+            if (u && aliveRef.current && qIndexRef.current === i) setSound("ready");
+          }).catch(() => {});
+        }
+      }
       // 다음 문제 소리를 미리 받아 둡니다
       const n = questionsRef.current[i + 1];
       if (n) ensureUrl(n.answer.word).catch(() => {});
@@ -249,6 +277,15 @@ const GameDengar = () => {
       (async () => {
         const all = await collectCandidates();
         let answers = (await drawPool(14, 6)).filter((p) => fitsListening(p.word.trim().toLowerCase()));
+        // 판마다 직전 판에 낸 단어는 뒤로 — 후보가 넉넉하면 새 구성, 모자라면 그만큼만 겹칩니다(2026-11-23 J-6 · D12, 버튼 없음).
+        // 출제 순서의 앞줄(다시 확인할 단어·찾아본 단어)이 스무 개 안팎이라 매번 거의 같은 묶음이 나왔습니다.
+        // 새 단어마다 처음 들을 때 발음 소리 1회가 듭니다(Plus 하루 1000 안, 한 번 받은 소리는 기기에 저장).
+        const prev = lastRoundRef.current;
+        if (prev.size > 0) {
+          const fresh = answers.filter((p) => !prev.has(p.word));
+          const again = answers.filter((p) => prev.has(p.word));
+          answers = fresh.concat(again);
+        }
         // 오프라인이면 기기에 소리가 저장된 단어를 앞으로
         if (isOffline()) {
           const have: PoolWord[] = [];
@@ -278,8 +315,13 @@ const GameDengar = () => {
             return;
           }
           questionsRef.current = qs;
+          lastRoundRef.current = new Set(qs.map((q) => q.answer.word));
           if (auto) beginPlay();
-          else setPhase("ready");
+          else {
+            setPhase("ready");
+            // 준비 화면에서 첫 문제 소리를 미리 받아 둡니다 — "시작"을 누를 때 기다리지 않게(J-6)
+            ensureUrl(qs[0].answer.word).catch(() => {});
+          }
         })
         .catch(() => {
           if (!aliveRef.current) return;
@@ -287,7 +329,7 @@ const GameDengar = () => {
           setPhase("empty");
         });
     },
-    [beginPlay]
+    [beginPlay, ensureUrl]
   );
 
   useEffect(() => {
