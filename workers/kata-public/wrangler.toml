@@ -27,7 +27,7 @@ GOOGLE_WEB_CLIENT_ID = "228056729729-kalemfhdg394bgo2mft16g5asnin21gd.apps.googl
 PLAY_PACKAGE = "app.naruve.katakata"
 PRODUCT_IDS = "plus"
 # 한도를 바꾸려면 이 값만 고칩니다. 비워 두면 worker.js 의 DEFAULT_LIMITS(결정 문서 표)를 씁니다.
-# 적은 칸만 바뀝니다. 예: {"plus":{"story":{"day":6,"month":70}},"trial":{"longread":{"total":20}},"free":{"tts":0}}
+# 적은 칸만 바뀝니다. 예: {"plus":{"story":{"day":6,"month":70}},"free":{"tts":0}}  (체험 등급 trial 은 2026-11-23 폐지)
 #   숫자 하나는 하루 상한, null 은 그 기간 제한 없음, "locked":true 는 그 등급에서 잠금.
 LIMITS_JSON = ""
 # 전체 하루 상한 — 하루(한국 날짜)에 AI 쪽으로 나가는 호출 수. 비우면 상한 없음.
