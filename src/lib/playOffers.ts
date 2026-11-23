@@ -59,6 +59,20 @@ function priceText(formatted: string): string {
 // ── Play 조회 (앱 전체에 하나) ───────────────────────────────
 
 const RETRY_AFTER_FAIL_MS = 30 * 1000;
+/**
+ * 화면에서 가격을 기다리는 시간. 그 뒤에는 "가격을 불러오지 못했습니다 · 다시 불러오기"로 바꿉니다.
+ * 늦게라도 Play 가 답하면 그 값을 받아 씁니다(onLateProducts). 2026-11-23 내부 테스트 I-3: 비행기 모드에서
+ * "불러오는 중"이 오래 남았음 — 15초 → 8초, 인터넷이 꺼져 있으면 기다리지 않음.
+ */
+const OFFERS_WAIT_MS = 8000;
+
+function isOffline(): boolean {
+  try {
+    return typeof navigator !== "undefined" && navigator.onLine === false;
+  } catch (e) {
+    return false;
+  }
+}
 
 let offers: PlanOffer[] | null = null; // null = 아직 받은 적 없음
 let state: OffersState = "loading";
@@ -82,12 +96,21 @@ export function loadOffers(force = false): void {
     if (state === "ready") return;
     if (state === "failed" && Date.now() - triedAt < RETRY_AFTER_FAIL_MS) return;
   }
+  // 인터넷이 꺼져 있으면 기다리지 않고 바로 "못 받음"(앞서 받은 값이 있으면 그대로 보여 줌)
+  if (isOffline()) {
+    if (!offers) {
+      state = "failed";
+      triedAt = Date.now();
+      emit();
+    }
+    return;
+  }
   loading = true;
   if (!offers) {
     state = "loading";
     emit();
   }
-  queryOffers()
+  queryOffers(undefined, OFFERS_WAIT_MS)
     .then((list) => {
       if (!accept(list) && !offers) state = "failed";
     })
