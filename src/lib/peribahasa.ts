@@ -158,14 +158,14 @@ export function saveKinds(kinds: PhraseKind[]): void {
 
 /* ── 지금 보여주고 있는 문장 기억 ── */
 //
-// 새 문장이 나오는 조건은 두 가지입니다.
-//   1) 앱이 완전히 새로 뜰 때 (모듈 변수가 비어 있음)
-//   2) 마지막으로 문장을 띄운 날짜가 지났을 때
+// 새 문장은 한국 날짜가 바뀔 때만 나옵니다(2026-11-23 내부 테스트 D-2).
+// 예전에는 오늘 문장을 메모리(모듈 변수)에만 들고 있어, 앱을 완전히 닫았다 열 때마다 새 문장이 나왔습니다 —
+// 그래서 무료의 "하루 한 번 다른 문장" 제한을 앱을 다시 켜는 것으로 비켜 갈 수 있었습니다.
+// 이제 오늘 문장을 {한국 날짜, 문장} 으로 이 기기에 적어 두고, 같은 날에는 다시 열어도 같은 문장을 씁니다.
 //
-// 2번이 중요합니다. 안드로이드가 앱을 메모리에 며칠씩 붙들고 있으면 모듈 변수가
-// 살아남아 1번 조건이 영영 안 맞습니다. 그래서 프로세스가 죽었는지가 아니라
-// "언제 띄웠는지"로 판단합니다. 화면으로 돌아올 때마다 phraseIsStale()을 확인하면
-// 며칠 상주해 있던 앱도 날짜가 바뀐 순간 새 문장으로 넘어갑니다.
+// 날짜 판단은 기기 시간이 아니라 한국 시간(오늘의 카드·이야기·단어 퍼즐과 같음).
+// 안드로이드가 앱을 메모리에 며칠씩 붙들고 있어도, 화면으로 돌아올 때마다 phraseIsStale() 을 확인하므로
+// 날짜가 바뀐 순간 새 문장으로 넘어갑니다.
 
 let sessionPhrase: Phrase | null = null;
 let sessionDay = "";
@@ -173,18 +173,49 @@ let sessionDay = "";
 // 바로 직전에 보여준 문장 (내장 문장으로 채울 때 같은 게 또 나오지 않도록)
 const LAST_ID_KEY = "phrase-last-id";
 const OLD_TODAY_KEY = "phrase-today";
+/** 오늘(한국 날짜)의 문장 { day, phrase } — localWipe.ts 의 학습 기록 목록에도 올라 있음 */
+export const TODAY_PHRASE_KEY = "phrase-today-v2";
 
-// 하루의 경계 (그 지역 시간 기준 자정)
-function todayKey(): string {
-  const d = new Date();
-  return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+const KST_MS = 9 * 3600 * 1000;
+
+/** 한국 날짜 "YYYY-MM-DD" (하루의 경계는 한국 자정) */
+export function kstDayKey(nowMs: number = Date.now()): string {
+  return new Date(nowMs + KST_MS).toISOString().slice(0, 10);
 }
 
-// 다음 자정까지 남은 밀리초 — 앱을 켜둔 채 날짜가 바뀌는 경우를 위해 씁니다
+function todayKey(): string {
+  return kstDayKey();
+}
+
+// 다음 한국 자정까지 남은 밀리초 — 앱을 켜둔 채 날짜가 바뀌는 경우를 위해 씁니다
 export function msUntilNextDay(): number {
-  const d = new Date();
-  const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 5);
-  return Math.max(1000, next.getTime() - d.getTime());
+  const now = Date.now();
+  const kst = now + KST_MS;
+  const nextKstMidnight = (Math.floor(kst / 86400000) + 1) * 86400000;
+  return Math.max(1000, nextKstMidnight - kst + 5000);
+}
+
+/** 이 기기에 적어 둔 오늘 문장 — 날짜가 지났거나 없으면 null */
+function readStoredToday(): Phrase | null {
+  try {
+    const raw = localStorage.getItem(TODAY_PHRASE_KEY);
+    if (!raw) return null;
+    const o = JSON.parse(raw) as { day?: string; phrase?: Phrase };
+    if (!o || o.day !== todayKey() || !o.phrase || typeof o.phrase !== "object" || !o.phrase.id) return null;
+    return o.phrase;
+  } catch (e) {
+    return null;
+  }
+}
+
+/** 메모리에 없으면 기기에 적어 둔 오늘 문장을 불러옵니다(앱을 새로 켠 뒤). */
+function hydrateFromStorage(): void {
+  if (sessionPhrase && sessionDay === todayKey()) return;
+  const p = readStoredToday();
+  if (p) {
+    sessionPhrase = p;
+    sessionDay = todayKey();
+  }
 }
 
 function getLastPhraseId(): string {
@@ -196,13 +227,15 @@ function getLastPhraseId(): string {
 }
 
 export function loadSavedPhrase(): Phrase | null {
+  hydrateFromStorage();
   if (!sessionPhrase) return null;
   if (sessionDay !== todayKey()) return null;
   return sessionPhrase;
 }
 
-/** 새 문장으로 갈아탈 때가 되었는지 (앱을 새로 켰거나 날짜가 지났거나) */
+/** 새 문장으로 갈아탈 때가 되었는지 (오늘 문장이 없거나 한국 날짜가 지났거나) */
 export function phraseIsStale(): boolean {
+  hydrateFromStorage();
   return sessionPhrase === null || sessionDay !== todayKey();
 }
 
@@ -210,6 +243,9 @@ function remember(p: Phrase): Phrase {
   sessionPhrase = p;
   sessionDay = todayKey();
   pushRecent(p.kind === "alkitab" && p.ref ? p.ref : p.id);
+  try {
+    localStorage.setItem(TODAY_PHRASE_KEY, JSON.stringify({ day: sessionDay, phrase: p }));
+  } catch (e) { /* 무시 */ }
   try {
     localStorage.setItem(LAST_ID_KEY, p.id);
     // 더 이상 쓰지 않는 예전 키를 치웁니다
