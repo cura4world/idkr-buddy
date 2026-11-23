@@ -203,7 +203,10 @@ export async function queryOffers(productIds: string[] = [PLUS_PRODUCT_ID], time
   return ev.type === "products" && Array.isArray(ev.products) ? ev.products : [];
 }
 
-/** 구독이 붙은 플랜인지 — 7일 무료 체험(trial)도 구독이 시작된 것입니다. Special·관리자는 계정에 준 등급이라 아님. */
+/**
+ * 구독이 붙은 플랜인지. Special·관리자는 계정에 준 등급이라 아님.
+ * (tier "trial" 은 2026-11-23 체험 폐지 전 서버의 응답 — 만료 시각까지는 구독으로 봅니다.)
+ */
 export function isPaidPlan(plan: PublicPlan): boolean {
   return (plan.tier === "plus" || plan.tier === "trial") && plan.until > Date.now();
 }
