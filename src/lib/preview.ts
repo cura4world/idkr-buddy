@@ -14,10 +14,11 @@
 
 import { isPreviewBuild } from "@/lib/plan";
 
-const TRIAL_USED_KEY = "kata-preview-trial-used";
+// 예전 "체험을 이미 쓴 계정" 스위치의 저장 키 — 2026-11-23 체험 폐지로 스위치를 없앴고, 처음부터 다시 할 때 지우기만 합니다.
+const OLD_TRIAL_USED_KEY = "kata-preview-trial-used";
 
 // "데이터 비우기"에서도 남겨 두는 값 — 미리보기 도구의 설정이지 앱 데이터가 아닙니다.
-const KEEP_KEYS = ["kata-preview-tier", TRIAL_USED_KEY, "geminiApiKey"];
+const KEEP_KEYS = ["kata-preview-tier", "geminiApiKey"];
 
 // indexedDB.databases() 가 없는 웹뷰를 위한 목록 (src 의 DB_NAME 전부, 2026-11-10 기준)
 const KNOWN_DBS = [
@@ -44,27 +45,7 @@ export function previewBuildLabel(): string {
   }
 }
 
-/** "체험을 이미 쓴 계정" 흉내 — 구독 화면(PW2) 확인용. 미리보기가 아니면 언제나 false. */
-export function previewTrialUsed(): boolean {
-  if (!isPreview()) return false;
-  try {
-    return localStorage.getItem(TRIAL_USED_KEY) === "1";
-  } catch (e) {
-    return false;
-  }
-}
-
-export function setPreviewTrialUsed(v: boolean): void {
-  try {
-    if (v) localStorage.setItem(TRIAL_USED_KEY, "1");
-    else localStorage.removeItem(TRIAL_USED_KEY);
-  } catch (e) {}
-  listeners.forEach((l) => {
-    try { l(); } catch (e) {}
-  });
-}
-
-/** 미리보기 설정(체험 사용 여부)이 바뀌면 알림. 등급 변경은 plan.ts 의 onTierChange 를 쓰세요. */
+/** 미리보기 설정이 바뀌면 알림(지금은 알리는 설정이 없음 — 가격 훅이 구독만 해 둠). 등급 변경은 plan.ts 의 onTierChange 를 쓰세요. */
 export function onPreviewChange(fn: () => void): () => void {
   listeners.add(fn);
   return () => { listeners.delete(fn); };
@@ -143,14 +124,13 @@ export async function clearPreviewData(): Promise<void> {
 
 /**
  * "새 무료 계정으로 처음부터" — 스토어 앱을 처음 설치해 로그인한 무료 사용자의 화면을 다시 보기 위한 것.
- * 데이터 비우기에 더해 등급을 무료로, "체험을 이미 쓴 계정"을 끔으로 돌립니다(체험 제안이 다시 보임).
- * Gemini 키만 남깁니다. 미리보기가 아니면 아무것도 하지 않습니다. (2026-11-17 Arga 요청)
+ * 데이터 비우기에 더해 등급을 무료로 돌립니다. Gemini 키만 남깁니다. 미리보기가 아니면 아무것도 하지 않습니다. (2026-11-17 Arga 요청)
  */
 export async function resetPreviewAsNewFreeUser(): Promise<void> {
   if (!isPreview()) return;
   try {
     localStorage.setItem("kata-preview-tier", "free");
-    localStorage.removeItem(TRIAL_USED_KEY);
+    localStorage.removeItem(OLD_TRIAL_USED_KEY);
   } catch (e) {}
   await clearPreviewData(); // 끝나면 첫 화면으로 다시 열립니다
 }
