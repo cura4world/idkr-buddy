@@ -15,6 +15,7 @@ import {
   prefetchNextPhrase,
   clearNextPhrase,
   phraseToQuery,
+  kstDayKey,
 } from "@/lib/peribahasa";
 import SettingsDialog, { REOPEN_SETTINGS_KEY } from "@/components/SettingsDialog";
 import MedaliBadge from "@/components/MedaliBadge";
@@ -150,9 +151,9 @@ const FIT_PEEK = 28;
 
 // 무료 사용자의 "다른 문장" 은 하루 한 번 (결정 문서 무료와 Plus 표)
 const FREE_PHRASE_DAY_KEY = "kata-free-phrase-refresh-day";
+// 날짜 경계는 한국 자정 — 오늘 문장이 바뀌는 때(peribahasa.ts)와 같게(2026-11-23 D-2)
 function localDay(): string {
-  const d = new Date();
-  return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+  return kstDayKey();
 }
 
 // 잠긴 메뉴를 누르면 그 자리에서 피어오르는 안내 (시안 H5 의 안개 말풍선)
