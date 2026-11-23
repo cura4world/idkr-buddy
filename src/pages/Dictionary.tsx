@@ -22,7 +22,9 @@ import { addWordIfAbsent, hasWordInCategory } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import AiReportButton from "@/components/AiReportButton";
-import { dictCacheKey, getCachedResult, saveCachedResult } from "@/lib/dictStore";
+import { dictCacheKey, deleteCachedResult, getCachedResult, saveCachedResult } from "@/lib/dictStore";
+import { lookupDictCorrection, syncDictCorrections } from "@/lib/dictCorrections";
+import { sha256Hex } from "@/lib/hash";
 import { ttsPlayer } from "@/lib/tts";
 import { lastQuotaNotice } from "@/lib/aiProxy";
 import { publicAiErrorText } from "@/lib/aiErrors";
@@ -431,6 +433,33 @@ const Dictionary = () => {
       setHistory(pushHistory(w));
     };
 
+    // 저장된(또는 검증된) 결과를 화면에 올립니다 — 정정 목록·저장본 경로가 함께 씁니다.
+    const showStored = (data: unknown) => {
+      resetForNewSearch();
+      if (detected === "id_word") {
+        const r = data as DictResult;
+        setResult(r);
+        // 지금 고른 대상 단어장 기준으로 판정합니다.
+        if (saveTargetId && hasWordInCategory(saveTargetId, r.word)) setSaved(true);
+      } else if (detected === "id_sentence") {
+        setIdSentence(data as IdSentenceResult);
+      } else if (detected === "ko_word") {
+        setKoWord(data as KoWordResult);
+      } else {
+        setKoSentence(data as KoSentenceResult);
+      }
+      finishSuccess();
+    };
+
+    // 정정 목록의 검증본이 있으면 그것을 먼저 — 저장본·AI 보다 앞(비용 0, 2026-11-23 12장 A).
+    // "다시 만들어 보기"(forceRefresh)여도 검증본이 있으면 그것을 씁니다.
+    const fixed = await lookupDictCorrection(cacheKey, detected);
+    if (fixed) {
+      showStored(fixed);
+      saveCachedResult(cacheKey, detected, w, fixed).catch(() => {});
+      return;
+    }
+
     // 캐시 적중: setLoading(true)를 아예 거치지 않아 로딩 화면이 깜빡이지 않습니다.
     if (!forceRefresh) {
       const cached0 = await getCachedResult(cacheKey);
@@ -438,23 +467,13 @@ const Dictionary = () => {
       const cached =
         cached0 && detected === "ko_sentence" && koQuestionAmbiguous(w) && !(cached0 as KoSentenceResult).question ? null : cached0;
       if (cached) {
-        resetForNewSearch();
-        if (detected === "id_word") {
-          const r = cached as DictResult;
-          setResult(r);
-          // 지금 고른 대상 단어장 기준으로 판정합니다.
-          if (saveTargetId && hasWordInCategory(saveTargetId, r.word)) setSaved(true);
-        } else if (detected === "id_sentence") {
-          setIdSentence(cached as IdSentenceResult);
-        } else if (detected === "ko_word") {
-          setKoWord(cached as KoWordResult);
-        } else {
-          setKoSentence(cached as KoSentenceResult);
-        }
-        finishSuccess();
+        showStored(cached);
         return;
       }
     }
+
+    // "다시 만들어 보기"가 실패해도 지금 화면의 결과는 남겨 둡니다(저장본만 지운 상태) — 되돌릴 사본
+    const prevSnap = forceRefresh ? { result, idSentence, koWord, koSentence } : null;
 
     setLoading(true);
     resetForNewSearch();
@@ -483,7 +502,15 @@ const Dictionary = () => {
       medaliEngine.addPoints("dict", 1).catch(() => {});  // 새 검색 +1 (조용히)
       finishSuccess();
     } catch (e: any) {
-      setError(errorMessage(e?.message || ""));
+      if (prevSnap && (prevSnap.result || prevSnap.idSentence || prevSnap.koWord || prevSnap.koSentence)) {
+        setResult(prevSnap.result);
+        setIdSentence(prevSnap.idSentence);
+        setKoWord(prevSnap.koWord);
+        setKoSentence(prevSnap.koSentence);
+        toast(errorMessage(e?.message || ""));
+      } else {
+        setError(errorMessage(e?.message || ""));
+      }
       setQuery(w); // 검색 실패 시 입력한 내용을 검색창에 되돌려 둠 (다시 타이핑할 필요 없음)
       // 실패한 결과는 캐시에 저장하지 않습니다.
     } finally {
@@ -559,6 +586,42 @@ const Dictionary = () => {
       histPushedRef.current = false;
     }
   };
+
+  // ---- 피드백을 보낸 사전 결과 (2026-11-23 12장 A·B) ----
+  // 같은 대상 표식: "dictionary:" + sha256(캐시 키) — 정정 목록의 해시와 같은 값. 서버가 같은 대상 신고를 세어 3번째에 알림.
+  const reportTarget = async (): Promise<string> => {
+    const w = lastTermRef.current;
+    if (!w) return "";
+    const h = await sha256Hex(dictCacheKey(detectInputKind(w), w));
+    return h ? "dictionary:" + h : "";
+  };
+  // 보낸 그 결과는 이 폰의 저장본에서 바로 지우고, "다시 만들어 보기"를 한 번 보입니다(사전 하루 한도 안).
+  // 지금 화면의 결과는 그대로 둡니다 — 다시 만들기가 실패해도 볼 것이 남게.
+  const [remakeFor, setRemakeFor] = useState("");
+  const onReportSent = () => {
+    const w = lastTermRef.current;
+    if (!w) return;
+    deleteCachedResult(dictCacheKey(detectInputKind(w), w)).catch(() => {});
+    setRemakeFor(w);
+  };
+  const remakeEl = () =>
+    remakeFor && remakeFor === lastTerm && !loading ? (
+      <button
+        type="button"
+        onClick={() => {
+          setRemakeFor("");
+          handleSearch(lastTerm, "none", true);
+        }}
+        className="mt-1 h-9 px-4 rounded-full border border-[#2C6D63] font-gothic text-[0.78125rem] font-semibold text-[#2C6D63] active:bg-[#E3EEEC]"
+      >
+        다시 만들어 보기
+      </button>
+    ) : null;
+
+  // 사전 정정 목록 — 사전 화면을 열 때 하루 한 번(한국 날짜) 받아 반영합니다(조용히, 실패해도 무시)
+  useEffect(() => {
+    syncDictCorrections().catch(() => {});
+  }, []);
 
   // 결과가 나온 뒤 검색창을 다시 누르면 방금 찾은 말을 지워 빈 칸으로(2026-11-23 Arga 8 — 이전 검색어는 최근 검색 목록에 남음).
   // 오류 화면에서는 지우지 않습니다(고쳐 쓰려는 것이므로). 결과가 떠 있는 동안 찾은 말을 보여 주는 것(QA Q10)은 그대로.
@@ -1177,7 +1240,10 @@ const Dictionary = () => {
                 input={idSentence.original}
                 output={idSentence.translation + (idSentence.natural.id ? " / " + idSentence.natural.id : "")}
                 className="flex flex-col items-center"
+                target={reportTarget}
+                onSent={onReportSent}
               />
+              {remakeEl()}
             </div>
           </>
         )}
@@ -1235,7 +1301,10 @@ const Dictionary = () => {
                 input={koWord.query}
                 output={JSON.stringify(koWord.candidates)}
                 className="flex flex-col items-center"
+                target={reportTarget}
+                onSent={onReportSent}
               />
+              {remakeEl()}
             </div>
           </>
         )}
@@ -1292,7 +1361,10 @@ const Dictionary = () => {
                 input={koSentence.query}
                 output={JSON.stringify({ casual: koSentence.casual, formal: koSentence.formal, question: koSentence.question })}
                 className="flex flex-col items-center"
+                target={reportTarget}
+                onSent={onReportSent}
               />
+              {remakeEl()}
             </div>
           </>
         )}
@@ -1440,7 +1512,10 @@ const Dictionary = () => {
                   input={result.word}
                   output={result.meaning + (result.meaningDetail ? " / " + result.meaningDetail : "")}
                   className="flex flex-col items-center"
+                  target={reportTarget}
+                  onSent={onReportSent}
                 />
+                {remakeEl()}
               </div>
             </>
           );
