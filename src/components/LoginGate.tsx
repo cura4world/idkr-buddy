@@ -27,7 +27,7 @@ import {
 } from "@/lib/billing";
 import { createExpiryWatcher } from "@/lib/planExpiry";
 import { isPreview } from "@/lib/preview";
-import { isOtherAccountCode, TOAST_OTHER_ACCOUNT, TOAST_VERIFIED, TOAST_VERIFIED_TRIAL } from "@/lib/plusCopy";
+import { isOtherAccountCode, TOAST_OTHER_ACCOUNT, TOAST_VERIFIED } from "@/lib/plusCopy";
 
 // 화면이 다시 보일 때 서버에서 등급을 새로 받는 최소 간격 (2026-11-14 출시 전 점검 C-13)
 const REFRESH_GAP_MS = 10 * 60 * 1000;
@@ -176,7 +176,7 @@ const LoginGate = ({ children }: { children: React.ReactNode }) => {
 
     // 자동 재검증의 결과 알림 — 결제 직후 확인이 실패했던 구매가 뒤늦게 확인됐을 때.
     const offVerify = onVerifyEvent((e) => {
-      if (e.type === "done") toast(e.plan.tier === "trial" ? TOAST_VERIFIED_TRIAL : TOAST_VERIFIED);
+      if (e.type === "done") toast(TOAST_VERIFIED);
       else if (e.type === "stopped" && isOtherAccountCode(e.code)) toast(TOAST_OTHER_ACCOUNT, { duration: 6000 });
     });
 
