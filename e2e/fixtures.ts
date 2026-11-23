@@ -11,8 +11,6 @@ import { test as base, expect, Page } from "@playwright/test";
 // ── 앱이 쓰는 저장 키 (값이 바뀌면 여기만 고칩니다) ─────────────
 /** src/lib/plan.ts 의 PREVIEW_TIER_KEY — 미리보기 패널이 고른 등급 */
 export const PREVIEW_TIER_KEY = "kata-preview-tier";
-/** src/lib/preview.ts 의 TRIAL_USED_KEY — "체험을 이미 쓴 계정" 스위치 */
-export const PREVIEW_TRIAL_USED_KEY = "kata-preview-trial-used";
 /** src/lib/fontScale.ts 의 KEY — 글자 크기 단계(0~8, 3 = 100%, 6 = 115%) */
 export const FONT_STEP_KEY = "app-font-scale-step";
 /** src/lib/fontScale.ts 의 FONT_BASE_KEY·FONT_BASE_VER — 없으면 저장된 단계를 한 칸 올려 버립니다(migrateOnce) */
@@ -27,7 +25,8 @@ export const FONT_STEP_115 = 6;
 export const ROOT_PX_100 = 15.2;
 export const ROOT_PX_115 = 17.48;
 
-export type PreviewTier = "free" | "trial" | "plus" | "special" | "admin";
+// 7일 무료 체험(trial)은 2026-11-23 폐지 — 미리보기 패널에도 없음
+export type PreviewTier = "free" | "plus" | "special" | "admin";
 
 export const test = base.extend<{ guard: void }>({
   guard: [
@@ -68,8 +67,6 @@ export interface PreviewOptions {
   tier: PreviewTier;
   /** 글자 크기 단계. 기본 3(100%) */
   fontStep?: number;
-  /** "체험을 이미 쓴 계정" */
-  trialUsed?: boolean;
 }
 
 /** 미리보기 빌드에서 등급·글자 크기를 정해 둡니다. page.goto 앞에서 부릅니다. */
@@ -78,7 +75,6 @@ export async function setupPreview(page: Page, o: PreviewOptions): Promise<void>
   kv[PREVIEW_TIER_KEY] = o.tier;
   kv[FONT_STEP_KEY] = String(o.fontStep === undefined ? FONT_STEP_100 : o.fontStep);
   kv[FONT_BASE_KEY] = FONT_BASE_VER;
-  if (o.trialUsed) kv[PREVIEW_TRIAL_USED_KEY] = "1";
   await seedStorage(page, kv);
 }
 
