@@ -3,6 +3,7 @@
 // 관리자판·회원판 APK와 브라우저에서는 아무것도 하지 않고 그대로 통과시킵니다.
 
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { isStoreApp, PRIVACY_URL, TERMS_URL } from "@/lib/platform";
@@ -190,6 +191,23 @@ const LoginGate = ({ children }: { children: React.ReactNode }) => {
       window.removeEventListener("focus", onVisible);
     };
   }, [store]);
+
+  // 로그인 화면이 떠 있는 동안 주소를 홈으로 돌려 둡니다(2026-11-23 내부 테스트 Arga 3).
+  // 내 정보에서 로그아웃·계정 삭제하거나 세션이 끊기면 주소가 /me 등 그대로 남아, 다시 로그인하면 그 화면이 첫 화면으로
+  // 열렸습니다. 자식 화면은 이미 내려간 뒤라 이동만 합니다(setState 와 navigate 를 함께 부르지 않음 — CLAUDE.md).
+  const navigate = useNavigate();
+  const location = useLocation();
+  const showSignIn = store && !session;
+  useEffect(() => {
+    if (!showSignIn || location.pathname === "/") return;
+    navigate("/", { replace: true });
+    // 라우터는 기본 경로 뒤의 "/"를 떼어 주소를 ".../idkr-buddy" 로 만듭니다. 이 상태에서 화면을 새로 열면(계정 삭제 뒤
+    // "모두 지우기"가 새로 고침) 서버에 따라 다른 주소로 봅니다 — 맨 끝 "/"를 붙인 원래 주소로 맞춰 둡니다(라우터 상태는 그대로).
+    try {
+      const base = import.meta.env.BASE_URL || "/";
+      if (window.location.pathname + "/" === base) window.history.replaceState(window.history.state, "", base + window.location.search);
+    } catch (e) {}
+  }, [showSignIn, location.pathname, navigate]);
 
   if (!store || session) return <>{children}</>;
   return <SignInScreen />;
