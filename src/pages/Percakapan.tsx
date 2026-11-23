@@ -423,10 +423,10 @@ const Percakapan = () => {
                 <><Plus size={17} strokeWidth={2.4} /> 대화 만들기</>
               )}
             </FormPrimaryButton>
-            <p className="mt-2 text-center break-keep font-gothic text-[0.75rem]" style={{ color: quotaHit ? C.sub : C.mute }}>
-              {/* 한도에 걸렸으면 서버가 알려 준 그 문장(오늘/이번 달) 하나만 씁니다 — 알림과 같은 말 */}
+            <p className="mt-2 text-center break-keep whitespace-pre-line font-gothic text-[0.75rem]" style={{ color: quotaHit ? C.sub : C.mute }}>
+              {/* 한도에 걸렸으면 서버가 알려 준 그 문장(오늘/이번 달) 하나만 씁니다 — 알림과 같은 말(두 문장 사이 줄바꿈, J-5) */}
               {quotaHit
-                ? (quotaNote || "오늘 만들 수 있는 대화를 모두 만들었습니다. 내일 다시 만들어 보세요.")
+                ? (quotaNote || "오늘 만들 수 있는 대화를 모두 만들었습니다.\n내일 다시 만들어 보세요.")
                 : "만드는 데 20초쯤 걸립니다"}
             </p>
           </>
