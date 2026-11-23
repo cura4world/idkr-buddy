@@ -184,13 +184,21 @@ const BottomTabs = () => {
       if (h < fullH - KEYBOARD_MIN) {
         shrunk = true;
         if (isField(document.activeElement)) setTyping(true);
-      } else if (shrunk) {
+      } else {
+        // 창 높이가 원래대로(키보드 없음) — 줄었다 늘어난 경우뿐 아니라, 포커스가 입력칸에 없으면 언제든 막대를 다시 보입니다.
+        // 첫 칸 자동 포커스처럼 키보드 없이 포커스만 들어간 뒤 창이 닫히면 "줄었다 늘어남"이 없어 막대가 돌아오지 않았습니다
+        // (2026-11-23 내부 테스트 E-3 · D-3).
+        if (shrunk || !isField(document.activeElement)) setTyping(false);
         shrunk = false;
-        setTyping(false);
       }
     };
     const onIn = (e: FocusEvent) => { if (isField(e.target)) setTyping(true); };
-    const onOut = (e: FocusEvent) => { if (isField(e.target)) setTyping(false); };
+    // 포커스가 빠진 직후 실제로 어디에 있는지 다시 봅니다 — 입력칸이 통째로 사라지면(시트가 닫힘) focusout 이 늦거나
+    // 오지 않는 웹뷰가 있어, 바로 판단하지 않고 한 박자 뒤에 확인합니다.
+    const onOut = (e: FocusEvent) => {
+      if (!isField(e.target)) return;
+      window.setTimeout(() => setTyping(isField(document.activeElement)), 0);
+    };
     document.addEventListener("focusin", onIn);
     document.addEventListener("focusout", onOut);
     if (vv) vv.addEventListener("resize", onResize);
@@ -202,6 +210,18 @@ const BottomTabs = () => {
       else window.removeEventListener("resize", onResize);
     };
   }, [shown]);
+
+  // 화면을 옮기면 입력 중 표시를 지금 포커스로 다시 정합니다 — 앞 화면의 검색칸 포커스가 남은 채 넘어오면
+  // 막대가 계속 숨고 "찾기" 막대가 맨 아래로 내려가 탭 자리를 덮어 보였습니다(2026-11-23 D-3).
+  useEffect(() => {
+    try {
+      const el = document.activeElement as HTMLElement | null;
+      const tag = el && el.tagName ? el.tagName.toUpperCase() : "";
+      setTyping(tag === "INPUT" || tag === "TEXTAREA" || !!(el && el.isContentEditable));
+    } catch (e) {
+      setTyping(false);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     try {
