@@ -3,7 +3,7 @@
 // 7줄: 오늘의 단어 퍼즐(맨 위, 무료도 가능) · 빠른 짝짓기 · 스피드 O/X · 듣고 고르기 · 문장 조립 · 철자 채우기 · 단어 받기.
 // 짝맞추기(Cocokkan)와 단어장 퀴즈(Kuis)는 2026-11 결정으로 뺐습니다(단어장 안의 퀴즈 버튼은 그대로).
 // 무료 사용자: 귤색 Plus 상자 + 퍼즐 말고 모두 흐리게 잠금(누르면 안내 후 구독 화면).
-// Plus·체험·Special·관리자: 머리에 훈장 알약, 아래에 Medali Bintang 안내.
+// Plus·Special·관리자: 머리에 훈장 알약, 아래에 Medali Bintang 안내.
 // 공개판에서는 하단 탭(BottomTabs)의 뿌리 화면이라 뒤로가기를 두지 않습니다. 탭 막대 아래 빈칸은
 // BottomTabs 가 화면 흐름 끝에 직접 두므로 여기서는 높이만 막대만큼 줄입니다(--kata-tabbar-h).
 // 관리자판·회원판에는 탭 막대가 없어 예전처럼 뒤로가기를 둡니다.
@@ -14,7 +14,10 @@ import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import { listRounds } from "@/lib/medali";
 import type { GameRound } from "@/lib/medali";
-import { usePlan, PAYWALL_PATH, paywallNotice } from "@/lib/plan";
+import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import LockMark from "@/components/LockMark";
+import { openPlusLock } from "@/lib/plusLock";
+import { LOCK_TITLE_GAME } from "@/lib/tasteAccess";
 import { isStoreApp } from "@/lib/platform";
 import { currentStreak } from "@/lib/kataHariIni";
 import MedaliSheet from "@/components/MedaliSheet";
@@ -27,7 +30,6 @@ import {
   GAME_ORDER,
   GameIcon,
   IconChevron,
-  IconLock,
   Svg,
 } from "@/components/game/GameKit";
 import type { GameId } from "@/components/game/GameKit";
@@ -141,7 +143,8 @@ const Permainan = () => {
   const open = (id: GameId) => {
     const locked = id !== "kata" && !plus;
     if (locked) {
-      navigate(PAYWALL_PATH, paywallNotice("게임은 Plus 회원 기능입니다"));
+      // 잠긴 게임: 공용 안내 창(2026-11-23 — 잠금 표시·안내를 앱 전체에서 같게)
+      openPlusLock(LOCK_TITLE_GAME);
       return;
     }
     navigate(GAME_META[id].path);
@@ -229,7 +232,7 @@ const Permainan = () => {
                   {m.desc}
                 </span>
               </span>
-              {locked ? <IconLock size={17} /> : <IconChevron size={17} />}
+              {locked ? <LockMark size={16} /> : <IconChevron size={17} />}
             </button>
           );
         })}
