@@ -20,6 +20,39 @@ const PURCHASE_TIMEOUT_MS = 10 * 60 * 1000;
 /** Play 응답 코드 7 (ITEM_ALREADY_OWNED) — 네이티브가 "BILLING_" + 코드로 넘겨 줍니다. */
 const CODE_ALREADY_OWNED = "BILLING_7";
 
+// ── 일시 진단 기록 (2026-11-23 내부 테스트 1장 D) ─────────────────
+// 구독 갱신 직후 무료로 보이던 원인을 폰 logcat 으로 확인하려는 임시 장치입니다. 웹뷰가 콘솔 글을 logcat 의
+// chromium 줄로 내보내므로 `adb logcat | findstr KKBilling` 으로 봅니다. 구매 토큰·이메일·계정 ID 는 남기지 않습니다.
+// 원인이 확인되면 상수만 끄지 말고 billingLog 와 부르는 곳을 코드째 걷어냅니다(CLAUDE.md 원인 찾기 3).
+const DEBUG_BILLING_LOG = true;
+
+function isoOrDash(ms: unknown): string {
+  try {
+    return typeof ms === "number" && ms > 0 ? new Date(ms).toISOString() : "-";
+  } catch (e) {
+    return "-";
+  }
+}
+
+/** 진단 한 줄. fields 의 값은 결과 코드·등급·시각·호출 이유 같은 민감하지 않은 것만 넣습니다. */
+export function billingLog(fields: Record<string, string | number | boolean | undefined>): void {
+  if (!DEBUG_BILLING_LOG) return;
+  try {
+    const parts: string[] = [];
+    Object.keys(fields).forEach((k) => {
+      const v = fields[k];
+      if (v === undefined) return;
+      parts.push(k + "=" + (k === "until" || k === "untilBefore" ? isoOrDash(v) : String(v)));
+    });
+    console.info("[KKBilling] " + parts.join(" "));
+  } catch (e) {}
+}
+
+function sessionTierText(): string {
+  const s = getSession();
+  return s && s.plan ? String(s.plan.tier) : "none";
+}
+
 export interface PlanOffer {
   productId: string;
   basePlanId: string;
@@ -153,11 +186,14 @@ function waitFor(types: string[], ms: number, errs: string[]): Promise<BillingEv
   });
 }
 
-/** Play 에서 구독 상품(기본 요금제·체험 제안)과 현지 가격을 받아 옵니다. */
-export async function queryOffers(productIds: string[] = [PLUS_PRODUCT_ID]): Promise<PlanOffer[]> {
+/**
+ * Play 에서 구독 상품(기본 요금제·체험 제안)과 현지 가격을 받아 옵니다.
+ * timeoutMs: 기다릴 시간(기본 15초). 그 뒤에 도착한 목록은 onLateProducts 로 넘어갑니다.
+ */
+export async function queryOffers(productIds: string[] = [PLUS_PRODUCT_ID], timeoutMs: number = QUERY_TIMEOUT_MS): Promise<PlanOffer[]> {
   const b = bridge();
   if (!b || typeof b.query !== "function") return [];
-  const wait = waitFor(["products", "error"], QUERY_TIMEOUT_MS, ERR_QUERY);
+  const wait = waitFor(["products", "error"], timeoutMs, ERR_QUERY);
   try {
     b.query(JSON.stringify(productIds));
   } catch (e) {
@@ -170,6 +206,16 @@ export async function queryOffers(productIds: string[] = [PLUS_PRODUCT_ID]): Pro
 /** 구독이 붙은 플랜인지 — 7일 무료 체험(trial)도 구독이 시작된 것입니다. Special·관리자는 계정에 준 등급이라 아님. */
 export function isPaidPlan(plan: PublicPlan): boolean {
   return (plan.tier === "plus" || plan.tier === "trial") && plan.until > Date.now();
+}
+
+/**
+ * 최근까지 유료였는데 만료 시각이 지난 플랜인가 — 갱신이 아직 반영되지 않았을 수 있는 상태입니다.
+ * 이때는 Play 에 구매를 다시 확인해야 합니다(2026-11-23 내부 테스트: 갱신 직후 무료로 보이고, 구독 버튼을 누르면
+ * Play 의 "이미 가입" 오류창이 먼저 떴음).
+ */
+export function isLapsedPaidPlan(plan: PublicPlan | null | undefined, now: number = Date.now()): boolean {
+  if (!plan) return false;
+  return (plan.tier === "plus" || plan.tier === "trial") && typeof plan.until === "number" && plan.until > 0 && plan.until <= now;
 }
 
 // ── 서버 검증 ────────────────────────────────────────────────
@@ -217,11 +263,17 @@ type VerifyAllResult =
   | { status: "error"; code: string };
 
 /** 결제가 끝난(PURCHASED) 구매들을 차례로 검증합니다. 하나라도 유효하면 끝. */
-async function verifyAll(mine: PurchaseInfo[]): Promise<VerifyAllResult> {
+async function verifyAll(mine: PurchaseInfo[], reason: string = "verify"): Promise<VerifyAllResult> {
   const pending: PurchaseInfo[] = [];
   let code = "NOT_VALID";
   for (const p of mine) {
+    const before = sessionTierText();
     const r = await verify(p);
+    if (r.kind === "answered") {
+      billingLog({ reason, result: r.valid ? "valid" : "not-valid", until: r.plan.until, tier: before + "->" + r.plan.tier, autoRenew: r.plan.autoRenew });
+    } else {
+      billingLog({ reason, result: "failed", code: r.code, retry: r.retry, tier: before });
+    }
     if (r.kind === "answered") {
       if (r.valid) return { status: "plus", plan: r.plan };
       continue; // 서버가 답했지만 끝난 구매(환불·만료)
@@ -403,36 +455,75 @@ const QUIET_AGAIN_GAP_MS = 10 * 60 * 1000;
  *   · Play 가 답하지 않았으면(인터넷 없음) 끝낸 것으로 치지 않아, 다음에 부를 때 다시 합니다.
  *   · again: 화면이 다시 보일 때 — 지금 무료로 보이는 계정이면 끝낸 뒤라도 10분에 한 번까지 다시 합니다
  *     (구독 중인데 무료로 보이는 사용자가 앱을 끄지 않고도 돌아오게).
+ *   · opts.force: 위의 "한 번만·10분 간격·유료면 건너뜀"을 무시하고 지금 확인합니다(2026-11-23 추가).
+ *     구독 만료 시각이 막 지났을 때, Play 의 구독 관리 화면에서 돌아왔을 때 씁니다 — 서버의 /me 는 이용 중인 구독을
+ *     하루에 한 번·만료 뒤 한 시간에 한 번만 Play 에 묻지만, 구매 확인(/billing/verify)은 부를 때마다 Play 에 묻습니다.
+ *   · 끝나면(또는 건너뛰면) 풀리는 Promise 를 돌려줍니다. 예전처럼 결과를 기다리지 않고 불러도 됩니다.
  */
-export function autoRestoreOnce(again = false): void {
+let quietRun: Promise<void> | null = null;
+export function autoRestoreOnce(again = false, opts?: { force?: boolean; reason?: string }): Promise<void> {
+  const force = !!(opts && opts.force);
+  const reason = (opts && opts.reason) || (again ? "visible" : "start");
   const s = getSession();
-  if (!billingAvailable() || !s || quietBusy) return;
+  if (!billingAvailable() || !s) return Promise.resolve();
+  if (quietBusy) return quietRun || Promise.resolve();
   if (isVerifyingPurchase()) {
     retryVerifyNow();
-    return;
+    return Promise.resolve();
   }
   const uid = s.user.id;
   const now = Date.now();
-  if (quietDoneFor === uid) {
-    // 이미 끝냄 — 화면이 다시 보였고 지금 무료로 보이는 계정일 때만, 10분에 한 번까지 다시
-    const open = isPaidPlan(s.plan) || s.plan.tier === "special" || s.plan.tier === "admin" || s.plan.tier === "review";
-    if (!again || open || now - quietAt < QUIET_AGAIN_GAP_MS) return;
-  } else if (again && quietAt > 0 && now - quietAt < QUIET_GAP_MS) {
-    return; // 방금 해 봤는데 Play 가 답하지 않음 — 1분 안에는 다시 하지 않음
+  if (!force) {
+    if (quietDoneFor === uid) {
+      // 이미 끝냄 — 화면이 다시 보였고 지금 무료로 보이는 계정일 때만, 10분에 한 번까지 다시
+      const open = isPaidPlan(s.plan) || s.plan.tier === "special" || s.plan.tier === "admin" || s.plan.tier === "review";
+      if (!again || open || now - quietAt < QUIET_AGAIN_GAP_MS) return Promise.resolve();
+    } else if (again && quietAt > 0 && now - quietAt < QUIET_GAP_MS) {
+      return Promise.resolve(); // 방금 해 봤는데 Play 가 답하지 않음 — 1분 안에는 다시 하지 않음
+    }
   }
   quietBusy = true;
   quietAt = now;
-  ownedFromPlay()
+  billingLog({ reason, step: "restore-start", until: s.plan.until, tier: s.plan.tier });
+  quietRun = ownedFromPlay()
     .then(async (owned) => {
-      if (owned === null) return; // Play 가 답하지 않음 → 다음에 다시
+      if (owned === null) { // Play 가 답하지 않음 → 다음에 다시
+        billingLog({ reason, step: "restore", result: "play-no-answer" });
+        return;
+      }
       quietDoneFor = uid;
       const mine = owned.filter(isMine);
-      if (mine.length === 0) return;
-      const r = await verifyAll(mine);
+      if (mine.length === 0) {
+        billingLog({ reason, step: "restore", result: "no-purchase" });
+        return;
+      }
+      const r = await verifyAll(mine, reason);
       if (r.status === "verifying") startVerifyRetry(r.pending);
     })
     .catch(() => {})
-    .finally(() => { quietBusy = false; });
+    .finally(() => {
+      quietBusy = false;
+      quietRun = null;
+    });
+  return quietRun;
+}
+
+// ── Play 구독 관리 화면에서 돌아옴 (2026-11-23 내부 테스트 I-8) ────────────
+// 해지는 Play 화면에서 하므로 앱은 모릅니다. 관리 화면을 연 시각을 적어 두고, 30분 안에 앱이 다시 보이면
+// 구매를 바로 다시 확인합니다(LoginGate). 그래야 서버가 Play 에 물어 "정기 결제 취소됨"을 곧바로 알게 됩니다.
+const MANAGE_OPENED_KEY = "kata-billing-manage-opened";
+const MANAGE_RETURN_MS = 30 * 60 * 1000;
+
+/** Play 구독 관리 화면을 열었다가 돌아온 것인가. 한 번 읽으면 지웁니다. */
+export function takeManageReturn(now: number = Date.now()): boolean {
+  try {
+    const at = Number(sessionStorage.getItem(MANAGE_OPENED_KEY) || 0);
+    if (!at) return false;
+    sessionStorage.removeItem(MANAGE_OPENED_KEY);
+    return now - at >= 0 && now - at < MANAGE_RETURN_MS;
+  } catch (e) {
+    return false;
+  }
 }
 
 /** 앱(페이지)이 다시 열렸을 때 — 지난번에 끝내지 못한 "확인 중"이 있으면 이어 갑니다. */
@@ -467,12 +558,13 @@ export async function purchase(offer: PlanOffer): Promise<PurchaseOutcome> {
     return { status: "error", code: "FAILED" };
   }
   const ev = await wait;
+  billingLog({ reason: "purchase", step: "play-result", result: ev.type, code: ev.code });
   if (ev.type === "canceled") return { status: "canceled" };
   if (ev.type === "error") {
     const code = ev.code || "FAILED";
     // 이미 보유: 새로 살 수 없으므로 구매 복원 흐름으로 바로 넘깁니다(B-11).
     if (code === CODE_ALREADY_OWNED) {
-      const r = await restoreDetailed();
+      const r = await restoreDetailed("purchase-owned");
       if (r.status === "plus") return { status: "plus", plan: r.plan, restored: true };
       if (r.status === "verifying") return { status: "verifying" };
       return { status: "error", code: r.status === "error" ? r.code : code };
@@ -485,7 +577,7 @@ export async function purchase(offer: PlanOffer): Promise<PurchaseOutcome> {
   if (mine.every((p) => p.state === "PENDING")) return { status: "pending" };
   const paid = mine.filter(isMine);
   if (paid.length === 0) return { status: "error", code: "NO_PURCHASE" };
-  const r = await verifyAll(paid);
+  const r = await verifyAll(paid, "purchase");
   if (r.status === "plus") return { status: "plus", plan: r.plan };
   if (r.status === "verifying") {
     startVerifyRetry(r.pending);
@@ -502,13 +594,22 @@ export type RestoreOutcome =
   /** RESTORE_FAILED = Play 가 답하지 않음 · ACCOUNT_MISMATCH·PURCHASE_OWNED_BY_OTHER = 다른 앱 계정의 구독 */
   | { status: "error"; code: string };
 
-/** 이미 산 구독을 이 계정에 다시 연결합니다. 왜 안 됐는지까지 돌려줍니다. */
-export async function restoreDetailed(): Promise<RestoreOutcome> {
+/**
+ * 이미 산 구독을 이 계정에 다시 연결합니다. 왜 안 됐는지까지 돌려줍니다.
+ * reason: 진단 기록에 남길 호출 이유(기본 "restore").
+ */
+export async function restoreDetailed(reason: string = "restore"): Promise<RestoreOutcome> {
   const owned = await ownedFromPlay();
-  if (owned === null) return { status: "error", code: "RESTORE_FAILED" };
+  if (owned === null) {
+    billingLog({ reason, step: "restore", result: "play-no-answer" });
+    return { status: "error", code: "RESTORE_FAILED" };
+  }
   const mine = owned.filter(isMine);
-  if (mine.length === 0) return { status: "none" };
-  const r = await verifyAll(mine);
+  if (mine.length === 0) {
+    billingLog({ reason, step: "restore", result: "no-purchase" });
+    return { status: "none" };
+  }
+  const r = await verifyAll(mine, reason);
   if (r.status === "plus") return { status: "plus", plan: r.plan };
   if (r.status === "verifying") {
     startVerifyRetry(r.pending);
@@ -526,6 +627,9 @@ export async function restorePurchases(): Promise<PublicPlan | null> {
 
 /** Play 의 구독 관리 화면(해지·결제 수단 변경)을 엽니다. */
 export function manageSubscription(productId: string = PLUS_PRODUCT_ID): void {
+  try {
+    sessionStorage.setItem(MANAGE_OPENED_KEY, String(Date.now()));
+  } catch (e) {}
   try {
     bridge()?.manage?.(productId);
   } catch (e) {}
