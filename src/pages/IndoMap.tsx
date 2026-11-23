@@ -1158,11 +1158,13 @@ const IndoMap = () => {
                             <span className="flex-1 min-w-0 font-gothic text-[0.84375rem] text-[#4A5257]">{w.meaning}</span>
                             <button
                               onClick={() => saveMapWord(w)}
+                              // 담기 전: 사전의 '내 단어장에 담기'와 같은 초록 동그라미 + 흰 + (2026-11-23 Arga 13 · H-7)
+                              // 담은 뒤: 사전처럼 옅은 초록 + 초록 체크(담기 전과 구분되게)
                               className={
                                 "w-8 h-8 rounded-full flex items-center justify-center shrink-0 " +
                                 (savedWords[w.word]
-                                  ? "bg-[#2C6D63] text-white"
-                                  : "bg-white border border-[#DDE3E6] text-[#646C72] active:bg-[#F1F4F5]")
+                                  ? "bg-[#E3EEEC] text-[#2C6D63]"
+                                  : "bg-[#2C6D63] text-white active:bg-[#24594F]")
                               }
                               title={savedWords[w.word] ? "담기 취소" : "단어장에 담기"}
                               aria-label={savedWords[w.word] ? "담기 취소" : "단어장에 담기"}
