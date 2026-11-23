@@ -3,19 +3,17 @@
 // (QA Q04: 예전 오른쪽 아래 알약은 퍼즐 자판·지도 축소·사전 ▼ 등 실제 버튼을 덮었습니다.)
 // App.tsx 가 isPreview() 일 때만 한 번 붙입니다. 관리자판·회원판·스토어 앱에는 나타나지 않습니다.
 //
-// 시트: 등급 전환 / 체험을 이미 쓴 계정 / Gemini API 키 / 새 무료 계정으로 처음부터 / 이 미리보기 데이터 비우기.
+// 시트: 등급 전환 / Gemini API 키 / 새 무료 계정으로 처음부터 / 이 미리보기 데이터 비우기.
+// (예전 "체험을 이미 쓴 계정" 스위치·체험 등급 버튼은 2026-11-23 체험 폐지로 없앰)
 // 폰 뒤로가기는 시트만 닫도록 히스토리를 한 칸 쌓습니다(CLAUDE.md: 한 화면 안의 뒤로가기는 pushState + popstate).
 
 import { useEffect, useRef, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { Tier, TIER_LABEL, setPreviewTier, usePlan } from "@/lib/plan";
-import {
-  clearPreviewData, onPreviewChange, previewBuildLabel, previewTrialUsed, resetPreviewAsNewFreeUser, setPreviewTrialUsed,
-} from "@/lib/preview";
+import { clearPreviewData, previewBuildLabel, resetPreviewAsNewFreeUser } from "@/lib/preview";
 import { getGeminiApiKey, setGeminiApiKey, cleanGeminiKeyInput, geminiKeyInputProblem } from "@/lib/gemini";
 
-const TIERS: Tier[] = ["free", "trial", "plus", "special", "admin"];
+const TIERS: Tier[] = ["free", "plus", "special", "admin"];
 
 // 끝자리와 길이만 보여 줍니다 — 길이로 일부만 복사됐는지 알 수 있습니다(AQ. 키는 53자).
 function maskKey(k: string): string {
@@ -26,7 +24,6 @@ function maskKey(k: string): string {
 export default function PreviewPanel() {
   const { tier } = usePlan();
   const [open, setOpen] = useState(false);
-  const [trialUsed, setTrialUsed] = useState<boolean>(previewTrialUsed());
   const [savedKey, setSavedKey] = useState<string>(getGeminiApiKey());
   const [keyInput, setKeyInput] = useState("");
   const [keyCheck, setKeyCheck] = useState("");
@@ -37,8 +34,6 @@ export default function PreviewPanel() {
   const [confirmFresh, setConfirmFresh] = useState(false);
   const openRef = useRef(false);
   const pushedRef = useRef(false);
-
-  useEffect(() => onPreviewChange(() => setTrialUsed(previewTrialUsed())), []);
 
   // 뒤로가기 → 시트만 닫힘
   useEffect(() => {
@@ -158,7 +153,7 @@ export default function PreviewPanel() {
     await clearPreviewData(); // 끝나면 첫 화면으로 다시 열립니다
   };
 
-  // 새 무료 계정으로 처음부터 — 데이터 비우기 + 등급 무료 + 체험 안 쓴 계정. 키만 남김.
+  // 새 무료 계정으로 처음부터 — 데이터 비우기 + 등급 무료. 키만 남김.
   const fresh = async () => {
     if (wiping) return;
     setWiping(true);
@@ -230,19 +225,6 @@ export default function PreviewPanel() {
               </div>
             </section>
 
-            {/* 체험 사용 여부 */}
-            <section className="border-t border-border px-4 py-3.5">
-              <div className="flex items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-[13px] font-semibold text-foreground">체험을 이미 쓴 계정</h3>
-                  <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
-                    켜면 구독 화면이 체험 없이 바로 구독으로 보입니다.
-                  </p>
-                </div>
-                <Switch checked={trialUsed} onCheckedChange={(v) => setPreviewTrialUsed(!!v)} aria-label="체험을 이미 쓴 계정" />
-              </div>
-            </section>
-
             {/* Gemini API 키 */}
             <section className="border-t border-border px-4 py-3.5">
               <h3 className="text-[13px] font-semibold text-foreground">Gemini API 키</h3>
@@ -308,7 +290,7 @@ export default function PreviewPanel() {
             <section className="border-t border-border px-4 py-3.5">
               <h3 className="text-[13px] font-semibold text-foreground">새 무료 계정으로 처음부터</h3>
               <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
-                처음 설치해 로그인한 무료 사용자의 화면으로 돌아갑니다. 데이터를 모두 지우고 등급은 무료, 체험은 아직 안 쓴 계정으로 바꿉니다. API 키는 남겨 둡니다.
+                처음 설치해 로그인한 무료 사용자의 화면으로 돌아갑니다. 데이터를 모두 지우고 등급은 무료로 바꿉니다. API 키는 남겨 둡니다.
               </p>
               {confirmFresh ? (
                 <div className="mt-2.5 rounded-[12px] border border-border bg-muted/40 p-3">
@@ -350,7 +332,7 @@ export default function PreviewPanel() {
             <section className="border-t border-border px-4 py-3.5">
               <h3 className="text-[13px] font-semibold text-foreground">이 미리보기 데이터 비우기</h3>
               <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
-                처음 설치한 상태로 돌아가 확인하세요. 등급·체험·API 키 설정은 남겨 둡니다.
+                처음 설치한 상태로 돌아가 확인하세요. 등급·API 키 설정은 남겨 둡니다.
               </p>
               {confirmWipe ? (
                 <div className="mt-2.5 rounded-[12px] border border-border bg-muted/40 p-3">
