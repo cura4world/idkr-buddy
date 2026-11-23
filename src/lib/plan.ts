@@ -1,9 +1,8 @@
 // src/lib/plan.ts
 // 공개판 등급 — 모든 화면은 잠금 판단을 이 파일로만 합니다.
 //
-//   free    무료
-//   trial   7일 무료 체험 중 (Plus 기능은 모두 열림, 한도는 절반)
-//   plus    Plus 구독
+//   free    무료 (메뉴마다 맛보기만 — src/lib/tasteAccess.ts)
+//   plus    Plus 구독 (7일 무료 체험은 2026-11-23 폐지. 예전 체험 응답은 만료 시각까지 plus 로 읽음)
 //   special Special Member (회원키)
 //   admin   관리자
 //
@@ -16,7 +15,7 @@ import { useEffect, useState } from "react";
 import { isStoreApp } from "@/lib/platform";
 import { getSession, onSessionChange } from "@/lib/account";
 
-export type Tier = "free" | "trial" | "plus" | "special" | "admin";
+export type Tier = "free" | "plus" | "special" | "admin";
 
 export const PAYWALL_PATH = "/plus";
 
@@ -31,7 +30,6 @@ export function paywallNotice(text: string, replace = false): { state: { plusNot
 
 export const TIER_LABEL: Record<Tier, string> = {
   free: "무료",
-  trial: "Plus 무료 체험 중",
   plus: "Plus",
   special: "Special Member",
   admin: "관리자",
@@ -54,7 +52,8 @@ export function getPreviewTier(): Tier | null {
   if (!isPreviewBuild()) return null;
   try {
     const v = localStorage.getItem(PREVIEW_TIER_KEY);
-    if (v === "free" || v === "trial" || v === "plus" || v === "special" || v === "admin") return v;
+    if (v === "free" || v === "plus" || v === "special" || v === "admin") return v;
+    if (v === "trial") return "plus"; // 체험 폐지 전에 미리보기 패널에서 고른 값
   } catch (e) {}
   // 아직 고르지 않았으면 관리자 — 출시 전 검사에서 잠김 없이 모든 화면을 보도록(2026-11-11 사용자 요청).
   // 무료·Plus 화면은 미리보기 패널에서 골라 확인합니다.
@@ -84,10 +83,8 @@ export function getTier(): Tier {
   if (p.tier === "special" && (!p.until || live)) return "special";
   // 심사용 계정(review): 화면·잠금은 Plus 와 똑같습니다. Special 과 달리 신앙·뉴스 메뉴는 열리지 않습니다.
   if (p.tier === "review" && (!p.until || live)) return "plus";
-  // 서버는 체험을 {tier:"trial", trial:true} 로 줍니다. 예전 모양 {tier:"plus", trial:true} 도 받습니다.
-  if ((p.tier === "plus" || p.tier === "trial") && live) {
-    return p.trial || p.tier === "trial" ? "trial" : "plus";
-  }
+  // 체험 폐지(2026-11-23) 전 서버는 체험을 {tier:"trial"} 로 줬습니다. 그런 세션도 만료 시각(원래 체험 끝)까지만 plus.
+  if ((p.tier === "plus" || p.tier === "trial") && live) return "plus";
   return "free";
 }
 
