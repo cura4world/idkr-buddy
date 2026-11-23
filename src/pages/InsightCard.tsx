@@ -212,8 +212,9 @@ const InsightCard = () => {
                         <span className="block font-word text-[0.9375rem] text-foreground">{w.id}</span>
                         <span className="block mt-px font-gothic text-[0.78125rem] text-[#7A848A]">{w.ko}</span>
                       </span>
-                      <span className="flex items-center gap-1 font-gothic text-[0.75rem] text-[#1E8A99] shrink-0">
-                        <BookOpen size={13} /> 사전
+                      {/* "사전" 글자는 빼고 아이콘만(2026-11-23 H-4). 읽어 주기 프로그램에는 "사전에서 보기"로 알림 */}
+                      <span className="flex items-center font-gothic text-[#1E8A99] shrink-0" role="img" aria-label="사전에서 보기">
+                        <BookOpen size={15} />
                       </span>
                     </button>
                   ))}
