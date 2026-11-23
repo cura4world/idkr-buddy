@@ -246,7 +246,8 @@ const InsightReligion = () => {
         </p>
       </Fold>
 
-      <Fold title="6개 공인 종교" defaultOpen>
+      {/* 처음 들어오면 모든 구역이 접혀 목차처럼 제목만 보입니다(2026-11-23 H-11) */}
+      <Fold title="6개 공인 종교">
         <div className="-mx-4 -my-3.5 divide-y divide-gray-100">
           {RELIGIONS.map((r) => (
             <div key={r.name} className="px-4 py-3.5">
@@ -270,7 +271,7 @@ const InsightReligion = () => {
         </div>
       </Fold>
 
-      <Fold title="지도로 보는 인도네시아 종교" defaultOpen>
+      <Fold title="지도로 보는 인도네시아 종교">
         <ReligionMap />
         <p className="text-[0.8125rem] font-gothic text-gray-600 leading-relaxed mt-3">
           지역별로 우세한 종교를 한눈에 볼 수 있습니다. 서부(수마트라·자바)는 이슬람이
