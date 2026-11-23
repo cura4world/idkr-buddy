@@ -34,6 +34,7 @@ export const WIPE_LS_KEYS: string[] = [
   "story-quota-day",
   // 백업 표시 — 지운 뒤에는 "마지막 백업" 날짜가 맞지 않습니다
   "kata-backup-file-last",
+  // (남김) "dict-corrections"·"dict-corrections-day" — 모두에게 같은 사전 정정 목록 사본이라 개인 기록이 아닙니다(2026-11-23)
 ];
 
 /** 이 글자로 시작하는 localStorage 키를 모두 지웁니다 */
