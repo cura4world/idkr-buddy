@@ -1,7 +1,9 @@
 // 등급별 공개판 홈 메뉴의 기대값과 그 단언 — preview/home-tiers.spec.ts 와 web/store-review.spec.ts 가 같이 씁니다.
 //
 // 기대값은 src/pages/Index.tsx 의 `if (storeApp)` 쪽과 src/lib/plan.ts 에서 옮겼습니다.
-//   plus  = tier !== "free"                    → 단어장·회화집·인도네시아 이해의 자물쇠가 풀리고 Plus 줄이 사라짐
+//   plus  = tier !== "free"                    → Plus 줄이 사라짐
+//   (2026-11-23 맛보기) 무료도 단어장·회화집·인도네시아 이해에 들어가 목록을 봅니다 — 홈 줄에는 자물쇠가 없고,
+//   잠긴 것은 그 화면 안에서 작은 자물쇠와 안내 창으로 보입니다.
 //   staff = tier === "special" || "admin"      → 뉴스 줄 + "Firman Hari Ini"(신앙) 구역이 보임
 //   tier === "admin"                           → 신앙 구역 첫 줄에 설교문
 //   서버 등급 review(심사용)는 getTier() 가 "plus" 로 돌려주므로 Plus 와 같은 홈입니다.
@@ -25,17 +27,10 @@ const BASIC = ["단어장", "회화집", "오늘의 이야기", "인도네시아
 
 export const HOME_EXPECTED: Record<PreviewTier, HomeExpected> = {
   free: {
-    locked: ["단어장", "회화집", "인도네시아 이해"],
-    open: ["오늘의 이야기"],
-    hidden: ["뉴스", "설교문"].concat(FAITH),
-    plusBox: true,
-    faithSection: false,
-  },
-  trial: {
     locked: [],
     open: BASIC,
     hidden: ["뉴스", "설교문"].concat(FAITH),
-    plusBox: false,
+    plusBox: true,
     faithSection: false,
   },
   plus: {
