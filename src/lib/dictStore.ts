@@ -141,6 +141,38 @@ async function evictOldest(n: number): Promise<void> {
   }
 }
 
+// 저장된 결과 하나 삭제 — 피드백을 보낸 결과, 정정 목록에 오른 결과(2026-11-23 내부 테스트 12장)
+export async function deleteCachedResult(key: string): Promise<void> {
+  if (!key) return;
+  try {
+    const db = await openDB();
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
+    });
+  } catch {
+    // 무시
+  }
+}
+
+// 저장된 결과의 키 전부 — 정정 목록의 해시와 맞춰 보려고 씁니다(지울 것 찾기)
+export async function listCachedResultKeys(): Promise<string[]> {
+  try {
+    const db = await openDB();
+    return await new Promise((resolve) => {
+      const tx = db.transaction(STORE, "readonly");
+      const req = tx.objectStore(STORE).getAllKeys();
+      req.onsuccess = () => resolve((req.result || []).map((k) => String(k)));
+      req.onerror = () => resolve([]);
+    });
+  } catch {
+    return [];
+  }
+}
+
 // 저장된 결과 전부 삭제 (설정의 "비우기" 버튼)
 export async function clearCachedResults(): Promise<void> {
   try {
