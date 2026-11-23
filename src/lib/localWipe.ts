@@ -25,6 +25,8 @@ export const WIPE_LS_KEYS: string[] = [
   "dict-search-history",
   "phrase-saved",
   "phrase-recent",
+  "phrase-today-v2",           // 오늘(한국 날짜)의 문장 — 2026-11-23 D-2
+  "kata-free-phrase-refresh-day", // 무료 "다른 문장" 하루 한 번 표시
   "medali-cache",
   "medali-nudge-date",
   "kata-hari-ini",
