@@ -32,6 +32,7 @@ import { getSession, onSessionChange, signOut, deleteAccount, PublicSession } fr
 import { askLocalWipe } from "@/lib/localWipe";
 import { billingAvailable, manageSubscription } from "@/lib/billing";
 import { usePlusPricing } from "@/lib/playOffers";
+import { canceledUntilText } from "@/lib/plusCopy";
 import { isStoreApp, storeAppVersion, hasNativeFileSave, saveFileNative, PRIVACY_URL, TERMS_URL, BUSINESS_INFO_URL } from "@/lib/platform";
 import { getEdition, EDITION_LABEL } from "@/lib/access";
 import { getMemberProfile } from "@/lib/member";
@@ -146,9 +147,11 @@ interface RowProps {
   danger?: boolean;
   chevron?: boolean;
   right?: React.ReactNode;
+  /** 오른쪽 값이 길면 "…"로 자르지 않고 두 줄까지 줄바꿈합니다(구독 관리의 "정기 결제 취소됨 · …까지 이용") */
+  wrapValue?: boolean;
 }
 
-const Row = ({ icon, label, value, onClick, last, danger, chevron = true, right }: RowProps) => (
+const Row = ({ icon, label, value, onClick, last, danger, chevron = true, right, wrapValue }: RowProps) => (
   <button
     type="button"
     onClick={onClick}
@@ -160,7 +163,10 @@ const Row = ({ icon, label, value, onClick, last, danger, chevron = true, right 
       {label}
     </span>
     {value ? (
-      <span className="font-gothic shrink-0 truncate" style={{ maxWidth: "55%", fontSize: rem(12), color: MUTED }}>
+      <span
+        className={"font-gothic shrink-0 " + (wrapValue ? "text-right break-keep" : "truncate")}
+        style={{ maxWidth: "55%", fontSize: rem(12), color: MUTED, lineHeight: wrapValue ? 1.35 : undefined, padding: wrapValue ? "6px 0" : undefined }}
+      >
         {value}
       </span>
     ) : null}
@@ -632,16 +638,18 @@ const MyInfo = () => {
               onClick={() => navigate(PAYWALL_PATH)}
               last={review}
             />
-            {/* 심사용 계정은 구독이 아니라 관리할 결제가 없습니다. 해지한 구독은 "다음 결제" 대신 "…까지 이용"(B-09). */}
+            {/* 심사용 계정은 구독이 아니라 관리할 결제가 없습니다. 해지한 구독은 "다음 결제" 대신
+                "정기 결제 취소됨 · …까지 이용"(B-09, 2026-11-23 I-8). */}
             {review ? null : (
               <Row
                 icon={I_CARD}
                 label="구독 관리"
                 value={until > Date.now()
                   ? (session && session.plan.autoRenew === false
-                      ? koDate(until) + "까지 이용"
+                      ? canceledUntilText(koDate(until))
                       : (tier === "trial" ? "첫 결제 " : "다음 결제 ") + koDate(until))
                   : undefined}
+                wrapValue
                 onClick={openManage}
                 last
               />
