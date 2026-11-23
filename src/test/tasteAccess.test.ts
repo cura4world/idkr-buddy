@@ -41,8 +41,12 @@ describe("맛보기 회화 장면", () => {
     expect(hasBundledAudio(DASAR[1])).toBe(false);
     expect(TASTE_AUDIO && TASTE_AUDIO.lines.length).toBe(DASAR[0].lines.length);
     for (const rel of [TASTE_AUDIO!.all].concat(TASTE_AUDIO!.lines)) {
+      expect(rel.endsWith(".mp3"), rel).toBe(true);
       expect(fs.existsSync("public/" + rel), rel).toBe(true);
     }
+    // 2026-11-24 WAV → MP3. 같은 소리를 두 벌 담지 않는다 — 맛보기 폴더에 WAV 가 남아 있으면 안 됨
+    const dir = "public/" + TASTE_AUDIO!.all.slice(0, TASTE_AUDIO!.all.lastIndexOf("/"));
+    expect(fs.readdirSync(dir).filter((n) => n.toLowerCase().endsWith(".wav"))).toEqual([]);
     // 대사를 고쳐 rev 가 오르면 옛 파일을 쓰지 않음
     expect(hasBundledAudio({ ...DASAR[0], rev: (DASAR[0].rev || 0) + 1 })).toBe(false);
   });
