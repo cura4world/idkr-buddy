@@ -127,7 +127,29 @@ export async function collectCandidates(): Promise<PoolWord[]> {
 // 재료 부족 시 있는 쪽에서 채우고, 그래도 부족하면 있는 만큼만 반환.
 export async function drawPool(unconfirmed: number, confirmed: number): Promise<PoolWord[]> {
   const all = await collectCandidates();
+  return drawFromCandidates(all, unconfirmed, confirmed, 0).core;
+}
 
+// 단어 받기(Tangkap)용. drawPool 과 같은 판(core)에 더해, 같은 뽑기 순서에서 겹치지 않는
+// 예비 단어를 reserve개까지 더 뽑습니다. 뜻이 같은 단어는 core·예비를 통틀어 한 번만 들어갑니다.
+// 예비가 모자라면 있는 만큼만 돌려줍니다.
+export async function drawPoolWithReserve(
+  unconfirmed: number,
+  confirmed: number,
+  reserve: number
+): Promise<{ core: PoolWord[]; reserve: PoolWord[] }> {
+  const all = await collectCandidates();
+  return drawFromCandidates(all, unconfirmed, confirmed, reserve);
+}
+
+// drawPool·drawPoolWithReserve 공용 본체. reserve가 0이면 예전 drawPool과 똑같이 동작합니다.
+// (후보 목록을 직접 넣어 확인할 수 있게 테스트용으로도 내보냅니다)
+export function drawFromCandidates(
+  all: PoolWord[],
+  unconfirmed: number,
+  confirmed: number,
+  reserve: number
+): { core: PoolWord[]; reserve: PoolWord[] } {
   // 미확정 뽑기 순서: monitoring → recheck → 확정 직전 → 찾아본 단어 → 단어장 → 시드.
   // monitoring은 한 번 더 틀리면 별이 줄어드는 단어라 재검증 중에서도 가장 먼저 냅니다.
   // 확정 직전(nearConfirm)은 한 번만 더 맞히면 별이 되므로 같은 판 수로 별이 더 빨리 늡니다.
@@ -155,7 +177,7 @@ export async function drawPool(unconfirmed: number, confirmed: number): Promise<
   const usedMeaning = new Set<string>();
 
   // 뜻이 같은 두 단어가 한 판에 들어가면 짝맞추기가 성립하지 않습니다.
-  const take = (list: PoolWord[], n: number): number => {
+  const take = (list: PoolWord[], n: number, into: PoolWord[] = picked): number => {
     let got = 0;
     for (const p of list) {
       if (got >= n) break;
@@ -164,7 +186,7 @@ export async function drawPool(unconfirmed: number, confirmed: number): Promise<
       if (usedWord.has(wk) || usedMeaning.has(mk)) continue;
       usedWord.add(wk);
       usedMeaning.add(mk);
-      picked.push(p);
+      into.push(p);
       got++;
     }
     return got;
@@ -188,7 +210,15 @@ export async function drawPool(unconfirmed: number, confirmed: number): Promise<
     if (more < short) take(unconfirmedOrder, short - more);
   }
 
-  return picked;
+  // 예비 단어 — core를 다 뽑은 뒤 같은 순서(미확정 → 확정)에서 이어서 뽑습니다.
+  // 섞기를 더 하지 않으므로 core 결과는 reserve 값과 무관하게 같습니다.
+  const extra: PoolWord[] = [];
+  if (reserve > 0) {
+    const got = take(unconfirmedOrder, reserve, extra);
+    if (got < reserve) take(confirmedOrder, reserve - got, extra);
+  }
+
+  return { core: picked, reserve: extra };
 }
 
 // ── 듣고 고르기(Dengar)용 비슷한 단어 ───────────────────────────────
