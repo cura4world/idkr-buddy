@@ -22,12 +22,19 @@ interface Props {
   // 여는 단추의 글자. 기본은 "피드백 보내기"이고 지금은 모든 화면이 기본값을 씁니다(2026-11-19).
   // 화면 글자일 뿐이고, 서버로 보내는 신고 종류(feature)·사유 값은 그대로입니다.
   label?: string;
+  /**
+   * 같은 대상 표식을 만드는 함수(선택) — 예: 사전은 "dictionary:" + sha256(캐시 키). 서버가 같은 대상의 신고를 세어
+   * 3번째에 운영자에게 "누적 3회" 알림을 보냅니다(2026-11-23 12장 B). 빈 문자열이면 보내지 않습니다.
+   */
+  target?: () => Promise<string>;
+  /** 보내기에 성공한 뒤 한 번 부릅니다(선택) — 사전은 이 결과의 저장본을 지우고 "다시 만들어 보기"를 보입니다 */
+  onSent?: () => void;
 }
 
 // 말투 규칙(11/10): "~해요" 대신 "~입니다".
 const REASONS = ["뜻·번역이 틀립니다", "부적절한 내용입니다", "기타"];
 
-const AiReportButton = ({ feature, input, output, className, label = "피드백 보내기" }: Props) => {
+const AiReportButton = ({ feature, input, output, className, label = "피드백 보내기", target, onSent }: Props) => {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -38,10 +45,20 @@ const AiReportButton = ({ feature, input, output, className, label = "피드백 
     if (busy) return;
     setBusy(true);
     try {
-      await sendAiReport({ feature, input: input.slice(0, 500), output: output.slice(0, 2000), reason });
+      let t = "";
+      if (target) {
+        try { t = await target(); } catch (e) { t = ""; }
+      }
+      await sendAiReport({
+        feature, input: input.slice(0, 500), output: output.slice(0, 2000), reason,
+        ...(t ? { target: t } : {}),
+      });
       setSent(true);
       setOpen(false);
       toast("알려 주셔서 고맙습니다. 살펴보고 고치겠습니다");
+      if (onSent) {
+        try { onSent(); } catch (e) {}
+      }
     } catch (e) {
       // 하루 신고 한도에 걸린 것과 통신 실패를 나눠 알립니다(출시 전 점검 P-25)
       const code = e instanceof Error ? e.message : "";
