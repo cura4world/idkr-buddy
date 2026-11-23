@@ -7,17 +7,21 @@
 //   node scripts/gen-taste-audio.mjs --go
 //   Remove-Item Env:GEMINI_API_KEY
 // --go 없이 돌리면 무엇을 만들지만 보여 주고 AI 를 부르지 않습니다(실수로 돌려 비용이 나가지 않게).
+// ffmpeg 가 있어야 합니다(PATH 에서 찾음) — Gemini 가 준 소리(WAV)를 MP3 로 바꿉니다.
 //
-// 만드는 것:
-//   public/audio/taste/dasar-kenalan-r<rev>/all.wav        전체 듣기(남·여 두 목소리)
-//   public/audio/taste/dasar-kenalan-r<rev>/line-01.wav …  문장 하나씩(그 줄 화자의 목소리)
+// 만드는 것 (2026-11-24 Arga 요청: WAV 3.9MB → MP3 모노 64kbps 로 줄임):
+//   public/audio/taste/dasar-kenalan-r<rev>/all.mp3        전체 듣기(남·여 두 목소리)
+//   public/audio/taste/dasar-kenalan-r<rev>/line-01.mp3 …  문장 하나씩(그 줄 화자의 목소리)
 //   src/data/tasteAudio.ts                                 위 파일 목록(앱이 읽음)
+// 같은 폴더에 MP3 가 이미 있으면 건너뛰고, MP3 는 없는데 WAV 가 있으면(예전 판·중간에 멈춘 것) AI 를 부르지 않고 바꾸기만 합니다.
+// MP3 를 만든 뒤 WAV 는 지웁니다(같은 소리를 두 벌 남기지 않게).
 // 요청 모양(모델·목소리·안내문)은 앱의 회화 재생기와 똑같이 맞췄습니다 — 앱에서 Plus 로 들을 때와 같은 소리입니다.
 // 장면 대사를 고쳐 rev 를 올리면 이 스크립트를 다시 돌립니다(옛 파일은 앱이 쓰지 않음).
 // 호출 수: 전체 1 + 문장 13 = 14번(실패한 요청은 2번까지 다시).
 
 import { build } from "esbuild";
 import { mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
@@ -32,13 +36,11 @@ const FEMALE_SPEAKER = "Sinta";
 const MALE_VOICE = "Charon";
 const FEMALE_VOICE = "Kore";
 const TIMEOUT_MS = 90000;
+const MP3_BITRATE = "64k"; // 모노 64kbps — 말소리에 충분하고 한 장면 합이 1MB 안쪽
 
 const GO = process.argv.indexOf("--go") >= 0;
+// 키는 AI 를 실제로 불러야 할 때만 확인합니다(WAV 를 MP3 로 바꾸기만 할 때는 필요 없음).
 const key = String(process.env.GEMINI_API_KEY || "").trim();
-if (GO && !key) {
-  console.error("GEMINI_API_KEY 환경 변수가 없습니다. 맨 위 '쓰는 법'을 보세요.");
-  process.exit(1);
-}
 
 // ── 장면 불러오기 (TypeScript 데이터 파일을 esbuild 로 잠깐 풀어 읽음) ──
 async function loadScene() {
@@ -124,6 +126,7 @@ function wavFromPcm(pcm) {
 }
 
 async function tts(body, label) {
+  if (!key) throw new Error("GEMINI_API_KEY 환경 변수가 없습니다(" + label + " 을 새로 만들어야 함). 맨 위 '쓰는 법'을 보세요.");
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent";
   for (let attempt = 0; attempt < 3; attempt++) {
     const ctrl = new AbortController();
@@ -169,42 +172,82 @@ const dirRel = "audio/taste/" + SCENE_ID + "-r" + rev;
 const dirAbs = join(ROOT, "public", dirRel);
 console.log("장면 " + SCENE_ID + " (rev " + rev + ", " + scene.lines.length + "줄) → public/" + dirRel);
 if (!GO) {
-  console.log("만들 파일: all.wav + line-01~" + String(scene.lines.length).padStart(2, "0") + ".wav (AI 호출 " + (scene.lines.length + 1) + "번)");
+  console.log("만들 파일: all.mp3 + line-01~" + String(scene.lines.length).padStart(2, "0") + ".mp3 (없는 것만 AI 호출, 최대 " + (scene.lines.length + 1) + "번)");
   console.log("실제로 만들려면 --go 를 붙여 다시 돌리세요. 이번에는 AI 를 부르지 않았습니다.");
   process.exit(0);
 }
+// ffmpeg 가 없으면 AI 를 부르기 전에 멈춥니다(소리만 받고 MP3 로 못 바꾸는 일이 없게)
+{
+  const v = spawnSync("ffmpeg", ["-hide_banner", "-version"], { encoding: "utf8" });
+  if (v.status !== 0) {
+    console.error("ffmpeg 를 찾지 못했습니다. ffmpeg 를 설치하고 PATH 에 넣은 뒤 다시 돌리세요.");
+    process.exit(1);
+  }
+}
 mkdirSync(dirAbs, { recursive: true });
 
-// 이미 만든 파일(같은 rev 폴더에 있고 WAV 머리가 맞는 것)은 다시 부르지 않습니다 — 중간에 멈췄다 이어 돌릴 때 비용을 아낍니다.
-// 처음부터 다시 만들려면 그 폴더를 지우고 돌립니다.
-function existing(name) {
+function readIf(path, ok) {
   try {
-    const b = readFileSync(join(dirAbs, name));
-    return b.length > 1000 && b.slice(0, 4).toString("ascii") === "RIFF" ? b : null;
+    const b = readFileSync(path);
+    return ok(b) ? b : null;
   } catch (e) {
     return null;
   }
 }
+const isWav = (b) => b.length > 1000 && b.slice(0, 4).toString("ascii") === "RIFF";
+// MP3: ID3 머리 또는 프레임 동기(0xFFE…)로 시작
+const isMp3 = (b) => b.length > 1000 && (b.slice(0, 3).toString("ascii") === "ID3" || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0));
 
-const files = { all: dirRel + "/all.wav", lines: [] };
-let all = existing("all.wav");
-if (all) console.log("  all.wav 이미 있음 " + Math.round(all.length / 1024) + " KB");
-else {
-  all = await tts(sceneBody(scene), "전체 듣기");
-  writeFileSync(join(dirAbs, "all.wav"), all);
-  console.log("  all.wav " + Math.round(all.length / 1024) + " KB");
+/** WAV 바이트 → MP3 바이트 (ffmpeg, 모노·24kHz·64kbps) */
+function toMp3(wav) {
+  const stamp = join(tmpdir(), "kata-taste-" + process.pid + "-" + Date.now());
+  const tin = stamp + ".wav";
+  const tout = stamp + ".mp3";
+  writeFileSync(tin, wav);
+  try {
+    const r = spawnSync("ffmpeg", [
+      "-hide_banner", "-loglevel", "error", "-y", "-i", tin,
+      "-ac", "1", "-ar", String(SAMPLE_RATE), "-codec:a", "libmp3lame", "-b:a", MP3_BITRATE, tout,
+    ], { encoding: "utf8" });
+    if (r.status !== 0) throw new Error("ffmpeg 로 MP3 를 만들지 못했습니다: " + String(r.stderr || "").slice(0, 300));
+    return readFileSync(tout);
+  } finally {
+    try { rmSync(tin); } catch (e) {}
+    try { rmSync(tout); } catch (e) {}
+  }
 }
+
+// base("all"·"line-01") 의 MP3 를 마련합니다.
+//   MP3 가 있으면 그대로 → WAV 만 있으면 바꾸기만(AI 호출 없음) → 둘 다 없으면 AI 로 WAV 를 받아 먼저 저장(중간에 멈춰도 다음에 이어 감) 뒤 바꿈.
+//   MP3 를 만든 뒤 WAV 는 지웁니다. 처음부터 다시 만들려면 그 폴더를 지우고 돌립니다.
+async function ensureMp3(base, makeWav) {
+  const mp3Path = join(dirAbs, base + ".mp3");
+  const wavPath = join(dirAbs, base + ".wav");
+  const have = readIf(mp3Path, isMp3);
+  if (have) {
+    console.log("  " + base + ".mp3 이미 있음 " + Math.round(have.length / 1024) + " KB");
+    return;
+  }
+  let wav = readIf(wavPath, isWav);
+  const from = wav ? "WAV 에서 바꿈" : "새로 만듦";
+  if (!wav) {
+    wav = await makeWav();
+    writeFileSync(wavPath, wav);
+  }
+  const mp3 = toMp3(wav);
+  if (!isMp3(mp3)) throw new Error(base + ".mp3 가 MP3 모양이 아닙니다");
+  writeFileSync(mp3Path, mp3);
+  try { rmSync(wavPath); } catch (e) {}
+  console.log("  " + base + ".mp3 " + Math.round(mp3.length / 1024) + " KB (" + from + ", WAV " + Math.round(wav.length / 1024) + " KB)");
+}
+
+const files = { all: dirRel + "/all.mp3", lines: [] };
+await ensureMp3("all", () => tts(sceneBody(scene), "전체 듣기"));
 for (let i = 0; i < scene.lines.length; i++) {
   const l = scene.lines[i];
-  const name = "line-" + String(i + 1).padStart(2, "0") + ".wav";
-  let buf = existing(name);
-  if (buf) console.log("  " + name + " 이미 있음 " + Math.round(buf.length / 1024) + " KB");
-  else {
-    buf = await tts(lineBody(l.id, speakerNameOf(scene, l.s)), name);
-    writeFileSync(join(dirAbs, name), buf);
-    console.log("  " + name + " " + Math.round(buf.length / 1024) + " KB");
-  }
-  files.lines.push(dirRel + "/" + name);
+  const base = "line-" + String(i + 1).padStart(2, "0");
+  await ensureMp3(base, () => tts(lineBody(l.id, speakerNameOf(scene, l.s)), base));
+  files.lines.push(dirRel + "/" + base + ".mp3");
 }
 
 const ts =
@@ -220,7 +263,7 @@ const ts =
   "  sceneId: string;\n" +
   "  rev: number;\n" +
   "  lineCount: number;\n" +
-  "  /** 앱 주소 기준 경로(BASE_URL 뒤). 예: \"audio/taste/dasar-kenalan-r2/all.wav\" */\n" +
+  "  /** 앱 주소 기준 경로(BASE_URL 뒤). 예: \"audio/taste/dasar-kenalan-r2/all.mp3\" */\n" +
   "  all: string;\n" +
   "  /** 줄마다 하나(줄 순서대로) */\n" +
   "  lines: string[];\n" +
