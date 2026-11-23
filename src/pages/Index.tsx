@@ -25,9 +25,8 @@ import { needsMedaliId, syncMedali } from "@/lib/medaliSync";
 import { getEdition, takeRevokedNotice } from "@/lib/access";
 import { isStoreApp } from "@/lib/platform";
 import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
-import { usePlan, PAYWALL_PATH, paywallNotice } from "@/lib/plan";
-import { usePlusPricing } from "@/lib/playOffers";
-import { lockButtonSub } from "@/lib/plusCopy";
+import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { LOCK_BUTTON_SUB } from "@/lib/plusCopy";
 import { isWordbookVisible } from "@/lib/wordbookAccess";
 import { listCategories as listPercakapanCategories } from "@/lib/percakapan";
 import {
@@ -520,8 +519,6 @@ const Index = () => {
   // 공개판 홈: 등급은 usePlan() 하나로만 판단합니다
   //   staff(관리자·Special Member) 에게는 말씀과 기도·뉴스를, 관리자에게는 설교를 더 보여 줍니다(2026-11-12 사용자 요청)
   const { plus, staff, tier } = usePlan();
-  // Plus 줄의 "7일 무료 체험"은 Play 체험 제안이 있을 때만 보입니다(무료 등급의 공개판 홈에서만 Play 에 묻습니다).
-  const pricing = usePlusPricing(storeApp && !plus);
 
   // 공개판 홈 개수 표시 (2026-11-12): 기본 단어장의 단어 수 · 회화집의 대화 수
   //   단어 — 이 등급에 보이는 공용 단어장(성경과 신앙 35~41권은 staff 만)의 단어를 모두 셉니다
@@ -580,12 +577,8 @@ const Index = () => {
     fogTimers.current.push(window.setTimeout(() => setFog(null), 2500));
   };
 
-  // 무료 사용자가 잠긴 메뉴를 누르면 바로 구독 화면으로 갑니다. 안내 글은 구독 화면 맨 위에서 스르륵 내려왔다 올라갑니다
-  // (2026-11-17 Arga 요청 — 예전에는 여기서 안내를 띄우고 0.7초 뒤 넘어가 글을 다 읽기 어려웠음).
-  // setState 없이 navigate 만 부릅니다(언마운트 중 setState 금지 규칙).
-  const tapLocked = (_e: React.MouseEvent<HTMLElement>, text: string) => {
-    navigate(PAYWALL_PATH, paywallNotice(text));
-  };
+  // (2026-11-23) 단어장·회화집·인도네시아 이해는 무료도 들어가 목록을 봅니다 — 맛보기만 열리고 나머지는 그 화면에서
+  // 자물쇠와 안내 창(openPlusLock)으로 보입니다. 예전처럼 홈에서 곧바로 구독 화면으로 보내지 않습니다.
 
   // 무료: "다른 문장" 은 하루 한 번
   const tapNextPhrase = (e: React.MouseEvent<HTMLElement>) => {
@@ -772,7 +765,7 @@ const Index = () => {
   ) : null;
 
   // ── 화면 높이 맞춤(공개판 홈) — 위의 fitPx 설명 참고. 2026-11-13 사용자 요청.
-  //   기준선: 무료 = Plus 박스 윗부분 28px 이 보이는 곳(박스 위 끝 + 28), 체험·Plus·Special·관리자 = 문화 구역 마지막 줄 아래 끝.
+  //   기준선: 무료 = Plus 박스 윗부분 28px 이 보이는 곳(박스 위 끝 + 28), Plus·Special·관리자 = 문화 구역 마지막 줄 아래 끝.
   //   맞춤 정도 0 에서 기준선(b0)과 1 에서 기준선(b1)을 같은 순간에 재고(그림이 그려지기 전이라 깜빡이지 않음),
   //   f = (b0 - 보이는 높이) / (b0 - b1) 을 0~1 로 잘라 정합니다. 보이는 높이 = 창 높이 - 하단 탭 막대 높이.
   //   최대로 줄여도 안 들어가면 f = 1 로 두고 평소처럼 스크롤합니다. setState 없이 CSS 변수만 바꿉니다(CLAUDE.md WebView 주의).
@@ -1170,8 +1163,8 @@ const Index = () => {
                 title="단어장"
                 sub="Kosakata"
                 meta={pubWordCount > 0 ? pubWordCount.toLocaleString("ko-KR") + "단어" : undefined}
-                locked={!plus}
-                onClick={(e) => (plus ? navigate("/wordbooks") : tapLocked(e, "기본 단어장은 Plus 회원 기능입니다"))}
+                locked={false}
+                onClick={() => navigate("/wordbooks")}
               />
               <PubRow
                 tileBg="#DCEAF6"
@@ -1184,8 +1177,8 @@ const Index = () => {
                 title="회화집"
                 sub="Percakapan"
                 meta={pubSceneCount ? "대화 " + pubSceneCount.toLocaleString("ko-KR") + "개" : undefined}
-                locked={!plus}
-                onClick={(e) => (plus ? navigate("/percakapan") : tapLocked(e, "회화집은 Plus 회원 기능입니다"))}
+                locked={false}
+                onClick={() => navigate("/percakapan")}
                 last
               />
             </div>
@@ -1218,8 +1211,8 @@ const Index = () => {
                 ))}
                 title="인도네시아 이해"
                 sub="Wawasan"
-                locked={!plus}
-                onClick={(e) => (plus ? navigate("/insight") : tapLocked(e, "인도네시아 이해는 Plus 회원 기능입니다"))}
+                locked={false}
+                onClick={() => navigate("/insight")}
                 last={!staff}
               />
               {/* 뉴스 — 관리자·Special Member 에게만 (검색 그라운딩 비용이 커서 일반 공개판에는 없음) */}
@@ -1353,9 +1346,10 @@ const Index = () => {
               </span>
               <span
                 className="shrink-0 flex items-center text-center text-white font-gothic"
-                style={{ height: 42, padding: "0 13px", borderRadius: 21, background: "#8A6A12", fontSize: hrem(12), fontWeight: 700, lineHeight: 1.3 }}
+                style={{ height: 42, padding: "0 13px", borderRadius: 21, background: "#8A6A12", fontSize: hrem(10.5), fontWeight: 700, lineHeight: 1.25 }}
               >
-                Plus<br />{lockButtonSub(pricing.trialAny)}
+                {/* 글자 크기는 '오늘의 이야기' 맨 위 Plus 상자 버튼(PlusLockBox 10.5px)과 같게(2026-11-23 Arga 5) */}
+                Plus<br />{LOCK_BUTTON_SUB}
               </span>
             </button>
           ) : null}
