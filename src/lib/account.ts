@@ -24,9 +24,10 @@ export interface PublicUser {
 
 /**
  * 서버(kata-public)가 주는 등급.
- *   free · trial(7일 무료 체험 중, trial: true) · plus · special(Special Member) · admin
+ *   free · plus · review(심사용) · special(Special Member) · admin
  *   until: 끝나는 시각(ms). special·admin 은 0 이면 무기한.
- * 예전 서버는 체험을 {tier:"plus", trial:true} 로 줄 수도 있어 plan.ts 가 둘 다 받습니다.
+ * trial: 7일 무료 체험은 2026-11-23 폐지됐습니다. 예전 서버 응답({tier:"trial"} · {trial:true})이 남아 있어도
+ * plan.ts 가 만료 시각까지만 plus 로 읽습니다(타입은 그 응답을 받으려고 남겨 둠).
  */
 export interface PublicPlan {
   /** review = 심사용 계정(Google Play 심사자용). 기능은 plus 와 같고 화면에도 Plus 로 보입니다(plan.ts). */
@@ -58,7 +59,7 @@ export interface PublicLimits {
   tts: number | null;
 }
 
-/** /me 의 features 한 칸 — 기능별 하루·한 달(체험이면 체험 합계) 사용량과 한도. null = 제한 없음. */
+/** /me 의 features 한 칸 — 기능별 하루·한 달 사용량과 한도. null = 제한 없음. (total 은 예전 체험 합계 — 이제 오지 않음) */
 export interface PublicFeatureUsage {
   locked: boolean;
   hidden: boolean;
