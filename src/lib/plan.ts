@@ -112,7 +112,46 @@ export function isStaffTier(): boolean {
   return t === "special" || t === "admin";
 }
 
+// ── 만료 시각의 시계 (2026-11-23 내부 테스트 1장 C) ─────────────────
+// 등급은 plan.until 과 지금 시각으로 정해지는데, until 이 지나는 순간에는 세션이 바뀌지 않아 아무도 알려 주지 않았습니다.
+// 그래서 화면마다 "그린 때의 등급"이 남아, 어떤 화면은 Plus·어떤 화면은 무료로 갈릴 수 있었습니다.
+// until 이 지나는 순간 onTierChange 구독자 모두에게 한 번 알려 usePlan() 을 쓰는 화면이 함께 다시 판단하게 합니다.
+const MAX_TIMER_MS = 2147483647;
+let tierClock: ReturnType<typeof setTimeout> | null = null;
+let tierClockWired = false;
+
+function emitTier(): void {
+  tierListeners.forEach((l) => {
+    try { l(); } catch (e) {}
+  });
+}
+
+function armTierClock(): void {
+  if (tierClock !== null) {
+    clearTimeout(tierClock);
+    tierClock = null;
+  }
+  const s = getSession();
+  const p = s && s.plan && typeof s.plan === "object" ? (s.plan as { until?: number }) : null;
+  const until = p && typeof p.until === "number" ? p.until : 0;
+  const ms = until - Date.now();
+  if (until > 0 && ms > 0 && ms < MAX_TIMER_MS) {
+    tierClock = setTimeout(() => {
+      tierClock = null;
+      emitTier();
+    }, ms + 50);
+  }
+}
+
+function wireTierClock(): void {
+  if (tierClockWired) return;
+  tierClockWired = true;
+  onSessionChange(() => armTierClock());
+  armTierClock();
+}
+
 export function onTierChange(fn: () => void): () => void {
+  wireTierClock();
   tierListeners.add(fn);
   const off = onSessionChange(() => fn());
   return () => {
