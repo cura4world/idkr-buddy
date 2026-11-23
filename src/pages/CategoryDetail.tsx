@@ -361,6 +361,8 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
   const copyToClipboard = async (word: Word) => {
     try {
       await navigator.clipboard.writeText(word.word);
+      // 복사됐다는 표시가 없어 된 줄 몰랐습니다(2026-11-23 E-2 확인 중 발견) — 짧게 알립니다
+      toast("“" + word.word + "” 복사했습니다", { duration: 1500 });
     } catch {
       // 복사 실패 시 무시
     }
@@ -1272,7 +1274,22 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
                   {category.isShared ? <WordIllust scene={scenes[w.word]} measureKey={w.word + "|" + w.meaning} /> : null}
                   {/* pl-3 = 아래 예문 상자의 왼쪽 안쪽 여백(pl-3)과 같아, 단어·뜻의 첫 글자가 예문 첫 글자와 같은 세로줄에 놓입니다 */}
                   <div className="relative z-[1] flex-1 min-w-0 pl-3 content-bump">
-                    <p className="m-0 font-word text-[1.1875rem] font-semibold leading-[1.35] text-[#104B60] break-words">{w.word}</p>
+                    {/* 표제어를 누르면 바로 사전으로(2026-11-23 Arga 11 — 기본 단어장·내 단어장 모두).
+                        버튼으로 감싸지 않습니다: 감싸면 handleTouchStart 의 button 판정에 걸려 표제어 위에서 시작한 밀기·길게 누르기가 꺼집니다.
+                        밀기·끌기 뒤의 click 과 밀려 열린 줄을 닫는 click 은 여기서도 무시합니다. */}
+                    <p
+                      role="link"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (suppressClick.current) { suppressClick.current = false; return; }
+                        if (isDragging.current) return;
+                        if (openId === w.id) { setOpenId(null); return; }
+                        openInDictionary(w);
+                      }}
+                      className="m-0 inline font-word text-[1.1875rem] font-semibold leading-[1.35] text-[#104B60] break-words cursor-pointer"
+                    >
+                      {w.word}
+                    </p>
                     <p className="mt-px font-gothic text-[0.8125rem] font-semibold text-[#34332F]">{displayMeaning(w.meaning)}</p>
                   </div>
                   {!category.isShared ? (
@@ -1326,6 +1343,15 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
           <p>단어가 없습니다.</p>
         </div>
       )}
+      {/* 밀기 안내(2026-11-23 E-2) — 실제 동작 그대로: 오른쪽은 모든 단어장에서 복사, 왼쪽은 고칠 수 있는 단어장에서만
+          휴지통이 열리고 그것을 눌러야 지워집니다. 내 단어장은 단어 목록을 접었을 때 감춥니다. */}
+      {words.length > 0 && !(isMine && wordsCollapsed) ? (
+        <p className="mt-4 mb-1 text-center font-gothic text-[0.71875rem] leading-[1.5] text-[#9AA1A6] break-keep">
+          {editable
+            ? "단어 카드를 오른쪽으로 밀면 복사, 왼쪽으로 밀어 휴지통을 누르면 삭제"
+            : "단어 카드를 오른쪽으로 밀면 단어를 복사합니다"}
+        </p>
+      ) : null}
       {isMine && archived.length > 0 && (
         <section className="mt-6">
           <button
