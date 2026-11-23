@@ -151,14 +151,20 @@ export function quotaText(code: string, period: string, limit = 0): string {
   const p: Period = period === "month" ? "month" : "day";
   const when = p === "month" ? "이번 달" : "오늘";
   const next = p === "month" ? "다음 달에" : "내일";
+  // 2026-11-23 J-5·J-7·J-8: 두 문장 사이를 줄바꿈("\n")으로 — 알림(sonner)과 화면 안내가 white-space: pre-line 으로 보입니다.
   if (code === "QUOTA_STORY") {
-    return when + " 불러올 수 있는 이야기를 모두 불러왔습니다. " + next + " 다시 불러오세요.";
+    // 숫자는 서버가 한도 응답에 실어 준 값(limit)을 그대로 씁니다(고정 글자 금지). 값이 없으면 숫자 없는 문장.
+    if (limit > 0) {
+      return (p === "month" ? "한 달" : "하루") + " 이야기 불러오기 한도는 " + limit + "번까지입니다.\n" +
+        (p === "month" ? "다음 달에" : "내일") + " 다시 이야기를 불러오세요.";
+    }
+    return when + " 불러올 수 있는 이야기를 모두 불러왔습니다.\n" + next + " 다시 불러오세요.";
   }
   if (code === "QUOTA_PERCAKAPAN_MAKE") {
-    return when + " 만들 수 있는 대화를 모두 만들었습니다. " + next + " 다시 만들어 보세요.";
+    return when + " 만들 수 있는 대화를 모두 만들었습니다.\n" + next + " 다시 만들어 보세요.";
   }
   if (code === "QUOTA_LONGREAD") {
-    return when + " 들을 수 있는 이야기·대화를 모두 들었습니다. " + next + " 다시 들어 보세요.";
+    return when + " 들을 수 있는 이야기·대화를 모두 들었습니다.\n" + next + " 다시 들어 보세요.";
   }
   if (code === "QUOTA_DICT_NEW") {
     return when + " 새로 찾을 수 있는 말을 모두 찾았습니다. 이미 찾은 말은 계속 볼 수 있습니다. " + next + " 다시 찾아보세요.";
