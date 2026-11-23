@@ -71,7 +71,9 @@ export default defineConfig(({ mode }) => ({
         // 조각만 처음 볼 때 받아 "kata-fonts" 에 남깁니다. 파일 이름에 해시가 있어 글꼴이 바뀔 때만 새로 받습니다.
         // (미리보기 APK 는 웹 파일을 APK 안에 담아 이 캐시와 상관없이 오프라인에서도 글꼴이 나옵니다. 스토어 앱은
         //  GitHub Pages 를 원격으로 열기 때문에 이 캐시에 받아 둔 글꼴 조각만 오프라인에서 나옵니다 — C-26.)
-        globIgnores: ["**/illust-*.json", "**/*.woff2", "**/*.woff"],
+        // 사전 정정 목록(dict-corrections.json)도 미리 담지 않습니다 — 담으면 배포 전 사본을 계속 주어
+        // "하루 한 번 새로 받기"가 의미가 없어집니다(2026-11-23, src/lib/dictCorrections.ts 가 no-store 로 받음).
+        globIgnores: ["**/illust-*.json", "**/*.woff2", "**/*.woff", "**/dict-corrections.json"],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.includes("/assets/") && url.pathname.endsWith(".woff2"),
