@@ -80,6 +80,9 @@ const Devotion = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { widthClass, canWide, wide, toggle } = useWideMode();
+  // 화면을 떠나면(하단 탭·다른 화면) 듣기를 멈춥니다 — 예전에는 카드 목록으로 돌아갈 때만 멈춰, 탭 이동 뒤에도 계속 읽었습니다
+  // (2026-11-23 Arga 17 — 이야기와 같은 문제).
+  useEffect(() => () => { try { ttsPlayer.stop(); } catch (e) {} }, []);
 
   const [todayQt, setTodayQt] = useState<QtToday | null>(null);
   const [qtLoading, setQtLoading] = useState(true);
