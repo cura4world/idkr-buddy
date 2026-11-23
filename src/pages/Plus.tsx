@@ -19,6 +19,7 @@ import { getSession, onSessionChange, PublicSession } from "@/lib/account";
 import { isPreviewBuild, isReviewAccount, usePlan } from "@/lib/plan";
 import {
   billingAvailable,
+  isLapsedPaidPlan,
   isVerifyingPurchase,
   manageSubscription,
   onVerifyEvent,
@@ -30,6 +31,7 @@ import { loadOffers, usePlusPricing } from "@/lib/playOffers";
 import { getCategories, getWords } from "@/lib/store";
 import { isFaithWordbook } from "@/lib/wordbookAccess";
 import {
+  CTA_CHECKING,
   CTA_CLOSE,
   CTA_MANAGE,
   CTA_MONTHLY,
@@ -251,6 +253,8 @@ const Plus = () => {
   const [session, setSession] = useState<PublicSession | null>(getSession());
   const [selected, setSelected] = useState<PlanKey>("yearly");
   const [busy, setBusy] = useState(false);
+  /** 결제창을 열기 전 기존 구독을 확인하는 중(최근까지 유료였던 계정) */
+  const [checking, setChecking] = useState(false);
   const [verifying, setVerifying] = useState<boolean>(() => isVerifyingPurchase());
   const preview = isPreviewBuild();
   const pricing = usePlusPricing();
@@ -270,7 +274,13 @@ const Plus = () => {
       } catch (e) {}
     };
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    // 인터넷이 다시 연결되면 바로 다시 받습니다(비행기 모드를 끈 경우 — 2026-11-23 I-3).
+    const onOnline = () => loadOffers(true);
+    window.addEventListener("online", onOnline);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onOnline);
+    };
   }, []);
 
   const priceReady = pricing.state === "ready";
@@ -334,10 +344,22 @@ const Plus = () => {
   const close = () => goBackOr(navigate, location.key, "/");
 
   const buy = async () => {
-    if (busy || verifying) return;
+    if (busy || verifying || checking) return;
     if (preview) { toast(TOAST_PREVIEW); return; }
     if (!billingAvailable()) { toast(TOAST_NO_BILLING); return; }
     if (!chosen.offer) { toast(TOAST_NO_OFFERS); return; }
+    // 최근까지 유료였는데 만료 시각이 지난 계정 — 갱신이 아직 반영되지 않았을 수 있습니다. 결제창을 열면 Play 의
+    // "이미 가입되어 있습니다" 오류창이 먼저 뜨므로, 기존 구독을 먼저 확인합니다(2026-11-23 내부 테스트 1장 B).
+    const s0 = getSession();
+    if (s0 && isLapsedPaidPlan(s0.plan)) {
+      setChecking(true);
+      const rr = await restoreDetailed("purchase-precheck");
+      setChecking(false);
+      if (rr.status === "plus") { toast(TOAST_RESTORED); return; }
+      if (rr.status === "verifying") { toast(TOAST_VERIFYING); return; }
+      if (rr.status === "error" && isOtherAccountCode(rr.code)) { toast(TOAST_OTHER_ACCOUNT); return; }
+      // 구독 없음(none)이거나 Play 가 답하지 않음 → 그대로 결제로
+    }
     setBusy(true);
     const r = await purchase(chosen.offer);
     setBusy(false);
@@ -349,7 +371,7 @@ const Plus = () => {
   };
 
   const restore = async () => {
-    if (busy) return;
+    if (busy || checking) return;
     if (preview) { toast(TOAST_PREVIEW); return; }
     if (!billingAvailable()) { toast(TOAST_NO_BILLING); return; }
     setBusy(true);
@@ -384,7 +406,7 @@ const Plus = () => {
       : trialText
         ? noteTrialLines(trialText, chosen.price, yearlyChosen)
         : noteNoTrialLines(yearlyChosen);
-  const ctaLabel = verifying ? CTA_VERIFYING : trialText ? ctaTrial(trialText) : yearlyChosen ? CTA_YEARLY : CTA_MONTHLY;
+  const ctaLabel = verifying ? CTA_VERIFYING : checking ? CTA_CHECKING : trialText ? ctaTrial(trialText) : yearlyChosen ? CTA_YEARLY : CTA_MONTHLY;
   const priceMissing = pricing.state === "failed" ? PRICE_FAILED : PRICE_LOADING;
 
   return (
@@ -558,11 +580,11 @@ const Plus = () => {
             <button
               type="button"
               onClick={buy}
-              disabled={busy || verifying || !canBuy}
+              disabled={busy || verifying || checking || !canBuy}
               className={"w-full flex items-center justify-center gap-2 disabled:opacity-60 " + gothic}
               style={{ height: 48, borderRadius: 16, backgroundColor: C.gold, color: "#FFFFFF", fontSize: "0.90625rem", fontWeight: 700 }}
             >
-              {busy || verifying ? <Loader2 size={18} className="animate-spin" /> : null}
+              {busy || verifying || checking ? <Loader2 size={18} className="animate-spin" /> : null}
               {ctaLabel}
             </button>
             {/* 결제 안내 — 줄마다 작은 점, 왼쪽 정렬(2026-11-18). 결제 확인 중·가격을 못 받았을 때의 상태 글은 예전처럼 가운데 */}
@@ -614,7 +636,7 @@ const Plus = () => {
           {NOTE_AI_VOICE}
         </p>
         <div className={"flex " + gothic} style={{ marginTop: 4, gap: 16, fontSize: "0.75rem", color: C.lead }}>
-          <button type="button" onClick={restore} disabled={busy} style={{ textDecoration: "underline" }}>
+          <button type="button" onClick={restore} disabled={busy || checking} style={{ textDecoration: "underline" }}>
             {LINK_RESTORE}
           </button>
           <a href={TERMS_URL} style={{ textDecoration: "underline" }}>{LINK_TERMS}</a>
