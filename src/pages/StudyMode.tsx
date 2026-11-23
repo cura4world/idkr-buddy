@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { getCategories, getWordsByCategory, getSavedWordIds, toggleSavedWord, Word } from "@/lib/store";
-import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { usePlan } from "@/lib/plan";
+import { canOpenWordbook } from "@/lib/tasteAccess";
 import { groupOf } from "@/lib/wordbookGroups";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
 import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Play, Square, Bookmark, RefreshCw, Lock, Unlock } from "lucide-react";
@@ -405,8 +406,8 @@ export default function StudyMode() {
     if (wasSwiping || dragX !== 0) setDragX(0); // 제자리로 돌아감
   };
 
-  // 기본 단어장 잠금 (무료 → 구독 화면, 성경과 신앙 → 관리자·Special Member 만)
-  if (category && category.isShared && !plan.plus) return <Navigate to={PAYWALL_PATH} replace />;
+  // 기본 단어장 잠금 (무료 → 맛보기 01 만, 잠긴 것은 단어장 목록으로 · 성경과 신앙 → 관리자·Special Member 만)
+  if (category && category.isShared && !canOpenWordbook(category, plan.plus)) return <Navigate to="/wordbooks" replace />;
   if (category && category.isShared && !plan.staff && groupOf(category, categories) === "faith") {
     return <Navigate to="/wordbooks" replace />;
   }
