@@ -140,14 +140,15 @@ export function claudeTarget(apiKey: string): AiTarget | null {
 
 // ── 한도 안내 ───────────────────────────────────────────────
 
-type Period = "day" | "month" | "total";
+type Period = "day" | "month";
 
 /**
  * 한도 초과 안내 문장. 서버 응답의 error·period 로 고릅니다.
  * limit: 서버가 함께 준 그 기간의 한도 숫자(없으면 0). 오늘의 문장에서 "하루 한 번"이 맞는지 가릴 때만 봅니다.
  */
 export function quotaText(code: string, period: string, limit = 0): string {
-  const p: Period = period === "month" ? "month" : period === "total" ? "total" : "day";
+  // (예전 "total" — 체험 기간 합계 — 은 2026-11-23 체험 폐지로 서버가 더 보내지 않습니다. 오면 하루로 읽습니다.)
+  const p: Period = period === "month" ? "month" : "day";
   const when = p === "month" ? "이번 달" : "오늘";
   const next = p === "month" ? "다음 달에" : "내일";
   if (code === "QUOTA_STORY") {
@@ -157,7 +158,6 @@ export function quotaText(code: string, period: string, limit = 0): string {
     return when + " 만들 수 있는 대화를 모두 만들었습니다. " + next + " 다시 만들어 보세요.";
   }
   if (code === "QUOTA_LONGREAD") {
-    if (p === "total") return "체험 기간에 들을 수 있는 이야기·대화를 모두 들었습니다. Plus를 시작하면 계속 들을 수 있습니다.";
     return when + " 들을 수 있는 이야기·대화를 모두 들었습니다. " + next + " 다시 들어 보세요.";
   }
   if (code === "QUOTA_DICT_NEW") {
