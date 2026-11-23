@@ -209,7 +209,8 @@ const InsightOverview = () => {
       </p>
 
       <div className="space-y-3">
-        <Section title="기본 정보" rows={BASIC} defaultOpen />
+        {/* 처음 들어오면 모든 구역이 접혀 목차처럼 제목만 보입니다(2026-11-23 H-11) */}
+        <Section title="기본 정보" rows={BASIC} />
         <Section title="경제" rows={ECONOMY} />
         <Section title="사회" rows={SOCIETY} />
         <Section title="한국과 인도네시아" rows={KOREA} />
