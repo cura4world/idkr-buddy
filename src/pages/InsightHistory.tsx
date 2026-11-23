@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import { ReadingTracker } from "@/lib/readingTimer";
-import { ArrowLeft, Hourglass, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Hourglass, X } from "lucide-react";
 
 interface HistEvent {
   y: string; // 연도 표시
@@ -334,6 +334,10 @@ const InsightHistory = () => {
     };
   }, []);
   const [popup, setPopup] = useState<HistEvent | null>(null);
+  // 시대마다 접기 — 처음엔 모두 접혀 목차처럼 시대 이름만 보입니다(2026-11-23 H-11 · D9). 펼친 시대 이름을 담습니다.
+  const [openEras, setOpenEras] = useState<string[]>([]);
+  const toggleEra = (name: string) =>
+    setOpenEras((prev) => (prev.indexOf(name) >= 0 ? prev.filter((x) => x !== name) : prev.concat([name])));
   const popupOpenRef = useRef(false);
 
   // 팝업 열림 상태에서 뒤로가기 → 팝업만 닫기
@@ -383,7 +387,7 @@ const InsightHistory = () => {
       </header>
 
       <p className="mb-5 text-[0.8125rem] font-gothic text-muted-foreground leading-relaxed px-1">
-        위가 오늘, 아래로 내려갈수록 옛날입니다. 제목을 누르면 자세한 이야기가 열립니다.
+        위가 오늘, 아래로 내려갈수록 옛날입니다. 시대를 누르면 사건이 펼쳐지고, 사건을 누르면 자세한 이야기가 열립니다.
       </p>
 
       {/* 세로 타임라인 */}
@@ -391,16 +395,31 @@ const InsightHistory = () => {
         {/* 세로 라인 */}
         <div className="absolute left-[7px] top-1 bottom-1 w-[2px] bg-amber-500/40 rounded-full" />
 
-        {ERAS.map((era) => (
-          <div key={era.era} className="mb-7 last:mb-0">
-            {/* 시대 헤더 */}
-            <div className="relative mb-3">
+        {ERAS.map((era) => {
+          const open = openEras.indexOf(era.era) >= 0;
+          return (
+          <div key={era.era} className={open ? "mb-7 last:mb-0" : "mb-4 last:mb-0"}>
+            {/* 시대 헤더 — 누르면 펼치기·접기 */}
+            <button
+              type="button"
+              onClick={() => toggleEra(era.era)}
+              aria-expanded={open}
+              className={"relative w-full flex items-start gap-2 text-left " + (open ? "mb-3" : "")}
+            >
               <span className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-amber-400 border-[3px] border-background shadow" />
-              <h2 className="text-[0.9375rem] font-semibold text-amber-700 leading-tight">{era.era}</h2>
-              <p className="text-[0.6875rem] font-gothic text-muted-foreground mt-0.5">{era.period}</p>
-            </div>
+              <span className="flex-1 min-w-0">
+                <span className="block text-[0.9375rem] font-semibold text-amber-700 leading-tight">{era.era}</span>
+                <span className="block text-[0.6875rem] font-gothic text-muted-foreground mt-0.5">
+                  {era.period} · 사건 {era.events.length}개
+                </span>
+              </span>
+              <span className="shrink-0 mt-0.5 text-amber-700">
+                {open ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </span>
+            </button>
 
             {/* 사건들 */}
+            {open ? (
             <div className="space-y-2.5">
               {era.events.map((ev) => (
                 <button
@@ -416,8 +435,10 @@ const InsightHistory = () => {
                 </button>
               ))}
             </div>
+            ) : null}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* 상세 팝업 */}
