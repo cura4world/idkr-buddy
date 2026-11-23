@@ -210,8 +210,9 @@ export default function QuizMode() {
   if (!category || allWords.length < 2) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background font-body px-4">
-        <p className="text-muted-foreground">퀴즈를 풀려면 단어가 2개 이상 있어야 합니다.</p>
-        <button onClick={handleBack} className="mt-4 text-primary underline underline-offset-4">돌아가기</button>
+        {/* 글자 한 단계 작게(16 → 14px, 2026-11-23 E-1) */}
+        <p className="text-[0.875rem] text-muted-foreground">퀴즈를 풀려면 단어가 2개 이상 있어야 합니다.</p>
+        <button onClick={handleBack} className="mt-4 text-[0.875rem] text-primary underline underline-offset-4">돌아가기</button>
       </div>
     );
   }
