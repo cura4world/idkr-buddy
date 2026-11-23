@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import { findScene } from "@/lib/percakapan";
 import type { PercakapanScene, PercakapanSpeaker } from "@/lib/percakapan";
-import { percakapanAudioPlayer } from "@/lib/percakapanAudio";
+import { hasBundledAudio, percakapanAudioPlayer } from "@/lib/percakapanAudio";
 import type { PcAudioSnapshot } from "@/lib/percakapanAudio";
 import { quickLookupWord } from "@/lib/story";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
@@ -48,7 +48,8 @@ const speakWord = (text: string) => {
 };
 import PhraseFindBar from "@/components/PhraseFindBar";
 import AiReportButton from "@/components/AiReportButton";
-import { usePlan, PAYWALL_PATH, paywallNotice } from "@/lib/plan";
+import { usePlan } from "@/lib/plan";
+import { canOpenScene } from "@/lib/tasteAccess";
 import { isBackCloseEntry } from "@/hooks/useBackClose";
 
 const TEAL = "#2C6D63";
@@ -184,11 +185,12 @@ const PercakapanRead = () => {
   }, [id, navigate, plan.tier]);
 
   // ---------- 등급 확인 ----------
-  // 무료: 기본 회화집은 잠김 → 안내 + 구독 화면. (setState 없이 이동만 합니다)
+  // 무료: 맛보기 장면(01 처음 만나 인사)과 직접 만든 대화만 열림(2026-11-23). 잠긴 장면 주소로 바로 오면
+  // 회화집 목록으로 돌려보냅니다 — 목록에서 자물쇠를 누르면 안내 창이 뜹니다. (setState 없이 이동만 합니다)
   useEffect(() => {
     if (!scene) return;
-    if (!plan.plus && !scene.custom) {
-      navigate(PAYWALL_PATH, paywallNotice("회화집은 Plus 회원 기능입니다", true));
+    if (!canOpenScene(scene, plan.plus)) {
+      navigate("/percakapan", { replace: true });
     }
   }, [scene, plan.plus, navigate]);
 
@@ -263,9 +265,12 @@ const PercakapanRead = () => {
 
   const mineAll = !!scene && snap.sceneId === scene.id && snap.lineIndex === null;
 
-  // 무료에게 잠긴 기본 회화인가. 위 useEffect 가 구독 화면으로 보내지만 그 전에 한 번은 그려지므로,
+  // 무료에게 잠긴 기본 회화인가. 위 useEffect 가 목록으로 보내지만 그 전에 한 번은 그려지므로,
   // 그리는 쪽에서도 본문·듣기 단추·화자 안내를 내지 않습니다(출시 전 점검 E-09).
-  const locked = !!scene && !plan.plus && !scene.custom;
+  const locked = !!scene && !canOpenScene(scene, plan.plus);
+  // 무료가 여는 맛보기 장면의 음성은 앱에 담긴 파일로만 듣습니다(서버는 무료 회화 음성을 잠가 둠).
+  // 파일이 아직 없으면 듣기 단추를 숨깁니다 — 눌러도 "Plus 기능" 안내만 나오게 두지 않으려는 것(2026-11-23).
+  const canListen = !!scene && (plan.plus || !!scene.custom || hasBundledAudio(scene));
 
   // ---------- 전체 듣기 중 지금 읽는 줄 짐작 ----------
   // 전체 듣기는 소리 파일 하나라 줄 경계를 모릅니다. 재생 위치(비율)를 줄마다의 글자 수
@@ -464,7 +469,7 @@ const PercakapanRead = () => {
               {scene ? scene.titleId : ""}
             </p>
           </div>
-          {scene && !locked ? (
+          {scene && !locked && canListen ? (
             <button
               type="button"
               onClick={() => percakapanAudioPlayer.playAll(scene)}
@@ -579,6 +584,7 @@ const PercakapanRead = () => {
                         {l.ko}
                       </p>
                     </div>
+                    {canListen ? (
                     <button
                       type="button"
                       onClick={() => percakapanAudioPlayer.playLine(scene, i)}
@@ -593,6 +599,7 @@ const PercakapanRead = () => {
                         <Volume1 size={15} strokeWidth={2} />
                       )}
                     </button>
+                    ) : null}
                   </div>
                 );
               })}
