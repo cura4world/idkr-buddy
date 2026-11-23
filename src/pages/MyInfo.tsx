@@ -708,18 +708,23 @@ const MyInfo = () => {
               ))}
             </span>
           </div>
-          <p className="flex items-baseline" style={{ margin: "10px 0 0", gap: 6 }}>
-            {hm.h > 0 ? (
-              <>
-                <span className="font-word" style={{ fontSize: rem(27.5), fontWeight: 600, color: DEEP }}>{hm.h}</span>
-                <span style={{ fontSize: rem(13) }}>시간</span>
-              </>
-            ) : null}
-            <span className="font-word" style={{ fontSize: rem(27.5), fontWeight: 600, color: DEEP }}>{hm.m}</span>
-            <span style={{ fontSize: rem(13) }}>분</span>
+          {/* 첫 줄: 작은 "이번 달" + 큰 "6시간 24분" + 작은 "하루 평균 16분", 둘째 줄: "지난달 같은 기간보다 …"
+              (2026-11-23 Arga 19). 좁은 화면·큰 글자에서는 "하루 평균"이 넘치지 않고 다음 줄로 내려갑니다(flex-wrap). */}
+          <p className="flex flex-wrap items-baseline" style={{ margin: "10px 0 0", columnGap: 6, rowGap: 0 }}>
+            <span className="font-gothic" style={{ fontSize: rem(11.5), color: MUTED }}>{monthBack === 0 ? "이번 달" : "지난달"}</span>
+            <span className="inline-flex items-baseline" style={{ gap: 6 }}>
+              {hm.h > 0 ? (
+                <>
+                  <span className="font-word" style={{ fontSize: rem(27.5), fontWeight: 600, color: DEEP }}>{hm.h}</span>
+                  <span style={{ fontSize: rem(13) }}>시간</span>
+                </>
+              ) : null}
+              <span className="font-word" style={{ fontSize: rem(27.5), fontWeight: 600, color: DEEP }}>{hm.m}</span>
+              <span style={{ fontSize: rem(13) }}>분</span>
+            </span>
+            <span className="font-gothic whitespace-nowrap" style={{ fontSize: rem(11.5), color: MUTED }}>하루 평균 {hmText(view.avgMs)}</span>
           </p>
           <p className="font-gothic" style={{ margin: "2px 0 0", fontSize: rem(11.5), color: MUTED }}>
-            하루 평균 {hmText(view.avgMs)} ·{" "}
             {diffSame ? (
               prevName + " 같은 기간과 같음"
             ) : (
@@ -776,7 +781,8 @@ const MyInfo = () => {
                 <span className="font-gothic" style={{ fontSize: rem(11), fontWeight: 500, color: MUTED }}> 점</span>
               </p>
               <p className="font-gothic" style={{ margin: "4px 0 0", fontSize: rem(10.5), lineHeight: 1.5, letterSpacing: "-0.02em", color: "#8A6A5A", wordBreak: "keep-all" }}>
-                공부하며 쌓이는 이번 주 점수,<br />매주 월요일 갱신
+                {/* 줄바꿈 없이 한 줄로 이어 씀(2026-11-23 Arga 15). 좁으면 저절로 줄이 바뀝니다 */}
+                공부하며 쌓이는 이번 주 점수, 매주 월요일 갱신
               </p>
             </button>
             <button
@@ -835,7 +841,8 @@ const MyInfo = () => {
           {/* 공개판: 데이터가 이 폰에만 있으므로 "백업"을 앞세우고 마지막 백업 날짜를 보여 줍니다(D-01). 관리자판·회원판은 예전 그대로 */}
           <Row
             icon={I_PHONE}
-            label={publicLike ? "백업·새 폰으로 옮기기" : "새 폰으로 옮기기"}
+            // 메뉴 이름을 짧게 "백업·복원"(2026-11-23 O-1 — 오른쪽 정보 글자 때문에 잘렸음). 관리자판 이름은 그대로
+            label={publicLike ? "백업·복원" : "새 폰으로 옮기기"}
             value={publicLike ? (backupAt > 0 ? "마지막 백업 " + dotDate(backupAt) : "백업 아직 없음") : undefined}
             onClick={onMoveRow}
           />
@@ -850,7 +857,8 @@ const MyInfo = () => {
         </Card>
         {session ? (
           <Card style={{ overflow: "hidden", marginTop: 6 }}>
-            <Row icon={I_USERX} label="계정 삭제" danger chevron={false} onClick={() => setDeleteConfirm(true)} last />
+            {/* 뜻이 분명하게 "계정 삭제(탈퇴)"(2026-11-23 N-2). 확인 창의 단추 이름은 "계정 삭제" 그대로 */}
+            <Row icon={I_USERX} label="계정 삭제(탈퇴)" danger chevron={false} onClick={() => setDeleteConfirm(true)} last />
           </Card>
         ) : null}
         <p className="text-center font-gothic" style={{ margin: "6px 0 0", fontSize: rem(10.5), color: FAINT }}>
@@ -963,7 +971,7 @@ const MyInfo = () => {
       <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-sm mx-auto bg-card">
           <DialogHeader>
-            <DialogTitle className="font-body text-gray-900">백업·새 폰으로 옮기기</DialogTitle>
+            <DialogTitle className="font-body text-gray-900">백업·복원</DialogTitle>
           </DialogHeader>
           <p className="font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
             공부 기록은 이 폰에만 저장됩니다. 앱을 지우거나 폰을 바꾸면 사라지므로 백업 파일을 저장해 두세요.
