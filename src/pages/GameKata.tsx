@@ -315,6 +315,29 @@ const GameKata = () => {
         </div>
       </div>
 
+      {/* 하는 법 — 격자 아래 빈 곳에, 게임방의 "다섯 글자 단어를…" 설명과 같은 글자로(2026-11-23 Arga 4 · G-3).
+          색과 횟수는 실제 판정값(MARK_BG·MAX_TRIES)을 그대로 씁니다. 위 알림(맞지 않는 단어 등)이 겹치지 않게 조금 띄웁니다. */}
+      {!rec.done ? (
+        <div className="mt-12 px-2 font-gothic text-[11.5px] leading-[1.6] break-keep text-center" style={{ color: G.sub }}>
+          <p className="m-0">다섯 글자 인도네시아어 단어를 넣고 ‘확인’을 누르세요.</p>
+          <p className="m-0 mt-1 flex flex-wrap justify-center gap-x-2.5 gap-y-0.5">
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-block w-2.5 h-2.5 rounded-[3px]" style={{ background: MARK_BG.hit }} aria-hidden="true" />
+              초록: 글자와 자리가 맞음
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-block w-2.5 h-2.5 rounded-[3px]" style={{ background: MARK_BG.near }} aria-hidden="true" />
+              노랑: 단어에 있지만 자리가 다름
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-block w-2.5 h-2.5 rounded-[3px]" style={{ background: MARK_BG.miss }} aria-hidden="true" />
+              회색: 단어에 없는 글자
+            </span>
+          </p>
+          <p className="m-0 mt-1">{MAX_TRIES}번 안에 맞혀 보세요.</p>
+        </div>
+      ) : null}
+
       {rec.done ? (
         <div
           className="mt-auto pt-4"
