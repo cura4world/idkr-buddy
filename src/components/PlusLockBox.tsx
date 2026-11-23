@@ -1,16 +1,14 @@
 // src/components/PlusLockBox.tsx
 // 무료 사용자에게 보이는 Plus 안내 상자 (귤색) — 게임방·이야기·인도네시아 이해·내 정보가 같은 모양을 씁니다.
-// 시안 G2·ST2·IN2·ME2 공통: 바탕 #FFF6DC · 테두리 #F1E0AE · 설명 #6E5612 · 버튼 #8A6A12 "Plus / 7일 무료 체험".
+// 시안 G2·ST2·IN2·ME2 공통: 바탕 #FFF6DC · 테두리 #F1E0AE · 설명 #6E5612 · 버튼 #8A6A12 "Plus / 자세히 보기".
 // 다듬기 스토리 S56(같은 기능 같은 모양)에서 네 곳의 복사본을 이 하나로 모았습니다.
 // 홈의 "Kata kata Plus" 줄(시안 H5)은 꽃 아이콘이 붙은 다른 시안이라 여기 들지 않습니다.
-// 버튼 둘째 줄 "7일 무료 체험"은 Play 체험 제안이 있을 때만 보입니다(기간도 Play 값). 체험을 이미 쓴 계정이나
-// 아직 Play 값을 못 받았을 때는 "자세히 보기" (2026-11-14 출시 전 점검 B-05, src/lib/playOffers.ts).
+// (예전 버튼 둘째 줄 "7일 무료 체험"은 2026-11-23 체험 폐지로 없앴습니다.)
 //
 // 버튼은 상자 위아래 끝까지(제목 줄부터) 채웁니다 — 버튼 위·아래·오른쪽 여백이 모두 상자 안쪽 여백 14px 로 같습니다
 // (2026-11-17 Arga 요청). 그래서 제목은 버튼 왼쪽 칸에 들어가고, 칸보다 길면 줄임표 대신 두 줄로 넘어갑니다.
 
-import { usePlusPricing } from "@/lib/playOffers";
-import { lockButtonSub } from "@/lib/plusCopy";
+import { LOCK_BUTTON_SUB } from "@/lib/plusCopy";
 
 interface Props {
   /** 첫 줄 (15px 굵게). 버튼 왼쪽 칸보다 길면 두 줄 */
@@ -24,7 +22,6 @@ interface Props {
 }
 
 const PlusLockBox = ({ title, lines, onClick, wholeBox = false }: Props) => {
-  const pricing = usePlusPricing();
   return (
   <div
     role={wholeBox ? "button" : undefined}
@@ -53,7 +50,7 @@ const PlusLockBox = ({ title, lines, onClick, wholeBox = false }: Props) => {
     >
       Plus
       <br />
-      {lockButtonSub(pricing.trialAny)}
+      {LOCK_BUTTON_SUB}
     </button>
   </div>
   );
