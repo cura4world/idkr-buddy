@@ -2,7 +2,7 @@
 //   · 결제가 끝난 구매의 검증이 잠깐 실패하면 "확인 중"으로 두고 자동으로 다시 검증 → 성공하면 Plus
 //   · 다시 해도 같은 답(다른 계정의 구독)은 재시도하지 않고 그 이유를 돌려줌
 //   · "이미 보유(BILLING_7)"는 구매 복원 흐름으로 바로 넘김
-//   · 가격·체험 표시는 Play 에서 받은 값만 (연간의 월 환산 = 연 가격 ÷ 12)
+//   · 가격 표시는 Play 에서 받은 값만 (연간의 월 환산 = 연 가격 ÷ 12), 체험 제안은 고르지 않음(2026-11-23 체험 폐지)
 // 네이티브 통로(KataBilling)와 서버(fetch)는 가짜입니다.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -236,13 +236,14 @@ describe("결제 뒤 서버 검증", () => {
   });
 });
 
-describe("가격·체험 표시는 Play 값만", () => {
+describe("가격 표시는 Play 값만 · 체험 제안은 고르지 않음(2026-11-23 체험 폐지)", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorage.clear();
   });
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
     delete (window as unknown as { KataBilling?: unknown }).KataBilling;
   });
 
@@ -251,17 +252,14 @@ describe("가격·체험 표시는 Play 값만", () => {
     return await import("@/lib/playOffers");
   }
 
-  it("받기 전에는 가격·체험이 비어 있고(불러오는 중), 받으면 Play 값으로 — 월 환산은 연 가격 ÷ 12", async () => {
+  const Y_BASE = { productId: "plus", basePlanId: "yearly", offerId: "", offerToken: "y-base", formattedPrice: "₩34,800", billingPeriod: "P1Y", freeTrialPeriod: "" };
+  const M_BASE = { productId: "plus", basePlanId: "monthly", offerId: "", offerToken: "m-base", formattedPrice: "₩3,900", billingPeriod: "P1M", freeTrialPeriod: "" };
+
+  it("받기 전에는 가격이 비어 있고(불러오는 중), 받으면 Play 값으로 — 월 환산은 연 가격 ÷ 12", async () => {
     let send: (() => void) | null = null;
     installBridge({
       query: () => {
-        send = () => emit({
-          type: "products",
-          products: [
-            OFFER,
-            { productId: "plus", basePlanId: "monthly", offerId: "", offerToken: "ot-2", formattedPrice: "₩3,900", billingPeriod: "P1M", freeTrialPeriod: "" },
-          ],
-        });
+        send = () => emit({ type: "products", products: [Y_BASE, M_BASE] });
       },
     });
     const po = await loadPricing();
@@ -269,7 +267,6 @@ describe("가격·체험 표시는 Play 값만", () => {
     let p = po.getPlusPricing();
     expect(p.state).toBe("loading");
     expect(p.yearlyPrice).toBe("");
-    expect(p.trialAny).toBe("");
 
     (send as unknown as () => void)();
     await vi.advanceTimersByTimeAsync(0);
@@ -280,22 +277,19 @@ describe("가격·체험 표시는 Play 값만", () => {
     expect(p.yearlyPerMonth).toBe("2,900원");
     expect(p.monthlyPrice).toBe("3,900원");
     expect(p.discountPercent).toBe(26);
-    expect(p.trialYearly).toBe("7일");
-    expect(p.trialMonthly).toBe("");
-    expect(p.trialAny).toBe("7일");
   });
 
-  // 2026-11-14 Play Console 에 실제로 만든 값: 기본 요금제 monthly(P1M)·yearly(P1Y), 체험 제안 trial-7d-monthly·trial-7d-yearly.
-  // 체험 자격이 있는 계정에는 Play 가 요금제마다 "체험 제안"과 "제안 없는 기본 요금제" 두 줄을 함께 줍니다(순서는 정해져 있지 않음).
-  it("콘솔 실제 값: 요금제마다 체험 제안을 고르고, 구매에는 그 제안의 토큰을 쓴다", async () => {
+  // Play Console 에 체험 제안(trial-7d-monthly·trial-7d-yearly)이 아직 켜져 있으면 Play 는 요금제마다 "체험 제안"과
+  // "제안 없는 기본 요금제" 두 줄을 함께 줍니다(순서는 정해져 있지 않음). 체험은 없앴으므로 기본 요금제 토큰만 씁니다.
+  it("체험 제안이 함께 와도 요금제마다 기본 제안을 고르고, 구매에는 그 토큰을 쓴다", async () => {
     installBridge({
       query: () => emit({
         type: "products",
         products: [
-          { productId: "plus", basePlanId: "monthly", offerId: "", offerToken: "m-base", formattedPrice: "₩3,900", billingPeriod: "P1M", freeTrialPeriod: "" },
           { productId: "plus", basePlanId: "monthly", offerId: "trial-7d-monthly", offerToken: "m-trial", formattedPrice: "₩3,900", billingPeriod: "P1M", freeTrialPeriod: "P7D" },
+          M_BASE,
           { productId: "plus", basePlanId: "yearly", offerId: "trial-7d-yearly", offerToken: "y-trial", formattedPrice: "₩34,800", billingPeriod: "P1Y", freeTrialPeriod: "P7D" },
-          { productId: "plus", basePlanId: "yearly", offerId: "", offerToken: "y-base", formattedPrice: "₩34,800", billingPeriod: "P1Y", freeTrialPeriod: "" },
+          Y_BASE,
         ],
       }),
     });
@@ -306,21 +300,17 @@ describe("가격·체험 표시는 Play 값만", () => {
     expect(p.state).toBe("ready");
     expect(p.monthlyPrice).toBe("3,900원");
     expect(p.yearlyPrice).toBe("34,800원");
-    expect(p.yearlyPerMonth).toBe("2,900원");
-    expect(p.trialMonthly).toBe("7일");
-    expect(p.trialYearly).toBe("7일");
-    expect(p.monthlyOffer && p.monthlyOffer.offerToken).toBe("m-trial");
-    expect(p.yearlyOffer && p.yearlyOffer.offerToken).toBe("y-trial");
+    expect(p.monthlyOffer && p.monthlyOffer.offerToken).toBe("m-base");
+    expect(p.yearlyOffer && p.yearlyOffer.offerToken).toBe("y-base");
   });
 
-  // 체험을 이미 쓴 계정에는 Play 가 체험 제안을 주지 않습니다(자격: 이 구독을 이용한 적 없음).
-  it("콘솔 실제 값: 체험 제안이 오지 않으면 기본 요금제 토큰으로, 체험 문구 없이", async () => {
+  it("체험 제안만 오고 기본 제안이 없는 요금제는 쓰지 않는다(구독 버튼이 잠김)", async () => {
     installBridge({
       query: () => emit({
         type: "products",
         products: [
-          { productId: "plus", basePlanId: "monthly", offerId: "", offerToken: "m-base", formattedPrice: "₩3,900", billingPeriod: "P1M", freeTrialPeriod: "" },
-          { productId: "plus", basePlanId: "yearly", offerId: "", offerToken: "y-base", formattedPrice: "₩34,800", billingPeriod: "P1Y", freeTrialPeriod: "" },
+          { productId: "plus", basePlanId: "yearly", offerId: "trial-7d-yearly", offerToken: "y-trial", formattedPrice: "₩34,800", billingPeriod: "P1Y", freeTrialPeriod: "P7D" },
+          M_BASE,
         ],
       }),
     });
@@ -328,12 +318,12 @@ describe("가격·체험 표시는 Play 값만", () => {
     po.loadOffers();
     await vi.advanceTimersByTimeAsync(0);
     const p = po.getPlusPricing();
-    expect(p.trialAny).toBe("");
+    expect(p.yearlyOffer).toBeNull();
+    expect(p.yearlyPrice).toBe("");
     expect(p.monthlyOffer && p.monthlyOffer.offerToken).toBe("m-base");
-    expect(p.yearlyOffer && p.yearlyOffer.offerToken).toBe("y-base");
   });
 
-  it("Play 연 가격이 다르면 월 환산도 그 값으로 계산된다 / 체험 제안이 없으면 체험 문구 없음", async () => {
+  it("Play 연 가격이 다르면 월 환산도 그 값으로 계산된다", async () => {
     installBridge({
       query: () => emit({
         type: "products",
@@ -345,7 +335,6 @@ describe("가격·체험 표시는 Play 값만", () => {
     await vi.advanceTimersByTimeAsync(0);
     const p = po.getPlusPricing();
     expect(p.yearlyPerMonth).toBe("2,500원");
-    expect(p.trialAny).toBe("");
     expect(p.monthlyPrice).toBe("");
   });
 
@@ -353,7 +342,7 @@ describe("가격·체험 표시는 Play 값만", () => {
     installBridge({
       query: () => emit({
         type: "products",
-        products: [{ productId: "plus", basePlanId: "yearly", offerId: "t", offerToken: "ot", formattedPrice: "$24.99", billingPeriod: "P1Y", freeTrialPeriod: "P3D" }],
+        products: [{ productId: "plus", basePlanId: "yearly", offerId: "", offerToken: "ot", formattedPrice: "$24.99", billingPeriod: "P1Y", freeTrialPeriod: "" }],
       }),
     });
     const po = await loadPricing();
@@ -363,23 +352,34 @@ describe("가격·체험 표시는 Play 값만", () => {
     expect(p.yearlyPrice).toBe("$24.99");
     expect(p.yearlyPerMonth).toBe("");
     expect(p.discountPercent).toBe(0);
-    expect(p.trialYearly).toBe("3일");
   });
 
-  it("Play 가 답하지 않으면 '못 받음' — 고정 가격을 대신 보여 주지 않는다. 늦게라도 답이 오면 그 값을 쓴다", async () => {
+  it("Play 가 답하지 않으면 8초 뒤 '못 받음' — 고정 가격을 대신 보여 주지 않는다. 늦게라도 답이 오면 그 값을 쓴다", async () => {
     installBridge({ query: () => {} });
     const po = await loadPricing();
     po.loadOffers();
-    await vi.advanceTimersByTimeAsync(15000);
+    await vi.advanceTimersByTimeAsync(7999);
+    expect(po.getPlusPricing().state).toBe("loading");
+    await vi.advanceTimersByTimeAsync(1);
     let p = po.getPlusPricing();
     expect(p.state).toBe("failed");
     expect(p.yearlyPrice).toBe("");
     expect(p.monthlyPrice).toBe("");
-    expect(p.trialAny).toBe("");
 
-    emit({ type: "products", products: [OFFER] }); // 15초를 넘겨 도착한 응답
+    emit({ type: "products", products: [Y_BASE] }); // 기다림을 넘겨 도착한 응답
     p = po.getPlusPricing();
     expect(p.state).toBe("ready");
     expect(p.yearlyPrice).toBe("34,800원");
+  });
+
+  it("인터넷이 꺼져 있으면(비행기 모드) 기다리지 않고 바로 '못 받음'", async () => {
+    let asked = 0;
+    installBridge({ query: () => { asked++; } });
+    const spy = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    const po = await loadPricing();
+    po.loadOffers(true);
+    expect(po.getPlusPricing().state).toBe("failed");
+    expect(asked).toBe(0);
+    spy.mockRestore();
   });
 });
