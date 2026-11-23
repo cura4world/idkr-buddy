@@ -66,7 +66,8 @@ const GameSusun = () => {
   const [phase, setPhase] = useState<Phase>("loading");
   const [index, setIndex] = useState(0);          // 몇 번째 문장인가
   const [answer, setAnswer] = useState<Tile[]>([]);   // 답 영역에 놓인 알약
-  const [tray, setTray] = useState<Tile[]>([]);       // 아직 안 쓴 알약
+  const [tray, setTray] = useState<Tile[]>([]);       // 흩어 놓은 알약(쓴 것도 자리는 그대로 — 2026-11-23 J-6)
+  const [usedIds, setUsedIds] = useState<number[]>([]); // 이미 고른 알약 — 그 자리는 빈 칸으로 남김
   const [shakeId, setShakeId] = useState<number | null>(null);
   const [solved, setSolved] = useState(false);        // 이 문장을 방금 완성했는가
   const [elapsed, setElapsed] = useState(0);          // 첫 탭부터 흐른 초
@@ -94,6 +95,7 @@ const GameSusun = () => {
     setIndex(i);
     setAnswer([]);
     setTray(shuffleTiles(tokens));
+    setUsedIds([]);
     setShakeId(null);
     setSolved(false);
     lockedRef.current = false;
@@ -221,6 +223,7 @@ const GameSusun = () => {
 
   const handleTile = (t: Tile) => {
     if (phase !== "playing" || lockedRef.current) return;
+    if (usedIds.indexOf(t.id) >= 0) return;
     if (startedAtRef.current === 0) startedAtRef.current = Date.now();
 
     const want = targetRef.current[answer.length];
@@ -237,7 +240,8 @@ const GameSusun = () => {
 
     const nextAnswer = answer.concat([t]);
     setAnswer(nextAnswer);
-    setTray(tray.filter((x) => x.id !== t.id));
+    // 고른 알약은 배열에서 빼지 않고 "쓴 것"으로만 표시 — 빼면 나머지 알약이 빈 곳을 채우며 자리가 바뀌었습니다(J-6)
+    setUsedIds(usedIds.concat([t.id]));
 
     if (nextAnswer.length < targetRef.current.length) return;
 
@@ -319,7 +323,18 @@ const GameSusun = () => {
 
           {/* 흩어진 알약 */}
           <div className="mt-5 flex flex-wrap justify-center gap-2.5">
-            {tray.map((t) => (
+            {tray.map((t) =>
+              usedIds.indexOf(t.id) >= 0 ? (
+                // 고른 알약의 자리: 같은 크기의 빈 칸(점선)만 남깁니다
+                <span
+                  key={t.id}
+                  aria-hidden="true"
+                  className="h-11 px-4 rounded-xl box-border flex items-center font-word text-[16.5px]"
+                  style={{ border: "1px dashed " + G.line, color: "transparent", background: "transparent" }}
+                >
+                  {t.text}
+                </span>
+              ) : (
               <button
                 key={t.id}
                 type="button"
@@ -333,7 +348,8 @@ const GameSusun = () => {
               >
                 {t.text}
               </button>
-            ))}
+              )
+            )}
           </div>
           <style>{"@keyframes kata-blink{0%,49%{opacity:1}50%,100%{opacity:0}}.kata-caret{animation:kata-blink 1s step-end infinite}"}</style>
         </>
