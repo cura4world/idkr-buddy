@@ -12,6 +12,7 @@ import { hasInvalidKeyReason } from "@/lib/geminiText";
 import { ttsPlayer } from "@/lib/tts";
 import { bibleAudioPlayer } from "@/lib/bibleAudio";
 import type { PercakapanScene, PercakapanSpeaker } from "@/data/percakapan";
+import { TASTE_AUDIO } from "@/data/tasteAudio";
 
 const TTS_MODEL = "gemini-3.1-flash-tts-preview";
 const SAMPLE_RATE = 24000;
@@ -323,6 +324,28 @@ function lineKey(scene: PercakapanScene, index: number, speakerName: string): st
   return "line::" + scene.id + revPart(scene) + "::" + index + "::" + speakerName;
 }
 
+// ── 앱에 담긴 맛보기 음성 (2026-11-23, src/data/tasteAudio.ts) ──────────────
+// 무료 맛보기 장면은 서버를 부르지 않고 앱에 담긴 파일을 그대로 틉니다(서버는 무료 회화 음성을 잠가 둠).
+// 목록의 rev·줄 수가 장면과 같을 때만 씁니다 — 대사가 바뀌었으면 옛 소리를 틀지 않습니다.
+function bundledFor(scene: PercakapanScene): typeof TASTE_AUDIO {
+  const t = TASTE_AUDIO;
+  if (!t || !scene || scene.custom) return null;
+  if (t.sceneId !== scene.id || (scene.rev || 0) !== t.rev || scene.lines.length !== t.lineCount) return null;
+  if (!t.all || t.lines.length !== t.lineCount) return null;
+  return t;
+}
+
+function appPath(rel: string): string {
+  let base = "/";
+  try { base = import.meta.env.BASE_URL || "/"; } catch (e) {}
+  return (base.slice(-1) === "/" ? base : base + "/") + rel;
+}
+
+/** 이 장면의 음성이 앱에 담겨 있는가(무료 맛보기 장면 — 서버 없이 들을 수 있음) */
+export function hasBundledAudio(scene: PercakapanScene | null | undefined): boolean {
+  return !!scene && bundledFor(scene) !== null;
+}
+
 // ── 재생기 (전역 단일 인스턴스) ────────────────────────────────
 export type PcAudioState = "idle" | "loading" | "playing" | "paused";
 
@@ -484,7 +507,8 @@ class PercakapanAudioPlayer {
 
     let url: string | null = null;
     try {
-      url = await this.audioFor(allKey(scene), () => generateSceneAudio(scene));
+      const bundled = bundledFor(scene);
+      url = bundled ? appPath(bundled.all) : await this.audioFor(allKey(scene), () => generateSceneAudio(scene));
     } catch (e) {
       if (myToken !== this.token) return;
       // 한도·Plus 안내는 aiProxy 가 이미 띄웠으므로 오류 알림(errorAt)을 겹쳐 띄우지 않습니다.
@@ -520,7 +544,10 @@ class PercakapanAudioPlayer {
 
     let url: string | null = null;
     try {
-      url = await this.audioFor(lineKey(scene, index, speakerName), () => generateLineAudio(line.id, speakerName));
+      const bundled = bundledFor(scene);
+      url = bundled && bundled.lines[index]
+        ? appPath(bundled.lines[index])
+        : await this.audioFor(lineKey(scene, index, speakerName), () => generateLineAudio(line.id, speakerName));
     } catch (e) {
       if (myToken !== this.token) return;
       // 한도·Plus 안내는 aiProxy 가 이미 띄웠으므로 오류 알림(errorAt)을 겹쳐 띄우지 않습니다.
