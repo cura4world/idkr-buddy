@@ -28,7 +28,7 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
   const [categoryId, setCategoryId] = useState(categoryIdProp || defaultCategoryId || "");
   const [filling, setFilling] = useState(false);
   const [filled, setFilled] = useState<{ word: string; text: string } | null>(null);
-  // 공개판(스토어 앱)의 무료·체험·Plus 에게는 직접 만든 단어장만 보입니다(내 단어장 포함).
+  // 공개판(스토어 앱)의 무료·Plus 에게는 직접 만든 단어장만 보입니다(내 단어장 포함).
   // 공용 단어장에 넣은 단어는 그 등급에서 다시 볼 길이 없고, "성경과 신앙"(35~41)은 이름도 보이면 안 됩니다
   // (2026-11-14 출시 전 점검 E-03 — 담을 단어장 목록 saveTarget.ts 의 loadSaveTargets 와 같은 기준).
   // 관리자판·회원판과 공개판의 Special Member·관리자는 지금처럼 전체 목록입니다.
