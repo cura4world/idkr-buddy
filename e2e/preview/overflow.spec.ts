@@ -31,8 +31,8 @@ const COMMON: Screen[] = [
   { path: "percakapan", lands: "/percakapan", sees: "PERCAKAPAN" },
 ];
 
-// 기본 단어장 목록은 Plus 부터 (Wordbooks.tsx: 무료는 구독 화면으로 돌려보냄)
-const WORDBOOKS_FREE: Screen = { path: "wordbooks", lands: "/plus", sees: "Plus" };
+// 기본 단어장 목록 — 2026-11-23 맛보기부터 무료도 목록을 봅니다(01 만 열리고 나머지는 자물쇠)
+const WORDBOOKS_FREE: Screen = { path: "wordbooks", lands: "/wordbooks", sees: "KOSAKATA" };
 const WORDBOOKS_PLUS: Screen = { path: "wordbooks", lands: "/wordbooks", sees: "KOSAKATA" };
 
 const STAFF: Screen[] = [
