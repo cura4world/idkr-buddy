@@ -96,13 +96,19 @@ test("Plus — 허브 맨 위 카드 → 안쪽 화면 → 지난 카드", async
   await expect(page.getByRole("heading", { name: "르바란엔 끄뚜빳" })).toBeVisible();
 });
 
-test("무료 — 카드는 보이고, 누르면 구독 화면", async ({ page }) => {
+// 2026-11-23 맛보기: 카드(그림·제목)는 보이고, 누르면 공용 안내 창 — "자세히 보기"를 눌러야 구독 화면
+test("무료 — 카드는 보이고, 누르면 안내 창을 거쳐 구독 화면", async ({ page }) => {
   await setupPreview(page, { tier: "free" });
   await fakeServer(page);
   await openApp(page, "insight");
   const cardBtn = page.getByRole("button", { name: new RegExp("동네를 도는 박소 수레") });
   await expect(cardBtn).toBeVisible();
   await cardBtn.click();
+  const sheet = page.getByRole("dialog", { name: "오늘의 카드 자세히 보기는 Plus 회원 기능입니다" });
+  await expect(sheet).toBeVisible();
+  expect(appPath(page)).toBe("/insight");
+  // 허브 위쪽 귤색 Plus 상자에도 같은 글자의 버튼이 있어 창 안의 것으로 좁힙니다
+  await sheet.getByRole("button", { name: "Plus 자세히 보기" }).click();
   await expect.poll(() => appPath(page)).toBe("/plus");
 });
 
