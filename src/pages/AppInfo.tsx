@@ -62,11 +62,12 @@ const AppInfo = () => {
         <section>
           <p className={SECTION}>AI로 만든 내용</p>
           <div className={CARD + " px-4 py-3.5"} style={CARD_STYLE}>
+            {/* 2026-11-23 H-10: "Google Gemini" 를 빼고 "AI가 만듭니다", 확인 문장은 "한 번 더 확인하세요"로 */}
             <p className={TEXT}>
-              사전 풀이, 문장 해설, 이야기, 회화, 오늘의 카드의 글과 그림, 읽기 음성은 인공지능(Google Gemini)이 만듭니다.
+              사전 풀이, 문장 해설, 이야기, 회화, 오늘의 카드의 글과 그림, 읽기 음성은 AI가 만듭니다.
             </p>
             <p className={TEXT + " mt-1.5"}>
-              틀리거나 어색한 내용이 있을 수 있으므로 중요한 일에는 다른 자료로 확인하세요.
+              틀리거나 어색한 내용이 있을 수 있으므로 중요한 일에는 한 번 더 확인하세요.
             </p>
             <p className={TEXT + " mt-1.5"}>
               이상한 내용은 각 화면 아래의 "피드백 보내기"로 알려 주세요.
