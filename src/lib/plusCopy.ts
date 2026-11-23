@@ -123,6 +123,13 @@ export const NOTE_VERIFYING_LINES: string[] = [
   "확인되면 Plus가 바로 열립니다. 다시 결제하지 않으셔도 됩니다.",
 ];
 export const CTA_VERIFYING = "결제 확인 중";
+/** 최근까지 유료였던 계정이 구독 버튼을 눌렀을 때 — 결제창을 열기 전에 기존 구독을 먼저 확인하는 동안(2026-11-23) */
+export const CTA_CHECKING = "확인 중…";
+
+/** Play 에서 해지한(자동 갱신을 끈) 구독 — 내 정보·구독 화면 공통(2026-11-23 내부 테스트 I-8) */
+export function canceledUntilText(dateText: string): string {
+  return "정기 결제 취소됨 · " + dateText + "까지 이용";
+}
 
 // ── 잠금 상자·홈의 Plus 버튼 둘째 줄 ─────────────────────────
 /** Play 체험 제안이 있을 때만 "7일 무료 체험", 없으면 "자세히 보기" */
@@ -151,7 +158,7 @@ export const STATE_REVIEW_SUB = "심사용 계정";
 
 /** autoRenew 가 false 면 Play 에서 해지한 구독입니다 — 다음 결제가 없으므로 "자동 갱신"이라고 하지 않습니다(B-09). */
 export function stateUntilText(dateText: string, trial: boolean, autoRenew = true): string {
-  if (!autoRenew) return dateText + "까지 이용 · 자동 갱신 꺼짐";
+  if (!autoRenew) return canceledUntilText(dateText);
   return trial ? dateText + "까지 체험 · 끝나면 자동으로 구독됩니다" : dateText + "까지 · 자동 갱신";
 }
 
