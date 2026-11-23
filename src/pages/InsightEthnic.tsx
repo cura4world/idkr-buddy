@@ -242,7 +242,8 @@ const InsightEthnic = () => {
           </p>
         </Fold>
 
-        <Fold title="주요 종족" defaultOpen>
+        {/* 처음 들어오면 모든 구역이 접혀 목차처럼 제목만 보입니다(2026-11-23 H-11) */}
+        <Fold title="주요 종족">
           <div className="-mx-4 -my-3.5 divide-y divide-gray-100">
             {ETHNICS.map((e) => (
               <div key={e.name} className="px-4 py-3.5">
