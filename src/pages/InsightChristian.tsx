@@ -237,7 +237,8 @@ const InsightChristian = () => {
       </header>
 
       <div className="space-y-2">
-      <Fold title="핵심 통계" defaultOpen>
+      {/* 처음 들어오면 모든 구역이 접혀 목차처럼 제목만 보입니다(2026-11-23 H-11) */}
+      <Fold title="핵심 통계">
         <div className="grid grid-cols-3 gap-2 text-center mb-3">
           <Stat v="10.5%" label="전체 기독교" />
           <Stat v="7.4%" label="개신교" />
