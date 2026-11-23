@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
-import { ArrowLeft, Volume2, Loader2, BookOpen, Lightbulb, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, Volume2, Loader2, BookOpen, Lightbulb, Maximize2, Minimize2, Play, Pause } from "lucide-react";
 import LockMark from "@/components/LockMark";
 import { openPlusLock } from "@/lib/plusLock";
 import { LOCK_TITLE_STORY_LISTEN, LOCK_TITLE_STORY_NEW } from "@/lib/tasteAccess";
@@ -22,7 +22,6 @@ import StoryTopicGrid from "@/components/StoryTopicGrid";
 import PlusLockBox from "@/components/PlusLockBox";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
-import PlayButton from "@/components/PlayButton";
 import { ttsPlayer } from "@/lib/tts";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
@@ -103,6 +102,45 @@ const Chip = ({ children, tone }: { children: ReactNode; tone: "amber" | "grey" 
     {children}
   </span>
 );
+
+/**
+ * 이야기 듣기 단추 — 회화집 '전체 듣기'와 같은 모양·글자(2026-11-23 Arga 16, D7: 청록 바탕).
+ * 예전에는 공용 PlayButton 에 이야기용 색을 덮어씌워, 재생 중에 바깥 칸이 민트색 네모가 되고 정지 단추가 붙었습니다.
+ * PlayButton·tts.ts 는 고치지 않고(저장소 규칙) ttsPlayer 의 기존 메서드(subscribe·toggle·stop)만 씁니다.
+ *   듣기 → (준비 중...) → 일시 정지 → 이어 듣기. 준비 중에 누르면 취소. 멈춤 단추는 없습니다 — 화면을 떠나면 멈춥니다.
+ */
+const STORY_TEAL = "#2C6D63";
+const StoryListenButton = ({ cacheKey, text }: { cacheKey: string; text: string }) => {
+  const [snap, setSnap] = useState(() => ttsPlayer.getState());
+  useEffect(() => ttsPlayer.subscribe((s) => setSnap(s)), []);
+  const st = snap.key === cacheKey ? snap.state : "idle";
+  const label = st === "loading" ? "준비 중..." : st === "playing" ? "일시 정지" : st === "paused" ? "이어 듣기" : "듣기";
+  const onClick = () => {
+    if (st === "loading") {
+      ttsPlayer.stop();
+      return;
+    }
+    ttsPlayer.toggle(cacheKey, text).catch(() => {});
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="h-[34px] px-[13px] rounded-full inline-flex items-center gap-[5px] font-gothic text-[0.78125rem] font-semibold active:opacity-85"
+      style={{ background: STORY_TEAL, color: "#FFFFFF" }}
+      aria-label={label}
+    >
+      {st === "loading" ? (
+        <Loader2 size={13} className="animate-spin" />
+      ) : st === "playing" ? (
+        <Pause size={13} fill="currentColor" strokeWidth={0} />
+      ) : (
+        <Play size={13} fill="currentColor" strokeWidth={0} />
+      )}
+      {label}
+    </button>
+  );
+};
 
 // 펼친 책 그림 (시안 BOOK_ART — 진한 색, 반짝이 없음)
 const BookArt = () => (
@@ -303,6 +341,24 @@ const Story = () => {
     };
   }, []);
 
+  // 듣기: 화면을 떠나면(하단 탭·다른 화면) 멈추고, 앱이 숨겨지면(폰 홈 버튼) 일시 정지 — 돌아와 "이어 듣기"
+  // (2026-11-23 Arga 17, D8). 예전에는 뒤로가기만 멈추고 탭 이동·홈 버튼에는 계속 읽었습니다.
+  useEffect(() => {
+    const onVis = () => {
+      try {
+        if (document.visibilityState !== "hidden") return;
+        // 아직 준비 중이면 일시 정지할 소리가 없으므로 취소합니다(안 그러면 다 받은 뒤 숨은 채로 재생이 시작됨)
+        if (ttsPlayer.getState().state === "loading") ttsPlayer.stop();
+        else ttsPlayer.pause();
+      } catch (e) {}
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      try { ttsPlayer.stop(); } catch (e) {}
+    };
+  }, []);
+
   // 카드 화면을 열었는지 (히스토리를 한 칸 쌓았는지)
   const cardStateRef = useRef(false);
 
@@ -318,6 +374,10 @@ const Story = () => {
       cardStateRef.current = true;
       try { window.history.pushState({ storyCard: true }, ""); } catch (e) {}
     }
+    // 새로 여는 카드는 맨 위(제목)부터 — 예전에는 목록을 내려 둔 위치가 남아 긴 이야기의 아래쪽이 먼저 보였습니다
+    // (2026-11-23 Arga 18). 반드시 pushState 뒤에: 앞에서 올리면 목록 칸에 저장되는 스크롤이 0 이 되어 뒤로가기 때 목록 위치를 잃습니다.
+    // 사전에서 돌아올 때(돌아올 표)는 아래 효과가 나중에 위치를 다시 맞추므로 영향이 없습니다.
+    try { window.scrollTo(0, 0); } catch (e) {}
   };
 
   // 카드 상태만 정리 (히스토리는 건드리지 않음)
@@ -685,11 +745,9 @@ const Story = () => {
                   <span className="flex-1" />
                   <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
                     {plan.plus ? (
-                      <PlayButton
+                      <StoryListenButton
                         cacheKey={"story-v2-" + current.id}
                         text={[current.title, current.indonesian].filter(Boolean).join("\n\n")}
-                        label="듣기"
-                        className="!h-[34px] !px-[13px] !py-0 !text-[0.78125rem] !font-semibold !bg-[#E2F1EC] !text-[#2C6D63] font-gothic"
                       />
                     ) : (
                       <button
@@ -891,11 +949,12 @@ const Story = () => {
             )}
           </button>
           {blocked ? (
-            <p className="mt-2.5 text-center break-keep font-gothic text-[0.71875rem]" style={{ color: C.sub }}>
-              {/* 서버가 한도를 알려 온 날에는 그 문장(오늘/이번 달) 하나만 씁니다 — 알림과 버튼 아래 안내가 같은 말이 되게 */}
+            <p className="mt-2.5 text-center break-keep whitespace-pre-line font-gothic text-[0.71875rem]" style={{ color: C.sub }}>
+              {/* 서버가 한도를 알려 온 날에는 그 문장(오늘/이번 달) 하나만 씁니다 — 알림과 버튼 아래 안내가 같은 말이 되게.
+                  두 문장 사이는 줄바꿈(J-7, 숫자는 서버 한도 값 — aiProxy.ts quotaText) */}
               {quotaToday && quotaNote
                 ? quotaNote
-                : "오늘 불러올 수 있는 이야기를 모두 불러왔습니다 · 내일 다시 열립니다"}
+                : "오늘 불러올 수 있는 이야기를 모두 불러왔습니다.\n내일 다시 이야기를 불러오세요."}
             </p>
           ) : null}
         </div>
