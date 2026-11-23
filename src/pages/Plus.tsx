@@ -1,12 +1,12 @@
 // src/pages/Plus.tsx
-// Kata kata Plus (구독) 화면 — 시안 PW1(7일 무료 체험, 연간 기본 선택)·PW2(체험을 이미 쓴 계정) 그대로.
+// Kata kata Plus (구독) 화면 — 시안 PW2(연간 기본 선택). 7일 무료 체험(PW1)은 2026-11-23 폐지.
 //   · 혜택 5줄(귤색 아이콘 상자) → 요금제 2칸(연간·월간 라디오 카드) → 황금갈색 버튼 하나 → 안내 → 링크
-//   · 가격·체험은 Play 에서 받은 값만(src/lib/playOffers.ts). 정식 스토어 앱에서 아직 못 받았으면 가격 자리는
+//   · 가격은 Play 에서 받은 값만(src/lib/playOffers.ts). 정식 스토어 앱에서 아직 못 받았으면 가격 자리는
 //     "가격을 불러오는 중", 구독 버튼은 누를 수 없음. 고정 원화 가격은 미리보기 빌드의 대체값으로만 씀
 //   · 연간 카드는 실제 청구액("연 34,800원")을 크게, 월 환산("(월 2,900원)" = 연 가격 ÷ 12)을 작게
 //   · 버튼 바로 아래 첫 줄은 자동 결제 고지("Google Play에서 결제되며, 해지 전까지 매년/매달 자동으로 결제됩니다.")
 //   · 결제는 끝났는데 서버 확인이 아직이면 "결제는 완료되었습니다. 확인 중입니다." — 자동으로 다시 확인(billing.ts)
-//   · 이미 열린 계정(체험 중·Plus·Special·관리자)은 요금제 대신 "이용 중" 상자
+//   · 이미 열린 계정(Plus·Special·관리자)은 요금제 대신 "이용 중" 상자
 // 문구는 src/lib/plusCopy.ts, 등급은 src/lib/plan.ts.
 
 import { useEffect, useMemo, useState } from "react";
@@ -20,6 +20,7 @@ import { isPreviewBuild, isReviewAccount, usePlan } from "@/lib/plan";
 import {
   billingAvailable,
   isLapsedPaidPlan,
+  isPaidPlan,
   isVerifyingPurchase,
   manageSubscription,
   onVerifyEvent,
@@ -37,7 +38,6 @@ import {
   CTA_MONTHLY,
   CTA_VERIFYING,
   CTA_YEARLY,
-  ctaTrial,
   discountBadge,
   isOtherAccountCode,
   LINK_PRICE_RETRY,
@@ -46,12 +46,10 @@ import {
   LINK_TERMS,
   NOTE_AI_VOICE,
   NOTE_PRICE_FAILED,
-  NOTE_TRIAL_HALF,
   STATE_REVIEW_SUB,
   NOTE_PRICE_LOADING,
   NOTE_VERIFYING_LINES,
-  noteNoTrialLines,
-  noteTrialLines,
+  notePlanLines,
   perMonthNote,
   PLAN_MONTHLY_LABEL,
   PLAN_MONTHLY_SUB,
@@ -69,7 +67,6 @@ import {
   STATE_PLUS,
   STATE_SPECIAL,
   STATE_STAFF_SUB,
-  STATE_TRIAL,
   stateUntilText,
   TOAST_NO_BILLING,
   TOAST_NO_OFFERS,
@@ -80,7 +77,6 @@ import {
   TOAST_RESTORE_RETRY,
   TOAST_RESTORED,
   TOAST_STARTED,
-  TOAST_TRIAL_STARTED,
   TOAST_VERIFYING,
   toastFailed,
   wordCountNote,
@@ -100,7 +96,7 @@ const C = {
   closeBg: "#F1F4F5",
 };
 
-// 가격·체험 계산(원화 표기, 월 환산, 할인율, 미리보기 대체값)은 src/lib/playOffers.ts 에 있습니다.
+// 가격 계산(원화 표기, 월 환산, 할인율, 미리보기 대체값)은 src/lib/playOffers.ts 에 있습니다.
 
 type PlanKey = "yearly" | "monthly";
 
@@ -191,8 +187,6 @@ interface PlanCard {
   priceNote: string;
   badge: string;
   offer: PlanOffer | null;
-  /** 체험 기간 "7일" · 체험 제안이 없으면 "" */
-  trial: string;
 }
 
 // 잠긴 메뉴에서 넘어왔을 때 맨 위에 잠깐 보이는 안내 (2026-11-17 Arga 요청 — 예전 토스트 대신)
@@ -264,7 +258,7 @@ const Plus = () => {
   // 결제는 끝났는데 서버 확인이 아직인 동안 "확인 중" 안내를 보여 줍니다. 성공·중단 알림은 LoginGate 가 띄웁니다.
   useEffect(() => onVerifyEvent((e) => setVerifying(e.type === "verifying")), []);
 
-  // 이 화면을 열 때마다 Play 가격·체험 제안을 새로 받습니다(받는 동안에는 앞서 받은 값을 보여 줌).
+  // 이 화면을 열 때마다 Play 가격을 새로 받습니다(받는 동안에는 앞서 받은 값을 보여 줌).
   // 못 받은 채로 화면에 돌아오면 다시 받습니다.
   useEffect(() => {
     loadOffers(true);
@@ -314,7 +308,6 @@ const Plus = () => {
       priceNote: pricing.yearlyPerMonth ? perMonthNote(pricing.yearlyPerMonth) : "",
       badge: pricing.discountPercent > 0 ? discountBadge(pricing.discountPercent) : "",
       offer: pricing.yearlyOffer,
-      trial: pricing.trialYearly,
     },
     {
       key: "monthly",
@@ -324,22 +317,19 @@ const Plus = () => {
       priceNote: "",
       badge: "",
       offer: pricing.monthlyOffer,
-      trial: pricing.trialMonthly,
     },
   ], [
-    pricing.yearlyPrice, pricing.yearlyPerMonth, pricing.discountPercent, pricing.yearlyOffer, pricing.trialYearly,
-    pricing.monthlyPrice, pricing.monthlyOffer, pricing.trialMonthly,
+    pricing.yearlyPrice, pricing.yearlyPerMonth, pricing.discountPercent, pricing.yearlyOffer,
+    pricing.monthlyPrice, pricing.monthlyOffer,
   ]);
 
   const chosen = cards.find((c) => c.key === selected) || cards[0];
-  // 체험 문구는 Play 체험 제안이 있을 때만(미리보기는 "체험 이미 사용" 스위치). 가격을 못 받았으면 보이지 않습니다.
-  const trialText = priceReady && chosen.price ? chosen.trial : "";
   // 정식 스토어 앱에서는 Play 가격을 받은 요금제만 살 수 있습니다. 미리보기는 눌러도 결제하지 않습니다.
   const canBuy = priceReady && !!chosen.price && (preview || !!chosen.offer);
 
   const entitled = tier !== "free";
   const staff = tier === "special" || tier === "admin";
-  const paidUntil = session && (session.plan.tier === "plus" || session.plan.tier === "trial") ? session.plan.until : 0;
+  const paidUntil = session && isPaidPlan(session.plan) ? session.plan.until : 0;
 
   const close = () => goBackOr(navigate, location.key, "/");
 
@@ -363,7 +353,7 @@ const Plus = () => {
     setBusy(true);
     const r = await purchase(chosen.offer);
     setBusy(false);
-    if (r.status === "plus") toast(r.restored ? TOAST_RESTORED : r.plan.tier === "trial" ? TOAST_TRIAL_STARTED : TOAST_STARTED);
+    if (r.status === "plus") toast(r.restored ? TOAST_RESTORED : TOAST_STARTED);
     // 결제는 끝났고 서버 확인만 남음 — 다시 결제하라고 하지 않습니다. 자동으로 다시 확인합니다(billing.ts).
     else if (r.status === "verifying") toast(TOAST_VERIFYING);
     else if (r.status === "pending") toast(TOAST_PENDING);
@@ -386,14 +376,14 @@ const Plus = () => {
   const gothic = "font-gothic";
 
   // 이미 열린 계정의 상자 문구
-  const stateTitle = tier === "trial" ? STATE_TRIAL : tier === "plus" ? STATE_PLUS : tier === "special" ? STATE_SPECIAL : STATE_ADMIN;
+  const stateTitle = tier === "plus" ? STATE_PLUS : tier === "special" ? STATE_SPECIAL : STATE_ADMIN;
   // 심사용 계정은 Plus 와 같은 화면에 "심사용 계정" 한 줄(구독이 아니라 결제·해지할 것이 없음).
   // 해지한 구독(autoRenew false)은 "자동 갱신" 대신 "…까지 이용 · 자동 갱신 꺼짐".
   const review = isReviewAccount();
   const autoRenew = !(session && session.plan.autoRenew === false);
   const stateSub = review
     ? STATE_REVIEW_SUB
-    : !staff && paidUntil > 0 ? stateUntilText(shortDate(paidUntil), tier === "trial", autoRenew) : STATE_STAFF_SUB;
+    : !staff && paidUntil > 0 ? stateUntilText(shortDate(paidUntil), autoRenew) : STATE_STAFF_SUB;
   // 구독 관리(Google Play)로 보낼 수 있는 계정인가 — 실제 구독이 있는 계정만
   const canManage = !staff && !review && !preview && billingAvailable();
 
@@ -403,10 +393,8 @@ const Plus = () => {
     ? NOTE_VERIFYING_LINES
     : !canBuy
       ? [pricing.state === "failed" ? NOTE_PRICE_FAILED : NOTE_PRICE_LOADING]
-      : trialText
-        ? noteTrialLines(trialText, chosen.price, yearlyChosen)
-        : noteNoTrialLines(yearlyChosen);
-  const ctaLabel = verifying ? CTA_VERIFYING : checking ? CTA_CHECKING : trialText ? ctaTrial(trialText) : yearlyChosen ? CTA_YEARLY : CTA_MONTHLY;
+      : notePlanLines(yearlyChosen);
+  const ctaLabel = verifying ? CTA_VERIFYING : checking ? CTA_CHECKING : yearlyChosen ? CTA_YEARLY : CTA_MONTHLY;
   const priceMissing = pricing.state === "failed" ? PRICE_FAILED : PRICE_LOADING;
 
   return (
@@ -626,13 +614,6 @@ const Plus = () => {
           </>
         )}
         <p className={"m-0 text-center " + gothic} style={{ fontSize: "0.71875rem", lineHeight: 1.5, color: C.faint, wordBreak: "keep-all" }}>
-          {/* 체험으로 시작할 수 있을 때는 체험 한도가 절반이라는 것도 함께 알립니다(B-10) */}
-          {!entitled && !verifying && trialText ? (
-            <>
-              {NOTE_TRIAL_HALF}
-              <br />
-            </>
-          ) : null}
           {NOTE_AI_VOICE}
         </p>
         <div className={"flex " + gothic} style={{ marginTop: 4, gap: 16, fontSize: "0.75rem", color: C.lead }}>
