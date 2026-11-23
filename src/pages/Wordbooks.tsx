@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import { getCategories, getWordCount, Category } from "@/lib/store";
 import CategoryCard from "@/components/CategoryCard";
 import { ArrowLeft } from "lucide-react";
-import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { usePlan } from "@/lib/plan";
 import { GROUP_ORDER, GROUP_STYLES, GroupKey, groupOf, bookNumber } from "@/lib/wordbookGroups";
+import { canOpenWordbook } from "@/lib/tasteAccess";
 
 /* 기본 단어장 폴더 (시안: 단어장 폴더 · 추천안).
    이 화면은 완성된 "책"이라 읽기 전용입니다. 단어장 추가·이름 변경·삭제·순서 이동은
@@ -16,7 +17,8 @@ import { GROUP_ORDER, GROUP_STYLES, GroupKey, groupOf, bookNumber } from "@/lib/
    - 묶음은 단어장 이름 앞 번호로 정합니다(src/lib/wordbookGroups.ts — 예전 36권·새 41권 번호 모두).
    - "성경과 신앙" 묶음은 관리자·Special Member 에게만 보입니다. 관리자판·회원판(스토어 앱 밖)은 등급이
      늘 관리자라 지금처럼 모두 보입니다.
-   - 무료 사용자는 기본 단어장 폴더가 잠겨 있어 구독 화면으로 보냅니다. */
+   - 무료 사용자도 목록 전체를 봅니다. 01 인사·기본 표현만 열리고 02 부터는 자물쇠 — 누르면 공용 안내 창
+     (2026-11-23 7일 체험 폐지 → 맛보기, src/lib/tasteAccess.ts). 예전에는 화면 전체가 구독 화면으로 넘어갔습니다. */
 
 const Wordbooks = () => {
   const navigate = useNavigate();
@@ -95,8 +97,6 @@ const Wordbooks = () => {
     }
   };
 
-  if (!plan.plus) return <Navigate to={PAYWALL_PATH} replace />;
-
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto pb-9">
       <div ref={topRef} className="sticky top-0 z-30 bg-background">
@@ -169,6 +169,7 @@ const Wordbooks = () => {
                       variant="folder"
                       tile={st.tint}
                       last={i === group.items.length - 1}
+                      locked={!canOpenWordbook(cat, plan.plus)}
                     />
                   ))}
                 </div>
