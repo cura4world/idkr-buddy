@@ -34,9 +34,8 @@ const APP_ORIGINS = ["https://cura4world.github.io"];
 //   음성:   longread(내가 만든 이야기·회화 듣기) · word-audio(단어·예문 발음)
 //          · shared-audio(기본 회화집·지도·이해 읽기) · tts(예전 앱이 보내던 이름 — 그대로 받음)
 //
-// 칸 하나: { day, month, total, locked, hidden }
+// 칸 하나: { day, month, locked, hidden }
 //   day / month  한국 날짜·한국 달 기준 상한. 없으면 그 기간은 제한 없음
-//   total        체험 기간 전체 합계 상한 (체험 긴 읽기 15)
 //   locked       이 등급에서는 못 씀 → 403 PLUS_REQUIRED
 //   hidden       화면에 "남은 횟수"로 보이지 않는 상한(사전 숨은 한도, 남용 방지용 안전 상한)
 // 표에서 "제한 없음"·"한도에 안 셈"인 기능에도 Plus 에는 남용 방지용 hidden 상한을 둡니다
@@ -70,18 +69,17 @@ const DEFAULT_LIMITS = {
     tts: { day: 400, hidden: true },
     report: { day: 50, hidden: true },
   },
-  // trial 은 아래 deriveTrialLimits 가 plus 에서 만듭니다(절반).
   special: { report: { day: 50, hidden: true } },
   admin: { report: { day: 50, hidden: true } },
 };
 
-// 체험(7일)은 이 기능들만 Plus 의 절반(내림, 최소 1). 나머지는 Plus 와 같음.
-const TRIAL_HALF_KINDS = ["story", "percakapan-make", "longread", "dict-new"];
-const TRIAL_TOTALS = { longread: 15 }; // 체험 기간 전체 합계
+// 7일 무료 체험은 2026-11-23 Arga 결정으로 없앴습니다(메뉴별 맛보기로 바꿈). 체험 절반 한도·체험 합계(uset:)·
+// 체험 반복 기록(trial:)·체험 판정은 지웠습니다. 예전에 체험으로 적힌 계정(ent.tier "trial")은 Plus 로 다루되
+// 그 기록의 만료 시각(= 원래 체험 끝)까지만입니다 — 그 뒤에는 Play 에 다시 물어 실제 결제가 이어졌으면 Plus,
+// 아니면 무료(getPlan). 기한 없는 Plus 가 되지 않습니다.
 
 // review = 심사용 계정(Google Play 심사자에게 주는 계정). 기능·한도는 plus 와 똑같고,
 // 기독교·뉴스 같은 staff(special·admin) 전용 화면은 열지 않습니다. 관리자가 /admin/special 로 줍니다(2026-11-14).
-const TIERS = ["free", "trial", "plus", "review", "special", "admin"];
 // 관리자가 계정에 줄 수 있는 등급 (Play 구독과 무관)
 const GRANT_TIERS = ["special", "admin", "review"];
 
@@ -122,8 +120,8 @@ const MAX_TEXT_OUTPUT_TOKENS = 16384;
 const DEFAULT_TEXT_OUTPUT_TOKENS = 8192;
 const DAY_TTL_SEC = 3 * 24 * 3600;
 const MONTH_TTL_SEC = 40 * 24 * 3600;
+// 예전 체험 합계(uset:) 칸의 수명 — 체험은 없어졌지만 이미 적힌 칸을 Durable Object 정리에서 지우는 기준으로만 씁니다.
 const TRIAL_TOTAL_TTL_SEC = 400 * 24 * 3600;
-const TRIAL_DAYS = 7;
 const AI_TIMEOUT_MS = 100000;
 const API_TIMEOUT_MS = 15000;
 // Play 에 구독 상태를 다시 묻는 간격 (2026-11-14 출시 전 점검 B-01·B-02·B-04)
@@ -255,7 +253,7 @@ function kstMonth(nowMs) {
 function cloneCell(c) {
   const o = {};
   if (!c || typeof c !== "object") return o;
-  ["day", "month", "total"].forEach((p) => {
+  ["day", "month"].forEach((p) => {
     if (typeof c[p] === "number") o[p] = c[p];
   });
   if (c.locked) o.locked = true;
@@ -274,7 +272,7 @@ function mergeCell(base, v) {
     return out;
   }
   if (!v || typeof v !== "object") return out;
-  ["day", "month", "total"].forEach((p) => {
+  ["day", "month"].forEach((p) => {
     if (!(p in v)) return;
     if (v[p] === null) { delete out[p]; return; }
     const n = Number(v[p]);
@@ -282,33 +280,6 @@ function mergeCell(base, v) {
   });
   if ("locked" in v) { if (v.locked) out.locked = true; else delete out.locked; }
   if ("hidden" in v) { if (v.hidden) out.hidden = true; else delete out.hidden; }
-  return out;
-}
-
-function halfOf(n) {
-  return Math.max(1, Math.floor(n / 2));
-}
-
-// 체험 한도 = Plus 의 절반(내림, 최소 1). 다만 무료보다 박해지지는 않게 합니다
-// (사전 하루 50 은 무료도 50 이라 절반 25 로 두면 체험이 무료보다 못해짐 — 무료 값으로 올림).
-function deriveTrialLimits(free, plus) {
-  const out = {};
-  Object.keys(plus).forEach((kind) => {
-    const p = cloneCell(plus[kind]);
-    if (TRIAL_HALF_KINDS.indexOf(kind) < 0) { out[kind] = p; return; }
-    const f = free[kind] || {};
-    const t = cloneCell(p);
-    ["day", "month"].forEach((per) => {
-      if (typeof p[per] !== "number") return;
-      t[per] = halfOf(p[per]);
-      if (!f.locked) {
-        if (typeof f[per] !== "number") delete t[per];          // 무료가 그 기간 제한이 없음
-        else if (f[per] > t[per]) t[per] = f[per];
-      }
-    });
-    if (typeof TRIAL_TOTALS[kind] === "number") t.total = TRIAL_TOTALS[kind];
-    out[kind] = t;
-  });
   return out;
 }
 
@@ -329,7 +300,6 @@ function getLimits(env) {
   return {
     free,
     plus,
-    trial: apply("trial", deriveTrialLimits(free, plus)),
     review: apply("review", plus), // 심사용 계정은 plus 와 같은 한도 (LIMITS_JSON 의 plus 변경도 따라감)
     special: apply("special", DEFAULT_LIMITS.special),
     admin: apply("admin", DEFAULT_LIMITS.admin),
@@ -485,8 +455,8 @@ function publicUser(user) {
 
 // ── 플랜 ─────────────────────────────────────────────────────
 
-// 등급: free · trial · plus · special · admin
-//   ent:<uid> = { tier, productId, purchaseToken, tokenHash, until, trial, state, checkedAt, staff,
+// 등급: free · plus · review · special · admin  (예전 체험 기록 tier "trial" 은 plus 로 다룸 — 2026-11-23 체험 폐지)
+//   ent:<uid> = { tier, productId, purchaseToken, tokenHash, until, state, checkedAt, staff,
 //                 triedAt?, freeSince?, ackPending?, ackFailedAt? }
 //     checkedAt   Play 가 마지막으로 답해 준 시각
 //     triedAt     Play 에 물었지만 답을 못 받은(일시 오류) 마지막 시각 — 답을 받으면 지워짐
@@ -494,7 +464,7 @@ function publicUser(user) {
 //     ackPending  Play 는 유효하다고 했는데 확인(acknowledge)이 아직 안 된 구매 — 다음 /me·/billing/verify 때 다시 시도
 //   staff = { tier: "special"|"admin", until(0=무기한), note, at } — 관리자가 /admin/special 로 준 등급.
 //   Play 검증이 ent 를 다시 써도 staff 는 남습니다. ent.tier 를 KV 에서 직접 special·admin 으로 적어도 인정합니다.
-// 앱에 주는 plan: { tier, until, trial?, productId? }  (trial 이면 trial: true)
+// 앱에 주는 plan: { tier, until, productId?, autoRenew? }
 
 function staffPlan(ent, now) {
   const s = ent && ent.staff;
@@ -509,16 +479,19 @@ function staffPlan(ent, now) {
 
 // autoRenew: 자동 갱신이 켜져 있는가. Play 에서 해지한(자동 갱신만 끈) 구독은 만료 시각까지 쓰지만 다음 결제는 없습니다 —
 // 앱이 "다음 결제 ○월 ○일" 대신 "○월 ○일까지 이용"으로 보여 주도록 싣습니다(출시 전 점검 B-09).
+// 예전 체험 기록(tier "trial")도 앱에는 "plus" 로 줍니다 — 만료 시각(원래 체험 끝)은 그대로라 그 뒤에는 Plus 가 아닙니다.
 function paidPlan(ent, until) {
   const autoRenew = ent.state !== "SUBSCRIPTION_STATE_CANCELED";
-  if (ent.tier === "trial" || ent.trial === true) {
-    return { tier: "trial", until, trial: true, productId: ent.productId, autoRenew };
-  }
   return { tier: "plus", until, productId: ent.productId, autoRenew };
 }
 
 function isPaidTier(ent) {
   return !!ent && (ent.tier === "plus" || ent.tier === "trial");
+}
+
+/** 체험 폐지 전에 체험으로 적힌 기록인가 — 원래 체험 끝 시각을 넘겨 Plus 를 주지 않으려고 봅니다. */
+function isLegacyTrialEnt(ent) {
+  return !!ent && (ent.tier === "trial" || ent.trial === true);
 }
 
 /**
@@ -586,8 +559,9 @@ async function getPlan(env, uid) {
   if (ent.until > now) return paidPlan(ent, ent.until);
   // 만료 시각은 지났는데 Play 가 답을 못 준 경우(일시 오류): 하루까지는 지금 등급을 유지하고 한 시간 뒤 다시 묻습니다.
   // Play 가 한 번이라도 답하면 ent 가 새로 쓰이므로(무료 또는 새 만료 시각) 이 길로 오지 않습니다.
+  // 예전 체험 기록은 이 유예를 받지 않습니다 — 원래 체험 끝 시각까지만(2026-11-23 Arga 결정).
   const unanswered = (ent.triedAt || 0) > (ent.checkedAt || 0) && (ent.triedAt || 0) >= ent.until;
-  if (unanswered && now - ent.until < ENT_OUTAGE_GRACE_MS) return paidPlan(ent, ent.until + ENT_OUTAGE_GRACE_MS);
+  if (unanswered && !isLegacyTrialEnt(ent) && now - ent.until < ENT_OUTAGE_GRACE_MS) return paidPlan(ent, ent.until + ENT_OUTAGE_GRACE_MS);
   return { tier: "free", until: 0 };
 }
 
@@ -595,11 +569,10 @@ async function getPlan(env, uid) {
 
 //   use:<uid>:<YYYY-MM-DD>  하루 사용량 { <kind>: n, units: { longread: { <unit>: 조각 수 } } }  (3일)
 //   usem:<uid>:<YYYY-MM>    한 달 사용량 { <kind>: n }  (40일)
-//   uset:<uid>              체험 기간 합계 { longread: n }  (400일 — 체험은 계정마다 한 번)
+//   (uset:<uid> 예전 체험 기간 합계 — 2026-11-23 체험 폐지로 더 적지 않음. 남은 칸은 계정 삭제·DO 정리가 지움)
 
 function dayKey(uid, nowMs) { return "use:" + uid + ":" + kstDay(nowMs); }
 function monthKey(uid, nowMs) { return "usem:" + uid + ":" + kstMonth(nowMs); }
-function totalKey(uid) { return "uset:" + uid; }
 
 async function readUsage(env, uid) {
   const now = Date.now();
@@ -666,10 +639,10 @@ function logDoFailure(e) {
   try { console.error("[kata-public] USAGE_DO_FAILED — KV 방식으로 처리 (" + String((e && e.message) || e).slice(0, 80) + ")"); } catch (e2) {}
 }
 
-/** 하루·한 달·체험 합계 칸을 읽습니다. */
-async function readCounters(env, uid, wantTotal) {
+/** 하루·한 달 칸을 읽습니다. */
+async function readCounters(env, uid) {
   const now = Date.now();
-  const keys = { dKey: dayKey(uid, now), mKey: monthKey(uid, now), tKey: wantTotal ? totalKey(uid) : null };
+  const keys = { dKey: dayKey(uid, now), mKey: monthKey(uid, now) };
   const stub = usageStub(env, "u:" + uid);
   if (stub) {
     try { return await doCall(stub, { op: "read", keys }); } catch (e) { logDoFailure(e); }
@@ -681,7 +654,6 @@ async function readCore(store, keys) {
   return {
     d: (await store.get(keys.dKey)) || {},
     m: (await store.get(keys.mKey)) || {},
-    t: keys.tKey ? (await store.get(keys.tKey)) || {} : {},
   };
 }
 
@@ -759,13 +731,9 @@ async function reserveCore(store, p) {
 
   const mKey = monthKey(uid, now);
   const m = (await store.get(mKey)) || {};
-  const useTotal = tier === "trial" && typeof lim.total === "number";
-  const tKey = totalKey(uid);
-  const t = useTotal ? (await store.get(tKey)) || {} : null;
 
   if (typeof lim.day === "number" && (d[kind] || 0) >= lim.day) throw quotaError(kind, "day", lim.day, tier);
   if (typeof lim.month === "number" && (m[kind] || 0) >= lim.month) throw quotaError(kind, "month", lim.month, tier);
-  if (t && (t[kind] || 0) >= lim.total) throw quotaError(kind, "total", lim.total, tier);
 
   d[kind] = (d[kind] || 0) + 1;
   if (unit) {
@@ -783,12 +751,7 @@ async function reserveCore(store, p) {
   }
   await store.put(dKey, d, DAY_TTL_SEC);
   await store.put(mKey, m, MONTH_TTL_SEC);
-  if (t) {
-    t[kind] = (t[kind] || 0) + 1;
-    if (!t.at) t.at = now; // 처음 적은 때 — Durable Object 에서 400일 뒤 지우는 기준
-    await store.put(tKey, t, TRIAL_TOTAL_TTL_SEC);
-  }
-  return { uid, kind, unit, counted: true, dKey, mKey, tKey: t ? tKey : null, req: req && !unit ? req : null };
+  return { uid, kind, unit, counted: true, dKey, mKey, req: req && !unit ? req : null };
 }
 
 async function refundCore(store, r) {
@@ -810,18 +773,13 @@ async function refundCore(store, r) {
     const m = (await store.get(r.mKey)) || {};
     m[r.kind] = Math.max(0, (m[r.kind] || 0) - 1);
     await store.put(r.mKey, m, MONTH_TTL_SEC);
-    if (r.tKey) {
-      const t = (await store.get(r.tKey)) || {};
-      t[r.kind] = Math.max(0, (t[r.kind] || 0) - 1);
-      await store.put(r.tKey, t, TRIAL_TOTAL_TTL_SEC);
-    }
   } catch (e) {}
 }
 
 /** /me 에 싣는 기능별 사용량·한도·남은 수 (null = 제한 없음). */
 async function featureUsage(env, uid, tier) {
-  const c = await readCounters(env, uid, tier === "trial");
-  const d = c.d, m = c.m, t = c.t;
+  const c = await readCounters(env, uid);
+  const d = c.d, m = c.m;
   const lims = limitsFor(env, tier);
   const out = {};
   Object.keys(KINDS).concat(["report"]).forEach((kind) => {
@@ -835,11 +793,6 @@ async function featureUsage(env, uid, tier) {
       day: limit.day === null ? null : Math.max(0, limit.day - used.day),
       month: limit.month === null ? null : Math.max(0, limit.month - used.month),
     };
-    if (tier === "trial" && typeof lim.total === "number") {
-      used.total = t[kind] || 0;
-      limit.total = lim.total;
-      left.total = Math.max(0, lim.total - used.total);
-    }
     out[kind] = { locked: !!lim.locked, hidden: !!lim.hidden, used, limit, left };
   });
   return out;
@@ -1044,6 +997,52 @@ async function notifyReport(env, rep) {
   } catch (e) {}
 }
 
+// ── 같은 대상 누적 신고 (2026-11-23 내부 테스트 12장 B) ─────────────
+// 앱이 신고에 대상 표식 target("dictionary:<sha256 64자>" 같은 모양)을 실어 보내면, 같은 대상의 신고 수를 셉니다.
+// 정확히 3번째 신고에서 한 번만 "누적 3회" 알림을 보냅니다. 1회 신고의 한 시간 묶음 알림은 그대로입니다.
+//   rcnt:<target> = { n, first, alerted }  수명: 처음 신고 + 180일(신고 보관 기간과 같음, 새 신고로 늘리지 않음)
+// 사람을 가리지 않고 신고 건수로 셉니다 — 계정 정보를 새로 남기지 않으려는 것(같은 사람이 세 번 눌러도 3회, 하루 신고 상한 있음).
+const REPORT_TARGET_RE = new RegExp("^[a-z]{1,12}:[0-9a-f]{64}$");
+const REPORT_REPEAT_ALERT = 3;
+
+function reportTarget(v) {
+  const s = String(v == null ? "" : v);
+  return REPORT_TARGET_RE.test(s) ? s : "";
+}
+
+/** 같은 대상 신고 수를 하나 올리고, 이번이 알림을 보낼 차례(정확히 3번째, 처음)인지 돌려줍니다. 절대 던지지 않습니다. */
+async function countReportTarget(env, target, nowMs) {
+  try {
+    const key = "rcnt:" + target;
+    const prev = (await kvGetJson(env, key)) || {};
+    const first = typeof prev.first === "number" ? prev.first : nowMs;
+    const n = (prev.n || 0) + 1;
+    const alert = n >= REPORT_REPEAT_ALERT && !prev.alerted;
+    const leftSec = Math.floor((first + REPORT_TTL_SEC * 1000 - nowMs) / 1000);
+    if (leftSec >= 60) await kvPutJson(env, key, { n, first, alerted: !!prev.alerted || alert }, leftSec);
+    return { n, alert };
+  } catch (e) {
+    return { n: 0, alert: false };
+  }
+}
+
+/** "누적 3회" 알림. 절대 던지지 않습니다. */
+async function notifyReportRepeat(env, rep, n) {
+  if (!tgConfigured(env)) return;
+  try {
+    const lines = [
+      "[Kata kata] 같은 결과 누적 " + n + "회",
+      "기능: " + (rep.feature || "-"),
+      "시각: " + kstStamp(rep.at || Date.now()),
+    ];
+    const pv = tgPreview(rep);
+    if (pv) lines.push("앞부분: " + pv);
+    lines.push("대상: " + String(rep.target || "").slice(0, 24));
+    lines.push("전체 보기: GET /admin/reports");
+    await tgSend(env, lines.join("\n"));
+  } catch (e) {}
+}
+
 /** 한 시간이 지난 묶음이 남아 있으면 한꺼번에 알립니다(Cron 이 부름). */
 async function flushReportNotice(env) {
   if (!tgConfigured(env)) return false;
@@ -1138,8 +1137,9 @@ async function verifyWithPlay(env, uid, productId, purchaseToken) {
   if (owner && owner !== uid) throw new HttpError(409, "PURCHASE_OWNED_BY_OTHER");
 
   const now = Date.now();
+  // 체험 판정은 없앴습니다(2026-11-23 체험 폐지). Play 가 아직 체험 단계라고 답하는 예전 구독도 만료 시각(= 체험 끝)까지만
+  // plus 로 적고, 그 뒤에는 다시 물어 실제 결제가 이어졌을 때만 plus 입니다.
   const valid = VALID_SUB_STATES.indexOf(sub.subscriptionState) >= 0 && until > now;
-  const trial = valid && isFreeTrialPhase(sub, item, now);
 
   await env.PUBLIC_KV.put("ptok:" + tokenHash, uid, { expirationTtl: 400 * 24 * 3600 });
   // 이 계정에 묶인 구매 토큰을 모두 기억해 두었다가 계정 삭제 때 전부 풉니다
@@ -1154,16 +1154,15 @@ async function verifyWithPlay(env, uid, productId, purchaseToken) {
 
   // 끝난 구매(만료·환불된 옛 토큰)가 지금 이용 중인 다른 구매를 덮어써 무료로 만들지 않게 합니다.
   if (!valid && prevEnt && !sameToken && isPaidTier(prevEnt) && prevEnt.until > now) {
-    return { valid: false, until: 0, trial: false, ackPending: false, ent: prevEnt };
+    return { valid: false, until: 0, ackPending: false, ent: prevEnt };
   }
 
   const nextEnt = {
-    tier: valid ? (trial ? "trial" : "plus") : "free",
+    tier: valid ? "plus" : "free",
     productId,
     purchaseToken,
     tokenHash,
     until: valid ? until : 0,
-    trial,
     state: sub.subscriptionState || "",
     checkedAt: now,
   };
@@ -1172,20 +1171,7 @@ async function verifyWithPlay(env, uid, productId, purchaseToken) {
   // 계정 표식이 없는 구매(앱 밖에서 만들어진 것 — 프로모션 코드, Play 구독 화면의 "다시 구독")는 먼저 검증을 요청한
   // 계정에 붙습니다. 나중에 운영자가 알아볼 수 있게 표시해 둡니다(B-13).
   if (!got) nextEnt.unbound = true;
-  // 이 계정의 무료 체험 기록(B-08). 체험 자격은 Play 계정 기준이라, 같은 앱 계정으로 Play 계정만 바꿔 체험을
-  // 되풀이할 수 있습니다. 첫 체험과 그 뒤 체험 횟수를 남겨 운영자가 볼 수 있게 합니다(체험 합계 한도 uset: 은 계정에 묶여 이미 공유됨).
-  if (trial) {
-    try {
-      const rec = (await kvGetJson(env, "trial:" + uid)) || { first: now, firstToken: tokenHash, tokens: [] };
-      if (rec.tokens.indexOf(tokenHash) < 0) {
-        rec.tokens.push(tokenHash);
-        rec.tokens = rec.tokens.slice(-20);
-        rec.last = now;
-        await kvPutJson(env, "trial:" + uid, rec, TRIAL_TOTAL_TTL_SEC);
-      }
-      if (rec.tokens.length > 1) nextEnt.trialRepeat = rec.tokens.length;
-    } catch (e) {}
-  }
+  // (예전 체험 반복 기록 trial:<uid> 는 체험 폐지로 더 적지 않습니다. 남은 기록은 계정 삭제 때 지웁니다.)
   // 관리자가 준 Special Member·관리자 등급은 Play 검증으로 지워지지 않게 그대로 둡니다.
   if (prevEnt && prevEnt.staff) nextEnt.staff = prevEnt.staff;
 
@@ -1219,7 +1205,7 @@ async function verifyWithPlay(env, uid, productId, purchaseToken) {
     // 앞서 실패했던 확인이 그사이 끝났거나(Play 가 확인됨으로 답함) 구매가 끝난 경우 — 실패 기록을 치웁니다.
     try { await env.PUBLIC_KV.delete("ackfail:" + tokenHash); } catch (e) {}
   }
-  return { valid, until: valid ? until : 0, trial, ackPending: !!nextEnt.ackPending, ent: nextEnt };
+  return { valid, until: valid ? until : 0, ackPending: !!nextEnt.ackPending, ent: nextEnt };
 }
 
 /**
@@ -1241,24 +1227,6 @@ async function logAckFailure(env, uid, tokenHash, status) {
       count: (prev.count || 0) + 1,
     }, ACK_FAIL_TTL_SEC);
   } catch (e) {}
-}
-
-/**
- * 지금 무료 체험 기간인지 (best-effort).
- *  1) subscriptionsv2 의 lineItems[].offerPhase.freeTrial 이 있으면 체험 중 (Google 이 주는 정식 값)
- *  2) offerPhase 칸이 아예 없는 응답이면: 제안 ID·태그에 "trial" 이 들어 있고 시작한 지 7일(+1일 여유)이
- *     안 됐을 때만 체험으로 봅니다. 체험이 끝나 유료로 넘어가도 offerId 는 그대로 남기 때문에 날짜로 자릅니다.
- * Play 콘솔에서 체험 제안 ID 에 "trial" 을 넣어 두면(예: "trial-7d") 2) 의 대비책도 맞게 돕니다.
- */
-function isFreeTrialPhase(sub, item, nowMs) {
-  const phase = item && item.offerPhase;
-  if (phase && typeof phase === "object") return !!phase.freeTrial;
-  const od = (item && item.offerDetails) || {};
-  const tags = Array.isArray(od.offerTags) ? od.offerTags : [];
-  const named = [String(od.offerId || "")].concat(tags.map(String)).some((s) => s.toLowerCase().indexOf("trial") >= 0);
-  if (!named) return false;
-  const start = Date.parse((sub && sub.startTime) || "") || 0;
-  return start > 0 && nowMs - start < (TRIAL_DAYS + 1) * 86400000;
 }
 
 // ── 경로 ─────────────────────────────────────────────────────
@@ -1594,6 +1562,9 @@ async function handleReport(request, env, ctx) {
     output: clip(body.output, 2000),
     reason: clip(body.reason, 200),
   };
+  // 같은 대상 표식(있으면) — 모양이 맞을 때만 받습니다(12장 B).
+  const target = reportTarget(body.target);
+  if (target) rep.target = target;
   try {
     await kvPutJson(env, key, rep, REPORT_TTL_SEC);
   } catch (e) {
@@ -1607,6 +1578,10 @@ async function handleReport(request, env, ctx) {
   await kvPutJson(env, "ureports:" + a.uid, mine.slice(-MAX_REPORTS_TRACKED), REPORT_TTL_SEC);
   // 운영자 알림(설정돼 있을 때만). 신고는 이미 저장됐고, 알림이 실패해도 응답은 그대로 성공입니다.
   await defer(ctx, notifyReport(env, rep));
+  if (target) {
+    const c = await countReportTarget(env, target, rep.at);
+    if (c.alert) await defer(ctx, notifyReportRepeat(env, rep, c.n));
+  }
   return json(request, { ok: true });
 }
 
