@@ -266,7 +266,6 @@ function koDate(t: number): string {
 function tierBadge(t: Tier): { text: string; bg: string; fg: string } {
   if (t === "free") return { text: "무료", bg: "#F1F4F5", fg: MUTED };
   if (t === "plus") return { text: "Plus", bg: "#E3EEEC", fg: TEAL };
-  if (t === "trial") return { text: "체험 중", bg: "#E3EEEC", fg: TEAL };
   return { text: TIER_LABEL[t], bg: "#FFF6DC", fg: "#8A6A12" };
 }
 
@@ -629,12 +628,12 @@ const MyInfo = () => {
             />
             {/* 공개판 회원키 입력은 서버가 생기면 다시 넣습니다(QA Q01 — 그 전에는 링크를 보이지 않음) */}
           </>
-        ) : tier === "plus" || tier === "trial" ? (
+        ) : tier === "plus" ? (
           <Card style={{ overflow: "hidden" }}>
             <Row
               icon={I_DOC}
               label="회원 등급"
-              value={review ? "Plus · 심사용 계정" : tier === "trial" ? "Plus 무료 체험 중" : "Plus" + (period ? " · " + period : "")}
+              value={review ? "Plus · 심사용 계정" : "Plus" + (period ? " · " + period : "")}
               onClick={() => navigate(PAYWALL_PATH)}
               last={review}
             />
@@ -647,7 +646,7 @@ const MyInfo = () => {
                 value={until > Date.now()
                   ? (session && session.plan.autoRenew === false
                       ? canceledUntilText(koDate(until))
-                      : (tier === "trial" ? "첫 결제 " : "다음 결제 ") + koDate(until))
+                      : "다음 결제 " + koDate(until))
                   : undefined}
                 wrapValue
                 onClick={openManage}
