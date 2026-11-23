@@ -2,7 +2,10 @@ import { useEffect, useState, useRef } from "react";
 import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
-import { ArrowLeft, Volume2, Loader2, BookOpen, Lock, Lightbulb, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, Volume2, Loader2, BookOpen, Lightbulb, Maximize2, Minimize2 } from "lucide-react";
+import LockMark from "@/components/LockMark";
+import { openPlusLock } from "@/lib/plusLock";
+import { LOCK_TITLE_STORY_LISTEN, LOCK_TITLE_STORY_NEW } from "@/lib/tasteAccess";
 import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
 import { generateStory, quickLookupWord, StoryDifficulty, StoryTopicKey, isStoryTopicKey } from "@/lib/story";
@@ -177,15 +180,6 @@ const Story = () => {
     if (current && flipped) t.koreanOpened();
   }, [flipped, current]);
 
-  // ---------- 무료: 듣기 잠금 안내 말풍선 ----------
-  const [lockTip, setLockTip] = useState(false);
-  const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    return () => {
-      if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
-    };
-  }, []);
-
   // 앞/뒤 문단 DOM 참조 (뒤집을 때 읽던 문단으로 스크롤 맞추기)
   const paraRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
   const pendingPara = useRef<number | null>(null);
@@ -214,7 +208,6 @@ const Story = () => {
   const handleFlip = () => {
     const side = flipped ? "ko" : "id";
     pendingPara.current = currentParaIndex(side);
-    setLockTip(false);
     setFlipped((f) => !f);
   };
 
@@ -319,7 +312,6 @@ const Story = () => {
     wordCache.current.clear();
     setCurrent(rec);
     setFlipped(false);
-    setLockTip(false);
     paraRefs.current = {};
     pendingPara.current = null;
     if (!cardStateRef.current) {
@@ -333,7 +325,6 @@ const Story = () => {
     ttsPlayer.stop();
     setCurrent(null);
     setFlipped(false);
-    setLockTip(false);
     paraRefs.current = {};
     pendingPara.current = null;
     setPopupWord(null);
@@ -429,7 +420,7 @@ const Story = () => {
   const handleGenerate = async () => {
     if (generating || blocked) return;
     if (!plan.plus) {
-      goPaywall();
+      openPlusLock(LOCK_TITLE_STORY_NEW); // 공용 안내 창(2026-11-23 — 잠금 안내를 앱 전체에서 같게)
       return;
     }
     if (!hasGeminiApiKey()) {
@@ -481,15 +472,9 @@ const Story = () => {
     navigate(PAYWALL_PATH);
   };
 
-  // 무료: 잠긴 "듣기" — 처음 누르면 안내 말풍선, 말풍선이 떠 있을 때 한 번 더 누르면 구독 화면
+  // 무료: 잠긴 "듣기" — 공용 안내 창(2026-11-23. 예전에는 말풍선 → 한 번 더 누르면 구독 화면)
   const onLockedListen = () => {
-    if (lockTip) {
-      goPaywall();
-      return;
-    }
-    setLockTip(true);
-    if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
-    lockTimerRef.current = setTimeout(() => setLockTip(false), 2800);
+    openPlusLock(LOCK_TITLE_STORY_LISTEN);
   };
 
   // 단어 탭 → 미니 팝업
@@ -714,7 +699,7 @@ const Story = () => {
                         style={{ background: C.greyBg, color: "#8F7E4E" }}
                         aria-label="듣기 (Plus 회원 기능)"
                       >
-                        <Lock size={14} strokeWidth={2} />
+                        <LockMark size={14} />
                         듣기
                       </button>
                     )}
@@ -727,20 +712,6 @@ const Story = () => {
                   {renderTokens(current.title, "title-")}
                 </h2>
                 {renderIndonesian(current.indonesian)}
-                {lockTip ? (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); goPaywall(); }}
-                    className="absolute z-10 right-[6px] top-[59px] px-3 py-2 rounded-xl font-gothic text-[0.78125rem] text-left"
-                    style={{
-                      background: "rgba(226,231,234,0.96)",
-                      color: "#4D565B",
-                      boxShadow: "0 2px 8px rgba(16,40,50,0.08)",
-                    }}
-                  >
-                    듣기는 Plus 회원 기능입니다
-                  </button>
-                ) : null}
               </div>
             ) : (
               <div style={{ padding: 18 }}>
