@@ -46,6 +46,7 @@ import {
   LINK_RESTORE,
   LINK_TERMS,
   NOTE_AI_VOICE,
+  NOTE_KEEP_CREATIONS,
   NOTE_PRICE_FAILED,
   STATE_REVIEW_SUB,
   NOTE_PRICE_LOADING,
@@ -466,6 +467,14 @@ const Plus = () => {
             );
           })}
         </ul>
+        {/* Plus 가 끝난 뒤 만든 것 — 미리 알림(2026-11-24, 문구는 plusCopy.ts 한 곳). 혜택 목록 바로 아래 */}
+        <p
+          data-keep-creations
+          className={gothic}
+          style={{ margin: "-6px 0 0", fontSize: "0.75rem", lineHeight: 1.55, color: C.gray, wordBreak: "keep-all" }}
+        >
+          {NOTE_KEEP_CREATIONS}
+        </p>
 
         {entitled ? (
           <div
