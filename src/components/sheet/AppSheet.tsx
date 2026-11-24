@@ -166,6 +166,7 @@ export default function AppSheet({
   const [shown, setShown] = useState(open && reduce);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [bodyScrolled, setBodyScrolled] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const drag = useRef<{ id: number; y0: number; t0: number; active: boolean } | null>(null);
 
@@ -174,6 +175,7 @@ export default function AppSheet({
   // 열려 있는 동안 알림을 화면 위쪽으로(바닥 단추를 가리지 않게)
   useEffect(() => {
     if (!open) return;
+    setBodyScrolled(false); // 다시 열면 본문은 맨 위부터
     setOpenSheetDelta(1);
     return () => setOpenSheetDelta(-1);
   }, [open]);
@@ -262,16 +264,29 @@ export default function AppSheet({
   const dur = reduce ? 0 : shown ? SHEET.openMs : SHEET.closeMs;
   const panelTransform = shown ? "translateY(" + dragY + "px)" : "translateY(100%)";
 
+  // 본문을 내리면 머리 바로 밑에서 글자가 칼로 자른 듯 끊겨 "비쳐 보이는" 조각처럼 보였습니다(2026-11-24 설정 창).
+  // 내린 동안에는 머리 아래에 가는 줄을 긋고, 본문 맨 위 14px 를 흐리게 사라지게 합니다.
+  // (줄은 흐리게 하는 상자 밖에 따로 둡니다 — 상자에 테두리로 주면 흐림 효과에 같이 지워졌음)
+  const scrollMask = bodyScrolled ? "linear-gradient(to bottom, transparent 0, #000 16px)" : undefined;
   const bodyEl = (
+    <>
+    <div className="shrink-0" style={{ height: 1, background: bodyScrolled ? SHEET.line : "transparent" }} />
     <div
       className={"min-h-0 overflow-y-auto overscroll-contain " + (bodyStyle && bodyStyle.height ? "shrink-0" : "flex-1")}
+      onScroll={(e) => {
+        const s = (e.currentTarget as HTMLDivElement).scrollTop > 2;
+        if (s !== bodyScrolled) setBodyScrolled(s);
+      }}
       style={{
         padding: bodyPadding || (footer ? "16px 20px 4px" : "16px 20px calc(20px + env(safe-area-inset-bottom))"),
+        WebkitMaskImage: scrollMask,
+        maskImage: scrollMask,
         ...bodyStyle,
       }}
     >
       <div className="flex flex-col" style={{ gap }}>{children}</div>
     </div>
+    </>
   );
   const footerEl = footer ? (
     <div className="shrink-0" style={{ padding: "12px 20px calc(16px + env(safe-area-inset-bottom))" }}>{footer}</div>
@@ -474,6 +489,16 @@ export function ChoiceRow({ selected = false, onClick, mode, title, wordSub, sub
       {trailing ? <span className="shrink-0 font-gothic text-[0.75rem]" style={{ color: SHEET.mute }}>{trailing}</span> : null}
       {mode === "single" ? box : null}
     </button>
+  );
+}
+
+/** 고르기 줄 묶음 — 화면 낭독기가 "목록 중 몇 번째, 선택됨"을 알 수 있게 묶습니다.
+ *  하나 고르기(single)는 radiogroup, 여러 개 고르기(multi)는 group. 모양은 줄 간격(gap)만 줍니다. */
+export function ChoiceGroup({ mode, label, gap = 8, children }: { mode: "single" | "multi"; label: string; gap?: number; children: ReactNode }) {
+  return (
+    <div role={mode === "single" ? "radiogroup" : "group"} aria-label={label} className="flex flex-col" style={{ gap }}>
+      {children}
+    </div>
   );
 }
 
