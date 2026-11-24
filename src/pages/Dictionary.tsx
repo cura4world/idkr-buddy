@@ -34,7 +34,7 @@ import { medaliEngine } from "@/lib/medali";
 import { useBackClose } from "@/hooks/useBackClose";
 import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
 import VoiceSearchPill from "@/components/VoiceSearchPill";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ConfirmSheet } from "@/components/sheet/AppSheet";
 
 // TTS: AndroidTTS 우선, 없으면 speechSynthesis 폴백 (프로젝트 공통 패턴)
 const speak = (text: string, lang: "id" | "ko") => {
@@ -816,6 +816,9 @@ const Dictionary = () => {
 
   // 최근 검색 항목 길게 누르기 → 삭제 확인 (600ms, 앱 공통 롱프레스 시간)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  // 확인 창이 닫히며 내려가는 동안 보여 줄 마지막 대상
+  const lastDeleteTargetRef = useRef("");
+  if (deleteTarget) lastDeleteTargetRef.current = deleteTarget;
   // 폰 뒤로가기는 "검색 기록 삭제" 창만 닫습니다(QA Q03)
   useBackClose(!!deleteTarget, () => setDeleteTarget(null));
   const lpTimer = useRef<number | null>(null);
@@ -938,21 +941,17 @@ const Dictionary = () => {
         <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">KAMUS BAHASA INDONESIA</h1>
       </header>
 
-      {/* 최근 검색 항목 삭제 확인 */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
-        <AlertDialogContent className="max-w-sm bg-card">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-body text-gray-900">검색 기록 삭제</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600 break-words">
-              "{deleteTarget}" 검색 기록을 삭제하시겠습니까?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteHistory}>삭제</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* 최근 검색 항목 삭제 확인 — 앱 공통 틀의 확인 창(대상 이름 굵게). 뒤로가기는 위 useBackClose(deleteTarget).
+          닫히며 내려가는 동안에도 지우려던 말을 그대로 보여 줍니다. */}
+      <ConfirmSheet
+        open={!!deleteTarget}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDeleteHistory}
+        title="검색 기록 삭제"
+        message={<span className="break-words">"<b>{deleteTarget || lastDeleteTargetRef.current}</b>" 검색 기록을 삭제하시겠습니까?</span>}
+        confirmLabel="삭제"
+        danger
+      />
 
       {/* 예전의 "← 사과로" 돌아가기 플로팅 버튼은 2026-11-11 사용자 요청으로 뺐습니다.
           이제 결과마다 히스토리 칸이 있어 폰의 뒤로가기로 바로 전 결과로 돌아갑니다. */}
