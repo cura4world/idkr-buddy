@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import { ReadingTracker } from "@/lib/readingTimer";
-import { ArrowLeft, ChevronDown, ChevronUp, Hourglass, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Hourglass, Landmark } from "lucide-react";
+import AppSheet from "@/components/sheet/AppSheet";
 
 interface HistEvent {
   y: string; // 연도 표시
@@ -334,6 +335,10 @@ const InsightHistory = () => {
     };
   }, []);
   const [popup, setPopup] = useState<HistEvent | null>(null);
+  // 상세 창이 닫히며 내려가는 동안 보여 줄 마지막 사건
+  const lastPopupRef = useRef<HistEvent | null>(null);
+  if (popup) lastPopupRef.current = popup;
+  const shownPopup = popup || lastPopupRef.current;
   // 시대마다 접기 — 처음엔 모두 접혀 목차처럼 시대 이름만 보입니다(2026-11-23 H-11 · D9). 펼친 시대 이름을 담습니다.
   const [openEras, setOpenEras] = useState<string[]>([]);
   const toggleEra = (name: string) =>
@@ -441,45 +446,23 @@ const InsightHistory = () => {
         })}
       </div>
 
-      {/* 상세 팝업 */}
-      {popup && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-5 kkh-fade"
-          onClick={closePopup}
-        >
-          <div
-            className="w-full max-w-md bg-card rounded-2xl shadow-2xl max-h-[80vh] overflow-y-auto kkh-pop"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 bg-card px-5 pt-4 pb-3 border-b border-gray-100 flex items-start gap-3">
-              <div className="flex-1">
-                <p className="text-[0.6875rem] font-gothic font-bold text-amber-600">{popup.y}</p>
-                <h3 className="text-base font-semibold text-gray-900 mt-0.5 leading-snug">{popup.t}</h3>
-              </div>
-              <button
-                onClick={closePopup}
-                className="w-8 h-8 rounded-full bg-black/5 text-gray-500 flex items-center justify-center shrink-0"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="px-5 py-4">
-              {popup.d.map((p, i) => (
-                <p key={i} className="text-sm font-gothic text-gray-700 leading-relaxed mb-2.5 last:mb-0">
-                  {p}
-                </p>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        .kkh-fade { animation: kkhFade 0.15s ease-out; }
-        .kkh-pop { animation: kkhPop 0.22s cubic-bezier(0.22,1,0.36,1); }
-        @keyframes kkhFade { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes kkhPop { from { opacity: 0; transform: translateY(24px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-      `}</style>
+      {/* 상세 팝업 — 앱 공통 틀(안내, 2026-11-24 가운데 창 → 아래 시트). 연도는 제목 아래 설명 줄.
+          뒤로가기는 이 화면의 pushState(kkHist). 닫히며 내려가는 동안에도 마지막 사건을 그대로 보여 줍니다. */}
+      <AppSheet
+        open={!!popup}
+        onClose={closePopup}
+        title={shownPopup ? shownPopup.t : ""}
+        icon={<Landmark size={20} strokeWidth={1.8} />}
+        desc={shownPopup ? <span className="font-bold text-amber-700">{shownPopup.y}</span> : null}
+      >
+        {shownPopup
+          ? shownPopup.d.map((p, i) => (
+              <p key={i} className="m-0 font-gothic text-[0.875rem] leading-relaxed break-keep" style={{ color: "#3B4245" }}>
+                {p}
+              </p>
+            ))
+          : null}
+      </AppSheet>
     </div>
   );
 };
