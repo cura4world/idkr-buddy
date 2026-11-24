@@ -19,7 +19,6 @@ import {
 } from "@/lib/account";
 import {
   autoRestoreOnce,
-  billingLog,
   isLapsedPaidPlan,
   onVerifyEvent,
   resumeVerifyIfNeeded,
@@ -115,21 +114,17 @@ const LoginGate = ({ children }: { children: React.ReactNode }) => {
     // 서버의 /me 는 이용 중인 구독을 하루에 한 번·만료 뒤 한 시간에 한 번만 Play 에 묻기 때문에, /me 만으로는
     // 갱신·해지가 늦게 반영됩니다. 구매 확인(/billing/verify)은 부를 때마다 Play 에 묻습니다.
     let lastForcedAt = 0;
-    const forceRecheck = (reason: string): Promise<void> => {
+    const forceRecheck = (): Promise<void> => {
       if (!getSession()) return Promise.resolve();
       lastForcedAt = Date.now();
       lastRefreshAt = lastForcedAt;
-      const before = getSession();
-      billingLog({ reason, step: "recheck", until: before ? before.plan.until : 0, tier: before ? before.plan.tier : "none" });
-      return autoRestoreOnce(true, { force: true, reason })
+      return autoRestoreOnce(true, { force: true })
         .then(() => refreshMe().catch(() => null))
-        .then(() => {
-          const after = getSession();
-          billingLog({ reason, step: "recheck-done", until: after ? after.plan.until : 0, tier: after ? after.plan.tier : "none" });
-        });
+        .then(() => undefined);
     };
 
-    // 유료 등급의 만료 시각 + 3초에 다시 확인하는 시계(src/lib/planExpiry.ts). 세션이 바뀔 때마다 다시 맞춥니다.
+    // 유료 등급의 만료 시각 + 3초(서버가 아직이면 + 60초·+ 3분)에 다시 확인하는 시계(src/lib/planExpiry.ts).
+    // 그동안 등급은 갱신 확인 유예(plan.ts RENEW_GRACE_MS)로 Plus 그대로입니다. 세션이 바뀔 때마다 다시 맞춥니다.
     const watcher = createExpiryWatcher({
       now: () => Date.now(),
       setTimer: (fn, ms) => setTimeout(fn, ms),
@@ -138,7 +133,7 @@ const LoginGate = ({ children }: { children: React.ReactNode }) => {
         const s = getSession();
         return s && s.plan ? { tier: String(s.plan.tier), until: Number(s.plan.until) || 0 } : null;
       },
-      recheck: (reason) => forceRecheck(reason),
+      recheck: () => forceRecheck(),
     });
     const offWatch = onSessionChange(() => watcher.sync());
 
@@ -167,7 +162,7 @@ const LoginGate = ({ children }: { children: React.ReactNode }) => {
       const s = getSession();
       const lapsed = !!s && isLapsedPaidPlan(s.plan);
       if ((manage || lapsed) && Date.now() - lastForcedAt >= FORCED_GAP_MS) {
-        forceRecheck(manage ? "manage-return" : "visible-lapsed").catch(() => {});
+        forceRecheck().catch(() => {});
         return;
       }
       if (Date.now() - lastRefreshAt >= REFRESH_GAP_MS) refresh(true);
