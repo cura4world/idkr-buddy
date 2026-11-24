@@ -412,8 +412,7 @@ const Percakapan = () => {
         title="대화 만들기"
         desc="상황을 적으면 두 사람의 대화를 만듭니다"
         icon={<MessagesSquare size={20} strokeWidth={1.8} />}
-        tileBg="#E4EEF6"
-        tileInk="#2B5F86"
+        dirty={!!(name.trim() || situation.trim() || newCatKo.trim() || newCatId.trim())}
         footer={
           <>
             <FormPrimaryButton onClick={handleCreate} disabled={creating || quotaHit} muted={quotaHit} dim={creating}>
