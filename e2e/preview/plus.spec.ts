@@ -139,6 +139,26 @@ for (const s of SIZES) {
   });
 }
 
+// 할인 알약 — 글자 상자가 알약 가운데(2026-11-25). 글자 잉크 기준 실측은 412px·100% 세로 −0.25px(예전 −1.25px)
+test("할인 알약 — 글자 상자 중심과 알약 중심 차이 1px 이하(412px·100%, 360px·125%)", async ({ page }) => {
+  for (const v of [{ w: 412, h: 915, step: FONT_STEP_100 }, { w: 360, h: 740, step: 8 }]) {
+    await page.setViewportSize({ width: v.w, height: v.h });
+    await setupPreview(page, { tier: "free", fontStep: v.step });
+    await openApp(page, "plus");
+    const badge = page.locator("[data-discount-badge]");
+    await expect(badge).toHaveText(DISCOUNT);
+    const d = await badge.evaluate((e) => {
+      const b = e.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(e);
+      const t = range.getBoundingClientRect();
+      return { dx: (t.left + t.right) / 2 - (b.left + b.right) / 2, dy: (t.top + t.bottom) / 2 - (b.top + b.bottom) / 2 };
+    });
+    expect(Math.abs(d.dx), "가로 " + d.dx).toBeLessThanOrEqual(1);
+    expect(Math.abs(d.dy), "세로 " + d.dy).toBeLessThanOrEqual(1);
+  }
+});
+
 // 혜택 설명은 " · " 로 나뉜 말 덩어리마다 통째로 줄을 넘깁니다(2026-11-25 "나만의 단어장 만들기" 추가 — 360px·125% 에서 "나만의 단 / 어장"으로 꺾였음)
 test("혜택 설명 — 360px·125% 에서 말 덩어리가 낱말 가운데서 꺾이지 않음, 412px·100% 첫 줄은 한 줄", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 740 });
