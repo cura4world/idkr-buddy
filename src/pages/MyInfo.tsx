@@ -813,7 +813,7 @@ const MyInfo = () => {
                 className="w-full text-left active:opacity-80"
                 style={{ borderRadius: 14, background: "#FBF1EC", padding: "10px 10px 10px 12px" }}
               >
-                <span className="flex items-center" style={{ gap: 5, minHeight: 20, paddingRight: 24, fontSize: rem(12), fontWeight: 700, color: "#B5643C" }}>
+                <span className="flex items-center" style={{ gap: 5, minHeight: 20, paddingRight: 24, fontSize: rem(12), fontWeight: 700, color: "#A35A36" /* 칸 바탕 대비 4.64:1 (2026-11-24, 예전 #B5643C 3.89:1) */ }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="#E8875A" aria-hidden="true" className="shrink-0">
                     <path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" />
                   </svg>
@@ -845,7 +845,7 @@ const MyInfo = () => {
                 className="w-full text-left active:opacity-80"
                 style={{ borderRadius: 14, background: "#FBF5E6", padding: "10px 10px 10px 12px" }}
               >
-                <span className="flex items-center" style={{ gap: 5, minHeight: 20, paddingRight: 24, fontSize: rem(12), fontWeight: 700, color: "#94723A" }}>
+                <span className="flex items-center" style={{ gap: 5, minHeight: 20, paddingRight: 24, fontSize: rem(12), fontWeight: 700, color: "#886935" /* 칸 바탕 대비 4.69:1 (2026-11-24, 예전 #94723A 4.08:1) */ }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="#E0B04A" aria-hidden="true" className="shrink-0">
                     <path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.3 6L12 16.4 6.6 19.4l1.3-6L3.4 9.3l6-.7z" />
                   </svg>
