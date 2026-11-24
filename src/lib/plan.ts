@@ -69,6 +69,22 @@ export function setPreviewTier(t: Tier): void {
   });
 }
 
+/**
+ * 갱신 확인 유예 (2026-11-24) — 유료 플랜(plus·예전 trial)의 만료 시각이 막 지났을 때, 이 시간 동안은 Plus 로 봅니다.
+ * 테스트 구독(월간 5분)에서 만료 순간 곧바로 무료로 바꾸고 3초 뒤에야 다시 확인해, 갱신된 구독인데도 잠금 화면이 4~6초
+ * 보였습니다(S21, 서버 tail·화면 덤프로 확인). "확인 전에 먼저 잠그는" 순서를 바꿉니다 — 그동안 planExpiry 가
+ * 만료 + 3초·60초·3분에 다시 확인하고, 서버가 무료로 답하면(세션 plan 이 바뀜) 유예 없이 바로 무료입니다.
+ * 심사용·Special·관리자 판단에는 쓰지 않습니다.
+ */
+export const RENEW_GRACE_MS = 10 * 60 * 1000;
+
+/** 만료 시각이 막 지나 갱신 확인을 기다리는 유료 플랜인가 (만료 전이면 false) */
+export function inRenewGrace(plan: { tier?: string; until?: number } | null | undefined, now: number = Date.now()): boolean {
+  if (!plan || !(plan.tier === "plus" || plan.tier === "trial")) return false;
+  const until = plan.until;
+  return typeof until === "number" && until > 0 && until <= now && now < until + RENEW_GRACE_MS;
+}
+
 export function getTier(): Tier {
   const pv = getPreviewTier();
   if (pv) return pv;
@@ -85,6 +101,8 @@ export function getTier(): Tier {
   if (p.tier === "review" && (!p.until || live)) return "plus";
   // 체험 폐지(2026-11-23) 전 서버는 체험을 {tier:"trial"} 로 줬습니다. 그런 세션도 만료 시각(원래 체험 끝)까지만 plus.
   if ((p.tier === "plus" || p.tier === "trial") && live) return "plus";
+  // 만료 시각이 막 지남 — 갱신 확인을 기다리는 동안(RENEW_GRACE_MS)은 잠그지 않습니다.
+  if (inRenewGrace(p)) return "plus";
   return "free";
 }
 
@@ -113,6 +131,7 @@ export function isStaffTier(): boolean {
 // 등급은 plan.until 과 지금 시각으로 정해지는데, until 이 지나는 순간에는 세션이 바뀌지 않아 아무도 알려 주지 않았습니다.
 // 그래서 화면마다 "그린 때의 등급"이 남아, 어떤 화면은 Plus·어떤 화면은 무료로 갈릴 수 있었습니다.
 // until 이 지나는 순간 onTierChange 구독자 모두에게 한 번 알려 usePlan() 을 쓰는 화면이 함께 다시 판단하게 합니다.
+// 유료 플랜(plus·예전 trial)은 등급이 실제로 바뀌는 때인 until + 갱신 확인 유예에 울립니다(2026-11-24).
 const MAX_TIMER_MS = 2147483647;
 let tierClock: ReturnType<typeof setTimeout> | null = null;
 let tierClockWired = false;
@@ -129,9 +148,10 @@ function armTierClock(): void {
     tierClock = null;
   }
   const s = getSession();
-  const p = s && s.plan && typeof s.plan === "object" ? (s.plan as { until?: number }) : null;
+  const p = s && s.plan && typeof s.plan === "object" ? (s.plan as { tier?: string; until?: number }) : null;
   const until = p && typeof p.until === "number" ? p.until : 0;
-  const ms = until - Date.now();
+  const paid = !!p && (p.tier === "plus" || p.tier === "trial");
+  const ms = until + (paid ? RENEW_GRACE_MS : 0) - Date.now();
   if (until > 0 && ms > 0 && ms < MAX_TIMER_MS) {
     tierClock = setTimeout(() => {
       tierClock = null;
