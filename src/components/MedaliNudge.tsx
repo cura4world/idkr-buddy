@@ -12,6 +12,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { medaliEngine, listRounds, dateKey } from "@/lib/medali";
+import { useMedaliPopoverOpen } from "@/components/MedaliPopover";
 
 const NUDGE_KEY = "medali-nudge-date";
 const SHOW_MS = 7000;        // 7초 뒤 스스로 사라집니다
@@ -22,6 +23,8 @@ export default function MedaliNudge() {
   const [show, setShow] = useState(false);
   const [entered, setEntered] = useState(false);   // 등장 트랜지션용
   const timersRef = useRef<number[]>([]);
+  // 명찰 요약 상자(MedaliPopover)가 열려 있는 동안은 겹치지 않게 숨깁니다(2026-11-24). 타이머는 그대로 흐릅니다.
+  const popoverOpen = useMedaliPopoverOpen();
 
   // 타이머만 정리합니다 (setState를 하지 않아 언마운트 중 크래시가 나지 않습니다)
   const clearTimers = () => {
@@ -75,7 +78,7 @@ export default function MedaliNudge() {
     };
   }, []);
 
-  if (!show) return null;
+  if (!show || popoverOpen) return null;
 
   const goPermainan = () => {
     clearTimers();          // setState 없이 정리만 하고 이동합니다
