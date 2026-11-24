@@ -53,6 +53,32 @@ export const SHEET_TONE = {
 } as const;
 export type SheetTone = keyof typeof SHEET_TONE;
 
+// ── 열린 창이 있는가(알림 자리 옮기기용) ─────────────────────────
+// 아래 시트의 바닥 단추가 화면 아래쪽 알림(토스트)에 가려 눌리지 않았습니다(2026-11-24 계정 삭제 직후 "단어장도 지울까요?").
+// 창이 하나라도 열려 있으면 알림을 화면 위쪽에 띄웁니다(src/components/ui/sonner.tsx).
+let openSheetCount = 0;
+const openSheetListeners = new Set<() => void>();
+function setOpenSheetDelta(d: number): void {
+  openSheetCount = Math.max(0, openSheetCount + d);
+  openSheetListeners.forEach((l) => {
+    try { l(); } catch (e) {}
+  });
+}
+
+/** 앱 공통 틀(AppSheet)의 창이 하나라도 열려 있는가 */
+export function useAnySheetOpen(): boolean {
+  const [v, setV] = useState(openSheetCount > 0);
+  useEffect(() => {
+    const f = () => setV(openSheetCount > 0);
+    openSheetListeners.add(f);
+    f();
+    return () => {
+      openSheetListeners.delete(f);
+    };
+  }, []);
+  return v;
+}
+
 function prefersReducedMotion(): boolean {
   try {
     return !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -106,6 +132,13 @@ export default function AppSheet({
   const drag = useRef<{ id: number; y0: number; t0: number; active: boolean } | null>(null);
 
   useBackClose(!!backClose && open, () => { if (!closeLocked) onClose(); });
+
+  // 열려 있는 동안 알림을 화면 위쪽으로(바닥 단추를 가리지 않게)
+  useEffect(() => {
+    if (!open) return;
+    setOpenSheetDelta(1);
+    return () => setOpenSheetDelta(-1);
+  }, [open]);
 
   // 열기·닫기 움직임: 열릴 때 그린 뒤 다음 프레임에 올리고, 닫힐 때는 내려가는 동안(closeMs) 남겨 둡니다.
   useEffect(() => {
