@@ -82,8 +82,7 @@ export default function CSVImportDialog({ open, onOpenChange, onImported, catego
       title="CSV 가져오기"
       desc="엑셀·CSV 파일의 단어를 한 번에 넣으세요"
       icon={<FileSpreadsheet size={20} strokeWidth={1.8} />}
-      tileBg="#E4EEF6"
-      tileInk="#2B5F86"
+      dirty={!!csv.trim()}
       footer={
         <FormPrimaryButton onClick={handleImport} disabled={!csv.trim()} muted={!csv.trim()}>
           가져오기
