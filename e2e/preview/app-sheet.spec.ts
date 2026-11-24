@@ -92,3 +92,58 @@ test("주 단추는 창 바닥에 붙어 있다(글자 125%, 360px)", async ({ p
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(overflow).toBe(false);
 });
+
+// ── 묶음 1(고르기): "완료 = 적용, X·바깥·뒤로가기 = 바꾼 것 버림" 으로 동작이 바뀐 창 ──
+
+test("볼 문장 고르기 — X 는 바꾼 것을 버리고, 완료를 눌러야 적용", async ({ page }) => {
+  await setupPreview(page, { tier: "plus" });
+  await openApp(page, "");
+  const kindsNow = () => page.evaluate(() => localStorage.getItem("phrase-kinds"));
+  const before = await kindsNow();
+  const open = async () => {
+    await page.locator('button[aria-label="문장 종류 고르기"]:visible').first().click();
+    const s = page.getByRole("dialog", { name: "볼 문장을 고르세요", exact: true });
+    await expect(s).toBeVisible();
+    return s;
+  };
+  let sheet = await open();
+  const row = sheet.getByRole("checkbox", { name: new RegExp("회화집") });
+  const was = await row.getAttribute("aria-checked");
+  await row.click();
+  await expect(row).toHaveAttribute("aria-checked", was === "true" ? "false" : "true");
+  expect(await kindsNow()).toBe(before); // 체크만으로는 저장하지 않음
+  await sheet.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  expect(await kindsNow()).toBe(before);
+  sheet = await open();
+  await expect(sheet.getByRole("checkbox", { name: new RegExp("회화집") })).toHaveAttribute("aria-checked", was || "false");
+  await sheet.getByRole("checkbox", { name: new RegExp("회화집") }).click();
+  await sheet.getByRole("button", { name: "완료", exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  expect(await kindsNow()).not.toBe(before);
+});
+
+test("글자 크기 — 고르는 동안 미리 보이고, X 는 원래 크기로, 완료는 저장", async ({ page }) => {
+  await setupPreview(page, { tier: "plus" });
+  await openApp(page, "me");
+  const rootPx = () => page.evaluate(() => getComputedStyle(document.documentElement).fontSize);
+  const saved = () => page.evaluate(() => localStorage.getItem("app-font-scale-step"));
+  const px0 = await rootPx();
+  const step0 = await saved();
+  await page.getByText("글자 크기", { exact: true }).first().click();
+  let sheet = page.getByRole("dialog", { name: new RegExp("^글자 크기") });
+  await expect(sheet).toBeVisible();
+  await sheet.getByRole("button", { name: "글자 크게" }).click();
+  expect(await rootPx()).not.toBe(px0); // 미리 보기
+  await sheet.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  expect(await rootPx()).toBe(px0); // 원래 크기로
+  expect(await saved()).toBe(step0);
+  await page.getByText("글자 크기", { exact: true }).first().click();
+  sheet = page.getByRole("dialog", { name: new RegExp("^글자 크기") });
+  await sheet.getByRole("button", { name: "글자 크게" }).click();
+  await sheet.getByRole("button", { name: "완료", exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  expect(await rootPx()).not.toBe(px0);
+  expect(await saved()).not.toBe(step0);
+});
