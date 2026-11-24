@@ -1,13 +1,18 @@
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, toast } from "sonner";
+import { useAnySheetOpen } from "@/components/sheet/AppSheet";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
+  // 옵션 창(아래 시트)이 열려 있으면 알림을 위쪽에 — 아래쪽 알림이 시트의 바닥 단추를 가려 눌리지 않았음(2026-11-24)
+  const sheetOpen = useAnySheetOpen();
 
   return (
     <Sonner
+      {...props}
+      position={sheetOpen ? "top-center" : props.position}
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       toastOptions={{
@@ -20,8 +25,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
           actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
         },
+        ...props.toastOptions,
       }}
-      {...props}
     />
   );
 };
