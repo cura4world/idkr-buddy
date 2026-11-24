@@ -431,6 +431,14 @@ curl -s "https://api.github.com/repos/cura4world/idkr-buddy/actions/runs?per_pag
 - 네이티브 코드는 **APK 재빌드 + 두 기기 재설치**가 필요하다. 그래서 넘어가기 전에
   "정말 웹으로는 안 오는가"를 숫자로 확정하고 간다(6번의 진단 장치)
 
+**8. 스토어 앱(공개판)의 `console` 은 logcat 에 나오지 않는다.** (2026-11-24 진단 기록 KKBilling 0줄)
+폰에서만 나는 결제·등급 문제는 서버 `wrangler tail` 과 `adb shell uiautomator dump` 화면 덤프의 시각을 맞춰 추적한다.
+
+**9. `wrangler kv key get` 은 1분 가까이 늦은 값을 줄 수 있다.** 시각 판단("몇 시 몇 분에 무엇이 바뀌었나")은
+tail 기록을 기준으로 하고, KV 값은 결과 확인에만 쓴다.
+
+**10. `wrangler tail` 에는 모든 사용자와 curl 요청이 섞인다.** 확인하는 기기의 모델(user-agent)로 골라 본다.
+
 ## 완료 정의
 
 **"코드를 고쳤다"는 완료가 아니다. "사용자가 앱에서 결과를 볼 수 있다"가 완료다.**
