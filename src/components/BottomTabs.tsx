@@ -71,10 +71,10 @@ function sectionOf(p: string): string {
   return TAB_HOME;
 }
 
-/** 닉네임 — 훈장 비교에 쓰는 아이디(6자 이내)가 곧 닉네임입니다. 없으면 Google 이름의 첫 낱말. */
+/** 닉네임(6자 이내, 저장 키 "medali-my-id" — 이름만 옛것). 없으면 Google 이름의 첫 낱말. */
 export function profileName(s: PublicSession | null): string {
   const id = getMyMedaliId();
-  if (id && id !== "-" && isValidMedaliId(id)) return id.trim();
+  if (id && isValidMedaliId(id)) return id.trim();
   const n = s && s.user && typeof s.user.name === "string" ? s.user.name.trim() : "";
   if (!n) return "";
   return n.split(" ")[0];
