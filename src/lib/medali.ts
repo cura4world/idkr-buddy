@@ -1,6 +1,7 @@
 // src/lib/medali.ts
 // Medali(훈장) 시스템 엔진.
-// - Medali Api(불꽃)   : 이번 주(월~토) 노력 점수. 주일은 점수도 없고 streak도 끊기지 않는다.
+// - Medali Api(불꽃)   : 이번 주(월~일) 노력 점수. 월요일에 0점부터 다시 시작한다.
+//   (2026-11-24 까지는 주일 점수가 0 이고 streak 에서 주일을 건너뛰었다. 지금은 주일도 보통 날 — 쌓인 기록은 소급하지 않음)
 // - Medali Bintang(별) : 누적 실력. "확정 단어"(시차를 두고 2회 맞힌 단어) 절대 개수 기반.
 // 저장은 IndexedDB(kata-medali), 첫 페인트용 색만 localStorage에 캐시한다.
 // 저장이 실패해도 화면은 정상 동작해야 하므로 모든 공개 함수를 try/catch로 감싼다.
@@ -61,7 +62,7 @@ export interface DailyLog {
   date: string;                               // "2026-08-04" (KST 로컬 날짜)
   points: Partial<Record<ApiCategory, number>>;
   total: number;
-  usageMs?: number;                           // 그날 앱을 켜 둔 시간(ms). 점수와 무관하며 주일에도 쌓인다.
+  usageMs?: number;                           // 그날 앱을 켜 둔 시간(ms). 점수와 무관하다.
 }
 
 export interface WordRecord {
@@ -73,6 +74,9 @@ export interface WordRecord {
   lastCorrectAt: number;
   source: string;                             // "bible" | "story" | "map" | "seed" ...
   confirmedAt?: number;
+  // 처음 외운(pending → confirmed) 시각. 다시 확인을 통과한 복귀(recheck·monitoring → confirmed)에서는 바꾸지 않는다.
+  // 내 정보의 "이번 달 별 +N개"가 처음 외운 단어만 세는 데 쓴다(2026-11-24 추가 — 그 전 기록에는 없다).
+  firstConfirmedAt?: number;
   evidence?: number;                          // 확정용 누적 증거 (게임마다 가중치가 다름)
   recoverEvidence?: number;                   // 재검증 복귀용 누적 증거
 }
@@ -173,8 +177,6 @@ const pad2 = (n: number): string => (n < 10 ? "0" + n : String(n));
 
 export const dateKey = (d: Date): string =>
   d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
-
-export const isSunday = (d: Date): boolean => d.getDay() === 0;
 
 // 이번 주 월요일 00:00. 일요일이면 "다음" 월요일이 아니라 지나간 월요일(6일 전)이다.
 export const mondayOf = (d: Date): Date => {
@@ -454,7 +456,6 @@ class MedaliEngine {
   async addPoints(category: ApiCategory, amount: number): Promise<number> {
     try {
       const now = new Date();
-      if (isSunday(now)) return 0; // Api는 월~토만
       const cap = DAILY_CAPS[category];
       if (!cap || !(amount > 0)) return 0;
 
@@ -487,7 +488,7 @@ class MedaliEngine {
     }
   }
 
-  // 1-b) 앱을 켜 둔 시간 적립. 점수가 아니므로 주일 제외도 상한도 없고
+  // 1-b) 앱을 켜 둔 시간 적립. 점수가 아니므로 상한이 없고
   //      log.total 을 건드리지 않는다 — 훈장 색 판정에는 전혀 영향이 없다.
   async addUsageMs(ms: number): Promise<void> {
     try {
@@ -556,6 +557,7 @@ class MedaliEngine {
           if (rec.evidence >= CONFIRM_EVIDENCE && now - rec.firstCorrectAt >= CONFIRM_GAP_MS) {
             rec.status = "confirmed";
             rec.confirmedAt = now;
+            rec.firstConfirmedAt = now;
           }
         }
         // confirmed는 정답 횟수만 쌓고 상태는 그대로
@@ -598,7 +600,7 @@ class MedaliEngine {
     }
   }
 
-  // 4) 2단계(부부 비교)용 요약
+  // 4) 요약 (훈장 말풍선 MedaliNudge 가 이번 주 점수를 봅니다. 두 사람 비교는 2026-11-24 뺐습니다)
   getSummary(): MedaliSummary {
     return {
       apiColor: this.snap.apiColor,
@@ -656,6 +658,51 @@ export async function listWeekLogs(): Promise<DailyLog[]> {
   }
 }
 
+// 지난주(월~일) 불꽃 점수 — 내 정보의 "지난주보다 +N점"(2026-11-24). 이번 주 점수와 같은 방법(내 기기 + 다른 기기 몫,
+// 날짜마다 합친 뒤 하루 상한)으로 셉니다. hasHistory: 이번 주 월요일보다 앞선 기록이 하나라도 있는가(없으면 첫 주라 비교하지 않음).
+export async function lastWeekPoints(now: Date = new Date()): Promise<{ hasHistory: boolean; points: number }> {
+  try {
+    const thisMon = mondayOf(now);
+    const from = dateKey(addDays(thisMon, -7));
+    const until = dateKey(thisMon); // 이 날은 넣지 않음
+    const others = loadOthers();
+    const all = await getAll<DailyLog>(STORE_DAILY);
+    const mineByDate: Record<string, DailyLog> = {};
+    const dates = new Set<string>();
+    for (const l of all) {
+      if (!l || typeof l.date !== "string") continue;
+      mineByDate[l.date] = l;
+      dates.add(l.date);
+    }
+    for (const d of Object.keys(others.byDate)) dates.add(d);
+    let hasHistory = false;
+    let points = 0;
+    for (const d of dates) {
+      if (d < until) hasHistory = true;
+      if (d >= from && d < until) points += mergeDay(mineByDate[d] || null, others, d).total;
+    }
+    return { hasHistory, points };
+  } catch {
+    return { hasHistory: false, points: 0 };
+  }
+}
+
+// 이번 달에 처음 외운 단어 수 — 내 정보의 "이번 달 별 +N개"(2026-11-24).
+// 처음 외운 시각(firstConfirmedAt)으로 셉니다. 그 칸이 없는 예전 기록은 확정 시각(confirmedAt)으로 대신 셉니다 —
+// 그래서 2026-11 안에 다시 확인을 통과한 예전 단어는 한 번 더 세어질 수 있습니다(12월부터는 정확).
+// 지금 별로 세는 상태(confirmed·recheck·monitoring)인 단어만, 이 기기의 기록만 셉니다.
+export function countMonthStars(words: WordRecord[], now: Date = new Date()): number {
+  const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
+  let n = 0;
+  for (const w of words) {
+    if (!w || !(w.status === "confirmed" || w.status === "recheck" || w.status === "monitoring")) continue;
+    const at = typeof w.firstConfirmedAt === "number" ? w.firstConfirmedAt : w.confirmedAt;
+    if (typeof at === "number" && at >= start && at < end) n++;
+  }
+  return n;
+}
+
 // 서버에 올릴 "내 기기가 번 점수" 원본. 합산본(listWeekLogs)과 달리 다른 기기 몫이
 // 절대 섞이면 안 된다 — 섞으면 다음 업로드 때 서로 부풀린다.
 export async function listMyRawLogs(days: number): Promise<DailyLog[]> {
@@ -698,18 +745,14 @@ export async function listRounds(game?: GameRound["game"]): Promise<GameRound[]>
   }
 }
 
-// streak: 최근부터 역산. 일요일은 결번(있어도 없어도 건너뜀),
-// 월~토 중 점수 없는 날을 만나면 중단. 오늘 아직 점수가 없으면 어제까지로 센다.
-function computeStreak(scored: Set<string>, now: Date): number {
+// streak: 최근부터 역산. 점수 없는 날을 만나면 중단(일요일도 보통 날, 2026-11-24).
+// 오늘 아직 점수가 없으면 어제까지로 센다.
+export function computeStreak(scored: Set<string>, now: Date): number {
   let cur = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (isSunday(cur) || !scored.has(dateKey(cur))) cur = addDays(cur, -1);
+  if (!scored.has(dateKey(cur))) cur = addDays(cur, -1);
 
   let streak = 0;
   for (let guard = 0; guard < 400; guard++) {
-    if (isSunday(cur)) {
-      cur = addDays(cur, -1);
-      continue;
-    }
     if (!scored.has(dateKey(cur))) break;
     streak++;
     cur = addDays(cur, -1);
