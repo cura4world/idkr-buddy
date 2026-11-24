@@ -29,7 +29,7 @@ import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchL
 import VoiceSearchPill from "@/components/VoiceSearchPill";
 import AppSheet, { ChoiceGroup, ChoiceRow, SheetButton } from "@/components/sheet/AppSheet";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
-import { LOCK_BUTTON_SUB } from "@/lib/plusCopy";
+import PlusMoreButton from "@/components/PlusMoreButton";
 import { isWordbookVisible } from "@/lib/wordbookAccess";
 import { listCategories as listPercakapanCategories } from "@/lib/percakapan";
 import {
@@ -1330,13 +1330,8 @@ const Index = () => {
                   회화집·게임·듣기 모두 열기
                 </span>
               </span>
-              <span
-                className="shrink-0 flex items-center text-center text-white font-gothic"
-                style={{ height: 42, padding: "0 13px", borderRadius: 21, background: "#8A6A12", fontSize: hrem(10.5), fontWeight: 700, lineHeight: 1.25 }}
-              >
-                {/* 글자 크기는 '오늘의 이야기' 맨 위 Plus 상자 버튼(PlusLockBox 10.5px)과 같게(2026-11-23 Arga 5) */}
-                Plus<br />{LOCK_BUTTON_SUB}
-              </span>
+              {/* "Plus / 자세히 보기" 알약 — 내 정보 회원 칸과 같은 공용 조각(2026-11-25). 카드 전체가 단추라 겉모양만 */}
+              <PlusMoreButton as="span" />
             </button>
           ) : null}
         </div>
