@@ -9,11 +9,12 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, ChevronDown, ChevronRight, Loader2, MessagesSquare, Plus, RotateCcw } from "lucide-react";
 import LockMark from "@/components/LockMark";
 import { openPlusLock } from "@/lib/plusLock";
-import { LOCK_TITLE_PERCAKAPAN_MAKE } from "@/lib/tasteAccess";
+import { canOpenScene, LOCK_TITLE_PERCAKAPAN_MAKE } from "@/lib/tasteAccess";
 import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
 import {
   listCategories,
+  listScenes,
   saveCustomCat,
   saveCustomScene,
   getCustomScenes,
@@ -39,7 +40,8 @@ const RESTORE_ASKED_KEY = "percakapan-restore-asked";
 const NEW_CAT = "__new__";
 
 // mineOnly: 이 등급에 가려진 폴더(교회와 신앙)인데 직접 만든 대화가 있어 그 대화만 센 줄(percakapan.ts listCategories, D-21)
-type CatRow = PercakapanCategory & { count: number; mineOnly?: boolean };
+// scenes: 그 주제 안 장면(자물쇠 판단용 — 장면 목록 화면과 같은 listScenes)
+type CatRow = PercakapanCategory & { count: number; mineOnly?: boolean; scenes: Array<{ id: string; custom?: boolean }> };
 
 const C = {
   txt: "#1D1F1E",
@@ -134,7 +136,12 @@ const Percakapan = () => {
   useBackClose(restoreOpen, () => setRestoreOpen(false));
 
   const refresh = () => {
+    // 주제마다 장면을 함께 읽어 둡니다 — 열 수 있는 장면이 하나도 없는 주제에 자물쇠를 붙이기 위해(2026-11-24)
     listCategories()
+      .then(async (list) => {
+        const scenes = await Promise.all(list.map((c) => listScenes(c.id).catch(() => [])));
+        return list.map((c, i) => ({ ...c, scenes: scenes[i].map((s) => ({ id: s.id, custom: s.custom })) }));
+      })
       .then((list) => setAllCats(list))
       .catch(() => setAllCats([]));
   };
@@ -367,8 +374,11 @@ const Percakapan = () => {
         </div>
 
         {cats.length > 0 ? (
-          <div className="overflow-hidden" style={CARD_STYLE}>
+          <div data-percakapan-topics className="overflow-hidden" style={CARD_STYLE}>
             {cats.map((c, i) => {
+              // 자물쇠 = 이 주제 안에 지금 등급으로 열 수 있는 장면이 하나도 없음(판단은 tasteAccess.canOpenScene 그대로).
+              // 장면이 없는 주제(방금 만든 빈 주제)는 잠글 것이 없으니 화살표. 누르면 잠겨 있어도 장면 목록으로 들어갑니다.
+              const locked = c.scenes.length > 0 && !c.scenes.some((s) => canOpenScene(s, plan.plus));
               return (
                 <button
                   key={c.id}
@@ -392,7 +402,12 @@ const Percakapan = () => {
                     <span className="block mt-px truncate font-word text-[0.75rem]" style={{ color: C.sub }}>{c.titleId}</span>
                   </span>
                   <span className="shrink-0 font-gothic text-[0.78125rem]" style={{ color: C.mute }}>{c.count}개</span>
-                  <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#B7BDC1" }} />
+                  {/* 장면 목록(PercakapanCategory)의 자물쇠와 같은 크기·색 */}
+                  {locked ? (
+                    <LockMark size={14} />
+                  ) : (
+                    <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#B7BDC1" }} />
+                  )}
                 </button>
               );
             })}
