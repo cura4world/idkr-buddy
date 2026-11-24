@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock } from "lucide-react";
-import FormSheet from "@/components/FormSheet";
+import FormSheet, { FormPrimaryButton } from "@/components/FormSheet";
 import { useBackClose } from "@/hooks/useBackClose";
 import { onPlusLock } from "@/lib/plusLock";
 import { PAYWALL_PATH } from "@/lib/plan";
@@ -35,22 +35,15 @@ export default function PlusLockSheet() {
       open={open}
       onClose={() => setTitle(null)}
       title={title || ""}
-      icon={<Lock size={19} strokeWidth={2} />}
-      tileBg="#FFF6DC"
-      tileInk="#8A6A12"
+      icon={<Lock size={20} strokeWidth={1.8} />}
+      tone="plus"
       zIndex={60}
       footer={
-        <button
-          type="button"
-          onClick={more}
-          className="mt-4 w-full h-12 rounded-2xl flex items-center justify-center font-gothic text-[0.9375rem] font-semibold text-white active:opacity-90"
-          style={{ background: "#8A6A12" }}
-        >
-          Plus {LOCK_BUTTON_SUB}
-        </button>
+        // 주 단추는 앱 공통 청록, 금색은 머리 아이콘 칸에만(2026-11-24 Arga S3)
+        <FormPrimaryButton onClick={more}>Plus {LOCK_BUTTON_SUB}</FormPrimaryButton>
       }
     >
-      <p className="m-0 font-gothic text-[0.8125rem] leading-[1.6] break-keep" style={{ color: "#646C72" }}>
+      <p className="m-0 font-gothic text-[0.84375rem] leading-[1.6] break-keep" style={{ color: "#3B4245" }}>
         {LOCK_DESC}
       </p>
     </FormSheet>
