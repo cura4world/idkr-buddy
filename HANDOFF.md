@@ -18,6 +18,8 @@
 - 빠른 수정(같은 날): 공개판 명찰 요약을 명찰 아래 떠 있는 상자(`components/MedaliPopover.tsx`)로 — AppSheet 예외, `DECISIONS.md` 28장 예외 줄. 내 정보 별 칸 → 별 탭.
 - 빠른 수정(같은 날): 요약 상자 불꽃 칸 단계 줄 한 줄(연속 N일은 요일 막대 위로).
 - 빠른 수정(같은 날): 회화집 주제 목록에 자물쇠(무료, 열 수 있는 장면이 없는 주제). 화면 테스트 `e2e/preview/percakapan-lock.spec.ts`.
+- 수정(같은 날): Plus 가 끝난 뒤 만든 것은 읽기 전용 + 새 단어장 만들기(묶기 포함)는 Plus, 직접 만든 대화 듣기 잠금, 미리 알림 문장(Plus 화면·내 정보). `DECISIONS.md` 맛보기 절.
+  화면 테스트 `e2e/preview/made-by-me.spec.ts`(넣어 두기 도우미 `e2e/madeByMe.ts`). 약관 제5조에 넣을 문장은 제안만(게시는 HQ 경유) — 아직 ①② 안 고침.
 - 다음: 대화 Claude 의 S21 확인 → 빠른 수정.
 
 ## 34차 — 옵션 창 디자인 통일 (2026-11-24 · 배경은 `DECISIONS.md` 28장, 설계는 `docs/review/sheet-unify-2026-11-24.md`)
