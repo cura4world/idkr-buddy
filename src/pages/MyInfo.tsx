@@ -38,7 +38,7 @@ import { getSession, onSessionChange, signOut, deleteAccount, PublicSession } fr
 import { askLocalWipe } from "@/lib/localWipe";
 import { billingAvailable, manageSubscription, recheckSubscription } from "@/lib/billing";
 import { usePlusPricing } from "@/lib/playOffers";
-import { canceledUntilText } from "@/lib/plusCopy";
+import { canceledUntilText, NOTE_KEEP_CREATIONS } from "@/lib/plusCopy";
 import { isStoreApp, storeAppVersion, hasNativeFileSave, saveFileNative, PRIVACY_URL, TERMS_URL, BUSINESS_INFO_URL } from "@/lib/platform";
 import { getEdition, EDITION_LABEL } from "@/lib/access";
 import { getMemberProfile } from "@/lib/member";
@@ -703,7 +703,19 @@ const MyInfo = () => {
               />
             )}
           </Card>
-        ) : (
+        ) : null}
+        {/* 해지로 가는 곳(구독 관리) 바로 아래 — Plus 가 끝난 뒤 만든 것은 어떻게 되는지 미리 알림(2026-11-24, 문구는 plusCopy.ts 한 곳).
+            결제가 없는 심사용 계정에는 내지 않습니다 */}
+        {tier === "plus" && !review ? (
+          <p
+            data-keep-creations
+            className="font-gothic break-keep"
+            style={{ margin: "-4px 6px 0", fontSize: rem(11.5), lineHeight: 1.55, color: "#7A8287" }}
+          >
+            {NOTE_KEEP_CREATIONS}
+          </p>
+        ) : null}
+        {tier === "plus" || tier === "free" ? null : (
           <Card style={{ overflow: "hidden" }}>
             <Row
               icon={I_DOC}
