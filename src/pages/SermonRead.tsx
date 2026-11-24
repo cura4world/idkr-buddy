@@ -42,6 +42,8 @@ import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, LOOKUP_FAIL_TEXT }
 import { loadSaveTargets, loadSaveTargetId, saveSaveTargetId } from "@/lib/saveTarget";
 import WordbookPickerSheet from "@/components/WordbookPickerSheet";
 import WordMiniSheet from "@/components/WordMiniSheet";
+import AppSheet, { ConfirmSheet } from "@/components/sheet/AppSheet";
+import { useBackClose } from "@/hooks/useBackClose";
 import {
   SermonBlock,
   SermonFmt,
@@ -606,6 +608,8 @@ const SermonRead = () => {
   const [inkTool, setInkTool] = useState<InkToolState>(loadInkTool);
   const [eraser, setEraser] = useState(false);
   const [eraseMenu, setEraseMenu] = useState(false);
+  // "필기 전체 지우기" 확인 창(2026-11-24 옵션 창 통일 — 브라우저 기본 확인 창 대신 공통 확인 시트)
+  const [eraseAllConfirm, setEraseAllConfirm] = useState(false);
   const [inkTick, setInkTick] = useState(0);
   const [inkH, setInkH] = useState(0);
   const [barHidden, setBarHidden] = useState(false);
@@ -1551,7 +1555,11 @@ const SermonRead = () => {
   const clearAllInk = () => {
     setEraseMenu(false);
     if (!hasInk) return;
-    if (!window.confirm("이 설교문의 필기를 모두 지울까요?")) return;
+    setEraseAllConfirm(true);
+  };
+
+  const doClearAllInk = () => {
+    setEraseAllConfirm(false);
     if (saveTimerRef.current !== null) {
       window.clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
@@ -1599,6 +1607,9 @@ const SermonRead = () => {
       }
     } catch (e) {}
   };
+
+  // 폰 뒤로가기는 지우개 메뉴만 닫습니다(예전에는 설교문 화면을 떠났음, 2026-11-24)
+  useBackClose(inkMode && eraseMenu, () => setEraseMenu(false));
 
   // 지우개 메뉴 열기 — 도구막대 밖에 fixed 로 띄우므로 여는 순간 버튼 위치를 재둡니다.
   const toggleEraseMenu = () => {
@@ -2662,14 +2673,17 @@ const SermonRead = () => {
         </div>
       ) : null}
 
-      {/* 목차 시트 */}
-      {tocOpen ? (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/40" onClick={closeSub} />
-          <div className={"fixed inset-x-0 bottom-0 z-50 mx-auto " + widthClass + " rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5"}>
-            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
-            <h2 className="px-4 pb-3 text-sm font-semibold text-foreground">목차</h2>
-            <div className="max-h-[55vh] overflow-y-auto border-t border-border">
+      {/* 목차 시트 — 2026-11-24 옵션 창 통일: 앱 공통 틀. 뒤로가기는 이 화면의 pushSub/closeSub 가 그대로 맡습니다. */}
+      <AppSheet
+        open={tocOpen}
+        onClose={closeSub}
+        title="목차"
+        icon={<List size={20} strokeWidth={1.8} />}
+        widthClass={widthClass}
+        bodyPadding="4px 0 calc(16px + env(safe-area-inset-bottom))"
+        gap={0}
+      >
+            <div className="border-t border-border">
               {tocItems.map((x) => (
                 <button
                   key={x.i}
@@ -2691,9 +2705,20 @@ const SermonRead = () => {
                 </button>
               ))}
             </div>
-          </div>
-        </>
-      ) : null}
+      </AppSheet>
+
+      {/* 필기 전체 지우기 확인 — 브라우저 기본 확인 창 대신 공통 확인 시트. 문구는 그대로 */}
+      <ConfirmSheet
+        open={eraseAllConfirm}
+        onCancel={() => setEraseAllConfirm(false)}
+        onConfirm={doClearAllInk}
+        title="필기 전체 지우기"
+        message="이 설교문의 필기를 모두 지울까요?"
+        confirmLabel="지우기"
+        danger
+        backClose
+        zIndex={60}
+      />
 
       {/* 단어 팝업 — 2026-11-11 사용자 요청으로 이야기·회화집과 같은 공용 시트(WordMiniSheet)로 통일 */}
       {popupWord && (
