@@ -93,6 +93,13 @@ export function noteAutoRenew(yearly: boolean): string {
 export const NOTE_CANCEL =
   "해지는 언제든 할 수 있으며, 결제한 기간이 끝날 때까지 이용할 수 있습니다. 남은 기간의 금액은 돌려드리지 않습니다.";
 
+/**
+ * Plus 가 끝난 뒤 만든 것은 어떻게 되는가(2026-11-24 사용자 결정 — 만든 것은 읽기 전용으로 남김, 범위는 tasteAccess.ts).
+ * Plus 화면 혜택 아래와 내 정보 구독 관리 아래에 같은 문장으로 씁니다.
+ */
+export const NOTE_KEEP_CREATIONS =
+  "Plus가 끝나도 만든 단어장·대화·이야기는 그대로 남아 읽을 수 있습니다. 새로 만들기와 듣기는 Plus에서 할 수 있습니다.";
+
 /** 구독 버튼 아래 안내 — 자동 결제 고지 + 해지·환불 */
 export function notePlanLines(yearly: boolean): string[] {
   return [noteAutoRenew(yearly), NOTE_CANCEL];
