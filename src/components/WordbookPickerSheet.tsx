@@ -1,16 +1,18 @@
 // src/components/WordbookPickerSheet.tsx
 // "어디에 담을까요?" — 담을 단어장을 고르는 시트. 사전과 각 화면의 단어 팝업이 함께 씁니다.
-// 글자는 2026-11-23 E-4 로 한 단계씩 작게(제목 14→13px, 단어장 이름·새 단어장 13→12px, 개수 11→10.5px).
+// 2026-11-24 옵션 창 통일: 앱 공통 틀(AppSheet, 고르기 하나). 동작은 그대로 — 줄을 누르면 그 단어장이 담을 곳이 되고 닫힘.
+// 라디오는 "지금 담는 곳" 표시로만 씁니다. X·바깥 누르기는 바꾸지 않고 닫기.
 //
 // 히스토리(폰 뒤로가기)는 이 컴포넌트가 다루지 않습니다.
 // 화면마다 팝업의 뒤로가기 처리 방식이 달라, 여는 쪽에서 open/onOpenChange 로 맞춥니다.
 
 import { useEffect, useState } from "react";
-import { Check, Plus } from "lucide-react";
+import { BookmarkPlus, Plus } from "lucide-react";
 import { Category, getWordsByCategory } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId } from "@/lib/saveTarget";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import { CategoryGlyph } from "@/components/CategoryIcon";
+import AppSheet, { ChoiceRow, SHEET, SheetButton } from "@/components/sheet/AppSheet";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 
@@ -52,46 +54,37 @@ export default function WordbookPickerSheet({ open, onOpenChange, targetId, onPi
 
   return (
     <>
-      {open ? (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => onOpenChange(false)} />
-          <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
-            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
-            <h2 className="px-4 pb-3 text-[0.8125rem] font-semibold text-foreground">담을 단어장을 고르세요</h2>
-            <div className="max-h-[45vh] overflow-y-auto border-t border-border">
-              {targets.length === 0 ? (
-                <p className="px-4 py-4 text-[0.75rem] leading-relaxed text-muted-foreground">
-                  담을 단어장이 없습니다. 아래에서 새 단어장을 만들어 주세요.
-                </p>
-              ) : (
-                targets.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => { onPick(c.id); onOpenChange(false); }}
-                    className="flex w-full items-center gap-2.5 border-b border-border px-4 py-2.5 text-left active:bg-muted/60"
-                  >
-                    <span className="shrink-0 flex items-center text-[0.9375rem]"><CategoryGlyph value={c.emoji} size={17} /></span>
-                    <span className="min-w-0 flex-1 truncate text-[0.75rem] text-foreground">{c.name}</span>
-                    <span className="shrink-0 text-[0.65625rem] text-muted-foreground">{counts[c.id] ?? 0}</span>
-                    <span className="w-4 shrink-0 text-primary">
-                      {c.id === targetId ? <Check size={14} /> : null}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-            {/* 시트를 먼저 닫고 다이얼로그를 엽니다 (히스토리가 겹치지 않도록) */}
-            <button
-              type="button"
-              onClick={() => { onOpenChange(false); setAddOpen(true); }}
-              className="flex w-full items-center gap-2 px-4 py-3 text-[0.75rem] text-primary active:bg-muted/60"
-            >
-              <Plus size={14} /> 새 단어장 만들기
-            </button>
-          </div>
-        </>
-      ) : null}
+      <AppSheet
+        open={open}
+        onClose={() => onOpenChange(false)}
+        title="담을 단어장을 고르세요"
+        icon={<BookmarkPlus size={20} strokeWidth={1.8} />}
+        zIndex={55}
+        footer={
+          // 시트를 먼저 닫고 다이얼로그를 엽니다 (히스토리가 겹치지 않도록)
+          <SheetButton variant="secondary" onClick={() => { onOpenChange(false); setAddOpen(true); }}>
+            <Plus size={16} strokeWidth={2} /> 새 단어장 만들기
+          </SheetButton>
+        }
+      >
+        {targets.length === 0 ? (
+          <p className="m-0 py-3 text-center font-gothic text-[0.8125rem] leading-relaxed break-keep" style={{ color: SHEET.mute }}>
+            담을 단어장이 없습니다. 아래에서 새 단어장을 만들어 주세요.
+          </p>
+        ) : (
+          targets.map((c) => (
+            <ChoiceRow
+              key={c.id}
+              mode="single"
+              selected={c.id === targetId}
+              onClick={() => { onPick(c.id); onOpenChange(false); }}
+              leading={<CategoryGlyph value={c.emoji} size={18} />}
+              title={<span className="block truncate">{c.name}</span>}
+              trailing={(counts[c.id] ?? 0) + "개"}
+            />
+          ))
+        )}
+      </AppSheet>
 
       <AddCategoryDialog open={addOpen} onOpenChange={setAddOpen} onAdded={handleAdded} />
     </>
