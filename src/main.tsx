@@ -5,6 +5,7 @@ import "./index.css";
 import { applyFontScale } from "./lib/fontScale";
 import { startUsageTimer } from "./lib/usageTimer";
 import { isPreview } from "./lib/preview";
+import { cleanupRetiredMedaliKeys } from "./lib/medaliSync";
 
 // 저장된 글자 크기 배율을 앱 시작 시 적용
 applyFontScale();
@@ -44,6 +45,10 @@ try {
 } catch (e) {
   // IndexedDB 미지원 환경에서는 무시
 }
+
+// 훈장 두 사람 비교를 뺌(2026-11-24)에 따라 쓰지 않게 된 저장 키(상대 요약 사본·요약 올린 시각)를 지웁니다.
+// 키 두 개를 지우는 것뿐이라 표시 없이 매번 돌립니다.
+cleanupRetiredMedaliKeys();
 
 // 앱 자동 업데이트: 앱이 포그라운드로 돌아올 때마다 새 버전이 있는지 확인하고,
 // 서비스워커가 새 버전으로 교체되면 "화면이 가려져 있을 때만" 새로고침합니다(출시 전 점검 C-04).
