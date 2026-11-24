@@ -15,7 +15,9 @@ import AppSheet, { ChoiceRow, ConfirmSheet, SHEET } from "@/components/sheet/App
 import { toast } from "sonner";
 import { isStoreApp } from "@/lib/platform";
 import { usePlan } from "@/lib/plan";
-import { canOpenWordbook } from "@/lib/tasteAccess";
+import { canCreateWordbook, canOpenWordbook, LOCK_TITLE_WORDBOOK_MAKE } from "@/lib/tasteAccess";
+import { openPlusLock } from "@/lib/plusLock";
+import LockMark from "@/components/LockMark";
 import { GROUP_STYLES, GroupKey, groupOf, bookTitle, bookNumberText, displayMeaning } from "@/lib/wordbookGroups";
 import { loadIllustBook, hasIllustBook, IllustScene } from "@/lib/illust";
 import { CategoryTile } from "@/components/CategoryIcon";
@@ -389,7 +391,12 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
     setNudgeAt(words.length);
   };
 
+  // 묶기는 새 단어장을 만드는 길이라 단어장 만들기와 같이 Plus 기능입니다(2026-11-24, tasteAccess.canCreateWordbook)
   const openArchive = () => {
+    if (!canCreateWordbook(plan.plus)) {
+      openPlusLock(LOCK_TITLE_WORDBOOK_MAKE);
+      return;
+    }
     setArchiveName(nextArchiveName());
     setArchiveOpen(true);
   };
@@ -966,10 +973,16 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
     : [];
 
   // "추가하기" 시트의 줄. 내 단어장은 세 줄, 보관한 단어장은 단어 추가·CSV 가져오기 두 줄.
-  const plusItems: { key: string; title: string; sub: string; tileBg: string; ink: string; icon: React.ReactNode; onClick: () => void }[] = [
+  // 단어장 만들기는 Plus 기능 — 무료는 줄 오른쪽에 자물쇠, 누르면 공용 잠금 안내 창(2026-11-24)
+  const makeLocked = !canCreateWordbook(plan.plus);
+  const plusItems: { key: string; title: string; sub: string; tileBg: string; ink: string; icon: React.ReactNode; onClick: () => void; locked?: boolean }[] = [
     { key: "word", title: "단어 추가", sub: "단어와 뜻, 예문을 직접 넣으세요", tileBg: "#DDF0EA", ink: "#2C6D63", icon: <Plus size={17} strokeWidth={1.8} />, onClick: () => setAddOpen(true) },
     ...(isMine
-      ? [{ key: "cat", title: "단어장 만들기", sub: "주제별로 새 단어장을 만드세요", tileBg: "#E2E6F3", ink: "#2F3E7C", icon: <FolderPlus size={17} strokeWidth={1.8} />, onClick: () => setAddCatOpen(true) }]
+      ? [{
+          key: "cat", title: "단어장 만들기", sub: "주제별로 새 단어장을 만드세요", tileBg: "#E2E6F3", ink: "#2F3E7C", icon: <FolderPlus size={17} strokeWidth={1.8} />,
+          locked: makeLocked,
+          onClick: () => (makeLocked ? openPlusLock(LOCK_TITLE_WORDBOOK_MAKE) : setAddCatOpen(true)),
+        }]
       : []),
     { key: "csv", title: "CSV 가져오기", sub: "엑셀·CSV 파일의 단어를 한 번에 넣으세요", tileBg: "#E4EEF6", ink: "#2B5F86", icon: <FileSpreadsheet size={17} strokeWidth={1.8} />, onClick: () => setCsvOpen(true) },
   ];
@@ -1057,6 +1070,7 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
                         <span className="truncate font-body text-[0.9375rem]" style={{ color: "#1D1F1E" }}>{m.title}</span>
                         <span className="font-gothic text-[0.75rem] break-keep" style={{ color: "#646C72" }}>{m.sub}</span>
                       </span>
+                      {m.locked ? <LockMark size={14} /> : null}
                     </button>
                   ))}
                 </div>
@@ -1167,8 +1181,9 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
           <button
             type="button"
             onClick={openArchive}
-            className="shrink-0 h-8 px-3 rounded-full bg-white font-gothic text-[0.75rem] font-semibold text-[#7A520C] active:opacity-80"
+            className="shrink-0 h-8 px-3 rounded-full bg-white font-gothic text-[0.75rem] font-semibold text-[#7A520C] active:opacity-80 inline-flex items-center gap-1"
           >
+            {makeLocked ? <LockMark size={12} /> : null}
             묶기
           </button>
           <button
