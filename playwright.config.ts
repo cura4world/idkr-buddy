@@ -50,6 +50,8 @@ export default defineConfig({
     serviceWorkers: "block",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    // 옵션 창(AppSheet)이 열고 닫히는 움직임 없이 바로 제자리에 오게 — 위치를 재는 시험이 움직이는 중간을 잡지 않도록(2026-11-24)
+    contextOptions: { reducedMotion: "reduce" },
   },
   projects: [
     {
