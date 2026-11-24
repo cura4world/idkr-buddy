@@ -169,7 +169,8 @@ src/
     sheet/AppSheet.tsx       모든 옵션 창(입력·고르기·확인·안내)의 공통 틀 — 새 창은 이것(또는 FormSheet·ConfirmSheet)으로
     PlayButton.tsx           수정 금지
     MedaliBadge.tsx          헤더 명찰 캡슐 (불꽃 + 별)
-    MedaliSheet.tsx          훈장 팝업 (명찰을 누르면 올라옴)
+    MedaliSheet.tsx          훈장 창 — view="summary"(명찰, 요약) / "detail"(내 정보 훈장 칸·관리자판 명찰, 자세히)
+    MedaliWeekCompare.tsx    "지난주보다 ±N점 · 이번 달 별 +N개" 한 줄 (내 정보·요약 창 공용)
     MedaliNudge.tsx          게임을 며칠 안 하면 뜨는 말풍선
     MedaliHelpBubble.tsx     내 정보 훈장 칸 ⓘ 설명 말풍선 (AppSheet 의 예외, DECISIONS 29장)
     PointFloat.tsx           점수 확정 순간 "+N"이 잠깐 떠오름
