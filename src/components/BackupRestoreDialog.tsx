@@ -1,11 +1,11 @@
 // src/components/BackupRestoreDialog.tsx
 // 백업 파일 불러오기 — 백업 파일(.json)을 고르거나, '복사'로 보관해 둔 글을 붙여넣어 이 기기에 합칩니다.
 // 덮어쓰지 않고 합치므로 같은 백업을 두 번 넣어도 단어가 두 번 생기지 않습니다.
+// 2026-11-24 옵션 창 통일: 가운데 대화상자 → 앱 공통 틀(입력) 아래 시트. 문구·동작은 그대로.
+// 파일을 골랐거나 글을 붙여넣었으면 끌기·바깥 누르기로 닫히지 않고 X 로만 닫힙니다. 합치는 중에는 닫히지 않습니다.
 
 import { useState, useRef, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { ArchiveRestore } from "lucide-react";
 import { toast } from "sonner";
 import {
   PersonalBundle,
@@ -17,6 +17,8 @@ import {
 } from "@/lib/transfer";
 import { isStoreApp } from "@/lib/platform";
 import { useBackClose } from "@/hooks/useBackClose";
+import FormSheet, { FORM_FIELD_CLASS, FormPrimaryButton, FormSpinner } from "@/components/FormSheet";
+import { SHEET, SheetButton } from "@/components/sheet/AppSheet";
 
 interface BackupRestoreDialogProps {
   open: boolean;
@@ -32,8 +34,8 @@ export default function BackupRestoreDialog({ open, onOpenChange }: BackupRestor
   // 공개판에는 '복사'가 없고 버튼 이름이 "백업 파일 저장"입니다(내 정보 > 새 폰으로 옮기기)
   const storeApp = isStoreApp();
 
-  // 폰의 뒤로가기는 이 창만 닫습니다(화면을 떠나지 않음)
-  useBackClose(open, () => onOpenChange(false));
+  // 폰의 뒤로가기는 이 창만 닫습니다(화면을 떠나지 않음). 합치는 중에는 닫지 않습니다.
+  useBackClose(open, () => { if (!busy) onOpenChange(false); });
 
   useEffect(() => {
     if (open) {
@@ -98,50 +100,58 @@ export default function BackupRestoreDialog({ open, onOpenChange }: BackupRestor
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm mx-auto bg-card">
-        <DialogHeader>
-          <DialogTitle className="font-body text-gray-900">백업 파일 불러오기</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <p className="text-xs leading-relaxed text-muted-foreground font-gothic">
-            {storeApp
-              ? "'백업 파일 저장'으로 받은 파일을 고르세요. 지금 있는 것은 지우지 않고 합칩니다."
-              : "'파일 저장'으로 받은 백업 파일을 고르거나, '복사'로 보관해 둔 글을 아래에 붙여넣으세요. 지금 있는 것은 지우지 않고 합칩니다."}
-          </p>
-          <input
-            ref={fileRef}
-            type="file"
-            // 종류(MIME)를 앞에 둡니다 — 확장자가 맨 앞이면 안드로이드 웹뷰가 선택 창의 종류를 잘못 잡아
-            // 파일이 회색(선택 불가)으로 나올 수 있습니다(출시 전 점검 D-02). 옮겨 온 파일은 종류가 octet-stream 일 수도 있습니다.
-            accept="application/json,text/plain,text/csv,application/octet-stream,.json,.csv,.txt"
-            onChange={handleFile}
-            className="hidden"
+    <FormSheet
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title="백업 파일 불러오기"
+      desc={storeApp
+        ? "'백업 파일 저장'으로 받은 파일을 고르세요. 지금 있는 것은 지우지 않고 합칩니다."
+        : "'파일 저장'으로 받은 백업 파일을 고르거나, '복사'로 보관해 둔 글을 아래에 붙여넣으세요. 지금 있는 것은 지우지 않고 합칩니다."}
+      icon={<ArchiveRestore size={20} strokeWidth={1.8} />}
+      closeLocked={busy}
+      dirty={!!text.trim() || !!bundle}
+      zIndex={60}
+      footer={
+        <FormPrimaryButton onClick={handleApply} disabled={!bundle || busy} muted={!bundle && !busy} dim={busy}>
+          {busy ? <><FormSpinner />불러오는 중...</> : "이 기기에 합치기"}
+        </FormPrimaryButton>
+      }
+    >
+      <input
+        ref={fileRef}
+        type="file"
+        // 종류(MIME)를 앞에 둡니다 — 확장자가 맨 앞이면 안드로이드 웹뷰가 선택 창의 종류를 잘못 잡아
+        // 파일이 회색(선택 불가)으로 나올 수 있습니다(출시 전 점검 D-02). 옮겨 온 파일은 종류가 octet-stream 일 수도 있습니다.
+        accept="application/json,text/plain,text/csv,application/octet-stream,.json,.csv,.txt"
+        onChange={handleFile}
+        className="hidden"
+      />
+      <SheetButton variant="secondary" disabled={busy} onClick={() => fileRef.current?.click()}>
+        백업 파일 고르기
+      </SheetButton>
+      {storeApp ? null : (
+        <div className={FORM_FIELD_CLASS} style={{ alignItems: "stretch" }}>
+          <textarea
+            value={text}
+            onChange={(e) => handleTextChange(e.target.value)}
+            placeholder="또는 여기에 붙여넣기"
+            aria-label="백업 글 붙여넣기"
+            rows={4}
+            className="flex-1 min-w-0 bg-transparent outline-none resize-none py-2.5 text-[0.8125rem] font-body"
+            style={{ color: SHEET.txt }}
+            disabled={busy}
           />
-          <Button variant="outline" className="w-full text-xs" disabled={busy} onClick={() => fileRef.current?.click()}>
-            백업 파일 고르기
-          </Button>
-          {storeApp ? null : (
-            <Textarea
-              value={text}
-              onChange={(e) => handleTextChange(e.target.value)}
-              placeholder="또는 여기에 붙여넣기"
-              rows={4}
-              className="text-xs font-body"
-              disabled={busy}
-            />
-          )}
-          {bundle ? (
-            <p className="rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-gray-900 font-gothic">
-              {describeSummary(summarize(bundle))}
-            </p>
-          ) : null}
-          {msg ? <p className="text-xs leading-relaxed text-red-500 font-gothic">{msg}</p> : null}
-          <Button onClick={handleApply} className="w-full" disabled={!bundle || busy}>
-            {busy ? "불러오는 중..." : "이 기기에 합치기"}
-          </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+      {bundle ? (
+        <p
+          className="m-0 rounded-[14px] px-3.5 py-2.5 text-[0.78125rem] leading-relaxed font-gothic"
+          style={{ background: SHEET.tealSoft, color: SHEET.txt }}
+        >
+          {describeSummary(summarize(bundle))}
+        </p>
+      ) : null}
+      {msg ? <p className="m-0 text-[0.78125rem] leading-relaxed font-gothic" style={{ color: SHEET.danger }}>{msg}</p> : null}
+    </FormSheet>
   );
 }
