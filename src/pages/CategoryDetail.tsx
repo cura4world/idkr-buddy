@@ -10,12 +10,11 @@ import EditCategoryDialog from "@/components/EditCategoryDialog";
 import CategoryCard from "@/components/CategoryCard";
 import WordIllust, { PencilDefs } from "@/components/WordIllust";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Copy, Trash2, X, ChevronDown, ChevronUp, FileSpreadsheet, FolderInput, FolderPlus, Plus } from "lucide-react";
-import AppSheet, { ChoiceRow, SHEET } from "@/components/sheet/AppSheet";
+import AppSheet, { ChoiceRow, ConfirmSheet, SHEET } from "@/components/sheet/AppSheet";
 import { toast } from "sonner";
 import { isStoreApp } from "@/lib/platform";
 import { usePlan } from "@/lib/plan";
@@ -1437,25 +1436,20 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
             currentEmoji={category.emoji}
             onUpdated={refresh}
           />
-          <AlertDialog open={deleteCatOpen} onOpenChange={setDeleteCatOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="font-body">단어장 삭제</AlertDialogTitle>
-                <AlertDialogDescription>
-                  '{category.name}' 단어장과 포함된 단어 {words.length}개가 모두 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>취소</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={(e) => { e.preventDefault(); handleDeleteCategory(); }}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  삭제
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {/* 단어장 삭제 확인 — 앱 공통 틀의 확인 창(대상 이름 굵게, 빨간 주 단추). 뒤로가기는 위 useBackClose(deleteCatOpen) */}
+          <ConfirmSheet
+            open={deleteCatOpen}
+            onCancel={() => setDeleteCatOpen(false)}
+            onConfirm={handleDeleteCategory}
+            title="단어장 삭제"
+            message={
+              <>
+                '<b>{category.name}</b>' 단어장과 포함된 단어 {words.length}개가 모두 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+              </>
+            }
+            confirmLabel="삭제"
+            danger
+          />
         </>
       ) : null}
       <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
