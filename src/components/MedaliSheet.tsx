@@ -290,7 +290,7 @@ export function MedaliSummaryBody({ open }: { open: boolean }) {
     <div className="font-gothic" data-medali-view="summary" style={{ color: INK }}>
       <div className="grid grid-cols-2" style={{ gap: 8 }}>
         {/* 불꽃 칸 */}
-        <div style={{ borderRadius: 14, background: CELL.api.bg, padding: "10px 10px 10px 12px" }}>
+        <div data-medali-cell="api" className="min-w-0" style={{ borderRadius: 14, background: CELL.api.bg, padding: "10px 10px 10px 12px" }}>
           <p className="flex items-center" style={{ margin: 0, gap: 5, fontSize: "0.75rem", fontWeight: 700, color: CELL.api.title }}>
             <CellFlame color={CELL.api.icon} />
             이번 주 불꽃
@@ -299,9 +299,10 @@ export function MedaliSummaryBody({ open }: { open: boolean }) {
             {snap.apiWeekPoints}
             <span style={{ fontSize: "0.71875rem", fontWeight: 500, color: MUTED }}> 점</span>
           </p>
-          <p className="flex items-center break-keep" style={{ margin: "2px 0 0", gap: 4, fontSize: "0.71875rem", fontWeight: 600, lineHeight: 1.4, color: CELL.api.sub }}>
+          {/* 단계 줄 = [아이콘] + 단계 이름만, 한 줄 고정(넘치면 말줄임). "연속 N일"은 아래 요일 막대 위로 옮김(2026-11-24 — S21 에서 세 줄로 접혔음) */}
+          <p data-medali-stage-line className="flex items-center" style={{ margin: "2px 0 0", gap: 4, fontSize: "0.71875rem", fontWeight: 600, lineHeight: 1.4, color: CELL.api.sub }}>
             <Flame size={14} color={STROKE} fill={apiHex} strokeWidth={1.5} className="shrink-0" />
-            <span>{apiStageName} · 연속 {snap.streak}일</span>
+            <span className="min-w-0 truncate">{apiStageName}</span>
           </p>
           <div style={{ marginTop: 7 }}>
             <ProgressBar widthPct={apiPct} color={apiBarColor} />
@@ -311,7 +312,7 @@ export function MedaliSummaryBody({ open }: { open: boolean }) {
           </p>
         </div>
         {/* 별 칸 */}
-        <div style={{ borderRadius: 14, background: CELL.bintang.bg, padding: "10px 10px 10px 12px" }}>
+        <div data-medali-cell="bintang" className="min-w-0" style={{ borderRadius: 14, background: CELL.bintang.bg, padding: "10px 10px 10px 12px" }}>
           <p className="flex items-center" style={{ margin: 0, gap: 5, fontSize: "0.75rem", fontWeight: 700, color: CELL.bintang.title }}>
             <CellStar color={CELL.bintang.icon} />
             모은 별
@@ -320,9 +321,9 @@ export function MedaliSummaryBody({ open }: { open: boolean }) {
             {snap.confirmedCount}
             <span style={{ fontSize: "0.71875rem", fontWeight: 500, color: MUTED }}> 단어</span>
           </p>
-          <p className="flex items-center break-keep" style={{ margin: "2px 0 0", gap: 4, fontSize: "0.71875rem", fontWeight: 600, lineHeight: 1.4, color: CELL.bintang.sub }}>
+          <p data-medali-stage-line className="flex items-center" style={{ margin: "2px 0 0", gap: 4, fontSize: "0.71875rem", fontWeight: 600, lineHeight: 1.4, color: CELL.bintang.sub }}>
             <Star size={14} color={STROKE} fill={bintangHex} strokeWidth={1.5} className="shrink-0" />
-            <span>{bintangStageName}</span>
+            <span className="min-w-0 truncate">{bintangStageName}</span>
           </p>
           <div style={{ marginTop: 7 }}>
             <ProgressBar widthPct={bintangPct} color={bintangBarColor} />
@@ -333,8 +334,12 @@ export function MedaliSummaryBody({ open }: { open: boolean }) {
         </div>
       </div>
 
+      {/* 연속 N일 — 요일 막대 위 오른쪽 작은 회색 글자(0일이면 안 보임, 줄 높이는 유지) */}
+      <p data-medali-streak className="text-right tabular-nums" style={{ margin: "10px 0 0", minHeight: 16, fontSize: "0.6875rem", lineHeight: "16px", color: FAINT }}>
+        {snap.streak > 0 ? "연속 " + snap.streak + "일" : ""}
+      </p>
       {/* 월~일 작은 막대 — 점수 높이만, 숫자 없음, 오늘 요일 굵게 */}
-      <div className="flex items-end" style={{ marginTop: 14, height: 34, gap: 6 }} aria-hidden="true">
+      <div className="flex items-end" style={{ marginTop: 4, height: 34, gap: 6 }} aria-hidden="true">
         {bars.map((b) => (
           <span key={b.key} className="flex-1 flex flex-col justify-end" style={{ height: "100%" }}>
             <span
