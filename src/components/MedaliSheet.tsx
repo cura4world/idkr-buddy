@@ -42,10 +42,11 @@ const LINE = "#E3E8EB";
 const TEAL = "#2C6D63";
 const FULL = "#C0532A"; // 상한을 채운 줄(주홍) — 흰 바탕 대비 4.65:1
 
-// 불꽃·별 칸 색 — 내 정보 훈장 칸과 같은 값(바탕·제목·제목 옆 그림)
+// 불꽃·별 칸 색 — 내 정보 훈장 칸과 같은 값(바탕·제목·제목 옆 그림). 진행 막대 채움도 그림 색(icon)으로 통일(2026-11-24).
+// 제목은 칸 바탕 대비 4.5:1 이상으로 한 단계 진하게(2026-11-24): 불꽃 #A35A36 4.64:1(예전 #B5643C 3.89:1), 별 #886935 4.69:1(예전 #94723A 4.08:1)
 const CELL = {
-  api: { bg: "#FBF1EC", title: "#B5643C", icon: "#E8875A", sub: "#8A6A5A" },
-  bintang: { bg: "#FBF5E6", title: "#94723A", icon: "#E0B04A", sub: "#8A7A55" },
+  api: { bg: "#FBF1EC", title: "#A35A36", icon: "#E8875A", sub: "#8A6A5A" },
+  bintang: { bg: "#FBF5E6", title: "#886935", icon: "#E0B04A", sub: "#8A7A55" },
 };
 
 const COLOR_NAME: Record<MedaliColor, string> = {
@@ -266,9 +267,15 @@ export default function MedaliSheet({ open, onOpenChange, view = "detail" }: Pro
   const apiNext = nextApiStep(snap.apiWeekPoints);
   const bintangNext = nextBintangStep(snap.confirmedCount);
   const apiPct = apiNext ? pct(snap.apiWeekPoints, apiNext.from, snap.apiWeekPoints + apiNext.need) : 100;
-  const apiBarColor = apiNext ? MEDALI_COLORS[apiNext.color] : apiHex;
+  // 진행 막대 채움은 칸 그림 색 하나로(2026-11-24 — 예전에는 다음 단계 색, 마지막 단계면 지금 색이라 회색·암갈색이 섞였음)
+  const apiBarColor = CELL.api.icon;
   const bintangPct = bintangNext ? pct(snap.confirmedCount, bintangNext.from, snap.confirmedCount + bintangNext.need) : 100;
-  const bintangBarColor = bintangNext ? MEDALI_COLORS[bintangNext.color] : bintangHex;
+  const bintangBarColor = CELL.bintang.icon;
+  // 다음 단계 문구 — 요약·자세히 두 창이 같은 글(2026-11-24): "Perak까지 43점" / "Tanah I까지 6개", 마지막 단계는 "가장 높은 단계"
+  const apiNextText = apiNext ? COLOR_NAME[apiNext.color] + "까지 " + apiNext.need + "점" : "가장 높은 단계";
+  const bintangNextText = bintangNext
+    ? COLOR_NAME[bintangNext.color] + " " + ROMAN[bintangNext.tier] + "까지 " + bintangNext.need + "개"
+    : "가장 높은 단계";
   const apiStageName = COLOR_NAME[snap.apiColor];
   const bintangStageName = COLOR_NAME[snap.bintangColor] + " " + ROMAN[snap.bintangTier];
 
@@ -314,7 +321,7 @@ export default function MedaliSheet({ open, onOpenChange, view = "detail" }: Pro
                 <ProgressBar widthPct={apiPct} color={apiBarColor} />
               </div>
               <p className="tabular-nums" style={{ margin: "4px 0 0", fontSize: "0.6875rem", color: MUTED }}>
-                {apiNext ? COLOR_NAME[apiNext.color] + "까지 " + apiNext.need + "점" : "최고 단계"}
+                {apiNextText}
               </p>
             </div>
             {/* 별 칸 */}
@@ -335,7 +342,7 @@ export default function MedaliSheet({ open, onOpenChange, view = "detail" }: Pro
                 <ProgressBar widthPct={bintangPct} color={bintangBarColor} />
               </div>
               <p className="tabular-nums" style={{ margin: "4px 0 0", fontSize: "0.6875rem", color: MUTED }}>
-                {bintangNext ? "다음 단계까지 " + bintangNext.need + "개" : "최고 단계"}
+                {bintangNextText}
               </p>
             </div>
           </div>
@@ -420,9 +427,7 @@ export default function MedaliSheet({ open, onOpenChange, view = "detail" }: Pro
           <ProgressBar widthPct={isApi ? apiPct : bintangPct} color={isApi ? apiBarColor : bintangBarColor} track="#EEF1F3" height={6} />
         </div>
         <p className="tabular-nums text-right" style={{ margin: "5px 0 0", fontSize: "0.71875rem", color: MUTED }}>
-          {isApi
-            ? (apiNext ? "다음 단계까지 " + apiNext.need + "점" : "최고 단계")
-            : (bintangNext ? "다음 단계까지 " + bintangNext.need + "개" : "최고 단계")}
+          {isApi ? apiNextText : bintangNextText}
         </p>
       </div>
     );
