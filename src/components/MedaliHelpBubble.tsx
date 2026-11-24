@@ -162,17 +162,23 @@ export function MedaliHelpBubble({
       <p className="relative" style={{ margin: "6px 0 0", fontSize: "0.8125rem", lineHeight: 1.6, color: "rgba(255,255,255,0.88)", wordBreak: "keep-all" }}>
         {text.body}
       </p>
-      {/* 색 사다리 — 명찰과 같은 아이콘·색. 좁으면 두 줄로 넘어갑니다 */}
+      {/* 색 사다리 — 명찰과 같은 아이콘·색. 360px·글자 100% 에서 한 줄(2026-11-24 S21 412px 에서 "→ 보석"이 넘어가 간격을 줄임).
+          화살표는 글꼴에 따라 폭이 달라지지 않게 작은 그림(8px)으로, 다음 단계와 한 묶음이라 줄이 바뀌어도 화살표가 줄 맨 앞에 오지 않습니다. */}
       <p
         className="relative flex flex-wrap items-center"
-        style={{ margin: "10px 0 0", columnGap: 4, rowGap: 4, fontSize: "0.75rem", color: "rgba(255,255,255,0.9)" }}
+        style={{ margin: "10px 0 0", columnGap: 3, rowGap: 4, fontSize: "0.75rem", color: "rgba(255,255,255,0.9)" }}
         aria-label={MEDALI_LADDER.map((c) => c.name).join(", ")}
       >
         {MEDALI_LADDER.map((c, i) => (
-          <span key={c.color} className="inline-flex items-center" style={{ gap: 4 }} aria-hidden="true">
-            {i > 0 ? <span style={{ color: "rgba(255,255,255,0.4)", margin: "0 1px" }}>→</span> : null}
-            <Icon size={15} color={STROKE} fill={MEDALI_COLORS[c.color]} strokeWidth={1.5} className="shrink-0" />
-            <span className="whitespace-nowrap">{c.name}</span>
+          <span key={c.color} className="inline-flex items-center whitespace-nowrap" style={{ gap: 2 }} aria-hidden="true">
+            {i > 0 ? (
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3"
+                strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                <path d="M1 4h6M4.5 1.5 7 4 4.5 6.5" />
+              </svg>
+            ) : null}
+            <Icon size={13} color={STROKE} fill={MEDALI_COLORS[c.color]} strokeWidth={1.5} className="shrink-0" />
+            <span>{c.name}</span>
           </span>
         ))}
       </p>
