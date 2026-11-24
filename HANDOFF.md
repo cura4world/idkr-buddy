@@ -11,7 +11,8 @@
 - 불꽃 월~일 집계(주일도 보통 날, 커트라인은 관찰 후 조정). 설명 문구는 `lib/medaliHelp.ts` 한 곳, 내 정보 훈장 칸 ⓘ → 말풍선(`components/MedaliHelpBubble.tsx`).
 - 내 정보: 글꼴 Pretendard 통일·412px 첫 화면에 훈장 끝까지(실측 무료 614px·Plus 646px)·회원 카드 한 줄 가격·순위 줄 대신 "지난주보다 ±N점 · 이번 달 별 +N개".
 - 테스트: 단위 194개(새 `src/test/medali.test.ts` 9개), 화면 119개(새 `e2e/preview/my-info.spec.ts` 3개, `admin-sheets` 아이디 창 시험 교체).
-- 다음: 대화 Claude 의 S21 확인 → 빠른 수정. 지난주 비교를 "지난주 같은 기간"으로 바꿀지 Arga 판단 대기(지금은 지난주 전체와 비교).
+- 후속(같은 날, Arga 결정): 지난주 비교를 같은 기간끼리(이번 주 월~오늘 vs 지난주 월~같은 요일)로, 설명 문구 두 곳(불꽃에 "글 읽기", 별 마지막 문장) 고침.
+- 다음: 대화 Claude 의 S21 확인 → 빠른 수정.
 
 ## 34차 — 옵션 창 디자인 통일 (2026-11-24 · 배경은 `DECISIONS.md` 28장, 설계는 `docs/review/sheet-unify-2026-11-24.md`)
 
