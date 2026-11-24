@@ -115,9 +115,8 @@ export default function AddWordDialog({ open, onOpenChange, defaultCategoryId, c
       title="단어 추가"
       desc="단어와 뜻, 예문을 직접 넣으세요"
       icon={<Plus size={20} strokeWidth={1.8} />}
-      tileBg="#DDF0EA"
-      tileInk="#2C6D63"
       onSubmit={handleSubmit}
+      dirty={!!(word.trim() || meaning.trim() || example.trim() || exampleMeaning.trim())}
       footer={
         <FormPrimaryButton type="submit" disabled={!canSubmit} muted={!canSubmit}>
           추가하기
