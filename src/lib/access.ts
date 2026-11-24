@@ -65,7 +65,9 @@ export async function activateAndSync(
     setPrivateFolderName(profile.folder);
     folderChanged = true;
   }
-  if (profile.medaliId && isValidMedaliId(profile.medaliId) && profile.medaliId !== getMyMedaliId()) {
+  // 닉네임이 비어 있을 때만 회원 아이디로 채웁니다(이미 정한 닉네임은 덮어쓰지 않음, 2026-11-24).
+  // 훈장 기기 합치기는 아이디를 보내지 않고 회원키로 하므로 닉네임과 무관합니다.
+  if (profile.medaliId && isValidMedaliId(profile.medaliId) && !getMyMedaliId()) {
     setMyMedaliId(profile.medaliId);
   }
 
