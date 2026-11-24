@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getGeminiApiKey, setGeminiApiKey, memberKeyInGeminiProblem } from "@/lib/gemini";
 import { getClaudeApiKey, setClaudeApiKey } from "@/lib/claude";
 import { exportPersonalWordsToCSV, getPrivateFolderName, setPrivateFolderName } from "@/lib/store";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import AppSheet, { ConfirmSheet, SheetButton } from "@/components/sheet/AppSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,8 +15,7 @@ import {
   BackupInfo, BackupShrinkError, getBackupInfo, backupNow, restoreFromServerBackup,
   isAutoBackupBlocked, describeBackupMeta, isInApp,
 } from "@/lib/transfer";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Copy, Download, Upload, Trash2, Minus, Plus, Type, Volume2, KeyRound, Smartphone, RotateCcw } from "lucide-react";
+import { Copy, Download, Upload, Trash2, Minus, Plus, Type, Volume2, KeyRound, Smartphone, RotateCcw, Settings as SettingsIcon } from "lucide-react";
 import { toast } from "sonner";
 import { clearLookupWords, countLookupWords } from "@/lib/wordStore";
 import { clearCachedResults, countCachedResults } from "@/lib/dictStore";
@@ -727,12 +726,17 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-sm mx-auto bg-card max-h-[85dvh] overflow-y-auto overflow-x-hidden">
-        <DialogHeader>
-          <DialogTitle className="font-body text-gray-900">설정</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
+    <>
+      {/* 2026-11-24 옵션 창 통일: 가운데 대화상자 → 앱 공통 틀 아래 시트. 안의 칸·문구·저장 동작은 그대로.
+          닫기 단추는 바닥에 고정했습니다(X·바깥·뒤로가기도 닫기). */}
+      <AppSheet
+        open={open}
+        onClose={() => onOpenChange(false)}
+        title="설정"
+        icon={<SettingsIcon size={20} strokeWidth={1.8} />}
+        footer={<SheetButton onClick={() => onOpenChange(false)}>닫기</SheetButton>}
+      >
+        <div className="space-y-4 overflow-x-hidden">
           <div>
             <Label className="font-body text-sm text-gray-900 flex items-center gap-1.5">
               <Type className="w-4 h-4" /> 글자 크기
@@ -1326,52 +1330,45 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             </>
             ) : null}
           </div>
-          <div className="border-t border-gray-200 pt-3">
-            <Button type="button" className="w-full" onClick={() => onOpenChange(false)}>
-              닫기
-            </Button>
-          </div>
         </div>
-        <CSVImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={() => {}} />
-        <BackupRestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} />
+      </AppSheet>
+      <CSVImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={() => {}} />
+      <BackupRestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} />
 
-        <AlertDialog open={confirmClearData} onOpenChange={setConfirmClearData}>
-          <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="font-body text-base text-gray-900">
-                저장된 단어·검색 결과를 비우시겠습니까?
-              </AlertDialogTitle>
-              <AlertDialogDescription className="font-gothic text-xs leading-relaxed">
-                사전에서 찾아둔 단어 풀이와 검색 결과가 지워집니다.
-                다음에 같은 단어를 찾으면 새로 불러옵니다.
-                단어장에 저장한 단어는 지워지지 않습니다.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="font-body">취소</AlertDialogCancel>
-              <AlertDialogAction onClick={handleClearDictData} className="font-body bg-red-600 hover:bg-red-700 text-white">비우기</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <AlertDialog open={confirmClearTts} onOpenChange={setConfirmClearTts}>
-          <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="font-body text-base text-gray-900">
-                저장된 읽기 음성을 비우시겠습니까?
-              </AlertDialogTitle>
-              <AlertDialogDescription className="font-gothic text-xs leading-relaxed">
-                미리 받아둔 음성 파일이 지워집니다.
-                다음에 "전체 듣기"를 누르면 새로 받아옵니다.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="font-body">취소</AlertDialogCancel>
-              <AlertDialogAction onClick={handleClearTts} className="font-body bg-red-600 hover:bg-red-700 text-white">비우기</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </DialogContent>
-    </Dialog>
+      {/* 확인 창 2개 — 폰 뒤로가기는 확인 창만 닫습니다(예전에는 설정 창이 닫히고 확인 창이 남았음) */}
+      <ConfirmSheet
+        open={confirmClearData}
+        onCancel={() => setConfirmClearData(false)}
+        onConfirm={() => { setConfirmClearData(false); handleClearDictData(); }}
+        title="저장된 단어·검색 결과를 비우시겠습니까?"
+        message={
+          <>
+            사전에서 찾아둔 단어 풀이와 검색 결과가 지워집니다.
+            다음에 같은 단어를 찾으면 새로 불러옵니다.
+            단어장에 저장한 단어는 지워지지 않습니다.
+          </>
+        }
+        confirmLabel="비우기"
+        danger
+        backClose
+        zIndex={60}
+      />
+      <ConfirmSheet
+        open={confirmClearTts}
+        onCancel={() => setConfirmClearTts(false)}
+        onConfirm={() => { setConfirmClearTts(false); handleClearTts(); }}
+        title="저장된 읽기 음성을 비우시겠습니까?"
+        message={
+          <>
+            미리 받아둔 음성 파일이 지워집니다.
+            다음에 "전체 듣기"를 누르면 새로 받아옵니다.
+          </>
+        }
+        confirmLabel="비우기"
+        danger
+        backClose
+        zIndex={60}
+      />
+    </>
   );
 }
