@@ -41,9 +41,8 @@ export default function AddCategoryDialog({ open, onOpenChange, onAdded }: Props
       title="단어장 만들기"
       desc="주제별로 새 단어장을 만드세요"
       icon={<FolderPlus size={20} strokeWidth={1.8} />}
-      tileBg="#E2E6F3"
-      tileInk="#2F3E7C"
       onSubmit={handleSubmit}
+      dirty={!!name.trim() || icon !== DEFAULT_ICON}
       footer={
         <FormPrimaryButton type="submit" disabled={!name.trim()} muted={!name.trim()}>
           만들기
