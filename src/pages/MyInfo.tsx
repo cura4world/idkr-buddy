@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import FormSheet, { FORM_FIELD_CLASS, FORM_INPUT_CLASS, FormPrimaryButton } from "@/components/FormSheet";
 import SettingsDialog, { REOPEN_SETTINGS_KEY } from "@/components/SettingsDialog";
 import BackupRestoreDialog from "@/components/BackupRestoreDialog";
+import PlusMoreButton from "@/components/PlusMoreButton";
 import { ArchiveRestore, AudioLines, Type, UserRound } from "lucide-react";
 import AppSheet, { ChoiceGroup, ChoiceRow, ConfirmSheet, SHEET, SheetButton } from "@/components/sheet/AppSheet";
 import { useBackClose } from "@/hooks/useBackClose";
@@ -655,11 +656,13 @@ const MyInfo = () => {
         <SectionTitle>회원</SectionTitle>
         {tier === "free" ? (
           <>
-            {/* 2026-11-24: 공용 귤색 상자(PlusLockBox) 대신 한 줄 가격 + 청록 주 단추. 카드 전체가 눌립니다 */}
-            <button
-              type="button"
+            {/* 2026-11-24: 공용 귤색 상자(PlusLockBox) 대신 한 줄 가격 + 단추. 카드 어디를 눌러도 구독 화면.
+                2026-11-25: 오른쪽 단추는 홈 Plus 카드와 같은 공용 "Plus / 자세히 보기"(PlusMoreButton).
+                카드 전체를 단추로 두면 화면 읽기가 카드 글 전체("Kata kata Plus … 자세히 보기")를 단추 이름으로 읽어,
+                카드는 누르기만 받고 단추는 이 알약 하나("Plus 자세히 보기")로 둡니다 */}
+            <div
               onClick={() => navigate(PAYWALL_PATH)}
-              className="w-full flex items-center text-left bg-white active:bg-black/[0.03] transition-colors"
+              className="w-full flex items-center text-left bg-white cursor-pointer active:bg-black/[0.03] transition-colors"
               style={{ borderRadius: 20, boxShadow: CARD_SHADOW, padding: "10px 12px 10px 16px", gap: 12, minHeight: 60 }}
             >
               <span className="flex-1 min-w-0">
@@ -668,13 +671,8 @@ const MyInfo = () => {
                   {plusLine}
                 </span>
               </span>
-              <span
-                className="shrink-0 flex items-center"
-                style={{ height: 36, padding: "0 14px", borderRadius: 10, background: TEAL, color: "#FFFFFF", fontSize: rem(13), fontWeight: 700 }}
-              >
-                자세히 보기
-              </span>
-            </button>
+              <PlusMoreButton onClick={() => navigate(PAYWALL_PATH)} />
+            </div>
             {/* 공개판 회원키 입력은 서버가 생기면 다시 넣습니다(QA Q01 — 그 전에는 링크를 보이지 않음) */}
           </>
         ) : tier === "plus" ? (
