@@ -23,8 +23,7 @@ import {
   loadMedaliCache,
 } from "@/lib/medali";
 import type { MedaliColor, DailyLog, WordRecord, ApiCategory } from "@/lib/medali";
-import { fetchPeer, loadPeerCache, staleLabel } from "@/lib/medaliSync";
-import type { PeerSummary } from "@/lib/medaliSync";
+import { MEDALI_HELP } from "@/lib/medaliHelp";
 
 // 아이콘 외곽선 — 명찰 캡슐과 같은 값 (어두운 색 단계에서도 형태가 보이도록)
 const STROKE = "rgba(255,255,255,0.55)";
@@ -41,7 +40,8 @@ const COLOR_NAME: Record<MedaliColor, string> = {
 const ROMAN: Record<number, string> = { 1: "I", 2: "II", 3: "III" };
 
 
-const DAY_LABELS = ["월", "화", "수", "목", "금", "토"];
+// 2026-11-24 부터 주일도 점수가 쌓이므로 일요일 막대까지 7개입니다
+const DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
 // 막대 위 표기: 60분 미만은 분 숫자만(45), 그 이상은 시:분(1:20).
 function usageLabel(ms: number): string {
@@ -161,8 +161,6 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
   const [words, setWords] = useState<WordRecord[]>([]);
   const [openDay, setOpenDay] = useState<number | null>(null);   // 막대를 탭하면 그날 점수 한 줄
   const [openRow, setOpenRow] = useState<string | null>(null);   // 내역 행 도움말
-  // 짝꿍 요약. 캐시를 초기값으로 두어 통신 전에도 바로 보입니다.
-  const [peer, setPeer] = useState<PeerSummary | null>(() => loadPeerCache());
 
   useEffect(() => {
     return medaliEngine.subscribe((s) => setSnap(s));
@@ -179,20 +177,6 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
     listWordRecords().then(setWords).catch(() => setWords([]));
   }, [open]);
 
-  // 짝꿍 요약은 시트를 열 때 한 번만 받아 옵니다. 닫힌 뒤 응답이 와도 setState 하지 않습니다.
-  useEffect(() => {
-    if (!open) return;
-    let alive = true;
-    fetchPeer()
-      .then((p) => {
-        if (alive && p) setPeer(p);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [open]);
-
   // 올라오고 내려가는 움직임과 뒤 화면 잠금은 앱 공통 틀(AppSheet)이 합니다(2026-11-24).
   // 내려가는 중에는 닫기를 다시 부르지 않습니다
   const requestClose = () => {
@@ -203,7 +187,7 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
   const apiHex = MEDALI_COLORS[snap.apiColor];
   const bintangHex = MEDALI_COLORS[snap.bintangColor];
 
-  // ── 요일 막대 (월~토). 색은 "그날 밤 기준 누적 주간 점수"의 도달 색입니다.
+  // ── 요일 막대 (월~일). 색은 "그날 밤 기준 누적 주간 점수"의 도달 색입니다.
   const monday = mondayOf(new Date());
   const todayKey = dateKey(new Date());
   const byDate = new Map<string, DailyLog>();
@@ -289,27 +273,6 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
     >
           {tab === "api" ? (
             <div className="relative pt-5">
-              {peer ? (
-                <div className="absolute right-0 top-3 flex flex-col items-end leading-tight">
-                  <div className="flex items-center gap-1">
-                    <span className="font-gothic text-[0.6875rem] text-muted-foreground">{peer.id}</span>
-                    <Flame
-                      size={12}
-                      color={MEDALI_COLORS[peer.apiColor]}
-                      fill={MEDALI_COLORS[peer.apiColor]}
-                      strokeWidth={1.5}
-                    />
-                    <span className="font-gothic text-[0.6875rem] text-muted-foreground">
-                      이번 주 {peer.weekPoints}점
-                    </span>
-                  </div>
-                  {staleLabel(peer.savedAt) ? (
-                    <span className="font-gothic text-[0.5625rem] text-muted-foreground/60">
-                      {staleLabel(peer.savedAt)}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
               {/* 지금 색 */}
               <div className="flex flex-col items-center text-center">
                 <Flame size={48} color={STROKE} fill={apiHex} strokeWidth={1.5} className="shrink-0" />
@@ -319,11 +282,9 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                 <p className="mt-1 text-[0.78125rem] text-muted-foreground">
                   이번 주 {snap.apiWeekPoints}점 · 연속 {snap.streak}일
                 </p>
-                {/* 명찰의 불꽃 옆 숫자가 무엇인지 여기서 읽힙니다 */}
-                <p className="mt-1.5 max-w-[17rem] font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
-                  이번 주 월요일부터 쌓은 공부 점수입니다.
-                  <br />
-                  토요일 밤까지 모으고 월요일에 다시 시작합니다.
+                {/* 명찰의 불꽃 옆 숫자가 무엇인지 여기서 읽힙니다 — 문구는 lib/medaliHelp.ts 한 곳에서 */}
+                <p className="mt-1.5 max-w-[19rem] font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground" style={{ wordBreak: "keep-all" }}>
+                  {MEDALI_HELP.api.body}
                 </p>
               </div>
 
@@ -345,7 +306,7 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                 </p>
               </div>
 
-              {/* 요일 막대 (월~토) */}
+              {/* 요일 막대 (월~일) */}
               <div className="mt-5">
                 <div className="flex h-20 items-end gap-2">
                   {bars.map((b, i) => (
@@ -462,32 +423,11 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                   ))}
               </div>
               <p className="mt-1.5 pb-1 text-center text-[0.6875rem] leading-relaxed text-muted-foreground">
-                불꽃은 월요일에 다시 시작합니다. 일요일은 쉽니다.
+                {MEDALI_HELP.api.ladderNote}
               </p>
             </div>
           ) : (
             <div className="relative pt-5">
-              {peer ? (
-                <div className="absolute right-0 top-3 flex flex-col items-end leading-tight">
-                  <div className="flex items-center gap-1">
-                    <span className="font-gothic text-[0.6875rem] text-muted-foreground">{peer.id}</span>
-                    <Star
-                      size={12}
-                      color={MEDALI_COLORS[peer.bintangColor]}
-                      fill={MEDALI_COLORS[peer.bintangColor]}
-                      strokeWidth={1.5}
-                    />
-                    <span className="font-gothic text-[0.6875rem] text-muted-foreground">
-                      {ROMAN[peer.bintangTier] || "III"} · {peer.confirmedCount}개
-                    </span>
-                  </div>
-                  {staleLabel(peer.savedAt) ? (
-                    <span className="font-gothic text-[0.5625rem] text-muted-foreground/60">
-                      {staleLabel(peer.savedAt)}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
               {/* 지금 단계 */}
               <div className="flex flex-col items-center text-center">
                 <Star size={48} color={STROKE} fill={bintangHex} strokeWidth={1.5} className="shrink-0" />
@@ -497,11 +437,9 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                 <p className="mt-1 text-[0.78125rem] text-muted-foreground">
                   확정 단어 {snap.confirmedCount}개
                 </p>
-                {/* 명찰의 별 옆 숫자가 무엇인지 여기서 읽힙니다 */}
-                <p className="mt-1.5 max-w-[17rem] font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
-                  3일 이상 간격을 두고 두 번 맞힌 단어입니다.
-                  <br />
-                  별 옆의 숫자로, 리셋 없이 평생 쌓입니다.
+                {/* 명찰의 별 옆 숫자가 무엇인지 여기서 읽힙니다 — 문구는 lib/medaliHelp.ts 한 곳에서 */}
+                <p className="mt-1.5 max-w-[19rem] font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground" style={{ wordBreak: "keep-all" }}>
+                  {MEDALI_HELP.bintang.body}
                 </p>
               </div>
 
