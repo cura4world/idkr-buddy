@@ -762,8 +762,9 @@ test("S2 만료 뒤 재확인: 한 번 무료로 적혀도 30일 동안은 한 �
   const { uid } = await buy(env, t, { days: 3 });
   assert.equal(playAsks(), 1);
 
-  // 만료 직후, Play 는 아직 옛 만료 시각을 답함(갱신 반영 전) → 무료로 적힘. 구매 토큰은 남음.
-  clockOffset = 3 * DAY + MIN;
+  // 만료 뒤 15분이 지나도 Play 가 옛 만료 시각을 답함(갱신 반영 전) → 무료로 적힘. 구매 토큰은 남음.
+  // (15분 안이면 갱신을 기다리며 Plus 그대로 — 아래 "갱신 반영 지연" 시험, 2026-11-24)
+  clockOffset = 3 * DAY + 16 * MIN;
   assert.equal(await tierOf(env, t), "free");
   assert.equal(playAsks(), 2);
   let ent = entOf(env, uid);
@@ -774,12 +775,12 @@ test("S2 만료 뒤 재확인: 한 번 무료로 적혀도 30일 동안은 한 �
 
   // Play 가 갱신을 반영함 — 한 시간 안에는 다시 묻지 않음
   playSub.lineItems[0].expiryTime = new Date(Date.now() + 30 * DAY).toISOString();
-  clockOffset = 3 * DAY + 30 * MIN;
+  clockOffset = 3 * DAY + 45 * MIN;
   assert.equal(await tierOf(env, t), "free");
   assert.equal(playAsks(), 2);
 
   // 한 시간 뒤: /me 만으로 Plus 로 돌아옴 (앱을 다시 켜거나 /billing/verify 를 부르지 않아도)
-  clockOffset = 3 * DAY + HOUR + 2 * MIN;
+  clockOffset = 3 * DAY + 16 * MIN + HOUR + 2 * MIN;
   assert.equal(await tierOf(env, t), "plus");
   assert.equal(playAsks(), 3);
   ent = entOf(env, uid);
@@ -793,7 +794,8 @@ test("S2-b 무료로 내려간 뒤 30일이 지나면 더 묻지 않고, 그 안
   const env = makeEnv();
   const t = await login(env, { sub: "9202", email: "s2b@example.com" });
   const { uid } = await buy(env, t, { days: 1 });
-  clockOffset = DAY + MIN;
+  // 만료 뒤 15분(갱신 반영 기다림)을 넘겨서 묻게 합니다 — 그 안이면 이용 중(ACTIVE) 답은 무료로 적지 않음(2026-11-24)
+  clockOffset = DAY + 16 * MIN;
   assert.equal(await tierOf(env, t), "free");
   const first = entOf(env, uid).freeSince;
   assert.equal(playAsks(), 2);
@@ -805,9 +807,101 @@ test("S2-b 무료로 내려간 뒤 30일이 지나면 더 묻지 않고, 그 안
   assert.equal(entOf(env, uid).freeSince, first);
 
   // 31일 뒤: 더 묻지 않음
-  clockOffset = DAY + MIN + 31 * DAY;
+  clockOffset = DAY + 16 * MIN + 31 * DAY;
   assert.equal(await tierOf(env, t), "free");
   assert.equal(playAsks(), 3);
+  resetWorld();
+});
+
+test("갱신 반영 지연(2026-11-24): 이용 중인데 만료 시각이 옛 값이면 15분까지 Plus 그대로·1분 간격으로 다시 묻고, 갱신되면 새 만료 시각", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const t = await login(env, { sub: "9203", email: "rp@example.com" });
+  const { uid } = await buy(env, t, { days: 1 });
+  assert.equal(playAsks(), 1);
+  const oldUntil = entOf(env, uid).until;
+
+  // 만료 2분 뒤 — Play 는 ACTIVE 인데 만료 시각은 옛 값(갱신 반영 전)
+  clockOffset = DAY + 2 * MIN;
+  const me = await call(env, "GET", "/me", { token: t });
+  assert.equal(me.data.plan.tier, "plus");
+  assert.equal(me.data.plan.until, oldUntil); // 만료 시각은 옛 값 그대로(앱은 갱신 확인 유예로 Plus 유지)
+  assert.equal(playAsks(), 2);
+  let ent = entOf(env, uid);
+  assert.equal(ent.tier, "plus");
+  assert.equal(ent.renewPending, true);
+  assert.equal(ent.until, oldUntil);
+
+  // 1분 안에는 다시 묻지 않고, 1분이 지나면 다시 묻는다
+  clockOffset = DAY + 2 * MIN + 30 * 1000;
+  assert.equal(await tierOf(env, t), "plus");
+  assert.equal(playAsks(), 2);
+  clockOffset = DAY + 3 * MIN + 10 * 1000;
+  assert.equal(await tierOf(env, t), "plus");
+  assert.equal(playAsks(), 3);
+
+  // 구매 확인도 "이용 중"으로 답함 — 앱이 결제창을 열어 "이미 가입" 오류가 나지 않게
+  const v = await call(env, "POST", "/billing/verify", { token: t, body: { productId: "plus", purchaseToken: "tok-buy" } });
+  assert.equal(v.status, 200);
+  assert.equal(v.data.valid, true);
+  assert.equal(v.data.plan.tier, "plus");
+
+  // Play 가 갱신을 반영함 → 새 만료 시각, 표시는 지워짐
+  const newUntil = Date.now() + 30 * DAY;
+  playSub.lineItems[0].expiryTime = new Date(newUntil).toISOString();
+  clockOffset = DAY + 4 * MIN + 30 * 1000;
+  const me2 = await call(env, "GET", "/me", { token: t });
+  assert.equal(me2.data.plan.tier, "plus");
+  assert.ok(me2.data.plan.until > Date.now());
+  ent = entOf(env, uid);
+  assert.equal(ent.renewPending, undefined);
+  assert.ok(ent.until > Date.now());
+  resetWorld();
+});
+
+test("갱신 반영 지연: 15분이 지나도 옛 값이면 지금 규칙대로 무료, 해지·만료(EXPIRED·CANCELED)는 15분 안이어도 바로 무료", async () => {
+  // 15분이 지남
+  resetWorld();
+  let env = makeEnv();
+  let t = await login(env, { sub: "9204", email: "rp2@example.com" });
+  let r = await buy(env, t, { days: 1 });
+  clockOffset = DAY + 2 * MIN;
+  assert.equal(await tierOf(env, t), "plus"); // 기다리는 중
+  clockOffset = DAY + 15 * MIN + 30 * 1000;
+  assert.equal(await tierOf(env, t), "free"); // 15분 지나면 기다림 끝 — 무료로 보임
+  const v = await call(env, "POST", "/billing/verify", { token: t, body: { productId: "plus", purchaseToken: "tok-buy" } });
+  assert.equal(v.data.valid, false);
+  assert.equal(v.data.plan.tier, "free");
+  assert.equal(entOf(env, r.uid).tier, "free");
+
+  // 만료(EXPIRED) — 15분 안이어도 바로 무료
+  resetWorld();
+  env = makeEnv();
+  t = await login(env, { sub: "9205", email: "rp3@example.com" });
+  r = await buy(env, t, { days: 1 });
+  playSub.subscriptionState = "SUBSCRIPTION_STATE_EXPIRED";
+  clockOffset = DAY + 2 * MIN;
+  assert.equal(await tierOf(env, t), "free");
+  assert.equal(entOf(env, r.uid).renewPending, undefined);
+
+  // 해지(CANCELED, 자동 갱신 꺼짐)한 구독이 만료 — 갱신될 일이 없으므로 바로 무료
+  resetWorld();
+  env = makeEnv();
+  t = await login(env, { sub: "9206", email: "rp4@example.com" });
+  r = await buy(env, t, { days: 1 });
+  playSub.subscriptionState = "SUBSCRIPTION_STATE_CANCELED";
+  clockOffset = DAY + 2 * MIN;
+  assert.equal(await tierOf(env, t), "free");
+
+  // 유예(IN_GRACE_PERIOD)는 기다림 대상 — 15분 안이면 Plus
+  resetWorld();
+  env = makeEnv();
+  t = await login(env, { sub: "9207", email: "rp5@example.com" });
+  r = await buy(env, t, { days: 1 });
+  playSub.subscriptionState = "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+  clockOffset = DAY + 2 * MIN;
+  assert.equal(await tierOf(env, t), "plus");
+  assert.equal(entOf(env, r.uid).renewPending, true);
   resetWorld();
 });
 
