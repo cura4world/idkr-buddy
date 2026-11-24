@@ -16,7 +16,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ReadingTracker } from "@/lib/readingTimer";
 import { goBackOr } from "@/lib/nav";
-import { ArrowLeft, Plus, Minus, Volume2, X, Check } from "lucide-react";
+import { ArrowLeft, Plus, Minus, Volume2, X, Check, MapPin } from "lucide-react";
+import { useBackClose } from "@/hooks/useBackClose";
+import AppSheet from "@/components/sheet/AppSheet";
 import { toast } from "sonner";
 import {
   MAP_VIEW,
@@ -252,6 +254,10 @@ const IndoMap = () => {
   // 설명을 못 받은 까닭이 한도 초과면 그 안내 문장(오늘/이번 달). 이때는 "다시 시도"를 보이지 않습니다(다시 눌러도 같은 답).
   const [infoQuota, setInfoQuota] = useState("");
   const [lightbox, setLightbox] = useState<string | null>(null);
+  // 사진 크게 보기는 폰 뒤로가기로 사진만 닫습니다(2026-11-24 — 예전에는 뒤의 지역 시트가 닫히고 사진은 남았음).
+  // useBackClose 의 popstate 처리가 이 화면의 처리보다 먼저 불려 지역 시트 쪽에는 알리지 않습니다.
+  useBackClose(!!lightbox, () => setLightbox(null));
+  const lastPinRef = useRef<Pin | null>(null);
   // 처음에는 도시만 켜 둡니다. 나머지는 범례 버튼으로 켭니다.
   // state(버튼 색)와 ref(렌더 루프)는 반드시 같은 값으로 짝을 맞춰야 합니다.
   const [showCities, setShowCities] = useState(true);
@@ -842,8 +848,11 @@ const IndoMap = () => {
         }
       : undefined;
 
-  const photos = selected ? getPlacePhotos(selected.id) : [];
-  const chip = selected ? TYPE_CHIP[selected.type] : TYPE_CHIP.city;
+  // 지역 시트가 닫히며 내려가는 동안에도 마지막 지역을 그대로 보여 줍니다(앱 공통 틀의 닫힘 움직임, 2026-11-24)
+  if (selected) lastPinRef.current = selected;
+  const sheetPin = selected || lastPinRef.current;
+  const photos = sheetPin ? getPlacePhotos(sheetPin.id) : [];
+  const chip = sheetPin ? TYPE_CHIP[sheetPin.type] : TYPE_CHIP.city;
 
   const legend: { on: boolean; color: string; label: string; toggle: () => void }[] = [
     { on: showCities, color: "#f97316", label: "도시", toggle: toggleCities },
@@ -1023,66 +1032,65 @@ const IndoMap = () => {
         </div>
       )}
 
-      {/* 하단 시트 */}
-      {selected && (
-        <div
-          className="fixed inset-0 z-40"
-          style={{ background: "rgba(5,20,24,0.35)" }}
-          onClick={() => {
-            // 핀 탭에서 이어지는 합성 click이 시트를 즉시 닫는 것 방지
-            if (Date.now() - sheetOpenedAt.current < 500) return;
-            closeSheet();
-          }}
-        >
-          <div
-            className="absolute left-0 right-0 bottom-0 mx-auto max-w-[560px] bg-white rounded-t-[22px] flex flex-col"
-            style={{ maxHeight: land === "css" ? "88%" : "75dvh", boxShadow: "0 -4px 24px rgba(5,20,24,0.18)" }}
-            onClick={(e) => e.stopPropagation()}
-            // 지도에서 이름을 누른 손가락의 클릭이 방금 열린 시트의 사진(같은 자리)까지 눌러
-            // 사진이 바로 크게 열리던 것(2026-11-11 사용자 보고) — 열린 직후 0.5초는 시트 안 누름을 무시합니다.
-            onClickCapture={(e) => {
-              if (Date.now() - sheetOpenedAt.current < 500) {
-                e.stopPropagation();
-                e.preventDefault();
-              }
-            }}
-          >
-            <div className="w-9 h-1 rounded-full bg-[#DDE3E6] mx-auto mt-2.5 shrink-0" />
-            <button
-              onClick={() => closeSheet()}
-              className="absolute right-4 top-[22px] w-8 h-8 rounded-full bg-[#F1F4F5] text-[#646C72] flex items-center justify-center active:bg-[#E5EAEC]"
-              aria-label="닫기"
-            >
-              <X size={14} strokeWidth={2.2} />
-            </button>
-            <div className="px-5 pt-3 pb-6 overflow-y-auto">
-              {/* 이름 */}
-              <div className="flex items-center gap-[9px] flex-wrap pr-10">
-                <h2 className="font-gothic text-[1.25rem] font-bold text-[#1D1F1E]">{selected.ko}</h2>
-                <span className="font-word italic text-[0.9375rem] text-[#646C72]">{selected.id}</span>
-                <button
-                  onClick={() => speak(selected.id, "id")}
-                  className="w-8 h-8 rounded-full bg-[#E3EEEC] text-[#2C6D63] flex items-center justify-center active:opacity-80 shrink-0"
-                  title="발음 듣기"
-                  aria-label="발음 듣기"
-                >
-                  <Volume2 size={15} strokeWidth={2} />
-                </button>
-              </div>
-              <div className="mt-1.5 flex items-center gap-2 min-w-0">
-                <span
-                  className="h-[22px] px-[9px] rounded-[11px] flex items-center font-gothic text-[0.71875rem] font-semibold shrink-0"
-                  style={{ background: chip.bg, color: chip.fg }}
-                >
-                  {TYPE_LABEL[selected.type]}
-                </span>
-                <span className="font-gothic text-[0.78125rem] text-[#9AA1A6] truncate">{selected.hint}</span>
-              </div>
-
+      {/* 하단 시트 — 앱 공통 틀(안내, 2026-11-24). 머리 = 지역 이름(한·인니어 Lora 기울임) + 발음 단추, 설명 줄 = 종류 칩 + 한 줄 힌트.
+          뒤로가기는 이 화면의 pushState(kkMapSheet). 핀을 누른 손가락의 이어지는 클릭이 방금 열린 시트를 바로 닫거나
+          사진을 바로 크게 여는 것을 막으려고 열린 직후 0.5초는 닫기·시트 안 누름을 무시합니다(2026-11-11 사용자 보고). */}
+      <AppSheet
+        open={!!selected}
+        onClose={() => {
+          if (Date.now() - sheetOpenedAt.current < 500) return;
+          closeSheet();
+        }}
+        title={sheetPin ? sheetPin.ko : ""}
+        icon={<MapPin size={20} strokeWidth={1.8} />}
+        zIndex={40}
+        widthClass="max-w-[560px]"
+        maxHeight={land === "css" ? "88%" : "75dvh"}
+        dragClose={land !== "css"}
+        bodyPadding="12px 20px calc(24px + env(safe-area-inset-bottom))"
+        onPanelClickCapture={(e) => {
+          if (Date.now() - sheetOpenedAt.current < 500) {
+            e.stopPropagation();
+            e.preventDefault();
+          }
+        }}
+        titleNode={
+          sheetPin ? (
+            <span className="flex items-center gap-[9px] flex-wrap">
+              <h2 className="m-0 font-gothic text-[1.125rem] font-bold text-[#1D1F1E]">{sheetPin.ko}</h2>
+              <span className="font-word italic text-[0.9375rem] text-[#646C72]">{sheetPin.id}</span>
+              <button
+                onClick={() => speak(sheetPin.id, "id")}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="w-8 h-8 rounded-full bg-[#E3EEEC] text-[#2C6D63] flex items-center justify-center active:opacity-80 shrink-0"
+                title="발음 듣기"
+                aria-label="발음 듣기"
+              >
+                <Volume2 size={15} strokeWidth={2} />
+              </button>
+            </span>
+          ) : null
+        }
+        desc={
+          sheetPin ? (
+            <span className="mt-1 flex items-center gap-2 min-w-0">
+              <span
+                className="h-[22px] px-[9px] rounded-[11px] flex items-center font-gothic text-[0.71875rem] font-semibold shrink-0"
+                style={{ background: chip.bg, color: chip.fg }}
+              >
+                {TYPE_LABEL[sheetPin.type]}
+              </span>
+              <span className="font-gothic text-[0.78125rem] text-[#9AA1A6] truncate">{sheetPin.hint}</span>
+            </span>
+          ) : null
+        }
+      >
+        {sheetPin ? (
+            <div>
               {/* 사진 — 고정 목록(mapPhotos)에서 최대 2장, 4:3. 탭하면 확대. 없으면 영역을 그리지 않습니다.
                   출처는 시트에 적지 않고 설정 > 앱 정보 > 사진 출처에 모읍니다. */}
               {photos.length > 0 ? (
-                <div className="mt-3 grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
                   {photos.map((ph, i) => (
                     <button
                       key={ph.file}
@@ -1092,7 +1100,7 @@ const IndoMap = () => {
                     >
                       <img
                         src={ph.thumb}
-                        alt={selected.ko + " 사진 " + (i + 1)}
+                        alt={sheetPin.ko + " 사진 " + (i + 1)}
                         loading="lazy"
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -1122,7 +1130,7 @@ const IndoMap = () => {
                     </p>
                     {!infoQuota && (publicEdition || hasGeminiApiKey()) ? (
                       <button
-                        onClick={() => openSheet(selected)}
+                        onClick={() => openSheet(sheetPin)}
                         className="mt-2.5 h-9 px-4 rounded-full bg-[#E3EEEC] text-[#2C6D63] font-gothic text-[0.8125rem] font-semibold active:opacity-80"
                       >
                         다시 시도
@@ -1181,9 +1189,8 @@ const IndoMap = () => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+        ) : null}
+      </AppSheet>
     </div>
   );
 };
