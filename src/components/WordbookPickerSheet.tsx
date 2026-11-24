@@ -12,7 +12,7 @@ import { Category, getWordsByCategory } from "@/lib/store";
 import { loadSaveTargets, loadSaveTargetId } from "@/lib/saveTarget";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import { CategoryGlyph } from "@/components/CategoryIcon";
-import AppSheet, { ChoiceRow, SHEET, SheetButton } from "@/components/sheet/AppSheet";
+import AppSheet, { ChoiceGroup, ChoiceRow, SHEET, SheetButton } from "@/components/sheet/AppSheet";
 
 const MY_WORDBOOK_ID = "my-wordbook";
 
@@ -72,17 +72,19 @@ export default function WordbookPickerSheet({ open, onOpenChange, targetId, onPi
             담을 단어장이 없습니다. 아래에서 새 단어장을 만들어 주세요.
           </p>
         ) : (
-          targets.map((c) => (
-            <ChoiceRow
-              key={c.id}
-              mode="single"
-              selected={c.id === targetId}
-              onClick={() => { onPick(c.id); onOpenChange(false); }}
-              leading={<CategoryGlyph value={c.emoji} size={18} />}
-              title={<span className="block truncate">{c.name}</span>}
-              trailing={(counts[c.id] ?? 0) + "개"}
-            />
-          ))
+          <ChoiceGroup mode="single" label="담을 단어장">
+            {targets.map((c) => (
+              <ChoiceRow
+                key={c.id}
+                mode="single"
+                selected={c.id === targetId}
+                onClick={() => { onPick(c.id); onOpenChange(false); }}
+                leading={<CategoryGlyph value={c.emoji} size={18} />}
+                title={<span className="block truncate">{c.name}</span>}
+                trailing={(counts[c.id] ?? 0) + "개"}
+              />
+            ))}
+          </ChoiceGroup>
         )}
       </AppSheet>
 
