@@ -9,10 +9,7 @@ import AddCategoryDialog from "@/components/AddCategoryDialog";
 import EditCategoryDialog from "@/components/EditCategoryDialog";
 import CategoryCard from "@/components/CategoryCard";
 import WordIllust, { PencilDefs } from "@/components/WordIllust";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import FormSheet, { FORM_FIELD_CLASS, FORM_INPUT_CLASS, FormLabel, FormPrimaryButton } from "@/components/FormSheet";
 import { ArrowLeft, Copy, Trash2, X, ChevronDown, ChevronUp, FileSpreadsheet, FolderInput, FolderPlus, Plus } from "lucide-react";
 import AppSheet, { ChoiceRow, ConfirmSheet, SHEET } from "@/components/sheet/AppSheet";
 import { toast } from "sonner";
@@ -1452,31 +1449,34 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
           />
         </>
       ) : null}
-      <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
-        <DialogContent className="max-w-sm mx-auto bg-card">
-          <DialogHeader>
-            <DialogTitle className="font-body text-black">단어장으로 묶기</DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={(e) => { e.preventDefault(); handleArchive(); }}
-            className="space-y-4"
-          >
-            <div>
-              <Label className="font-body text-sm text-black">단어장 이름</Label>
-              <Input
-                value={archiveName}
-                onChange={(e) => setArchiveName(e.target.value)}
-                className="mt-1"
-                autoFocus
-              />
-            </div>
-            <p className="font-body text-[0.8125rem] leading-relaxed text-muted-foreground">
-              지금 내 단어장의 단어 {words.length}개를 새 단어장으로 옮깁니다. 내 단어장은 비워집니다.
-            </p>
-            <Button type="submit" className="w-full" disabled={!archiveName.trim()}>묶기</Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* 단어장으로 묶기 — 앱 공통 틀(입력). 이름을 넣었으면 끌기·바깥으로 안 닫힘. 뒤로가기는 위 useBackClose(archiveOpen) */}
+      <FormSheet
+        open={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
+        title="단어장으로 묶기"
+        icon={<FolderInput size={20} strokeWidth={1.8} />}
+        onSubmit={(e) => { e.preventDefault(); handleArchive(); }}
+        dirty={!!archiveName.trim()}
+        footer={
+          <FormPrimaryButton type="submit" disabled={!archiveName.trim()} muted={!archiveName.trim()}>묶기</FormPrimaryButton>
+        }
+      >
+        <div>
+          <FormLabel>단어장 이름</FormLabel>
+          <div className={FORM_FIELD_CLASS} style={{ minHeight: 44 }}>
+            <input
+              value={archiveName}
+              onChange={(e) => setArchiveName(e.target.value)}
+              aria-label="단어장 이름"
+              className={FORM_INPUT_CLASS + " font-body"}
+              autoFocus
+            />
+          </div>
+        </div>
+        <p className="m-0 font-gothic text-[0.8125rem] leading-relaxed break-keep" style={{ color: SHEET.sub }}>
+          지금 내 단어장의 단어 {words.length}개를 새 단어장으로 옮깁니다. 내 단어장은 비워집니다.
+        </p>
+      </FormSheet>
       {/* 고른 단어가 있을 때만 뜨는 아래 고정 바. 어두운 배경에서도 보이도록 불투명 bg-card 를 씁니다. */}
       {editable && selectedIds.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40" style={{ bottom: "var(--kata-tabbar-h, 0px)" }}>
