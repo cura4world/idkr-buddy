@@ -1,11 +1,11 @@
 // src/components/MedaliSheet.tsx
-// 훈장 창 — 보기가 두 가지입니다(2026-11-24 Arga 승인 "훈장 창 정리").
-//   view="summary" 요약 창: 공개판 홈 명찰·게임방 명찰. 불꽃·별 칸 두 개 + 월~일 작은 막대 + 지난주 비교 한 줄. 탭·설명·단추 없음,
-//                  360px·글자 100% 에서 창 안 스크롤 없이 다 보이게.
-//   view="detail"  자세히 창: 내 정보 훈장 칸(관리자판·회원판은 내 정보로 갈 길이 없어 명찰도 이것). 알약 탭 "불꽃 / 별",
-//                  단계 줄·진행 막대 → 불꽃(요일 막대·오늘 쌓인 점수·색 사다리) / 별(최근 별이 된 단어·별의 단계 6줄·다시 확인할 단어).
-//                  설명 문단은 넣지 않습니다 — 설명은 내 정보 ⓘ 말풍선(lib/medaliHelp.ts)에만.
-// 계산(점수·단계·요일 막대·다음 단계)은 이 파일 위쪽 한 곳에서 하고 두 보기가 같이 씁니다. 보기만 하는 창이라 점수가 오르는 일은 없습니다.
+// 훈장 창(2026-11-24 Arga 승인 "훈장 창 정리" → 같은 날 요약은 명찰 아래 떠 있는 상자로).
+//   MedaliSummaryBody 요약 내용: 공개판 홈 명찰·게임방 명찰 → components/MedaliPopover(떠 있는 상자) 안에 들어갑니다.
+//                     불꽃·별 칸 두 개 + 월~일 작은 막대 + 지난주 비교 한 줄. 탭·설명·단추 없음.
+//   MedaliSheet(기본)  자세히 창: 내 정보 훈장 칸(누른 칸의 탭으로), 관리자판·회원판 명찰(내 정보로 갈 길이 없어 이것, 불꽃 탭).
+//                     알약 탭 "불꽃 / 별", 단계 줄·진행 막대 → 불꽃(요일 막대·오늘 쌓인 점수·색 사다리) / 별(최근 별이 된 단어·별의 단계 6줄·다시 확인할 단어).
+//                     설명 문단은 넣지 않습니다 — 설명은 내 정보 ⓘ 말풍선(lib/medaliHelp.ts)에만.
+// 계산(점수·단계·요일 막대·다음 단계)은 useMedaliData 한 곳에서 하고 요약·자세히가 같이 씁니다. 보기만 하는 창이라 점수가 오르는 일은 없습니다.
 // 글꼴은 모두 Pretendard(font-gothic). 단계 이름(Perunggu 등)도 라벨이라 Pretendard, 외운 인니어 단어만 font-word.
 //
 // 히스토리(폰 뒤로가기)는 이 컴포넌트가 다루지 않습니다 — 여는 쪽(Index·Permainan·MyInfo)이 합니다(WordbookPickerSheet와 같은 규칙).
@@ -184,16 +184,8 @@ const Label = ({ children, style }: { children: React.ReactNode; style?: React.C
   </p>
 );
 
-export type MedaliSheetView = "summary" | "detail";
-
-interface Props {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  /** 요약 창(명찰) / 자세히 창(내 정보). 기본은 자세히 창 */
-  view?: MedaliSheetView;
-}
-
-export default function MedaliSheet({ open, onOpenChange, view = "detail" }: Props) {
+/** 훈장 숫자·단계·요일 막대 계산 — 명찰 요약 상자(MedaliPopover)와 자세히 창이 같이 씁니다. open 이 될 때마다 새로 읽습니다. */
+function useMedaliData(open: boolean) {
   const [snap, setSnap] = useState(() => {
     const c = loadMedaliCache();
     return {
@@ -205,33 +197,19 @@ export default function MedaliSheet({ open, onOpenChange, view = "detail" }: Pro
       confirmedCount: c.confirmedCount,
     };
   });
-  const [tab, setTab] = useState<"api" | "bintang">("api");
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [words, setWords] = useState<WordRecord[]>([]);
-  const [openDay, setOpenDay] = useState<number | null>(null);   // 막대를 탭하면 그날 점수 한 줄
-  const [openRow, setOpenRow] = useState<string | null>(null);   // 내역 행 도움말
-  const weekCmp = useMedaliWeekCompare(open && view === "summary");
 
   useEffect(() => {
     return medaliEngine.subscribe((s) => setSnap(s));
   }, []);
 
-  // 열릴 때마다 처음 상태로 (항상 불꽃 탭) + 최신 값으로 다시 계산
   useEffect(() => {
     if (!open) return;
-    setTab("api");
-    setOpenDay(null);
-    setOpenRow(null);
     medaliEngine.refresh();
     listWeekLogs().then(setLogs).catch(() => setLogs([]));
     listWordRecords().then(setWords).catch(() => setWords([]));
   }, [open]);
-
-  // 올라오고 내려가는 움직임과 뒤 화면 잠금은 앱 공통 틀(AppSheet)이 합니다(2026-11-24).
-  const requestClose = () => {
-    if (!open) return;
-    onOpenChange(false);
-  };
 
   // ── 계산 (두 보기 공용) ─────────────────────────────────────────
   const apiHex = MEDALI_COLORS[snap.apiColor];
@@ -291,97 +269,138 @@ export default function MedaliSheet({ open, onOpenChange, view = "detail" }: Pro
     return st === "recheck" || st === "monitoring";
   }).length;
 
-  // ── 요약 창 ─────────────────────────────────────────────────────
-  if (view === "summary") {
-    return (
-      <AppSheet
-        open={open}
-        onClose={requestClose}
-        title="훈장"
-        icon={<Medal size={20} strokeWidth={1.8} />}
-        bodyPadding="4px 16px calc(16px + env(safe-area-inset-bottom))"
-      >
-        <div className="font-gothic" data-medali-view="summary" style={{ color: INK }}>
-          <div className="grid grid-cols-2" style={{ gap: 8 }}>
-            {/* 불꽃 칸 */}
-            <div style={{ borderRadius: 14, background: CELL.api.bg, padding: "10px 10px 10px 12px" }}>
-              <p className="flex items-center" style={{ margin: 0, gap: 5, fontSize: "0.75rem", fontWeight: 700, color: CELL.api.title }}>
-                <CellFlame color={CELL.api.icon} />
-                이번 주 불꽃
-              </p>
-              <p className="tabular-nums" style={{ margin: "2px 0 0", fontSize: "1.3125rem", fontWeight: 700, lineHeight: 1.3 }}>
-                {snap.apiWeekPoints}
-                <span style={{ fontSize: "0.71875rem", fontWeight: 500, color: MUTED }}> 점</span>
-              </p>
-              <p className="flex items-center break-keep" style={{ margin: "2px 0 0", gap: 4, fontSize: "0.71875rem", fontWeight: 600, lineHeight: 1.4, color: CELL.api.sub }}>
-                <Flame size={14} color={STROKE} fill={apiHex} strokeWidth={1.5} className="shrink-0" />
-                <span>{apiStageName} · 연속 {snap.streak}일</span>
-              </p>
-              <div style={{ marginTop: 7 }}>
-                <ProgressBar widthPct={apiPct} color={apiBarColor} />
-              </div>
-              <p className="tabular-nums" style={{ margin: "4px 0 0", fontSize: "0.6875rem", color: MUTED }}>
-                {apiNextText}
-              </p>
-            </div>
-            {/* 별 칸 */}
-            <div style={{ borderRadius: 14, background: CELL.bintang.bg, padding: "10px 10px 10px 12px" }}>
-              <p className="flex items-center" style={{ margin: 0, gap: 5, fontSize: "0.75rem", fontWeight: 700, color: CELL.bintang.title }}>
-                <CellStar color={CELL.bintang.icon} />
-                모은 별
-              </p>
-              <p className="tabular-nums" style={{ margin: "2px 0 0", fontSize: "1.3125rem", fontWeight: 700, lineHeight: 1.3 }}>
-                {snap.confirmedCount}
-                <span style={{ fontSize: "0.71875rem", fontWeight: 500, color: MUTED }}> 단어</span>
-              </p>
-              <p className="flex items-center break-keep" style={{ margin: "2px 0 0", gap: 4, fontSize: "0.71875rem", fontWeight: 600, lineHeight: 1.4, color: CELL.bintang.sub }}>
-                <Star size={14} color={STROKE} fill={bintangHex} strokeWidth={1.5} className="shrink-0" />
-                <span>{bintangStageName}</span>
-              </p>
-              <div style={{ marginTop: 7 }}>
-                <ProgressBar widthPct={bintangPct} color={bintangBarColor} />
-              </div>
-              <p className="tabular-nums" style={{ margin: "4px 0 0", fontSize: "0.6875rem", color: MUTED }}>
-                {bintangNextText}
-              </p>
-            </div>
-          </div>
+  return {
+    snap, apiHex, bintangHex, bars, barMax, todayLog, apiNext, bintangNext,
+    apiPct, apiBarColor, bintangPct, bintangBarColor, apiNextText, bintangNextText,
+    apiStageName, bintangStageName, confirmedWords, recheckCount,
+  };
+}
 
-          {/* 월~일 작은 막대 — 점수 높이만, 숫자 없음, 오늘 요일 굵게 */}
-          <div className="flex items-end" style={{ marginTop: 14, height: 34, gap: 6 }} aria-hidden="true">
-            {bars.map((b) => (
-              <span key={b.key} className="flex-1 flex flex-col justify-end" style={{ height: "100%" }}>
-                <span
-                  style={{
-                    height: b.total > 0 ? Math.max(4, Math.round((b.total / barMax) * 34)) : 3,
-                    borderRadius: 3,
-                    background: b.total > 0 ? b.color : "#E6EAEC",
-                    opacity: b.isFuture ? 0.5 : 1,
-                  }}
-                />
-              </span>
-            ))}
+/**
+ * 요약 내용 — 불꽃·별 칸 두 개 + 월~일 작은 막대 + 지난주 비교 한 줄. 명찰 아래 떠 있는 상자(MedaliPopover)에 들어갑니다.
+ * 탭·설명·단추 없음(자세히는 내 정보에서).
+ */
+export function MedaliSummaryBody({ open }: { open: boolean }) {
+  const {
+    snap, apiHex, bintangHex, bars, barMax, apiPct, apiBarColor, bintangPct, bintangBarColor,
+    apiNextText, bintangNextText, apiStageName, bintangStageName,
+  } = useMedaliData(open);
+  const weekCmp = useMedaliWeekCompare(open);
+  return (
+    <div className="font-gothic" data-medali-view="summary" style={{ color: INK }}>
+      <div className="grid grid-cols-2" style={{ gap: 8 }}>
+        {/* 불꽃 칸 */}
+        <div style={{ borderRadius: 14, background: CELL.api.bg, padding: "10px 10px 10px 12px" }}>
+          <p className="flex items-center" style={{ margin: 0, gap: 5, fontSize: "0.75rem", fontWeight: 700, color: CELL.api.title }}>
+            <CellFlame color={CELL.api.icon} />
+            이번 주 불꽃
+          </p>
+          <p className="tabular-nums" style={{ margin: "2px 0 0", fontSize: "1.3125rem", fontWeight: 700, lineHeight: 1.3 }}>
+            {snap.apiWeekPoints}
+            <span style={{ fontSize: "0.71875rem", fontWeight: 500, color: MUTED }}> 점</span>
+          </p>
+          <p className="flex items-center break-keep" style={{ margin: "2px 0 0", gap: 4, fontSize: "0.71875rem", fontWeight: 600, lineHeight: 1.4, color: CELL.api.sub }}>
+            <Flame size={14} color={STROKE} fill={apiHex} strokeWidth={1.5} className="shrink-0" />
+            <span>{apiStageName} · 연속 {snap.streak}일</span>
+          </p>
+          <div style={{ marginTop: 7 }}>
+            <ProgressBar widthPct={apiPct} color={apiBarColor} />
           </div>
-          <div className="flex" style={{ marginTop: 4, gap: 6 }} aria-hidden="true">
-            {bars.map((b) => (
-              <span
-                key={b.key}
-                className="flex-1 text-center"
-                style={{ fontSize: "0.6875rem", fontWeight: b.isToday ? 700 : 400, color: b.isToday ? INK : FAINT }}
-              >
-                {b.label}
-              </span>
-            ))}
-          </div>
-
-          {/* 지난주의 나와 비교 — 내 정보와 같은 함수·같은 기간 기준 */}
-          <p className="break-keep" style={{ margin: "12px 2px 0", minHeight: 18, fontSize: "0.75rem", lineHeight: 1.5, color: MUTED }}>
-            <MedaliWeekCompareText week={snap.apiWeekPoints} data={weekCmp} />
+          <p className="tabular-nums" style={{ margin: "4px 0 0", fontSize: "0.6875rem", color: MUTED }}>
+            {apiNextText}
           </p>
         </div>
-      </AppSheet>
-    );
-  }
+        {/* 별 칸 */}
+        <div style={{ borderRadius: 14, background: CELL.bintang.bg, padding: "10px 10px 10px 12px" }}>
+          <p className="flex items-center" style={{ margin: 0, gap: 5, fontSize: "0.75rem", fontWeight: 700, color: CELL.bintang.title }}>
+            <CellStar color={CELL.bintang.icon} />
+            모은 별
+          </p>
+          <p className="tabular-nums" style={{ margin: "2px 0 0", fontSize: "1.3125rem", fontWeight: 700, lineHeight: 1.3 }}>
+            {snap.confirmedCount}
+            <span style={{ fontSize: "0.71875rem", fontWeight: 500, color: MUTED }}> 단어</span>
+          </p>
+          <p className="flex items-center break-keep" style={{ margin: "2px 0 0", gap: 4, fontSize: "0.71875rem", fontWeight: 600, lineHeight: 1.4, color: CELL.bintang.sub }}>
+            <Star size={14} color={STROKE} fill={bintangHex} strokeWidth={1.5} className="shrink-0" />
+            <span>{bintangStageName}</span>
+          </p>
+          <div style={{ marginTop: 7 }}>
+            <ProgressBar widthPct={bintangPct} color={bintangBarColor} />
+          </div>
+          <p className="tabular-nums" style={{ margin: "4px 0 0", fontSize: "0.6875rem", color: MUTED }}>
+            {bintangNextText}
+          </p>
+        </div>
+      </div>
+
+      {/* 월~일 작은 막대 — 점수 높이만, 숫자 없음, 오늘 요일 굵게 */}
+      <div className="flex items-end" style={{ marginTop: 14, height: 34, gap: 6 }} aria-hidden="true">
+        {bars.map((b) => (
+          <span key={b.key} className="flex-1 flex flex-col justify-end" style={{ height: "100%" }}>
+            <span
+              style={{
+                height: b.total > 0 ? Math.max(4, Math.round((b.total / barMax) * 34)) : 3,
+                borderRadius: 3,
+                background: b.total > 0 ? b.color : "#E6EAEC",
+                opacity: b.isFuture ? 0.5 : 1,
+              }}
+            />
+          </span>
+        ))}
+      </div>
+      <div className="flex" style={{ marginTop: 4, gap: 6 }} aria-hidden="true">
+        {bars.map((b) => (
+          <span
+            key={b.key}
+            className="flex-1 text-center"
+            style={{ fontSize: "0.6875rem", fontWeight: b.isToday ? 700 : 400, color: b.isToday ? INK : FAINT }}
+          >
+            {b.label}
+          </span>
+        ))}
+      </div>
+
+      {/* 지난주의 나와 비교 — 내 정보와 같은 함수·같은 기간 기준 */}
+      <p className="break-keep" style={{ margin: "12px 2px 0", minHeight: 18, fontSize: "0.75rem", lineHeight: 1.5, color: MUTED }}>
+        <MedaliWeekCompareText week={snap.apiWeekPoints} data={weekCmp} />
+      </p>
+    </div>
+  );
+}
+
+export type MedaliSheetTab = "api" | "bintang";
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** 열 때 고를 탭 — 내 정보 별 칸을 누르면 "bintang"(2026-11-24). 칸 구분 없이 여는 곳(관리자판 명찰)은 불꽃 */
+  initialTab?: MedaliSheetTab;
+}
+
+/** 자세히 창 — 내 정보 훈장 칸, 관리자판·회원판 명찰 */
+export default function MedaliSheet({ open, onOpenChange, initialTab = "api" }: Props) {
+  const d = useMedaliData(open);
+  const {
+    snap, apiHex, bintangHex, bars, barMax, todayLog, apiPct, apiBarColor, bintangPct, bintangBarColor,
+    apiNextText, bintangNextText, apiStageName, bintangStageName, confirmedWords, recheckCount,
+  } = d;
+  const [tab, setTab] = useState<MedaliSheetTab>(initialTab);
+  const [openDay, setOpenDay] = useState<number | null>(null);   // 막대를 탭하면 그날 점수 한 줄
+  const [openRow, setOpenRow] = useState<string | null>(null);   // 내역 행 도움말
+
+  // 열릴 때마다 처음 상태로(누른 칸의 탭)
+  useEffect(() => {
+    if (!open) return;
+    setTab(initialTab);
+    setOpenDay(null);
+    setOpenRow(null);
+  }, [open, initialTab]);
+
+  // 올라오고 내려가는 움직임과 뒤 화면 잠금은 앱 공통 틀(AppSheet)이 합니다(2026-11-24).
+  const requestClose = () => {
+    if (!open) return;
+    onOpenChange(false);
+  };
 
   // ── 자세히 창 ───────────────────────────────────────────────────
   const tabBtn = (k: "api" | "bintang", text: string) => {
