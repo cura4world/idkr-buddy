@@ -171,6 +171,7 @@ src/
     MedaliBadge.tsx          헤더 명찰 캡슐 (불꽃 + 별)
     MedaliSheet.tsx          훈장 팝업 (명찰을 누르면 올라옴)
     MedaliNudge.tsx          게임을 며칠 안 하면 뜨는 말풍선
+    MedaliHelpBubble.tsx     내 정보 훈장 칸 ⓘ 설명 말풍선 (AppSheet 의 예외, DECISIONS 29장)
     PointFloat.tsx           점수 확정 순간 "+N"이 잠깐 떠오름
     WordbookPickerSheet.tsx  "어디에 담을까요?" 단어장 선택 시트
     CategoryCard.tsx / EditWordDialog.tsx / AddWordDialog.tsx
@@ -200,7 +201,9 @@ src/
     phrasePrompt.ts 문장 해설 프롬프트(앱과 scripts/gen-phrase-seed.mjs 가 같이 씀. import 없는 순수 TS 로 둘 것)
     dailyCard.ts    오늘의 카드(인도네시아 이해 맨 위) — 서버 kata-public 의 /card/* 에서 받아 IndexedDB(kata-daily-card)에 둠.
                     카드는 서버 Cron 이 하루 한 장 만들고 확인까지 마친 것(앱은 AI 를 부르지 않음). 2026-11-17 예전 생활 정보(tips.ts) 대체
-    medali.ts       Medali 엔진 — 불꽃(주간 점수)·별(확정 단어) 판정, IndexedDB
+    medali.ts       Medali 엔진 — 불꽃(주간 점수, 월~일)·별(확정 단어) 판정, IndexedDB
+    medaliHelp.ts   훈장 설명 문구(불꽃·별) — 내 정보 말풍선과 훈장 팝업이 같이 씀. 문구는 여기만 고칠 것
+    medaliSync.ts   내 기기끼리 훈장 점수 합치기(/medali/log, 회원키로만). "medali-my-id" 는 닉네임 칸. 두 사람 비교는 2026-11-24 삭제
     gamePool.ts     게임 출제 풀 (단어장·찾아본 단어·시드 3층, API 호출 없음)
     sermon.ts       Cloudflare Worker 호출 + IndexedDB
     sermonInk.ts    S펜 필기 저장 (IndexedDB)
