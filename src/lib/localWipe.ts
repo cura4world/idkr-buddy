@@ -29,6 +29,7 @@ export const WIPE_LS_KEYS: string[] = [
   "kata-free-phrase-refresh-day", // 무료 "다른 문장" 하루 한 번 표시
   "medali-cache",
   "medali-nudge-date",
+  "medali-others",             // 내 다른 기기에서 받아 둔 훈장 점수(회원키 기기만 생김, 2026-11-24)
   "kata-hari-ini",
   "story-quota-note",
   "story-quota-day",
