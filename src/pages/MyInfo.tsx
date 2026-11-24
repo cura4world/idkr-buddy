@@ -19,7 +19,7 @@ import FormSheet, { FORM_FIELD_CLASS, FORM_INPUT_CLASS, FormPrimaryButton } from
 import SettingsDialog, { REOPEN_SETTINGS_KEY } from "@/components/SettingsDialog";
 import BackupRestoreDialog from "@/components/BackupRestoreDialog";
 import { ArchiveRestore, AudioLines, Type, UserRound } from "lucide-react";
-import AppSheet, { ChoiceRow, ConfirmSheet, SHEET, SheetButton } from "@/components/sheet/AppSheet";
+import AppSheet, { ChoiceGroup, ChoiceRow, ConfirmSheet, SHEET, SheetButton } from "@/components/sheet/AppSheet";
 import { useBackClose } from "@/hooks/useBackClose";
 import { buildBackupFile, describeSummary, formatBytes, getBackupFileSavedAt, markBackupFileSaved } from "@/lib/transfer";
 import MedaliSheet from "@/components/MedaliSheet";
@@ -969,9 +969,11 @@ const MyInfo = () => {
         icon={<AudioLines size={20} strokeWidth={1.8} />}
         footer={<SheetButton onClick={applyVoice}>완료</SheetButton>}
       >
-        {TTS_VOICES.map((v) => (
-          <ChoiceRow key={v.id} mode="single" selected={voiceDraft === v.id} onClick={() => setVoiceDraft(v.id)} title={v.label} />
-        ))}
+        <ChoiceGroup mode="single" label="읽기 음성">
+          {TTS_VOICES.map((v) => (
+            <ChoiceRow key={v.id} mode="single" selected={voiceDraft === v.id} onClick={() => setVoiceDraft(v.id)} title={v.label} />
+          ))}
+        </ChoiceGroup>
         <p className="m-0 mt-1 font-gothic text-[0.78125rem] leading-[1.6] break-keep" style={{ color: SHEET.sub }}>
           이야기처럼 글을 읽어 주는 목소리입니다. 회화집은 남녀 두 목소리로 읽습니다. 이 기기에만 적용됩니다.
         </p>
