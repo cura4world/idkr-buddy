@@ -16,7 +16,7 @@ import {
   signOut,
   PublicSession,
 } from "@/lib/account";
-import { isPaidPlan, manageSubscription } from "@/lib/billing";
+import { isPaidOrRenewingPlan, manageSubscription } from "@/lib/billing";
 import { askLocalWipe } from "@/lib/localWipe";
 import { DELETE_ACCOUNT_URL, PRIVACY_URL, TERMS_URL } from "@/lib/platform";
 
@@ -38,7 +38,8 @@ const AccountSection = ({ onGo }: Props) => {
   }, []);
 
   if (!session) return null;
-  const plus = isPaidPlan(session.plan); // (예전 체험 응답 tier "trial" 도 만료 시각까지 포함)
+  // (예전 체험 응답 tier "trial" 도 포함. 만료 시각이 막 지나 갱신 확인을 기다리는 유예 10분도 구독 중으로 — 2026-11-24)
+  const plus = isPaidOrRenewingPlan(session.plan);
 
   const handleSignOut = async () => {
     if (busy) return;
