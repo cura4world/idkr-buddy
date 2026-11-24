@@ -56,3 +56,14 @@ test("설정 — 확인 창은 뒤로가기로 확인 창만 닫히고, 안에�
   await page.goBack();
   await expect(settings).toHaveCount(0);
 });
+
+test("관리자판 명찰 — 내 정보로 갈 길이 없어 요약 창이 아니라 자세히 창(2026-11-24)", async ({ page }) => {
+  await asAdmin(page);
+  await openApp(page, "");
+  await page.locator('button[title="Medali"]:visible').first().click();
+  const sheet = page.getByRole("dialog", { name: "훈장", exact: true });
+  await expect(sheet.locator('[data-medali-view="detail"]')).toHaveCount(1);
+  await expect(sheet.getByRole("button", { name: "별", exact: true })).toBeVisible();
+  await page.goBack();
+  await expect(sheet).toHaveCount(0);
+});
