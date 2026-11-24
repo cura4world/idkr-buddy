@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { hasBundledAudio } from "@/lib/percakapanAudio";
 import { TASTE_AUDIO } from "@/data/tasteAudio";
-import { canOpenScene, canOpenWordbook, isTasteScene, isTasteWordbook, TASTE_SCENE_ID } from "@/lib/tasteAccess";
+import { canCreateWordbook, canOpenScene, canOpenWordbook, isTasteScene, isTasteWordbook, TASTE_SCENE_ID } from "@/lib/tasteAccess";
 import { DASAR } from "@/data/percakapan/01-dasar";
 
 describe("맛보기 단어장", () => {
@@ -26,6 +26,18 @@ describe("맛보기 단어장", () => {
     expect(canOpenWordbook(mine, false)).toBe(true);
     expect(canOpenWordbook(w02, true)).toBe(true);
     expect(canOpenWordbook(null, true)).toBe(false);
+  });
+
+  // 2026-11-24 "만든 것은 읽기 전용" — 새 단어장 만들기만 Plus, 이미 만든 단어장은 무료에서도 열림
+  it("새 단어장 만들기는 무료 false / Plus true", () => {
+    expect(canCreateWordbook(false)).toBe(false);
+    expect(canCreateWordbook(true)).toBe(true);
+  });
+
+  it("무료가 되어도 내가 만든 단어장은 그대로 열림", () => {
+    const made = { name: "여행 표현" };
+    expect(canOpenWordbook(made, false)).toBe(true);
+    expect(canOpenWordbook({ ...made, isShared: false }, false)).toBe(true);
   });
 });
 
