@@ -15,10 +15,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import FormSheet, { FORM_FIELD_CLASS, FORM_INPUT_CLASS, FormPrimaryButton } from "@/components/FormSheet";
 import SettingsDialog, { REOPEN_SETTINGS_KEY } from "@/components/SettingsDialog";
 import BackupRestoreDialog from "@/components/BackupRestoreDialog";
-import { ArchiveRestore, AudioLines, Type } from "lucide-react";
+import { ArchiveRestore, AudioLines, Type, UserRound } from "lucide-react";
 import AppSheet, { ChoiceRow, ConfirmSheet, SHEET, SheetButton } from "@/components/sheet/AppSheet";
 import { useBackClose } from "@/hooks/useBackClose";
 import { buildBackupFile, describeSummary, formatBytes, getBackupFileSavedAt, markBackupFileSaved } from "@/lib/transfer";
@@ -420,9 +420,13 @@ const MyInfo = () => {
   const voiceLabel = (TTS_VOICES.find((v) => v.id === voice) || TTS_VOICES[0]).label;
   const autoBackupOn = !!memberProfile; // 서버 자동 백업은 회원키 기기에서 주 1회 저절로 돕니다
 
+  // 닉네임 창을 열 때의 값 — 고쳤으면(dirty) 끌기·바깥 누르기로 닫히지 않습니다(2026-11-24 옵션 창 통일)
+  const nickInitialRef = useRef("");
   const openNick = () => {
     const cur = getMyMedaliId();
-    setNickInput(cur && cur !== "-" ? cur : nick);
+    const v = cur && cur !== "-" ? cur : nick;
+    nickInitialRef.current = v;
+    setNickInput(v);
     setNickOpen(true);
   };
 
@@ -890,34 +894,30 @@ const MyInfo = () => {
         </p>
       </div>
 
-      {/* ── 닉네임 ── */}
-      <Dialog open={nickOpen} onOpenChange={setNickOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm mx-auto bg-card">
-          <DialogHeader>
-            <DialogTitle className="font-body text-gray-900">닉네임</DialogTitle>
-          </DialogHeader>
-          <p className="font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
-            훈장 점수 옆에 보이는 이름입니다. 한글·영문·숫자 6자 이내로 적어 주세요.
-          </p>
+      {/* ── 닉네임 — 앱 공통 틀(입력). 뒤로가기는 위 useBackClose(nickOpen) ── */}
+      <FormSheet
+        open={nickOpen}
+        onClose={() => setNickOpen(false)}
+        title="닉네임"
+        desc="훈장 점수 옆에 보이는 이름입니다. 한글·영문·숫자 6자 이내로 적어 주세요."
+        icon={<UserRound size={20} strokeWidth={1.8} />}
+        onSubmit={(e) => { e.preventDefault(); saveNick(); }}
+        dirty={nickInput.trim() !== nickInitialRef.current.trim()}
+        footer={<FormPrimaryButton type="submit">저장</FormPrimaryButton>}
+      >
+        <div className={FORM_FIELD_CLASS} style={{ minHeight: 44 }}>
           <input
             value={nickInput}
             onChange={(e) => setNickInput(e.target.value.slice(0, 12))}
-            onKeyDown={(e) => { if (e.key === "Enter") saveNick(); }}
             maxLength={12}
-            className="h-11 w-full rounded-xl border border-border bg-white px-3 text-[0.875rem] outline-none focus:border-primary"
+            aria-label="닉네임"
+            className={FORM_INPUT_CLASS + " font-body"}
+            style={{ color: SHEET.txt }}
             autoCapitalize="none"
             autoCorrect="off"
           />
-          <button
-            type="button"
-            onClick={saveNick}
-            className="h-11 w-full rounded-xl text-white font-gothic text-[0.8125rem] font-semibold"
-            style={{ background: TEAL }}
-          >
-            저장
-          </button>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </FormSheet>
 
       {/* ── 글자 크기 — 앱 공통 틀. 고르는 동안 미리 보기, 완료 = 저장, X·바깥·뒤로가기 = 원래 크기로 ── */}
       <AppSheet
