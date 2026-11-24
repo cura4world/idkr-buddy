@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import SettingsDialog, { REOPEN_SETTINGS_KEY } from "@/components/SettingsDialog";
 import BackupRestoreDialog from "@/components/BackupRestoreDialog";
+import { ArchiveRestore, AudioLines, Type } from "lucide-react";
+import AppSheet, { ChoiceRow, SHEET, SheetButton } from "@/components/sheet/AppSheet";
 import { useBackClose } from "@/hooks/useBackClose";
 import { buildBackupFile, describeSummary, formatBytes, getBackupFileSavedAt, markBackupFileSaved } from "@/lib/transfer";
 import MedaliSheet from "@/components/MedaliSheet";
@@ -36,7 +38,7 @@ import { canceledUntilText } from "@/lib/plusCopy";
 import { isStoreApp, storeAppVersion, hasNativeFileSave, saveFileNative, PRIVACY_URL, TERMS_URL, BUSINESS_INFO_URL } from "@/lib/platform";
 import { getEdition, EDITION_LABEL } from "@/lib/access";
 import { getMemberProfile } from "@/lib/member";
-import { getFontStep, getStepCount, stepFont } from "@/lib/fontScale";
+import { applyFontScale, getFontStep, getStepCount, setFontStep } from "@/lib/fontScale";
 import { getTtsVoice, setTtsVoice, TTS_VOICES, TtsVoiceId, clearTtsCache } from "@/lib/tts";
 import { clearPercakapanAudioCache } from "@/lib/percakapanAudio";
 import { getMyMedaliId, setMyMedaliId, isValidMedaliId, loadPeerCache, syncMedali } from "@/lib/medaliSync";
@@ -442,7 +444,21 @@ const MyInfo = () => {
     syncMedali(true).catch(() => {});
   };
 
-  const changeFont = (d: number) => setFontStepState(stepFont(d));
+  // 글자 크기·읽기 음성 — 2026-11-24 옵션 창 통일: 창 안에서 고르는 것은 초안, "완료"를 눌러야 적용합니다.
+  // X·바깥 누르기·뒤로가기는 바꾼 것을 버립니다(예전에는 누르는 즉시 저장). 글자 크기는 고르는 동안 화면에 미리 보여 주고,
+  // 취소하면 원래 크기로 되돌립니다.
+  const [fontDraft, setFontDraft] = useState(fontStep);
+  const [voiceDraft, setVoiceDraft] = useState<TtsVoiceId>(voice);
+  const openFont = () => { setFontDraft(fontStep); setFontOpen(true); };
+  const changeFont = (d: number) => {
+    const next = Math.max(0, Math.min(getStepCount() - 1, fontDraft + d));
+    setFontDraft(next);
+    applyFontScale(next); // 미리 보기(저장 안 함)
+  };
+  const applyFont = () => { setFontStepState(setFontStep(fontDraft)); setFontOpen(false); };
+  const cancelFont = () => { applyFontScale(fontStep); setFontOpen(false); };
+  const openVoice = () => { setVoiceDraft(voice); setVoiceOpen(true); };
+  const applyVoice = () => { setVoice(voiceDraft); setTtsVoice(voiceDraft); setVoiceOpen(false); };
 
   const handleClearTts = async () => {
     await clearTtsCache();
@@ -550,7 +566,7 @@ const MyInfo = () => {
 
   // 폰의 뒤로가기는 열린 창만 닫습니다(내 정보 화면을 떠나지 않음). 설정 창은 SettingsDialog 가 스스로 합니다.
   useBackClose(nickOpen, () => setNickOpen(false));
-  useBackClose(fontOpen, () => setFontOpen(false));
+  useBackClose(fontOpen, () => cancelFont());
   useBackClose(voiceOpen, () => setVoiceOpen(false));
   useBackClose(moveOpen, () => setMoveOpen(false));
   useBackClose(ttsConfirm, () => setTtsConfirm(false));
@@ -840,8 +856,8 @@ const MyInfo = () => {
         <SectionTitle>설정</SectionTitle>
         <Card style={{ overflow: "hidden" }}>
           <Row icon={I_PEN} label="닉네임" value={nick || "—"} onClick={openNick} />
-          <Row icon={I_TYPE} label="글자 크기" value={fontPct + "%"} onClick={() => setFontOpen(true)} />
-          <Row icon={I_MIC} label="읽기 음성" value={voiceLabel} onClick={() => setVoiceOpen(true)} />
+          <Row icon={I_TYPE} label="글자 크기" value={fontPct + "%"} onClick={openFont} />
+          <Row icon={I_MIC} label="읽기 음성" value={voiceLabel} onClick={openVoice} />
           {/* 서버 자동 백업은 관리자판·회원판(회원키 서버)에만 있습니다. 공개판은 서버가 생길 때까지 숨깁니다(QA Q01). */}
           {publicLike ? null : (
             <Row icon={I_CLOUD} label="서버 자동 백업" onClick={onAutoBackup} right={<Toggle on={autoBackupOn} />} />
@@ -907,110 +923,88 @@ const MyInfo = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ── 글자 크기 ── */}
-      <Dialog open={fontOpen} onOpenChange={setFontOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm mx-auto bg-card">
-          <DialogHeader>
-            <DialogTitle className="font-body text-gray-900">글자 크기 · {fontPct}%</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => changeFont(-1)}
-              disabled={fontStep <= 0}
-              aria-label="글자 작게"
-              className="w-11 h-11 rounded-full border border-border text-[1.03125rem] disabled:opacity-40"
-            >
-              −
-            </button>
-            <div className="flex-1 flex items-center justify-center gap-1">
-              {Array.from({ length: getStepCount() }).map((_, i) => (
-                <span
-                  key={i}
-                  className={"h-1.5 rounded-full transition-all " + (i === fontStep ? "w-5" : "w-1.5 bg-gray-300")}
-                  style={i === fontStep ? { background: TEAL } : undefined}
-                />
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => changeFont(1)}
-              disabled={fontStep >= getStepCount() - 1}
-              aria-label="글자 크게"
-              className="w-11 h-11 rounded-full border border-border text-[1.03125rem] disabled:opacity-40"
-            >
-              +
-            </button>
-          </div>
-          <p className="font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
-            앱 전체 글자 크기입니다. 이 기기에만 적용됩니다.
-          </p>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── 읽기 음성 ── */}
-      <Dialog open={voiceOpen} onOpenChange={setVoiceOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm mx-auto bg-card">
-          <DialogHeader>
-            <DialogTitle className="font-body text-gray-900">읽기 음성</DialogTitle>
-          </DialogHeader>
-          <div className="flex gap-2">
-            {TTS_VOICES.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => { setVoice(v.id); setTtsVoice(v.id); }}
-                className="flex-1 h-11 rounded-xl border font-gothic text-[0.8125rem] font-semibold"
-                style={voice === v.id
-                  ? { background: TEAL, borderColor: TEAL, color: "#FFFFFF" }
-                  : { background: "#FFFFFF", borderColor: "#DDE3E6", color: INK }}
-              >
-                {v.label}
-              </button>
+      {/* ── 글자 크기 — 앱 공통 틀. 고르는 동안 미리 보기, 완료 = 저장, X·바깥·뒤로가기 = 원래 크기로 ── */}
+      <AppSheet
+        open={fontOpen}
+        onClose={cancelFont}
+        title={"글자 크기 · " + (85 + fontDraft * 5) + "%"}
+        desc="앱 전체 글자 크기입니다. 이 기기에만 적용됩니다."
+        icon={<Type size={20} strokeWidth={1.8} />}
+        footer={<SheetButton onClick={applyFont}>완료</SheetButton>}
+      >
+        <div className="flex items-center gap-3 py-2">
+          <button
+            type="button"
+            onClick={() => changeFont(-1)}
+            disabled={fontDraft <= 0}
+            aria-label="글자 작게"
+            className="w-11 h-11 rounded-full border-[1.5px] text-[1.03125rem] disabled:opacity-40"
+            style={{ borderColor: SHEET.line, color: SHEET.label }}
+          >
+            −
+          </button>
+          <div className="flex-1 flex items-center justify-center gap-1">
+            {Array.from({ length: getStepCount() }).map((_, i) => (
+              <span
+                key={i}
+                className={"h-1.5 rounded-full transition-all " + (i === fontDraft ? "w-5" : "w-1.5 bg-gray-300")}
+                style={i === fontDraft ? { background: TEAL } : undefined}
+              />
             ))}
           </div>
-          <p className="font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
-            이야기처럼 글을 읽어 주는 목소리입니다. 회화집은 남녀 두 목소리로 읽습니다. 이 기기에만 적용됩니다.
-          </p>
-        </DialogContent>
-      </Dialog>
+          <button
+            type="button"
+            onClick={() => changeFont(1)}
+            disabled={fontDraft >= getStepCount() - 1}
+            aria-label="글자 크게"
+            className="w-11 h-11 rounded-full border-[1.5px] text-[1.03125rem] disabled:opacity-40"
+            style={{ borderColor: SHEET.line, color: SHEET.label }}
+          >
+            +
+          </button>
+        </div>
+      </AppSheet>
 
-      {/* ── 새 폰으로 옮기기 (공개판: 백업 파일) ── */}
-      <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm mx-auto bg-card">
-          <DialogHeader>
-            <DialogTitle className="font-body text-gray-900">백업·복원</DialogTitle>
-          </DialogHeader>
-          <p className="font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground">
-            공부 기록은 이 폰에만 저장됩니다. 앱을 지우거나 폰을 바꾸면 사라지므로 백업 파일을 저장해 두세요.
-            내 단어장·직접 넣은 단어·불러온 이야기·만든 대화·설정이 담깁니다. 새 폰에서 이 화면의
-            "백업 파일 불러오기"로 그 파일을 고르면 지금 있는 것과 합쳐집니다.
-          </p>
-          <p className="font-gothic text-[0.6875rem] font-semibold" style={{ color: INK }}>
-            마지막 백업: {backupAt > 0 ? dotDate(backupAt) : "아직 없음"}
-          </p>
-          <button
-            type="button"
-            onClick={saveBackupFile}
-            disabled={moveBusy}
-            className="h-11 w-full rounded-xl text-white font-gothic text-[0.8125rem] font-semibold disabled:opacity-60"
-            style={{ background: TEAL }}
-          >
-            백업 파일 저장
-          </button>
-          <button
-            type="button"
-            onClick={() => setRestoreOpen(true)}
-            disabled={moveBusy}
-            className="h-11 w-full rounded-xl border font-gothic text-[0.8125rem] font-semibold disabled:opacity-60"
-            style={{ background: "#FFFFFF", borderColor: "#DDE3E6", color: INK }}
-          >
-            백업 파일 불러오기
-          </button>
-          {/* 창 안에 두어야 겹친 창으로 열리고, 뒤로가기가 위의 창만 닫습니다(설정 창과 같은 방식) */}
-          <BackupRestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} />
-        </DialogContent>
-      </Dialog>
+      {/* ── 읽기 음성 — 앱 공통 틀(고르기 하나). 완료 = 적용, X·바깥·뒤로가기 = 그대로 ── */}
+      <AppSheet
+        open={voiceOpen}
+        onClose={() => setVoiceOpen(false)}
+        title="읽기 음성"
+        icon={<AudioLines size={20} strokeWidth={1.8} />}
+        footer={<SheetButton onClick={applyVoice}>완료</SheetButton>}
+      >
+        {TTS_VOICES.map((v) => (
+          <ChoiceRow key={v.id} mode="single" selected={voiceDraft === v.id} onClick={() => setVoiceDraft(v.id)} title={v.label} />
+        ))}
+        <p className="m-0 mt-1 font-gothic text-[0.78125rem] leading-[1.6] break-keep" style={{ color: SHEET.sub }}>
+          이야기처럼 글을 읽어 주는 목소리입니다. 회화집은 남녀 두 목소리로 읽습니다. 이 기기에만 적용됩니다.
+        </p>
+      </AppSheet>
+
+      {/* ── 새 폰으로 옮기기 (공개판: 백업 파일) — 앱 공통 틀. 단추를 누르면 바로 실행(동작 그대로) ── */}
+      <AppSheet
+        open={moveOpen}
+        onClose={() => setMoveOpen(false)}
+        title="백업·복원"
+        icon={<ArchiveRestore size={20} strokeWidth={1.8} />}
+        footer={
+          <div className="flex flex-col gap-2">
+            <SheetButton onClick={saveBackupFile} disabled={moveBusy} dim={moveBusy}>백업 파일 저장</SheetButton>
+            <SheetButton variant="secondary" onClick={() => setRestoreOpen(true)} disabled={moveBusy}>백업 파일 불러오기</SheetButton>
+          </div>
+        }
+      >
+        <p className="m-0 font-gothic text-[0.84375rem] leading-[1.6] break-keep" style={{ color: SHEET.label }}>
+          공부 기록은 이 폰에만 저장됩니다. 앱을 지우거나 폰을 바꾸면 사라지므로 백업 파일을 저장해 두세요.
+          내 단어장·직접 넣은 단어·불러온 이야기·만든 대화·설정이 담깁니다. 새 폰에서 이 화면의
+          "백업 파일 불러오기"로 그 파일을 고르면 지금 있는 것과 합쳐집니다.
+        </p>
+        <p className="m-0 font-gothic text-[0.8125rem] font-semibold" style={{ color: SHEET.txt }}>
+          마지막 백업: {backupAt > 0 ? dotDate(backupAt) : "아직 없음"}
+        </p>
+      </AppSheet>
+      {/* 백업 파일 불러오기 — 뒤로가기는 이 창만 닫습니다(설정 창과 같은 방식) */}
+      <BackupRestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} />
 
       {/* ── 저장된 읽기 음성 비우기 ── */}
       <AlertDialog open={ttsConfirm} onOpenChange={setTtsConfirm}>
