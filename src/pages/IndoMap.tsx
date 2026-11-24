@@ -1047,6 +1047,7 @@ const IndoMap = () => {
         widthClass="max-w-[560px]"
         maxHeight={land === "css" ? "88%" : "75dvh"}
         dragClose={land !== "css"}
+        inline={land === "css"}
         bodyPadding="12px 20px calc(24px + env(safe-area-inset-bottom))"
         onPanelClickCapture={(e) => {
           if (Date.now() - sheetOpenedAt.current < 500) {
