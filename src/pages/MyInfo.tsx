@@ -29,6 +29,7 @@ import AppSheet, { ChoiceGroup, ChoiceRow, ConfirmSheet, SHEET, SheetButton } fr
 import { useBackClose } from "@/hooks/useBackClose";
 import { buildBackupFile, describeSummary, formatBytes, getBackupFileSavedAt, markBackupFileSaved } from "@/lib/transfer";
 import MedaliSheet from "@/components/MedaliSheet";
+import { MedaliWeekCompareText, useMedaliWeekCompare } from "@/components/MedaliWeekCompare";
 import { MedaliHelpBubble, MedaliHelpButton, MedaliHelpKind } from "@/components/MedaliHelpBubble";
 import { ProfileAvatar, profileName } from "@/components/BottomTabs";
 import { usePlan, PAYWALL_PATH, Tier, TIER_LABEL, isPreviewBuild, isReviewAccount } from "@/lib/plan";
@@ -46,7 +47,6 @@ import { clearPercakapanAudioCache } from "@/lib/percakapanAudio";
 import { getMyMedaliId, setMyMedaliId, isValidMedaliId } from "@/lib/medaliSync";
 import {
   medaliEngine, loadMedaliCache, listMyRawLogs, loadOthers, mergeDay, dateKey, DailyLog,
-  lastWeekPoints, countMonthStars, listWordRecords,
 } from "@/lib/medali";
 
 // ── 색 (시안 그대로) ─────────────────────────────────────────────
@@ -341,17 +341,8 @@ const MyInfo = () => {
     medaliEngine.refresh();
     return off;
   }, []);
-  // 지난주의 나와 비교(2026-11-24) — 이 폰에 쌓인 날짜별 기록만 씁니다(서버 없음). null = 아직 계산 전
-  const [weekCmp, setWeekCmp] = useState<{ hasHistory: boolean; lastWeek: number; monthStars: number } | null>(null);
-  useEffect(() => {
-    let alive = true;
-    Promise.all([lastWeekPoints(), listWordRecords()])
-      .then(([lw, words]) => {
-        if (alive) setWeekCmp({ hasHistory: lw.hasHistory, lastWeek: lw.points, monthStars: countMonthStars(words) });
-      })
-      .catch(() => {});
-    return () => { alive = false; };
-  }, []);
+  // 지난주의 나와 비교(2026-11-24) — 훈장 요약 창과 같은 함수·같은 글(components/MedaliWeekCompare). null = 아직 계산 전
+  const weekCmp = useMedaliWeekCompare();
 
   // 훈장 칸 설명 말풍선 — 한 번에 하나. 뒤로가기는 아래 useBackClose(help)
   const [help, setHelp] = useState<MedaliHelpKind | null>(null);
@@ -622,20 +613,6 @@ const MyInfo = () => {
   const diffSame = Math.abs(view.diffMs) < 60000;
   const diffText = (view.diffMs > 0 ? "+" : "−") + hmText(view.diffMs);
 
-  // "지난주보다 +12점 · 이번 달 별 +5개". 이번 주 월요일~오늘 vs 지난주 월요일~같은 요일(lastWeekPoints).
-  // 첫 주(이번 주 월요일보다 앞선 기록 없음)는 비교 대신 안내 한 줄.
-  const weekDiff = weekCmp ? medal.week - weekCmp.lastWeek : 0;
-  const weekDiffNode = !weekCmp ? null : weekDiff === 0 ? (
-    "지난주와 같습니다"
-  ) : (
-    <>
-      지난주보다{" "}
-      <b className="tabular-nums" style={{ fontWeight: 700, color: weekDiff > 0 ? TEAL : MUTED }}>
-        {(weekDiff > 0 ? "+" : "−") + Math.abs(weekDiff)}점
-      </b>
-    </>
-  );
-
   const version = storeAppVersion() || "2.0";
 
   return (
@@ -903,17 +880,7 @@ const MyInfo = () => {
           </div>
           {/* 지난주의 나와 비교 — 두 사람 순위 줄 자리(2026-11-24). 계산 전에는 비워 둡니다(높이는 유지) */}
           <p className="break-keep" style={{ margin: "10px 2px 0", minHeight: 18, fontSize: rem(12), lineHeight: 1.5, color: MUTED }}>
-            {!weekCmp ? null : !weekCmp.hasHistory ? (
-              "다음 주부터 지난주와 비교해 드립니다"
-            ) : (
-              <>
-                {weekDiffNode}
-                {" · 이번 달 별 "}
-                <b className="tabular-nums" style={{ fontWeight: 700, color: weekCmp.monthStars > 0 ? TEAL : MUTED }}>
-                  +{weekCmp.monthStars}개
-                </b>
-              </>
-            )}
+            <MedaliWeekCompareText week={medal.week} data={weekCmp} />
           </p>
         </Card>
 
@@ -1104,7 +1071,8 @@ const MyInfo = () => {
         danger
       />
 
-      <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
+      {/* 내 정보 훈장 칸 → 자세히 창(2026-11-24). 명찰(홈·게임방)은 요약 창 */}
+      <MedaliSheet view="detail" open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
