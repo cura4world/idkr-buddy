@@ -43,14 +43,13 @@ const ROMAN: Record<number, string> = { 1: "I", 2: "II", 3: "III" };
 // 2026-11-24 부터 주일도 점수가 쌓이므로 일요일 막대까지 7개입니다
 const DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
-// 막대 위 표기: 60분 미만은 분 숫자만(45), 그 이상은 시:분(1:20).
+// 막대 위 표기: 60분 미만은 "45분", 그 이상은 막대 폭에 맞게 소수 한 자리 시간 "4.9시간"(올림 없이 버림 — 4시간 58분 = 4.9시간).
+// 2026-11-24 까지는 "45"·"4:58"(시:분)이라 아래 설명 "(분)"과 맞지 않았다.
 function usageLabel(ms: number): string {
   const m = Math.floor(ms / 60000);
   if (m <= 0) return "";
-  if (m < 60) return String(m);
-  const h = Math.floor(m / 60);
-  const rest = m % 60;
-  return h + ":" + (rest < 10 ? "0" + rest : String(rest));
+  if (m < 60) return m + "분";
+  return (Math.floor(m / 6) / 10).toFixed(1) + "시간";
 }
 
 // 막대를 탭했을 때 한 줄에 쓰는 풀 표기.
@@ -314,10 +313,10 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                       key={b.key}
                       type="button"
                       onClick={() => setOpenDay(openDay === i ? null : i)}
-                      className="flex flex-1 flex-col items-center justify-end gap-1.5"
+                      className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1.5"
                     >
                       <span
-                        className="font-gothic text-[0.5625rem] leading-none"
+                        className="font-gothic text-[0.5625rem] leading-none whitespace-nowrap tabular-nums"
                         style={{
                           color: b.total > 0 ? b.color : undefined,
                           opacity: b.isFuture ? 0.4 : 1,
@@ -345,7 +344,7 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
                   ))}
                 </div>
                 <p className="mt-1.5 text-center font-gothic text-[0.625rem] text-muted-foreground">
-                  숫자는 그날 앱에 접속한 시간(분)
+                  숫자는 그날 앱에 접속한 시간
                 </p>
                 <p className="mt-1 h-4 text-center text-[0.6875rem] text-muted-foreground">
                   {openDay !== null
