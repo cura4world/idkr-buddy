@@ -20,6 +20,10 @@ interface BadgeView {
 
 interface Props {
   onClick?: () => void;   // 없으면 눌러도 아무 일도 일어나지 않습니다
+  /** 명찰 요약 상자(MedaliPopover)가 꼬리를 맞출 단추 */
+  buttonRef?: React.Ref<HTMLButtonElement>;
+  /** 요약 상자가 열려 있는가(공개판). 주지 않으면 aria-expanded 를 달지 않습니다 */
+  expanded?: boolean;
 }
 
 // 캡슐이 길어지지 않게 세 자리부터는 줄여 씁니다
@@ -28,7 +32,7 @@ export const shortNum = (n: number): string => {
   return v > 999 ? "999+" : String(v);
 };
 
-export default function MedaliBadge({ onClick }: Props) {
+export default function MedaliBadge({ onClick, buttonRef, expanded }: Props) {
   const [view, setView] = useState<BadgeView>(() => {
     const c = loadMedaliCache();
     return {
@@ -57,8 +61,11 @@ export default function MedaliBadge({ onClick }: Props) {
 
   return (
     <button
+      ref={buttonRef}
       type="button"
       title="Medali"
+      aria-haspopup={expanded === undefined ? undefined : "dialog"}
+      aria-expanded={expanded}
       onClick={onClick}
       className="h-8 px-2.5 rounded-full flex items-center gap-1.5 bg-white/15 border border-white/20 shrink-0"
     >
