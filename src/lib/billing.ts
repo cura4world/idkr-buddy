@@ -12,7 +12,7 @@
 // 자동으로 다시 검증합니다(점점 늘어나는 간격 + 화면이 다시 보일 때). 사흘 안에 서버가 확인하지 못하면
 // Google 이 환불하므로, 사용자에게 다시 결제하라고 하지 않습니다(2026-11-14 출시 전 점검 B-03·B-14).
 
-import { expireSession, getSession, publicPost, updateSessionPlan, PublicPlan } from "@/lib/account";
+import { expireSession, getSession, publicPost, refreshMe, updateSessionPlan, PublicPlan, PUBLIC_BASE } from "@/lib/account";
 import { inRenewGrace } from "@/lib/plan";
 
 export const PLUS_PRODUCT_ID = "plus";
@@ -472,6 +472,44 @@ export function autoRestoreOnce(again = false, opts?: { force?: boolean }): Prom
       quietRun = null;
     });
   return quietRun;
+}
+
+// ── 구독 강제 재확인 (공용, 2026-11-24) ─────────────────────────
+// Play 에서 구매를 다시 받아(restore) 서버에 확인(/billing/verify — 서버가 그때 Play 에 물음)하고 등급을 새로 받습니다(/me).
+// 만료 시계·화면 복귀(LoginGate)와 내 정보 화면이 같은 길을 씁니다. 내 정보는 throttle 로 30초에 한 번까지.
+export const RECHECK_GAP_MS = 30 * 1000;
+let recheckAt = 0;
+
+/** 구매를 강제로 다시 확인합니다. 실제로 했으면 true, 간격 제한으로 건너뛰었으면 false. */
+export async function recheckSubscription(opts?: { throttle?: boolean }): Promise<boolean> {
+  if (!getSession()) return false;
+  const now = Date.now();
+  if (opts && opts.throttle && recheckAt > 0 && now - recheckAt < RECHECK_GAP_MS) return false;
+  recheckAt = now;
+  await autoRestoreOnce(true, { force: true });
+  await refreshMe().catch(() => null);
+  return true;
+}
+
+// ── 결제 전 인터넷 확인 (2026-11-24) ─────────────────────────────
+// 인터넷이 없을 때 구독 단추를 누르면 Play 결제 창이 "로드 중…"에서 끝나지 않았습니다(S21 실측). 창을 열기 전에 확인합니다.
+// navigator.onLine 이 false 면 바로, 아니면 우리 서버에 짧게(3초) 물어 봅니다.
+const ONLINE_CHECK_MS = 3000;
+
+export async function onlineForPurchase(timeoutMs: number = ONLINE_CHECK_MS): Promise<boolean> {
+  try {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return false;
+  } catch (e) {}
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const res = await fetch(PUBLIC_BASE + "/", { cache: "no-store", signal: ac.signal });
+    return res.ok;
+  } catch (e) {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ── Play 구독 관리 화면에서 돌아옴 (2026-11-23 내부 테스트 I-8) ────────────
