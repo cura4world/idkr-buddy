@@ -149,6 +149,27 @@ test("글자 크기 — 고르는 동안 미리 보이고, X 는 원래 크기�
   expect(await saved()).not.toBe(step0);
 });
 
+test("고르기 줄 — 화면 낭독용 묶음(radiogroup·group)과 선택 여부(checked)", async ({ page }) => {
+  await setupPreview(page, { tier: "plus" });
+  await openApp(page, "me");
+  await page.getByText("읽기 음성", { exact: true }).first().click();
+  const sheet = page.getByRole("dialog", { name: "읽기 음성", exact: true });
+  await expect(sheet).toBeVisible();
+  const group = sheet.getByRole("radiogroup", { name: "읽기 음성" });
+  await expect(group.getByRole("radio", { checked: true })).toHaveCount(1);
+  const unchecked = group.getByRole("radio", { checked: false }).first();
+  const name = await unchecked.textContent();
+  await unchecked.click();
+  await expect(group.getByRole("radio", { checked: true })).toHaveCount(1);
+  await expect(group.getByRole("radio", { checked: true })).toHaveText(name || "");
+  await sheet.getByRole("button", { name: "닫기", exact: true }).click();
+
+  await openApp(page, "");
+  await page.locator('button[aria-label="문장 종류 고르기"]:visible').first().click();
+  const kinds = page.getByRole("dialog", { name: "볼 문장을 고르세요", exact: true }).getByRole("group", { name: "볼 문장 종류" });
+  await expect(kinds.getByRole("checkbox", { checked: true }).first()).toBeVisible();
+});
+
 // ── 묶음 2(확인): 아래 시트 확인 창 — 대상 이름 굵게, X·취소 = 그대로, 빨간 주 단추 = 실행 ──
 
 test("단어장 삭제 확인 — 이름 굵게, X 는 취소, 삭제를 눌러야 지움", async ({ page }) => {
