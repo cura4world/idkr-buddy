@@ -21,6 +21,7 @@ import {
   billingAvailable,
   isLapsedPaidPlan,
   isPaidOrRenewingPlan,
+  onlineForPurchase,
   isVerifyingPurchase,
   manageSubscription,
   onVerifyEvent,
@@ -70,6 +71,7 @@ import {
   stateUntilText,
   TOAST_NO_BILLING,
   TOAST_NO_OFFERS,
+  TOAST_OFFLINE,
   TOAST_OTHER_ACCOUNT,
   TOAST_PENDING,
   TOAST_PREVIEW,
@@ -339,6 +341,11 @@ const Plus = () => {
     if (preview) { toast(TOAST_PREVIEW); return; }
     if (!billingAvailable()) { toast(TOAST_NO_BILLING); return; }
     if (!chosen.offer) { toast(TOAST_NO_OFFERS); return; }
+    // 인터넷이 없으면 Play 결제 창이 "로드 중…"에서 끝나지 않습니다 — 창을 열기 전에 확인합니다(2026-11-24 S21 실측).
+    setChecking(true);
+    const online = await onlineForPurchase();
+    setChecking(false);
+    if (!online) { toast(TOAST_OFFLINE); return; }
     // 최근까지 유료였는데 만료 시각이 지난 계정 — 갱신이 아직 반영되지 않았을 수 있습니다. 결제창을 열면 Play 의
     // "이미 가입되어 있습니다" 오류창이 먼저 뜨므로, 기존 구독을 먼저 확인합니다(2026-11-23 내부 테스트 1장 B).
     const s0 = getSession();
