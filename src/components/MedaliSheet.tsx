@@ -6,7 +6,8 @@
 // 히스토리(폰 뒤로가기)는 이 컴포넌트가 다루지 않습니다 (WordbookPickerSheet와 같은 규칙).
 
 import { useEffect, useState } from "react";
-import { Flame, Star, X } from "lucide-react";
+import { Flame, Medal, Star } from "lucide-react";
+import AppSheet from "@/components/sheet/AppSheet";
 import {
   medaliEngine,
   listWeekLogs,
@@ -39,7 +40,6 @@ const COLOR_NAME: Record<MedaliColor, string> = {
 
 const ROMAN: Record<number, string> = { 1: "I", 2: "II", 3: "III" };
 
-const EXIT_MS = 260;   // 내려가는 연출 길이 (아래 transition duration과 같아야 합니다)
 
 const DAY_LABELS = ["월", "화", "수", "목", "금", "토"];
 
@@ -161,8 +161,6 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
   const [words, setWords] = useState<WordRecord[]>([]);
   const [openDay, setOpenDay] = useState<number | null>(null);   // 막대를 탭하면 그날 점수 한 줄
   const [openRow, setOpenRow] = useState<string | null>(null);   // 내역 행 도움말
-  const [shown, setShown] = useState(open);        // 렌더를 유지할지 (퇴장 연출 동안 true)
-  const [entered, setEntered] = useState(false);   // 올라온 상태인지
   // 짝꿍 요약. 캐시를 초기값으로 두어 통신 전에도 바로 보입니다.
   const [peer, setPeer] = useState<PeerSummary | null>(() => loadPeerCache());
 
@@ -195,49 +193,10 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
     };
   }, [open]);
 
-  // 올라오고 내려가는 연출. 닫힐 때도 애니메이션이 끝난 뒤에 사라지도록
-  // open 이 false 가 돼도 EXIT_MS 동안은 렌더를 유지합니다.
-  useEffect(() => {
-    if (open) {
-      setShown(true);
-      // 첫 프레임에 "아래에 있는 상태"가 그려져야 올라오는 게 보입니다 (rAF 2번)
-      let inner = 0;
-      const outer = requestAnimationFrame(() => {
-        inner = requestAnimationFrame(() => setEntered(true));
-      });
-      return () => {
-        cancelAnimationFrame(outer);
-        if (inner) cancelAnimationFrame(inner);
-      };
-    }
-    setEntered(false);
-    const t = window.setTimeout(() => setShown(false), EXIT_MS);
-    return () => window.clearTimeout(t);
-  }, [open]);
-
-  // 시트가 떠 있는 동안 뒤 화면이 함께 밀리지 않게 잠급니다.
-  // (시트 안을 끝까지 굴린 뒤에도 계속 밀면 메인이 따라 움직이던 문제)
-  // touch-action은 건드리지 않습니다 — body에 none을 주면 그 자식인 시트 안쪽 스크롤까지 막힙니다.
-  useEffect(() => {
-    if (!shown) return;
-    const html = document.documentElement;
-    const body = document.body;
-    const prevHtml = html.style.overflow;
-    const prevBody = body.style.overflow;
-    html.style.overflow = "hidden";
-    body.style.overflow = "hidden";
-    return () => {
-      // 다른 화면의 스타일을 덮어쓰지 않도록 원래 값으로 되돌립니다
-      html.style.overflow = prevHtml;
-      body.style.overflow = prevBody;
-    };
-  }, [shown]);
-
-  if (!shown) return null;
-
+  // 올라오고 내려가는 움직임과 뒤 화면 잠금은 앱 공통 틀(AppSheet)이 합니다(2026-11-24).
   // 내려가는 중에는 닫기를 다시 부르지 않습니다
   const requestClose = () => {
-    if (!entered) return;
+    if (!open) return;
     onOpenChange(false);
   };
 
@@ -286,36 +245,18 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
     return st === "recheck" || st === "monitoring";
   }).length;
 
+  // 앱 공통 틀(안내). 닫기(X·바깥·끌기)는 히스토리를 직접 만지지 않고 여는 쪽(Index 등)에 맡깁니다 — 뒤로가기와 같은 경로.
+  // 탭은 머리 아래 고정 줄(subHeader), 본문 높이는 72dvh 로 고정(탭을 바꿔도 시트 높이가 출렁이지 않게, 넘치면 안에서 스크롤).
   return (
-    <>
-      <div
-        className={
-          "fixed inset-0 z-40 bg-black/40 transition-opacity duration-200 " +
-          (entered ? "opacity-100" : "opacity-0")
-        }
-        onClick={requestClose}
-      />
-      <div
-        className={
-          "fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5 " +
-          "transition-transform ease-out duration-[260ms] " +
-          (entered ? "translate-y-0" : "translate-y-full")
-        }
-      >
-        <div className="relative">
-          <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-border" />
-          {/* 닫기는 히스토리를 직접 만지지 않고 여는 쪽(Index)에 맡깁니다 — 뒤로가기와 같은 경로 */}
-          <button
-            type="button"
-            onClick={requestClose}
-            className="absolute right-3 -top-0.5 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground active:bg-muted"
-            title="닫기"
-          >
-            <X size={17} />
-          </button>
-        </div>
-
-        {/* 탭 — 고르지 않은 쪽 아이콘도 지금 훈장 색으로 칠해 둡니다 */}
+    <AppSheet
+      open={open}
+      onClose={requestClose}
+      title="훈장"
+      icon={<Medal size={20} strokeWidth={1.8} />}
+      bodyPadding="0 16px calc(16px + env(safe-area-inset-bottom))"
+      bodyStyle={{ height: "72dvh", touchAction: "pan-y" }}
+      subHeader={
+        /* 탭 — 고르지 않은 쪽 아이콘도 지금 훈장 색으로 칠해 둡니다 */
         <div className="flex border-b border-border px-4">
           <button
             type="button"
@@ -344,12 +285,8 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
             Bintang
           </button>
         </div>
-
-        {/* 탭을 바꿔도 시트 높이가 출렁이지 않게 고정합니다 (내용이 넘치면 안에서 스크롤) */}
-        <div
-          className="h-[72dvh] overflow-y-auto overscroll-contain px-4"
-          style={{ touchAction: "pan-y" }}
-        >
+      }
+    >
           {tab === "api" ? (
             <div className="relative pt-5">
               {peer ? (
@@ -654,8 +591,6 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
               ) : null}
             </div>
           )}
-        </div>
-      </div>
-    </>
+    </AppSheet>
   );
 }
