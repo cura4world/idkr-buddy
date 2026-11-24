@@ -37,6 +37,20 @@ test("360px·125%: 옆으로 넘치지 않는다", async ({ page }) => {
   expect(sw).toBeLessThanOrEqual(360);
 });
 
+test("360px·100%: 말풍선 색 사다리(불꽃·별)가 한 줄", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await setupPreview(page, { tier: "free", fontStep: FONT_STEP_100 });
+  await openApp(page, "me");
+  for (const k of [["이번 주 불꽃 설명", "이번 주 불꽃 (열정 점수)"], ["모은 별 설명", "모은 별 (암기 성과)"]]) {
+    await page.getByRole("button", { name: k[0] }).click();
+    const dlg = page.getByRole("dialog", { name: k[1] });
+    await expect(dlg).toBeVisible();
+    const tops = await dlg.locator("p.flex-wrap > span").evaluateAll((els) =>
+      Array.from(new Set(els.map((e) => Math.round(e.getBoundingClientRect().top)))));
+    expect(tops.length, k[0] + " 사다리 줄 수").toBe(1);
+  }
+});
+
 test("훈장 설명 말풍선 — 하나씩, 알겠어요·뒤로가기·바깥 누르기로 닫힘", async ({ page }) => {
   await page.setViewportSize({ width: 412, height: 840 });
   await setupPreview(page, { tier: "free", fontStep: FONT_STEP_100 });
