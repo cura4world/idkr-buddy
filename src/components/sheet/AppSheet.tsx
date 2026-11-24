@@ -18,7 +18,7 @@
 // 크기: 글자는 rem(글자 크기 85~125% 를 따름), 테두리·여백·아이콘 칸은 px.
 
 import { useEffect, useRef, useState } from "react";
-import type { FormEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import type { CSSProperties, FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { Check, CircleHelp, Trash2, X } from "lucide-react";
 import { useBackClose } from "@/hooks/useBackClose";
 
@@ -58,8 +58,23 @@ export type SheetTone = keyof typeof SHEET_TONE;
 // 창이 하나라도 열려 있으면 알림을 화면 위쪽에 띄웁니다(src/components/ui/sonner.tsx).
 let openSheetCount = 0;
 const openSheetListeners = new Set<() => void>();
+// 창이 떠 있는 동안 뒤 화면이 함께 밀리지 않게 잠급니다(훈장 창이 하던 것을 모든 창에 — 2026-11-24).
+// touch-action 은 건드리지 않습니다(body 에 none 을 주면 창 안쪽 스크롤까지 막힘).
+let savedOverflow: { html: string; body: string } | null = null;
 function setOpenSheetDelta(d: number): void {
+  const before = openSheetCount;
   openSheetCount = Math.max(0, openSheetCount + d);
+  try {
+    if (before === 0 && openSheetCount > 0) {
+      savedOverflow = { html: document.documentElement.style.overflow, body: document.body.style.overflow };
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else if (before > 0 && openSheetCount === 0 && savedOverflow) {
+      document.documentElement.style.overflow = savedOverflow.html;
+      document.body.style.overflow = savedOverflow.body;
+      savedOverflow = null;
+    }
+  } catch (e) {}
   openSheetListeners.forEach((l) => {
     try { l(); } catch (e) {}
   });
@@ -116,11 +131,28 @@ export interface AppSheetProps {
   zIndex?: number;
   /** 본문 줄 사이 간격(px). 입력 칸 13, 고르기 줄 8(기본) */
   gap?: number;
+  /** 제목 자리에 글자 대신 그릴 것(예: 단어 시트의 인니어 단어 + 발음 단추). 화면 읽기 이름은 title */
+  titleNode?: ReactNode;
+  /** 시트 폭(기본 max-w-lg). 넓게 보기 화면은 더 넓게 */
+  widthClass?: string;
+  /** 머리 아래 고정되는 줄(예: 훈장 창의 탭) — 스크롤되지 않습니다 */
+  subHeader?: ReactNode;
+  /** 본문 영역 모양(예: 높이 고정) */
+  bodyStyle?: CSSProperties;
+  /** 본문 안쪽 여백(기본 "16px 20px …") */
+  bodyPadding?: string;
+  /** 시트 최대 높이(기본 92dvh). 회전한 가로 보기처럼 화면 높이와 다른 곳에서 씁니다 */
+  maxHeight?: string;
+  /** 시트 안 누름을 먼저 받아 막을 때(예: 지도 핀을 누른 손가락이 방금 열린 시트까지 누르는 것) */
+  onPanelClickCapture?: (e: ReactMouseEvent<HTMLDivElement>) => void;
+  /** 머리를 끌어 닫기(기본 켬). 화면을 돌린 가로 보기처럼 끄는 방향이 맞지 않는 곳에서는 끕니다 */
+  dragClose?: boolean;
 }
 
 export default function AppSheet({
   open, onClose, title, desc, icon, tone = "teal", tileBg, tileInk, children, footer, onSubmit,
   closeLocked, dirty, backClose, role = "dialog", zIndex = 50, gap = 8,
+  titleNode, widthClass = "max-w-lg", subHeader, bodyStyle, bodyPadding, maxHeight, onPanelClickCapture, dragClose = true,
 }: AppSheetProps) {
   const reduce = prefersReducedMotion();
   const [mounted, setMounted] = useState(open);
@@ -189,6 +221,7 @@ export default function AppSheet({
 
   // ── 아래로 끌어 닫기(손잡이·머리 영역에서만) ──
   const onDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragClose) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     drag.current = { id: e.pointerId, y0: e.clientY, t0: Date.now(), active: false };
   };
@@ -225,8 +258,11 @@ export default function AppSheet({
 
   const bodyEl = (
     <div
-      className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
-      style={{ padding: footer ? "16px 20px 4px" : "16px 20px calc(20px + env(safe-area-inset-bottom))" }}
+      className={"min-h-0 overflow-y-auto overscroll-contain " + (bodyStyle && bodyStyle.height ? "shrink-0" : "flex-1")}
+      style={{
+        padding: bodyPadding || (footer ? "16px 20px 4px" : "16px 20px calc(20px + env(safe-area-inset-bottom))"),
+        ...bodyStyle,
+      }}
     >
       <div className="flex flex-col" style={{ gap }}>{children}</div>
     </div>
@@ -249,10 +285,11 @@ export default function AppSheet({
         aria-modal={open ? true : undefined}
         aria-label={open ? title : undefined}
         aria-hidden={open ? undefined : true}
-        className="absolute bottom-0 left-0 right-0 max-w-lg mx-auto bg-white flex flex-col outline-none"
+        onClickCapture={onPanelClickCapture}
+        className={"absolute bottom-0 left-0 right-0 " + widthClass + " mx-auto bg-white flex flex-col outline-none"}
         style={{
           borderRadius: SHEET.radius + "px " + SHEET.radius + "px 0 0",
-          maxHeight: SHEET.maxHeight,
+          maxHeight: maxHeight || SHEET.maxHeight,
           boxShadow: "0 -8px 28px rgba(8,32,38,0.14)",
           transform: panelTransform,
           transition: dragging ? "none" : "transform " + dur + "ms cubic-bezier(0.22, 1, 0.36, 1)",
@@ -277,7 +314,9 @@ export default function AppSheet({
               {icon}
             </span>
             <span className="flex-1 min-w-0">
-              <span className="block font-gothic text-[1rem] font-bold break-keep" style={{ color: SHEET.txt }}>{title}</span>
+              {titleNode || (
+                <span className="block font-gothic text-[1rem] font-bold break-keep" style={{ color: SHEET.txt }}>{title}</span>
+              )}
               {desc ? (
                 <span className="block mt-0.5 font-gothic text-[0.78125rem] leading-[1.45] break-keep" style={{ color: SHEET.sub }}>{desc}</span>
               ) : null}
@@ -296,6 +335,7 @@ export default function AppSheet({
             </button>
           </div>
         </div>
+        {subHeader ? <div className="shrink-0 mt-3">{subHeader}</div> : null}
         {onSubmit ? (
           <form onSubmit={onSubmit} className="min-h-0 flex-1 flex flex-col">
             {bodyEl}
