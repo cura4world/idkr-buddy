@@ -1346,7 +1346,8 @@ const Index = () => {
         ) : null}
 
         {kindSheet}
-        <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
+        {/* 명찰 → 공개판은 요약 창(자세히는 내 정보), 관리자판·회원판은 내 정보로 갈 길이 없어 자세히 창(2026-11-24) */}
+        <MedaliSheet view={storeApp ? "summary" : "detail"} open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
       </div>
     );
   }
@@ -1658,7 +1659,8 @@ const Index = () => {
 
       {kindSheet}
 
-      <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
+      {/* 관리자판·회원판 홈 — 내 정보(/me)로 갈 길이 없어 명찰도 자세히 창(2026-11-24) */}
+      <MedaliSheet view={storeApp ? "summary" : "detail"} open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
