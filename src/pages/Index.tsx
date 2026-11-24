@@ -27,7 +27,7 @@ import { getEdition, takeRevokedNotice } from "@/lib/access";
 import { isStoreApp } from "@/lib/platform";
 import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
 import VoiceSearchPill from "@/components/VoiceSearchPill";
-import AppSheet, { ChoiceRow, SheetButton } from "@/components/sheet/AppSheet";
+import AppSheet, { ChoiceGroup, ChoiceRow, SheetButton } from "@/components/sheet/AppSheet";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { LOCK_BUTTON_SUB } from "@/lib/plusCopy";
 import { isWordbookVisible } from "@/lib/wordbookAccess";
@@ -718,16 +718,18 @@ const Index = () => {
       icon={<SlidersHorizontal size={20} strokeWidth={1.8} />}
       footer={<SheetButton onClick={applyKinds}>완료</SheetButton>}
     >
-      {PHRASE_KINDS.map((info) => (
-        <ChoiceRow
-          key={info.key}
-          mode="multi"
-          selected={kindDraft.indexOf(info.key) >= 0}
-          onClick={() => toggleKindDraft(info.key)}
-          title={info.ko}
-          wordSub={info.id}
-        />
-      ))}
+      <ChoiceGroup mode="multi" label="볼 문장 종류">
+        {PHRASE_KINDS.map((info) => (
+          <ChoiceRow
+            key={info.key}
+            mode="multi"
+            selected={kindDraft.indexOf(info.key) >= 0}
+            onClick={() => toggleKindDraft(info.key)}
+            title={info.ko}
+            wordSub={info.id}
+          />
+        ))}
+      </ChoiceGroup>
     </AppSheet>
   );
 
