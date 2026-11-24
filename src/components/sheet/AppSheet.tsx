@@ -322,10 +322,10 @@ export function SheetButtonRow({ children }: { children: ReactNode }) {
 // ── 고르기 줄 ────────────────────────────────────────────────
 
 interface ChoiceRowProps {
-  selected: boolean;
+  selected?: boolean;
   onClick: () => void;
-  /** multi = 왼쪽 체크(여러 개), single = 오른쪽 라디오(하나) */
-  mode: "multi" | "single";
+  /** multi = 왼쪽 체크(여러 개), single = 오른쪽 라디오(하나), action = 누르면 바로 실행(표시 없음) */
+  mode: "multi" | "single" | "action";
   title: ReactNode;
   /** 인도네시아어 작은 이름 — font-word(Lora) */
   wordSub?: ReactNode;
@@ -339,9 +339,9 @@ interface ChoiceRowProps {
   ariaLabel?: string;
 }
 
-export function ChoiceRow({ selected, onClick, mode, title, wordSub, sub, leading, trailing, disabled, ariaLabel }: ChoiceRowProps) {
+export function ChoiceRow({ selected = false, onClick, mode, title, wordSub, sub, leading, trailing, disabled, ariaLabel }: ChoiceRowProps) {
   const box =
-    mode === "multi" ? (
+    mode === "action" ? null : mode === "multi" ? (
       <span
         className="shrink-0 flex items-center justify-center"
         style={
@@ -363,8 +363,8 @@ export function ChoiceRow({ selected, onClick, mode, title, wordSub, sub, leadin
       type="button"
       onClick={onClick}
       disabled={disabled}
-      role={mode === "multi" ? "checkbox" : "radio"}
-      aria-checked={selected}
+      role={mode === "multi" ? "checkbox" : mode === "single" ? "radio" : undefined}
+      aria-checked={mode === "action" ? undefined : selected}
       aria-label={ariaLabel}
       className="w-full flex items-center gap-3 text-left disabled:opacity-50"
       style={{
