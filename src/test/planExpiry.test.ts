@@ -305,6 +305,47 @@ describe("강제 재확인·최근 유료·구독 관리에서 돌아옴 (billin
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("공용 강제 재확인: 내 정보(throttle)는 30초에 한 번까지, 시계·복귀(throttle 없음)는 매번", async () => {
+    vi.resetModules();
+    saveSession({ tier: "plus", until: FUTURE });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ user: { id: "g_1" }, plan: { tier: "plus", until: FUTURE } }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const b = await import("@/lib/billing");
+    expect(b.RECHECK_GAP_MS).toBe(30 * 1000);
+    expect(await b.recheckSubscription({ throttle: true })).toBe(true);
+    expect(await b.recheckSubscription({ throttle: true })).toBe(false); // 30초 안 — 건너뜀
+    expect(await b.recheckSubscription()).toBe(true); // 시계·화면 복귀 길은 간격을 보지 않음
+    vi.setSystemTime(Date.now() + 31 * 1000);
+    expect(await b.recheckSubscription({ throttle: true })).toBe(true);
+    // 세션이 없으면 하지 않음
+    localStorage.clear();
+    vi.resetModules();
+    const b2 = await import("@/lib/billing");
+    expect(await b2.recheckSubscription({ throttle: true })).toBe(false);
+  });
+
+  it("결제 전 인터넷 확인: 꺼져 있으면 서버에 묻지 않고 false, 서버가 답하면 true, 실패·시간 초과면 false", async () => {
+    vi.resetModules();
+    const b = await import("@/lib/billing");
+    const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const nav = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    expect(await b.onlineForPurchase()).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+    nav.mockReturnValue(true);
+    expect(await b.onlineForPurchase()).toBe(true);
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
+    expect(await b.onlineForPurchase()).toBe(false);
+    // 응답이 오지 않으면 3초에 끊음
+    vi.stubGlobal("fetch", vi.fn((_u: unknown, init?: { signal?: AbortSignal }) => new Promise((_res, rej) => {
+      init?.signal?.addEventListener("abort", () => rej(new DOMException("aborted", "AbortError")));
+    })));
+    const p = b.onlineForPurchase();
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await p).toBe(false);
+    nav.mockRestore();
+  });
+
   it("구독 관리 화면을 열고 30분 안에 돌아오면 한 번만 '돌아옴'으로 본다", async () => {
     vi.resetModules();
     const b = await import("@/lib/billing");
