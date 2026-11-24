@@ -49,7 +49,9 @@ const speakWord = (text: string) => {
 import PhraseFindBar from "@/components/PhraseFindBar";
 import AiReportButton from "@/components/AiReportButton";
 import { usePlan } from "@/lib/plan";
-import { canOpenScene } from "@/lib/tasteAccess";
+import { canOpenScene, LOCK_TITLE_SCENE_LISTEN } from "@/lib/tasteAccess";
+import { openPlusLock } from "@/lib/plusLock";
+import LockMark from "@/components/LockMark";
 import { isBackCloseEntry } from "@/hooks/useBackClose";
 
 const TEAL = "#2C6D63";
@@ -280,7 +282,10 @@ const PercakapanRead = () => {
   const locked = !!scene && !canOpenScene(scene, plan.plus);
   // 무료가 여는 맛보기 장면의 음성은 앱에 담긴 파일로만 듣습니다(서버는 무료 회화 음성을 잠가 둠).
   // 파일이 아직 없으면 듣기 단추를 숨깁니다 — 눌러도 "Plus 기능" 안내만 나오게 두지 않으려는 것(2026-11-23).
-  const canListen = !!scene && (plan.plus || !!scene.custom || hasBundledAudio(scene));
+  // 직접 만든 대화는 무료에서도 글은 열리지만 듣기는 Plus 기능입니다(2026-11-24 "만든 것은 읽기 전용" 원칙).
+  // 무료에게는 머리의 "전체 듣기"를 자물쇠 단추로 보이고(누르면 공용 잠금 안내 창), 문장 듣기 단추는 내지 않습니다.
+  const canListen = !!scene && (plan.plus || hasBundledAudio(scene));
+  const listenLocked = !!scene && !locked && !canListen && !!scene.custom;
 
   // ---------- 전체 듣기 중 지금 읽는 줄 짐작 ----------
   // 전체 듣기는 소리 파일 하나라 줄 경계를 모릅니다. 재생 위치(비율)를 줄마다의 글자 수
@@ -494,6 +499,17 @@ const PercakapanRead = () => {
                 <Play size={13} fill="currentColor" strokeWidth={0} />
               )}
               {allLabel}
+            </button>
+          ) : listenLocked ? (
+            <button
+              type="button"
+              onClick={() => openPlusLock(LOCK_TITLE_SCENE_LISTEN)}
+              aria-label="전체 듣기 (Plus 회원 기능)"
+              className="shrink-0 -mr-1 h-9 px-[13px] rounded-full inline-flex items-center gap-[5px] font-gothic text-[0.78125rem] font-semibold active:opacity-85"
+              style={{ background: "#ECEFF1", color: "#8F7E4E" }}
+            >
+              <LockMark size={13} />
+              전체 듣기
             </button>
           ) : null}
           {canWide ? (
