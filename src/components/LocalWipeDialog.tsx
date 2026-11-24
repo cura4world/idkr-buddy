@@ -5,15 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmSheet } from "@/components/sheet/AppSheet";
 import { onAskLocalWipe, wipeLocalStudyData } from "@/lib/localWipe";
 
 const LocalWipeDialog = () => {
@@ -47,31 +39,26 @@ const LocalWipeDialog = () => {
     }
   };
 
+  // 앱 공통 틀의 확인 창(2026-11-24). X·바깥·끌기·폰 뒤로가기 = 남겨두기(예전에는 뒤로가기가 이 창을 닫지 않았음).
   return (
-    <AlertDialog open={open} onOpenChange={(o) => { if (!o) keep(); }}>
-      <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="font-body text-[0.9375rem] text-gray-900">
-            이 폰에 있는 단어장과 학습 기록도 지울까요?
-          </AlertDialogTitle>
-          <AlertDialogDescription className="font-gothic text-[0.6875rem] leading-relaxed">
-            계정은 삭제했습니다. 내 단어장·찾아본 단어·훈장·불러온 이야기·만든 대화는 아직 이 폰에 있습니다.
-            지우면 되돌릴 수 없습니다. 백업 파일을 저장해 두지 않았다면 남겨 두세요. 글자 크기 같은 설정은 그대로입니다.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy} className="font-body">남겨두기</AlertDialogCancel>
-          <button
-            type="button"
-            onClick={wipe}
-            disabled={busy}
-            className="h-10 px-4 rounded-md font-body text-sm font-medium bg-red-600 hover:bg-red-700 text-white disabled:opacity-60"
-          >
-            {busy ? "지우는 중..." : "모두 지우기"}
-          </button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmSheet
+      open={open}
+      onCancel={keep}
+      onConfirm={wipe}
+      title="이 폰에 있는 단어장과 학습 기록도 지울까요?"
+      message={
+        <>
+          계정은 삭제했습니다. 내 단어장·찾아본 단어·훈장·불러온 이야기·만든 대화는 아직 이 폰에 있습니다.
+          지우면 되돌릴 수 없습니다. 백업 파일을 저장해 두지 않았다면 남겨 두세요. 글자 크기 같은 설정은 그대로입니다.
+        </>
+      }
+      confirmLabel={busy ? "지우는 중..." : "모두 지우기"}
+      cancelLabel="남겨두기"
+      danger
+      busy={busy}
+      backClose
+      zIndex={70}
+    />
   );
 };
 
