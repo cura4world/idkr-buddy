@@ -138,3 +138,28 @@ for (const s of SIZES) {
     if (cb) expect(cb.y + cb.height).toBeLessThanOrEqual(navTop);
   });
 }
+
+// 혜택 설명은 " · " 로 나뉜 말 덩어리마다 통째로 줄을 넘깁니다(2026-11-25 "나만의 단어장 만들기" 추가 — 360px·125% 에서 "나만의 단 / 어장"으로 꺾였음)
+test("혜택 설명 — 360px·125% 에서 말 덩어리가 낱말 가운데서 꺾이지 않음, 412px·100% 첫 줄은 한 줄", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await setupPreview(page, { tier: "free", fontStep: 8 });
+  await openApp(page, "plus");
+  const first = page.locator("[data-perk-sub]").first();
+  await expect(first).toContainText(PLUS_PERKS[0].sub.split(" · ")[1]);
+  const segs = await first.locator(".inline-block").evaluateAll((els) =>
+    els.map((e) => {
+      const lh = parseFloat(getComputedStyle(e).lineHeight) || parseFloat(getComputedStyle(e).fontSize) * 1.5;
+      return { text: e.textContent, lines: Math.round(e.getBoundingClientRect().height / lh) };
+    }));
+  expect(segs.length).toBe(2);
+  for (const s of segs) expect(s.lines, s.text || "").toBe(1);
+
+  await page.setViewportSize({ width: 412, height: 915 });
+  await setupPreview(page, { tier: "free", fontStep: FONT_STEP_100 });
+  await openApp(page, "plus");
+  const h = await page.locator("[data-perk-sub]").first().evaluate((e) => {
+    const lh = parseFloat(getComputedStyle(e).lineHeight) || parseFloat(getComputedStyle(e).fontSize) * 1.5;
+    return Math.round(e.getBoundingClientRect().height / lh);
+  });
+  expect(h).toBe(1);
+});
