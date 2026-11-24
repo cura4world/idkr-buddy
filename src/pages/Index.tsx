@@ -27,6 +27,7 @@ import { getEdition, takeRevokedNotice } from "@/lib/access";
 import { isStoreApp } from "@/lib/platform";
 import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
 import VoiceSearchPill from "@/components/VoiceSearchPill";
+import AppSheet, { ChoiceRow, SheetButton } from "@/components/sheet/AppSheet";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { LOCK_BUTTON_SUB } from "@/lib/plusCopy";
 import { isWordbookVisible } from "@/lib/wordbookAccess";
@@ -35,7 +36,6 @@ import {
   RotateCcw,
   SlidersHorizontal,
   Bookmark,
-  Check,
   Settings,
   Search,
   Mic,
@@ -310,6 +310,8 @@ const Index = () => {
   const [phrase, setPhrase] = useState<Phrase | null>(() => loadSavedPhrase());
   const [phraseLoading, setPhraseLoading] = useState(false);
   const [kindSheetOpen, setKindSheetOpen] = useState(false);
+  // 볼 문장 고르기 창에서 고르는 중인 것(완료를 눌러야 kinds 에 적용)
+  const [kindDraft, setKindDraft] = useState<PhraseKind[]>([]);
   const sheetOpenRef = useRef(false);
   const sheetPushedRef = useRef(false);
 
@@ -397,6 +399,7 @@ const Index = () => {
 
   // 옵션 시트: 폰의 뒤로가기로도 닫히도록 히스토리를 한 칸 쌓습니다.
   const openKindSheet = () => {
+    setKindDraft(kinds);
     setKindSheetOpen(true);
     sheetOpenRef.current = true;
     try {
@@ -410,7 +413,8 @@ const Index = () => {
   const closeKindSheet = () => {
     if (sheetPushedRef.current) {
       sheetPushedRef.current = false;
-      sheetOpenRef.current = false;
+      // 열림 표시는 그대로 두고 칸만 뺍니다 — 아래 popstate 처리가 열림 표시를 보고 창을 닫습니다.
+      // (2026-11-24: 여기서 먼저 false 로 바꾸면 popstate 가 이미 닫힌 것으로 보고 창을 그대로 둬, 단추를 눌러도 닫히지 않았음)
       try { window.history.back(); return; } catch (e) { /* 아래에서 직접 닫습니다 */ }
     }
     sheetOpenRef.current = false;
@@ -487,17 +491,27 @@ const Index = () => {
     navigate("/phrase?" + phraseToQuery(phrase));
   };
 
-  const toggleKind = (key: PhraseKind) => {
-    setKinds((prev) => {
+  // 볼 문장 고르기 — 2026-11-24 옵션 창 통일: 체크는 고른 것만 바꾸고(초안), "완료"를 눌러야 적용합니다.
+  // X·바깥 누르기·뒤로가기는 바꾼 것을 버리고 닫습니다(예전에는 체크하는 즉시 저장했음).
+  const toggleKindDraft = (key: PhraseKind) => {
+    setKindDraft((prev) => {
       const on = prev.indexOf(key) >= 0;
       if (on && prev.length <= 1) return prev; // 최소 하나는 남깁니다
-      const next = on ? prev.filter((k) => k !== key) : prev.concat([key]);
+      return on ? prev.filter((k) => k !== key) : prev.concat([key]);
+    });
+  };
+
+  const applyKinds = () => {
+    const next = kindDraft;
+    const same = next.length === kinds.length && next.every((k) => kinds.indexOf(k) >= 0);
+    if (!same) {
+      setKinds(next);
       saveKinds(next);
       // 미리 받아둔 문장은 예전 설정으로 만든 것이라 버립니다
       clearNextPhrase();
       refreshPhrase(next);
-      return next;
-    });
+    }
+    closeKindSheet();
   };
 
   // 뜻 대신 조회 실패 안내문이 저장돼 있던 단어를 store.ts 가 시작할 때 지웁니다.
@@ -693,57 +707,29 @@ const Index = () => {
     }
   };
 
-  // 문장 종류 고르기 시트 — 공개판·관리자판 공용
-  const kindSheet = kindSheetOpen ? (
-    <>
-      <div
-        className="fixed inset-0 z-40 bg-black/40"
-        onClick={closeKindSheet}
-      />
-      <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-[22px] bg-card pb-[max(20px,env(safe-area-inset-bottom))] pt-2.5">
-        <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border" />
-        <h2 className="px-4 text-base font-semibold text-foreground">볼 문장을 고르세요</h2>
-        <p className="px-4 pb-3.5 pt-1.5 text-[0.78125rem] leading-relaxed text-muted-foreground">
-          여러 개를 고르면 그중 하나가 무작위로 나옵니다.
-        </p>
-        <div className="border-t border-border">
-          {PHRASE_KINDS.map((info) => {
-            const on = kinds.indexOf(info.key) >= 0;
-            return (
-              <button
-                key={info.key}
-                type="button"
-                onClick={() => toggleKind(info.key)}
-                className="flex w-full items-center gap-3 border-b border-border px-4 py-3.5 text-left active:bg-muted/60"
-              >
-                <span
-                  className={
-                    "flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-md border-2 " +
-                    (on ? "border-primary bg-primary text-white" : "border-border text-transparent")
-                  }
-                >
-                  <Check size={13} strokeWidth={3} />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[0.875rem] leading-tight text-foreground">{info.ko}</span>
-                  <span className="mt-0.5 block font-word text-[0.71875rem] text-muted-foreground">
-                    {info.id}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <button
-          type="button"
-          onClick={closeKindSheet}
-          className="mx-4 mt-4 h-12 w-[calc(100%-2rem)] rounded-[13px] bg-primary text-[0.9375rem] font-medium text-white"
-        >
-          완료
-        </button>
-      </div>
-    </>
-  ) : null;
+  // 문장 종류 고르기 시트 — 공개판·관리자판 공용. 앱 공통 틀(AppSheet, 고르기 여러 개).
+  // 폰 뒤로가기는 이 화면의 pushState(kindSheet) 가 처리합니다(backClose 끔).
+  const kindSheet = (
+    <AppSheet
+      open={kindSheetOpen}
+      onClose={closeKindSheet}
+      title="볼 문장을 고르세요"
+      desc="여러 개를 고르면 그중 하나가 무작위로 나옵니다."
+      icon={<SlidersHorizontal size={20} strokeWidth={1.8} />}
+      footer={<SheetButton onClick={applyKinds}>완료</SheetButton>}
+    >
+      {PHRASE_KINDS.map((info) => (
+        <ChoiceRow
+          key={info.key}
+          mode="multi"
+          selected={kindDraft.indexOf(info.key) >= 0}
+          onClick={() => toggleKindDraft(info.key)}
+          title={info.ko}
+          wordSub={info.id}
+        />
+      ))}
+    </AppSheet>
+  );
 
   // 최근 검색어 — 검색창을 눌렀을 때만 (최대 10개). 본문 위에 떠있는 플로팅 박스
   const historyBox = showHistory && query.trim() === "" && history.length > 0 ? (
