@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import FormSheet, { FORM_FIELD_CLASS, FORM_INPUT_CLASS, FormPrimaryButton } from "@/components/FormSheet";
 import SettingsDialog, { REOPEN_SETTINGS_KEY } from "@/components/SettingsDialog";
 import BackupRestoreDialog from "@/components/BackupRestoreDialog";
-import PlusMoreButton from "@/components/PlusMoreButton";
+import { PlusFreeCard, PlusMemberCard } from "@/components/PlusCard";
 import { ArchiveRestore, AudioLines, Type, UserRound } from "lucide-react";
 import AppSheet, { ChoiceGroup, ChoiceRow, ConfirmSheet, SHEET, SheetButton } from "@/components/sheet/AppSheet";
 import { useBackClose } from "@/hooks/useBackClose";
@@ -110,12 +110,6 @@ const I_DOC = (
   <Ico>
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
     <path d="M14 2v6h6" />
-  </Ico>
-);
-const I_CARD = (
-  <Ico>
-    <rect x="2" y="5" width="20" height="14" rx="2.5" />
-    <path d="M2 10h20M6 15h4" />
   </Ico>
 );
 const I_KEY = (
@@ -733,13 +727,14 @@ const MyInfo = () => {
       : EDITION_LABEL[getEdition()];
   const until = session && session.plan && typeof session.plan.until === "number" ? session.plan.until : 0;
   const period = planPeriod(session);
-  // 회원 카드의 요금 한 줄 — Play 에서 받은 가격으로만 만듭니다(월 환산 = Play 연 가격 ÷ 12, 2026-11-24 두 줄 → 한 줄).
+  // 무료 회원 카드의 요금 줄 — Play 에서 받은 가격으로만 만듭니다(월 환산 = Play 연 가격 ÷ 12).
+  // 2026-11-25: "월 3,900원 / 연간 구독 시 월 2,900원" 덩어리 둘 — 모자라면 " / " 자리에서만 줄을 넘김.
   // 아직 못 받았으면 금액 대신 소개 문구를 보입니다. 고정 원화 금액은 미리보기 빌드의 대체값뿐입니다.
-  const plusLine: string = pricing.state === "ready" && pricing.monthlyPrice
-    ? "월 " + pricing.monthlyPrice + (pricing.yearlyPerMonth
-        ? " · 연간 구독 시 월 " + pricing.yearlyPerMonth
-        : pricing.yearlyPrice ? " · 연간 구독 시 연 " + pricing.yearlyPrice : "")
-    : "단어장·게임·회화집·지도까지 모든 기능이 열립니다";
+  const plusChunks: string[] = pricing.state === "ready" && pricing.monthlyPrice
+    ? ["월 " + pricing.monthlyPrice].concat(pricing.yearlyPerMonth
+        ? ["연간 구독 시 월 " + pricing.yearlyPerMonth]
+        : pricing.yearlyPrice ? ["연간 구독 시 연 " + pricing.yearlyPrice] : [])
+    : ["단어장·게임·회화집·지도까지 모든 기능이 열립니다"];
   const tail = memberKeyTail(session);
   const hm = splitHM(view.totalMs);
 
@@ -782,51 +777,24 @@ const MyInfo = () => {
         <SectionTitle>회원</SectionTitle>
         {tier === "free" ? (
           <>
-            {/* 2026-11-24: 공용 귤색 상자(PlusLockBox) 대신 한 줄 가격 + 단추. 카드 어디를 눌러도 구독 화면.
-                2026-11-25: 오른쪽 단추는 홈 Plus 카드와 같은 공용 "Plus / 자세히 보기"(PlusMoreButton).
-                카드 전체를 단추로 두면 화면 읽기가 카드 글 전체("Kata kata Plus … 자세히 보기")를 단추 이름으로 읽어,
-                카드는 누르기만 받고 단추는 이 알약 하나("Plus 자세히 보기")로 둡니다 */}
-            <div
-              onClick={() => navigate(PAYWALL_PATH)}
-              className="w-full flex items-center text-left bg-white cursor-pointer active:bg-black/[0.03] transition-colors"
-              style={{ borderRadius: 20, boxShadow: CARD_SHADOW, padding: "10px 12px 10px 16px", gap: 12, minHeight: 60 }}
-            >
-              <span className="flex-1 min-w-0">
-                <span className="block" style={{ fontSize: rem(14.5), fontWeight: 700 }}>Kata kata Plus</span>
-                <span className="block break-keep tabular-nums" style={{ marginTop: 2, fontSize: rem(12), lineHeight: 1.4, color: MUTED }}>
-                  {plusLine}
-                </span>
-              </span>
-              <PlusMoreButton onClick={() => navigate(PAYWALL_PATH)} />
-            </div>
+            {/* 2026-11-25: 홈 맨 아래 Plus 카드와 같은 공용 카드(PlusCard). 카드 어디를 눌러도 구독 화면.
+                단추는 안쪽 알약 하나("Plus 자세히 보기") — 카드 전체를 단추로 두면 화면 읽기가 카드 글 전체를 단추 이름으로 읽음 */}
+            <PlusFreeCard sub={plusChunks} onOpen={() => navigate(PAYWALL_PATH)} />
             {/* 공개판 회원키 입력은 서버가 생기면 다시 넣습니다(QA Q01 — 그 전에는 링크를 보이지 않음) */}
           </>
         ) : tier === "plus" ? (
-          <Card style={{ overflow: "hidden" }}>
-            <Row
-              icon={I_DOC}
-              label="회원 등급"
-              value={review ? "Plus · 심사용 계정" : "Plus" + (period ? " · " + period : "")}
-              onClick={() => navigate(PAYWALL_PATH)}
-              last={review}
-            />
-            {/* 심사용 계정은 구독이 아니라 관리할 결제가 없습니다. 해지한 구독은 "다음 결제" 대신
-                "정기 결제 취소됨 · …까지 이용"(B-09, 2026-11-23 I-8). */}
-            {review ? null : (
-              <Row
-                icon={I_CARD}
-                label="구독 관리"
-                value={until > Date.now()
-                  ? (session && session.plan.autoRenew === false
-                      ? canceledUntilText(koDate(until))
-                      : "다음 결제 " + koDate(until))
-                  : undefined}
-                wrapValue
-                onClick={openManage}
-                last
-              />
-            )}
-          </Card>
+          // 2026-11-25: "회원 등급"·"구독 관리" 두 줄 목록 대신 홈 Plus 카드와 같은 공용 카드.
+          // 카드 누르기 = 예전 "회원 등급" 줄(구독 화면), "구독 / 관리" 알약 = 예전 "구독 관리" 줄(openManage).
+          // 심사용 계정은 둘째 줄 "심사용 계정"·알약 없음. 해지한 구독은 "정기 결제 취소됨 · …까지 이용"(B-09, I-8)
+          <PlusMemberCard
+            review={review}
+            period={period === "연간 구독" ? "연간" : period === "월간 구독" ? "월간" : ""}
+            nextText={until > Date.now()
+              ? (session && session.plan.autoRenew === false ? canceledUntilText(koDate(until)) : "다음 결제 " + koDate(until))
+              : ""}
+            onOpen={() => navigate(PAYWALL_PATH)}
+            onManage={openManage}
+          />
         ) : null}
         {/* 해지로 가는 곳(구독 관리) 바로 아래 — Plus 가 끝난 뒤 만든 것은 어떻게 되는지 미리 알림(2026-11-24, 문구는 plusCopy.ts 한 곳).
             결제가 없는 심사용 계정에는 내지 않습니다 */}
