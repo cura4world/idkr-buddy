@@ -173,3 +173,5 @@ export const TOAST_RESTORE_NONE = "이 Google 계정으로 산 구독을 찾지 
 export const TOAST_NO_BILLING = "구독은 Google Play에서 받은 앱에서만 할 수 있습니다";
 export const TOAST_NO_OFFERS = "요금제를 불러오지 못했습니다. 인터넷을 확인하고 다시 열어 주세요";
 export const TOAST_PREVIEW = "미리보기에서는 결제하지 않습니다";
+/** 구독 단추를 눌렀는데 인터넷이 없음 — Play 결제 창을 열지 않습니다(2026-11-24) */
+export const TOAST_OFFLINE = "인터넷 연결을 확인해 주세요";
