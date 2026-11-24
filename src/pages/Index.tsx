@@ -21,6 +21,7 @@ import SettingsDialog, { REOPEN_SETTINGS_KEY } from "@/components/SettingsDialog
 import MedaliBadge from "@/components/MedaliBadge";
 import MedaliNudge from "@/components/MedaliNudge";
 import MedaliSheet from "@/components/MedaliSheet";
+import MedaliPopover from "@/components/MedaliPopover";
 import { syncMedali } from "@/lib/medaliSync";
 import { getEdition, takeRevokedNotice } from "@/lib/access";
 import { isStoreApp } from "@/lib/platform";
@@ -286,6 +287,16 @@ const Index = () => {
       medaliPushedRef.current = false;
       try { window.history.back(); } catch (e) {}
     }
+  };
+
+  // 명찰 요약 상자(2026-11-24) — 공개판(스토어·미리보기)만. 명찰 바로 아래 떠 있는 상자이고 뒤로가기는 상자가 스스로 합니다.
+  // 관리자판·회원판은 내 정보로 갈 길이 없어 위의 자세히 창(MedaliSheet)을 엽니다.
+  const [medaliPop, setMedaliPop] = useState(false);
+  const medaliBadgeRef = useRef<HTMLButtonElement>(null);
+  const closeMedaliPop = useCallback(() => setMedaliPop(false), []);
+  const onMedaliBadge = () => {
+    if (isStoreApp()) setMedaliPop((v) => !v);
+    else openMedali();
   };
 
   useEffect(() => {
@@ -986,7 +997,7 @@ const Index = () => {
               </div>
             </div>
             <div className="relative flex items-center shrink-0">
-              <MedaliBadge onClick={openMedali} />
+              <MedaliBadge onClick={onMedaliBadge} buttonRef={medaliBadgeRef} expanded={storeApp ? medaliPop : undefined} />
               <MedaliNudge />
             </div>
           </div>
@@ -1346,8 +1357,9 @@ const Index = () => {
         ) : null}
 
         {kindSheet}
-        {/* 명찰 → 공개판은 요약 창(자세히는 내 정보), 관리자판·회원판은 내 정보로 갈 길이 없어 자세히 창(2026-11-24) */}
-        <MedaliSheet view={storeApp ? "summary" : "detail"} open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
+        {/* 명찰 → 공개판은 명찰 아래 요약 상자(자세히는 내 정보), 관리자판·회원판은 내 정보로 갈 길이 없어 자세히 창(2026-11-24) */}
+        <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
+        <MedaliPopover open={medaliPop} anchor={medaliBadgeRef.current} onClose={closeMedaliPop} />
       </div>
     );
   }
@@ -1417,7 +1429,7 @@ const Index = () => {
             </h1>
           </div>
           <div className="relative flex items-center gap-1.5 shrink-0">
-            <MedaliBadge onClick={openMedali} />
+            <MedaliBadge onClick={onMedaliBadge} buttonRef={medaliBadgeRef} expanded={storeApp ? medaliPop : undefined} />
             <MedaliNudge />
             <button type="button" onClick={() => setSettingsOpen(true)} className={iconBtn} title="설정">
               <Settings size={18} />
@@ -1660,7 +1672,8 @@ const Index = () => {
       {kindSheet}
 
       {/* 관리자판·회원판 홈 — 내 정보(/me)로 갈 길이 없어 명찰도 자세히 창(2026-11-24) */}
-      <MedaliSheet view={storeApp ? "summary" : "detail"} open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
+      <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
+      <MedaliPopover open={medaliPop} anchor={medaliBadgeRef.current} onClose={closeMedaliPop} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
