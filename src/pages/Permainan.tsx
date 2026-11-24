@@ -244,7 +244,8 @@ const Permainan = () => {
         ) : null}
       </div>
 
-      <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
+      {/* 게임방 명찰 → 공개판은 요약 창, 관리자판·회원판은 자세히 창(내 정보로 갈 길이 없음, 2026-11-24) */}
+      <MedaliSheet view={store ? "summary" : "detail"} open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
     </div>
   );
 };
