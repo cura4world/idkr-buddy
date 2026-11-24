@@ -1,13 +1,19 @@
 // src/components/MedaliSheet.tsx
-// 훈장 팝업. 명찰 캡슐을 누르면 아래에서 올라옵니다.
-// 사용자가 점수를 보는 유일한 창입니다 — 읽기·사전·담기처럼 조용히 쌓인 점수가 여기서 처음 보입니다.
-// 보기만 하는 화면이라 여기서 점수가 오르는 일은 없습니다.
+// 훈장 창 — 보기가 두 가지입니다(2026-11-24 Arga 승인 "훈장 창 정리").
+//   view="summary" 요약 창: 공개판 홈 명찰·게임방 명찰. 불꽃·별 칸 두 개 + 월~일 작은 막대 + 지난주 비교 한 줄. 탭·설명·단추 없음,
+//                  360px·글자 100% 에서 창 안 스크롤 없이 다 보이게.
+//   view="detail"  자세히 창: 내 정보 훈장 칸(관리자판·회원판은 내 정보로 갈 길이 없어 명찰도 이것). 알약 탭 "불꽃 / 별",
+//                  단계 줄·진행 막대 → 불꽃(요일 막대·오늘 쌓인 점수·색 사다리) / 별(최근 별이 된 단어·별의 단계 6줄·다시 확인할 단어).
+//                  설명 문단은 넣지 않습니다 — 설명은 내 정보 ⓘ 말풍선(lib/medaliHelp.ts)에만.
+// 계산(점수·단계·요일 막대·다음 단계)은 이 파일 위쪽 한 곳에서 하고 두 보기가 같이 씁니다. 보기만 하는 창이라 점수가 오르는 일은 없습니다.
+// 글꼴은 모두 Pretendard(font-gothic). 단계 이름(Perunggu 등)도 라벨이라 Pretendard, 외운 인니어 단어만 font-word.
 //
-// 히스토리(폰 뒤로가기)는 이 컴포넌트가 다루지 않습니다 (WordbookPickerSheet와 같은 규칙).
+// 히스토리(폰 뒤로가기)는 이 컴포넌트가 다루지 않습니다 — 여는 쪽(Index·Permainan·MyInfo)이 합니다(WordbookPickerSheet와 같은 규칙).
 
 import { useEffect, useState } from "react";
 import { Flame, Medal, Star } from "lucide-react";
 import AppSheet from "@/components/sheet/AppSheet";
+import { MedaliWeekCompareText, useMedaliWeekCompare } from "@/components/MedaliWeekCompare";
 import {
   medaliEngine,
   listWeekLogs,
@@ -23,10 +29,24 @@ import {
   loadMedaliCache,
 } from "@/lib/medali";
 import type { MedaliColor, DailyLog, WordRecord, ApiCategory } from "@/lib/medali";
-import { MEDALI_HELP } from "@/lib/medaliHelp";
+import { MEDALI_HELP, MEDALI_LADDER } from "@/lib/medaliHelp";
 
 // 아이콘 외곽선 — 명찰 캡슐과 같은 값 (어두운 색 단계에서도 형태가 보이도록)
 const STROKE = "rgba(255,255,255,0.55)";
+
+// 글자 색 (내 정보와 같은 값)
+const INK = "#1D1F1E";
+const MUTED = "#646C72";
+const FAINT = "#9AA1A6";
+const LINE = "#E3E8EB";
+const TEAL = "#2C6D63";
+const FULL = "#C0532A"; // 상한을 채운 줄(주홍) — 흰 바탕 대비 4.65:1
+
+// 불꽃·별 칸 색 — 내 정보 훈장 칸과 같은 값(바탕·제목·제목 옆 그림)
+const CELL = {
+  api: { bg: "#FBF1EC", title: "#B5643C", icon: "#E8875A", sub: "#8A6A5A" },
+  bintang: { bg: "#FBF5E6", title: "#94723A", icon: "#E0B04A", sub: "#8A7A55" },
+};
 
 const COLOR_NAME: Record<MedaliColor, string> = {
   tanah: "Tanah",
@@ -38,7 +58,6 @@ const COLOR_NAME: Record<MedaliColor, string> = {
 };
 
 const ROMAN: Record<number, string> = { 1: "I", 2: "II", 3: "III" };
-
 
 // 2026-11-24 부터 주일도 점수가 쌓이므로 일요일 막대까지 7개입니다
 const DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
@@ -138,21 +157,51 @@ const pct = (value: number, from: number, to: number): number => {
   return Math.max(4, Math.min(100, p));
 };
 
+// 칸 제목 옆 그림 — 내 정보 훈장 칸과 같은 모양
+const CellFlame = ({ color }: { color: string }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill={color} aria-hidden="true" className="shrink-0">
+    <path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" />
+  </svg>
+);
+const CellStar = ({ color }: { color: string }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill={color} aria-hidden="true" className="shrink-0">
+    <path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.3 6L12 16.4 6.6 19.4l1.3-6L3.4 9.3l6-.7z" />
+  </svg>
+);
+
+/** 얇은 진행 막대 */
+const ProgressBar = ({ widthPct, color, track = "rgba(0,0,0,0.07)", height = 4 }: { widthPct: number; color: string; track?: string; height?: number }) => (
+  <div className="w-full overflow-hidden" style={{ height, borderRadius: height, background: track }} aria-hidden="true">
+    <div style={{ height, borderRadius: height, width: widthPct + "%", background: color }} />
+  </div>
+);
+
+/** 작은 회색 굵은 라벨(내 정보 섹션 제목과 같은 모양) */
+const Label = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
+  <p style={Object.assign({ margin: 0, fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.02em", color: "#7A8287" }, style || {})}>
+    {children}
+  </p>
+);
+
+export type MedaliSheetView = "summary" | "detail";
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** 요약 창(명찰) / 자세히 창(내 정보). 기본은 자세히 창 */
+  view?: MedaliSheetView;
 }
 
-export default function MedaliSheet({ open, onOpenChange }: Props) {
+export default function MedaliSheet({ open, onOpenChange, view = "detail" }: Props) {
   const [snap, setSnap] = useState(() => {
     const c = loadMedaliCache();
     return {
       apiColor: c.apiColor,
-      apiWeekPoints: 0,
+      apiWeekPoints: c.apiWeekPoints,
       streak: 0,
       bintangColor: c.bintangColor,
       bintangTier: c.bintangTier,
-      confirmedCount: 0,
+      confirmedCount: c.confirmedCount,
     };
   });
   const [tab, setTab] = useState<"api" | "bintang">("api");
@@ -160,12 +209,13 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
   const [words, setWords] = useState<WordRecord[]>([]);
   const [openDay, setOpenDay] = useState<number | null>(null);   // 막대를 탭하면 그날 점수 한 줄
   const [openRow, setOpenRow] = useState<string | null>(null);   // 내역 행 도움말
+  const weekCmp = useMedaliWeekCompare(open && view === "summary");
 
   useEffect(() => {
     return medaliEngine.subscribe((s) => setSnap(s));
   }, []);
 
-  // 열릴 때마다 처음 상태로 (항상 Api 탭) + 최신 값으로 다시 계산
+  // 열릴 때마다 처음 상태로 (항상 불꽃 탭) + 최신 값으로 다시 계산
   useEffect(() => {
     if (!open) return;
     setTab("api");
@@ -177,16 +227,16 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
   }, [open]);
 
   // 올라오고 내려가는 움직임과 뒤 화면 잠금은 앱 공통 틀(AppSheet)이 합니다(2026-11-24).
-  // 내려가는 중에는 닫기를 다시 부르지 않습니다
   const requestClose = () => {
     if (!open) return;
     onOpenChange(false);
   };
 
+  // ── 계산 (두 보기 공용) ─────────────────────────────────────────
   const apiHex = MEDALI_COLORS[snap.apiColor];
   const bintangHex = MEDALI_COLORS[snap.bintangColor];
 
-  // ── 요일 막대 (월~일). 색은 "그날 밤 기준 누적 주간 점수"의 도달 색입니다.
+  // 요일 막대 (월~일). 색은 "그날 밤 기준 누적 주간 점수"의 도달 색입니다.
   const monday = mondayOf(new Date());
   const todayKey = dateKey(new Date());
   const byDate = new Map<string, DailyLog>();
@@ -215,6 +265,12 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
   const todayLog = byDate.get(todayKey) || null;
   const apiNext = nextApiStep(snap.apiWeekPoints);
   const bintangNext = nextBintangStep(snap.confirmedCount);
+  const apiPct = apiNext ? pct(snap.apiWeekPoints, apiNext.from, snap.apiWeekPoints + apiNext.need) : 100;
+  const apiBarColor = apiNext ? MEDALI_COLORS[apiNext.color] : apiHex;
+  const bintangPct = bintangNext ? pct(snap.confirmedCount, bintangNext.from, snap.confirmedCount + bintangNext.need) : 100;
+  const bintangBarColor = bintangNext ? MEDALI_COLORS[bintangNext.color] : bintangHex;
+  const apiStageName = COLOR_NAME[snap.apiColor];
+  const bintangStageName = COLOR_NAME[snap.bintangColor] + " " + ROMAN[snap.bintangTier];
 
   // 확정 후 60일이 지난 단어는 저장값이 confirmed라도 재검증 대기로 셉니다
   const nowMs = Date.now();
@@ -228,8 +284,150 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
     return st === "recheck" || st === "monitoring";
   }).length;
 
-  // 앱 공통 틀(안내). 닫기(X·바깥·끌기)는 히스토리를 직접 만지지 않고 여는 쪽(Index 등)에 맡깁니다 — 뒤로가기와 같은 경로.
-  // 탭은 머리 아래 고정 줄(subHeader), 본문 높이는 72dvh 로 고정(탭을 바꿔도 시트 높이가 출렁이지 않게, 넘치면 안에서 스크롤).
+  // ── 요약 창 ─────────────────────────────────────────────────────
+  if (view === "summary") {
+    return (
+      <AppSheet
+        open={open}
+        onClose={requestClose}
+        title="훈장"
+        icon={<Medal size={20} strokeWidth={1.8} />}
+        bodyPadding="4px 16px calc(16px + env(safe-area-inset-bottom))"
+      >
+        <div className="font-gothic" data-medali-view="summary" style={{ color: INK }}>
+          <div className="grid grid-cols-2" style={{ gap: 8 }}>
+            {/* 불꽃 칸 */}
+            <div style={{ borderRadius: 14, background: CELL.api.bg, padding: "10px 10px 10px 12px" }}>
+              <p className="flex items-center" style={{ margin: 0, gap: 5, fontSize: "0.75rem", fontWeight: 700, color: CELL.api.title }}>
+                <CellFlame color={CELL.api.icon} />
+                이번 주 불꽃
+              </p>
+              <p className="tabular-nums" style={{ margin: "2px 0 0", fontSize: "1.3125rem", fontWeight: 700, lineHeight: 1.3 }}>
+                {snap.apiWeekPoints}
+                <span style={{ fontSize: "0.71875rem", fontWeight: 500, color: MUTED }}> 점</span>
+              </p>
+              <p className="flex items-center break-keep" style={{ margin: "2px 0 0", gap: 4, fontSize: "0.71875rem", fontWeight: 600, lineHeight: 1.4, color: CELL.api.sub }}>
+                <Flame size={14} color={STROKE} fill={apiHex} strokeWidth={1.5} className="shrink-0" />
+                <span>{apiStageName} · 연속 {snap.streak}일</span>
+              </p>
+              <div style={{ marginTop: 7 }}>
+                <ProgressBar widthPct={apiPct} color={apiBarColor} />
+              </div>
+              <p className="tabular-nums" style={{ margin: "4px 0 0", fontSize: "0.6875rem", color: MUTED }}>
+                {apiNext ? COLOR_NAME[apiNext.color] + "까지 " + apiNext.need + "점" : "최고 단계"}
+              </p>
+            </div>
+            {/* 별 칸 */}
+            <div style={{ borderRadius: 14, background: CELL.bintang.bg, padding: "10px 10px 10px 12px" }}>
+              <p className="flex items-center" style={{ margin: 0, gap: 5, fontSize: "0.75rem", fontWeight: 700, color: CELL.bintang.title }}>
+                <CellStar color={CELL.bintang.icon} />
+                모은 별
+              </p>
+              <p className="tabular-nums" style={{ margin: "2px 0 0", fontSize: "1.3125rem", fontWeight: 700, lineHeight: 1.3 }}>
+                {snap.confirmedCount}
+                <span style={{ fontSize: "0.71875rem", fontWeight: 500, color: MUTED }}> 단어</span>
+              </p>
+              <p className="flex items-center break-keep" style={{ margin: "2px 0 0", gap: 4, fontSize: "0.71875rem", fontWeight: 600, lineHeight: 1.4, color: CELL.bintang.sub }}>
+                <Star size={14} color={STROKE} fill={bintangHex} strokeWidth={1.5} className="shrink-0" />
+                <span>{bintangStageName}</span>
+              </p>
+              <div style={{ marginTop: 7 }}>
+                <ProgressBar widthPct={bintangPct} color={bintangBarColor} />
+              </div>
+              <p className="tabular-nums" style={{ margin: "4px 0 0", fontSize: "0.6875rem", color: MUTED }}>
+                {bintangNext ? "다음 단계까지 " + bintangNext.need + "개" : "최고 단계"}
+              </p>
+            </div>
+          </div>
+
+          {/* 월~일 작은 막대 — 점수 높이만, 숫자 없음, 오늘 요일 굵게 */}
+          <div className="flex items-end" style={{ marginTop: 14, height: 34, gap: 6 }} aria-hidden="true">
+            {bars.map((b) => (
+              <span key={b.key} className="flex-1 flex flex-col justify-end" style={{ height: "100%" }}>
+                <span
+                  style={{
+                    height: b.total > 0 ? Math.max(4, Math.round((b.total / barMax) * 34)) : 3,
+                    borderRadius: 3,
+                    background: b.total > 0 ? b.color : "#E6EAEC",
+                    opacity: b.isFuture ? 0.5 : 1,
+                  }}
+                />
+              </span>
+            ))}
+          </div>
+          <div className="flex" style={{ marginTop: 4, gap: 6 }} aria-hidden="true">
+            {bars.map((b) => (
+              <span
+                key={b.key}
+                className="flex-1 text-center"
+                style={{ fontSize: "0.6875rem", fontWeight: b.isToday ? 700 : 400, color: b.isToday ? INK : FAINT }}
+              >
+                {b.label}
+              </span>
+            ))}
+          </div>
+
+          {/* 지난주의 나와 비교 — 내 정보와 같은 함수·같은 기간 기준 */}
+          <p className="break-keep" style={{ margin: "12px 2px 0", minHeight: 18, fontSize: "0.75rem", lineHeight: 1.5, color: MUTED }}>
+            <MedaliWeekCompareText week={snap.apiWeekPoints} data={weekCmp} />
+          </p>
+        </div>
+      </AppSheet>
+    );
+  }
+
+  // ── 자세히 창 ───────────────────────────────────────────────────
+  const tabBtn = (k: "api" | "bintang", text: string) => {
+    const on = tab === k;
+    return (
+      <button
+        type="button"
+        onClick={() => setTab(k)}
+        aria-pressed={on}
+        className="flex-1 flex items-center justify-center font-gothic"
+        style={{
+          gap: 5,
+          borderRadius: 13,
+          background: on ? "#FFFFFF" : "transparent",
+          boxShadow: on ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+          color: on ? (k === "api" ? CELL.api.title : CELL.bintang.title) : MUTED,
+          fontSize: "0.8125rem",
+          fontWeight: on ? 700 : 600,
+        }}
+      >
+        {k === "api"
+          ? <Flame size={14} color={STROKE} fill={apiHex} strokeWidth={1.5} className="shrink-0" />
+          : <Star size={14} color={STROKE} fill={bintangHex} strokeWidth={1.5} className="shrink-0" />}
+        {text}
+      </button>
+    );
+  };
+
+  // 단계 줄 — [단계 색 아이콘] 단계 이름 · 숫자, 진행 막대, 다음 단계까지
+  const stageBlock = (kind: "api" | "bintang") => {
+    const isApi = kind === "api";
+    const Icon = isApi ? Flame : Star;
+    return (
+      <div style={{ paddingTop: 14 }}>
+        <p className="flex items-center flex-wrap" style={{ margin: 0, columnGap: 6, rowGap: 2 }}>
+          <Icon size={22} color={STROKE} fill={isApi ? apiHex : bintangHex} strokeWidth={1.5} className="shrink-0" />
+          <span style={{ fontSize: "1rem", fontWeight: 700 }}>{isApi ? apiStageName : bintangStageName}</span>
+          <span className="tabular-nums" style={{ fontSize: "0.8125rem", color: MUTED }}>
+            {isApi ? "· " + snap.apiWeekPoints + "점 · 연속 " + snap.streak + "일" : "· " + snap.confirmedCount + "단어"}
+          </span>
+        </p>
+        <div style={{ marginTop: 10 }}>
+          <ProgressBar widthPct={isApi ? apiPct : bintangPct} color={isApi ? apiBarColor : bintangBarColor} track="#EEF1F3" height={6} />
+        </div>
+        <p className="tabular-nums text-right" style={{ margin: "5px 0 0", fontSize: "0.71875rem", color: MUTED }}>
+          {isApi
+            ? (apiNext ? "다음 단계까지 " + apiNext.need + "점" : "최고 단계")
+            : (bintangNext ? "다음 단계까지 " + bintangNext.need + "개" : "최고 단계")}
+        </p>
+      </div>
+    );
+  };
+
   return (
     <AppSheet
       open={open}
@@ -239,295 +437,196 @@ export default function MedaliSheet({ open, onOpenChange }: Props) {
       bodyPadding="0 16px calc(16px + env(safe-area-inset-bottom))"
       bodyStyle={{ height: "72dvh", touchAction: "pan-y" }}
       subHeader={
-        /* 탭 — 고르지 않은 쪽 아이콘도 지금 훈장 색으로 칠해 둡니다 */
-        <div className="flex border-b border-border px-4">
-          <button
-            type="button"
-            onClick={() => setTab("api")}
-            className={
-              "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[0.8125rem] font-gothic " +
-              (tab === "api"
-                ? "border-b-2 border-primary font-semibold text-foreground"
-                : "border-b-2 border-transparent text-muted-foreground")
-            }
-          >
-            <Flame size={16} color={apiHex} fill={apiHex} strokeWidth={1.5} />
-            Api
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("bintang")}
-            className={
-              "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[0.8125rem] font-gothic " +
-              (tab === "bintang"
-                ? "border-b-2 border-primary font-semibold text-foreground"
-                : "border-b-2 border-transparent text-muted-foreground")
-            }
-          >
-            <Star size={16} color={bintangHex} fill={bintangHex} strokeWidth={1.5} />
-            Bintang
-          </button>
+        /* 탭 — 내 정보 공부 시간 "이번 달/지난달" 과 같은 알약 모양 */
+        <div className="px-4" style={{ paddingTop: 2, paddingBottom: 10, borderBottom: "1px solid " + LINE }}>
+          <div className="flex" style={{ height: 32, borderRadius: 16, background: "#F1F4F5", padding: 3, boxSizing: "border-box" }}>
+            {tabBtn("api", "불꽃")}
+            {tabBtn("bintang", "별")}
+          </div>
         </div>
       }
     >
-          {tab === "api" ? (
-            <div className="relative pt-5">
-              {/* 지금 색 */}
-              <div className="flex flex-col items-center text-center">
-                <Flame size={48} color={STROKE} fill={apiHex} strokeWidth={1.5} className="shrink-0" />
-                <p className="mt-2 font-word text-[1.25rem] leading-tight text-foreground">
-                  {COLOR_NAME[snap.apiColor]}
-                </p>
-                <p className="mt-1 text-[0.78125rem] text-muted-foreground">
-                  이번 주 {snap.apiWeekPoints}점 · 연속 {snap.streak}일
-                </p>
-                {/* 명찰의 불꽃 옆 숫자가 무엇인지 여기서 읽힙니다 — 문구는 lib/medaliHelp.ts 한 곳에서 */}
-                <p className="mt-1.5 max-w-[19rem] font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground" style={{ wordBreak: "keep-all" }}>
-                  {MEDALI_HELP.api.body}
-                </p>
-              </div>
+      <div className="font-gothic" data-medali-view="detail" style={{ color: INK }}>
+        {tab === "api" ? (
+          <div>
+            {stageBlock("api")}
 
-              {/* 다음 색까지 */}
-              <div className="mt-4">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-1.5 rounded-full"
-                    style={{
-                      width: apiNext
-                        ? pct(snap.apiWeekPoints, apiNext.from, snap.apiWeekPoints + apiNext.need) + "%"
-                        : "100%",
-                      backgroundColor: apiNext ? MEDALI_COLORS[apiNext.color] : apiHex,
-                    }}
-                  />
-                </div>
-                <p className="mt-1 text-right text-[0.6875rem] text-muted-foreground">
-                  {apiNext ? COLOR_NAME[apiNext.color] + "까지 " + apiNext.need + "점" : "최고 단계"}
-                </p>
-              </div>
-
-              {/* 요일 막대 (월~일) */}
-              <div className="mt-5">
-                <div className="flex h-20 items-end gap-2">
-                  {bars.map((b, i) => (
-                    <button
-                      key={b.key}
-                      type="button"
-                      onClick={() => setOpenDay(openDay === i ? null : i)}
-                      className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1.5"
+            {/* 요일 막대 (월~일) — 위 숫자는 그날 접속 시간 */}
+            <div style={{ marginTop: 16 }}>
+              <div className="flex h-20 items-end gap-2">
+                {bars.map((b, i) => (
+                  <button
+                    key={b.key}
+                    type="button"
+                    onClick={() => setOpenDay(openDay === i ? null : i)}
+                    className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1.5"
+                  >
+                    <span
+                      className="text-[0.5625rem] leading-none whitespace-nowrap tabular-nums"
+                      style={{
+                        color: b.total > 0 ? b.color : undefined,
+                        opacity: b.isFuture ? 0.4 : 1,
+                      }}
                     >
-                      <span
-                        className="font-gothic text-[0.5625rem] leading-none whitespace-nowrap tabular-nums"
-                        style={{
-                          color: b.total > 0 ? b.color : undefined,
-                          opacity: b.isFuture ? 0.4 : 1,
-                        }}
-                      >
-                        {usageLabel(b.usageMs)}
-                      </span>
-                      <span
-                        className={"w-full rounded-md " + (b.total > 0 ? "" : "bg-border")}
-                        style={{
-                          height: Math.max(4, Math.round((b.total / barMax) * 60)) + "px",
-                          backgroundColor: b.total > 0 ? b.color : undefined,
-                          opacity: b.isFuture ? 0.4 : 1,
-                        }}
-                      />
-                      <span
-                        className={
-                          "text-[0.6875rem] font-gothic " +
-                          (b.isToday ? "font-semibold text-foreground" : "text-muted-foreground")
-                        }
-                      >
-                        {b.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-1.5 text-center font-gothic text-[0.625rem] text-muted-foreground">
-                  숫자는 그날 앱에 접속한 시간
-                </p>
-                <p className="mt-1 h-4 text-center text-[0.6875rem] text-muted-foreground">
-                  {openDay !== null
-                    ? bars[openDay].label +
-                      " · " +
-                      bars[openDay].total +
-                      "점" +
-                      (usageText(bars[openDay].usageMs) ? " · " + usageText(bars[openDay].usageMs) : "")
-                    : ""}
-                </p>
-              </div>
-
-              {/* 오늘 내역 */}
-              <div className="mt-3 border-t border-border pt-3">
-                <p className="mb-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                  오늘
-                </p>
-                {TODAY_ROWS.map((row) => {
-                  const got = pointsOf(todayLog, row.cats);
-                  const cap = capOf(row.cats);
-                  const full = got >= cap;
-                  return (
-                    <div key={row.key}>
-                      <button
-                        type="button"
-                        onClick={() => setOpenRow(openRow === row.key ? null : row.key)}
-                        className="flex w-full items-center gap-2 py-2 text-left"
-                      >
-                        <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-foreground">
-                          {row.label}
-                        </span>
-                        {full ? (
-                          <span
-                            className="shrink-0 text-[0.6875rem] font-gothic"
-                            style={{ color: MEDALI_COLORS.perunggu }}
-                          >
-                            상한
-                          </span>
-                        ) : null}
-                        <span
-                          className="shrink-0 font-word text-[0.8125rem] tabular-nums"
-                          style={{ color: full ? MEDALI_COLORS.perunggu : undefined }}
-                        >
-                          {got} / {cap}
-                        </span>
-                      </button>
-                      {openRow === row.key ? (
-                        <p className="pb-2 text-[0.71875rem] leading-relaxed text-muted-foreground">
-                          {row.help}
-                        </p>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* 커트라인 — 상수가 높은 단계부터라 뒤집어 동 → 보석 순으로 봅니다 (Tanah 0점은 제외) */}
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
-                {API_CUTOFFS.filter((c) => c.min > 0)
-                  .slice()
-                  .reverse()
-                  .map((c) => (
-                    <span key={c.color} className="flex items-center gap-1">
-                      <Flame
-                        size={13}
-                        color={STROKE}
-                        fill={MEDALI_COLORS[c.color]}
-                        strokeWidth={1.5}
-                        className="shrink-0"
-                      />
-                      <span className="font-gothic text-[0.65625rem] text-muted-foreground tabular-nums">
-                        {c.min}
-                      </span>
+                      {usageLabel(b.usageMs)}
                     </span>
-                  ))}
+                    <span
+                      className={"w-full rounded-md " + (b.total > 0 ? "" : "bg-border")}
+                      style={{
+                        height: Math.max(4, Math.round((b.total / barMax) * 60)) + "px",
+                        backgroundColor: b.total > 0 ? b.color : undefined,
+                        opacity: b.isFuture ? 0.4 : 1,
+                      }}
+                    />
+                    <span
+                      className="text-[0.6875rem]"
+                      style={{ fontWeight: b.isToday ? 700 : 400, color: b.isToday ? INK : MUTED }}
+                    >
+                      {b.label}
+                    </span>
+                  </button>
+                ))}
               </div>
-              <p className="mt-1.5 pb-1 text-center text-[0.6875rem] leading-relaxed text-muted-foreground">
-                {MEDALI_HELP.api.ladderNote}
+              <p className="text-center" style={{ margin: "6px 0 0", fontSize: "0.625rem", color: MUTED }}>
+                숫자는 그날 앱에 접속한 시간
+              </p>
+              <p className="text-center tabular-nums" style={{ margin: "4px 0 0", height: 16, fontSize: "0.6875rem", color: MUTED }}>
+                {openDay !== null
+                  ? bars[openDay].label +
+                    " · " +
+                    bars[openDay].total +
+                    "점" +
+                    (usageText(bars[openDay].usageMs) ? " · " + usageText(bars[openDay].usageMs) : "")
+                  : ""}
               </p>
             </div>
-          ) : (
-            <div className="relative pt-5">
-              {/* 지금 단계 */}
-              <div className="flex flex-col items-center text-center">
-                <Star size={48} color={STROKE} fill={bintangHex} strokeWidth={1.5} className="shrink-0" />
-                <p className="mt-2 font-word text-[1.25rem] leading-tight text-foreground">
-                  {COLOR_NAME[snap.bintangColor]} {ROMAN[snap.bintangTier]}
-                </p>
-                <p className="mt-1 text-[0.78125rem] text-muted-foreground">
-                  확정 단어 {snap.confirmedCount}개
-                </p>
-                {/* 명찰의 별 옆 숫자가 무엇인지 여기서 읽힙니다 — 문구는 lib/medaliHelp.ts 한 곳에서 */}
-                <p className="mt-1.5 max-w-[19rem] font-gothic text-[0.6875rem] leading-relaxed text-muted-foreground" style={{ wordBreak: "keep-all" }}>
-                  {MEDALI_HELP.bintang.body}
-                </p>
-              </div>
 
-              {/* 다음 단계까지 */}
-              <div className="mt-4">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-1.5 rounded-full"
-                    style={{
-                      width: bintangNext
-                        ? pct(snap.confirmedCount, bintangNext.from, snap.confirmedCount + bintangNext.need) + "%"
-                        : "100%",
-                      backgroundColor: bintangNext ? MEDALI_COLORS[bintangNext.color] : bintangHex,
-                    }}
-                  />
-                </div>
-                <p className="mt-1 text-right text-[0.6875rem] text-muted-foreground">
-                  {bintangNext ? "다음까지 " + bintangNext.need + "개" : "최고 단계"}
-                </p>
-              </div>
-
-              {/* 최근 별이 된 단어 */}
-              <div className="mt-5 border-t border-border pt-3">
-                <p className="mb-1 text-[0.6875rem] font-gothic font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                  최근 별이 된 단어
-                </p>
-                {confirmedWords.length === 0 ? (
-                  <p className="py-2 text-[0.78125rem] leading-relaxed text-muted-foreground">
-                    아직 없습니다 — 게임에서 맞힌 단어가 별이 됩니다
-                  </p>
-                ) : (
-                  confirmedWords.map((w) => (
-                    <div key={w.word} className="flex items-center gap-2 py-2">
-                      <span className="min-w-0 flex-1 truncate font-word text-[0.875rem] text-foreground">
-                        {w.word}
+            {/* 오늘 쌓인 점수 — 테두리 상자 안 줄 목록 */}
+            <Label style={{ marginTop: 10 }}>오늘 쌓인 점수</Label>
+            <div style={{ marginTop: 6, border: "1px solid " + LINE, borderRadius: 14, overflow: "hidden" }}>
+              {TODAY_ROWS.map((row, idx) => {
+                const got = pointsOf(todayLog, row.cats);
+                const cap = capOf(row.cats);
+                const full = got >= cap;
+                return (
+                  <div key={row.key} style={{ borderTop: idx === 0 ? "0" : "1px solid #EEF1F3" }}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenRow(openRow === row.key ? null : row.key)}
+                      aria-expanded={openRow === row.key}
+                      className="flex w-full items-center text-left"
+                      style={{ gap: 8, minHeight: 42, padding: "0 14px" }}
+                    >
+                      <span className="min-w-0 flex-1 truncate" style={{ fontSize: "0.84375rem", fontWeight: 500 }}>
+                        {row.label}
                       </span>
-                      <span className="shrink-0 rounded-full border border-border px-2 py-0.5 font-gothic text-[0.6875rem] text-muted-foreground">
-                        {SOURCE_LABEL[w.source] || "기타"}
+                      <span
+                        className="shrink-0 tabular-nums"
+                        style={{ fontSize: "0.8125rem", fontWeight: full ? 700 : 500, color: full ? FULL : MUTED }}
+                      >
+                        {got} / {cap}{full ? " 채움" : ""}
                       </span>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* 18단계 전체. 상수는 높은 단계부터라 뒤집어 낮은 단계(Tanah III)가 위로 옵니다.
-                  상수 배열 자체는 건드리지 않습니다 — bintangFor가 "높은 것부터 매칭"에 기대고 있습니다. */}
-              <div className="mt-5 border-t border-border pt-3">
-                <p className="py-1 font-gothic text-[0.78125rem] text-foreground">별의 단계</p>
-                <div className="mt-1.5 pb-1">
-                  {BINTANG_CUTOFFS.slice()
-                    .reverse()
-                    .map((c) => {
-                      const now = snap.bintangColor === c.color && snap.bintangTier === c.tier;
-                      return (
-                        <div
-                          key={c.color + c.tier}
-                          className={
-                            "flex items-center gap-2.5 rounded-lg px-2 py-1.5 " + (now ? "bg-muted" : "")
-                          }
-                        >
-                          <Star
-                            size={14}
-                            color={STROKE}
-                            fill={MEDALI_COLORS[c.color]}
-                            strokeWidth={1.5}
-                            className="shrink-0"
-                          />
-                          <span className="flex-1 min-w-0 truncate font-word text-[0.8125rem] text-foreground">
-                            {COLOR_NAME[c.color]} {ROMAN[c.tier]}
-                          </span>
-                          <span className="shrink-0 font-gothic text-[0.71875rem] text-muted-foreground tabular-nums">
-                            {c.min}개
-                          </span>
-                          {now ? (
-                            <span className="shrink-0 font-gothic text-[0.65625rem] text-primary">지금</span>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-
-              {recheckCount > 0 ? (
-                <p className="mt-3 pb-1 text-center text-[0.6875rem] leading-relaxed text-muted-foreground">
-                  다시 확인할 단어 {recheckCount}개 — 게임에서 다시 나옵니다
-                </p>
-              ) : null}
+                    </button>
+                    {openRow === row.key ? (
+                      <p style={{ margin: 0, padding: "0 14px 10px", fontSize: "0.75rem", lineHeight: 1.55, color: MUTED }}>
+                        {row.help}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
-          )}
+
+            {/* 색 사다리 — 단계 이름과 그 색이 되는 이번 주 점수 */}
+            <Label style={{ marginTop: 16 }}>불꽃 색</Label>
+            <div className="flex flex-wrap items-center" style={{ marginTop: 8, columnGap: 12, rowGap: 6 }}>
+              {MEDALI_LADDER.map((c) => {
+                const cut = API_CUTOFFS.find((x) => x.color === c.color);
+                const now = snap.apiColor === c.color;
+                return (
+                  <span key={c.color} className="inline-flex items-center whitespace-nowrap" style={{ gap: 4 }}>
+                    <Flame size={14} color={STROKE} fill={MEDALI_COLORS[c.color]} strokeWidth={1.5} className="shrink-0" />
+                    <span style={{ fontSize: "0.75rem", fontWeight: now ? 700 : 500, color: now ? INK : MUTED }}>{c.name}</span>
+                    <span className="tabular-nums" style={{ fontSize: "0.71875rem", color: FAINT }}>{cut ? cut.min : 0}</span>
+                  </span>
+                );
+              })}
+            </div>
+            <p style={{ margin: "8px 0 4px", fontSize: "0.71875rem", color: MUTED }}>{MEDALI_HELP.api.ladderNote}</p>
+          </div>
+        ) : (
+          <div>
+            {stageBlock("bintang")}
+
+            {/* 최근 별이 된 단어 */}
+            <Label style={{ marginTop: 12 }}>최근 별이 된 단어</Label>
+            <div style={{ marginTop: 4 }}>
+              {confirmedWords.length === 0 ? (
+                <p style={{ margin: 0, padding: "8px 0", fontSize: "0.78125rem", lineHeight: 1.55, color: MUTED }}>
+                  아직 없습니다 — 게임에서 맞힌 단어가 별이 됩니다
+                </p>
+              ) : (
+                confirmedWords.map((w) => (
+                  <div key={w.word} className="flex items-center" style={{ gap: 8, padding: "7px 0" }}>
+                    <span className="min-w-0 flex-1 truncate font-word" style={{ fontSize: "0.9375rem" }}>
+                      {w.word}
+                    </span>
+                    <span className="shrink-0" style={{ border: "1px solid " + LINE, borderRadius: 999, padding: "1px 8px", fontSize: "0.6875rem", color: MUTED }}>
+                      {SOURCE_LABEL[w.source] || "기타"}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* 별의 단계 — 색마다 한 줄(6줄). 오른쪽은 III·II·I 가 되는 외운 단어 수, 지금 단계 줄만 강조 */}
+            <Label style={{ marginTop: 14 }}>별의 단계</Label>
+            <p style={{ margin: "2px 0 0", fontSize: "0.6875rem", color: FAINT }}>숫자는 그 단계가 되는 외운 단어 수</p>
+            <div data-medali-stage-list style={{ marginTop: 6 }}>
+              {MEDALI_LADDER.map((c) => {
+                const tiers = BINTANG_CUTOFFS.filter((x) => x.color === c.color).slice().sort((a, b) => b.tier - a.tier); // III → I
+                const now = snap.bintangColor === c.color;
+                return (
+                  <div
+                    key={c.color}
+                    data-medali-stage-row
+                    className="flex items-center"
+                    style={{ gap: 8, minHeight: 38, padding: "0 10px", borderRadius: 10, background: now ? "#F3F0E6" : "transparent" }}
+                  >
+                    <Star size={15} color={STROKE} fill={MEDALI_COLORS[c.color]} strokeWidth={1.5} className="shrink-0" />
+                    <span className="shrink-0" style={{ width: 62, fontSize: "0.8125rem", fontWeight: now ? 700 : 500 }}>
+                      {COLOR_NAME[c.color]}
+                    </span>
+                    <span className="flex-1 min-w-0 flex flex-wrap justify-end tabular-nums" style={{ columnGap: 8, rowGap: 0, fontSize: "0.71875rem", color: MUTED }}>
+                      {tiers.map((t) => {
+                        const cur = now && snap.bintangTier === t.tier;
+                        return (
+                          <span
+                            key={t.tier}
+                            className="whitespace-nowrap"
+                            style={cur ? { fontWeight: 700, color: TEAL } : undefined}
+                          >
+                            {ROMAN[t.tier]} {t.min}
+                          </span>
+                        );
+                      })}
+                    </span>
+                    {now ? (
+                      <span className="shrink-0" style={{ fontSize: "0.6875rem", fontWeight: 700, color: TEAL }}>지금</span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+
+            {recheckCount > 0 ? (
+              <p className="text-center" style={{ margin: "12px 0 4px", fontSize: "0.71875rem", lineHeight: 1.55, color: MUTED }}>
+                다시 확인할 단어 {recheckCount}개 — 게임에서 다시 나옵니다
+              </p>
+            ) : null}
+          </div>
+        )}
+      </div>
     </AppSheet>
   );
 }
