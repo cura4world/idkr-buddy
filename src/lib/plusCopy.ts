@@ -29,7 +29,8 @@ export function wordCountNote(n: number): string {
 
 export const PLUS_PERKS: PlusPerk[] = [
   // 덧말의 단어 수는 구독 화면이 실제 수를 세어 바꿔 넣습니다(Plus.tsx). 여기 값은 세지 못했을 때만 보입니다.
-  { icon: "book", title: "기본 단어장 34권", note: wordCountNote(3005), sub: "주제별 단어를 카드와 퀴즈로 외우기" },
+  // 2026-11-25: 새 단어장 만들기가 Plus 기능이 되어(tasteAccess.canCreateWordbook) 설명 끝에 덧붙였습니다
+  { icon: "book", title: "기본 단어장 34권", note: wordCountNote(3005), sub: "주제별 단어를 카드와 퀴즈로 외우기 · 나만의 단어장 만들기" },
   { icon: "game", title: "단어 게임 6가지", sub: "게임으로 단어 실력 쌓기" },
   // 한 달 상한(60편)도 함께 적습니다 — "하루 5편"만 보고 매일 5편을 받으면 12일째에 막힙니다(B-10).
   // 2026-11-16: 새 이야기 불러오기가 Plus 전용이 되어(무료는 맛보기 3편) 제목에 "읽기"도 담았습니다.
