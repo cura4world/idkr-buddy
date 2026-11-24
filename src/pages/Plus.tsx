@@ -459,8 +459,15 @@ const Plus = () => {
                   {p.title}
                   {note ? <span style={{ marginLeft: 5, fontWeight: 500, color: C.gray }}>{note}</span> : null}
                 </span>
-                <span className={"block " + gothic} style={{ marginTop: 1, fontSize: "0.75rem", color: C.gray }}>
-                  {p.sub}
+                {/* 설명은 " · " 로 나뉜 말 덩어리마다 통째로 줄을 넘깁니다 — 좁은 화면·큰 글자에서 "나만의 단 / 어장"처럼
+                    낱말 가운데서 꺾이지 않게(2026-11-25). "·"는 앞 덩어리 끝에 붙습니다 */}
+                <span data-perk-sub className={"block " + gothic} style={{ marginTop: 1, fontSize: "0.75rem", color: C.gray }}>
+                  {p.sub.split(" · ").map((seg, i, arr) => (
+                    <span key={i}>
+                      <span className="inline-block break-keep">{seg}{i < arr.length - 1 ? " ·" : ""}</span>
+                      {i < arr.length - 1 ? " " : null}
+                    </span>
+                  ))}
                 </span>
               </span>
             </li>
