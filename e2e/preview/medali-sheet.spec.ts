@@ -113,6 +113,22 @@ test("요약 상자 — 360px·글자 125% 에서도 화면 안", async ({ page 
     expect(p.x + p.width).toBeLessThanOrEqual(360 - 16 + 1);
     expect(p.y + p.height).toBeLessThanOrEqual(740);
   }
+  // 불꽃·별 두 칸 높이가 같고, 단계 줄은 한 줄(2026-11-24 — S21 에서 "Perunggu · 연속 2일"이 세 줄로 접혔음)
+  const api = await box.locator('[data-medali-cell="api"]').boundingBox();
+  const star = await box.locator('[data-medali-cell="bintang"]').boundingBox();
+  expect(api && star).toBeTruthy();
+  if (api && star) expect(Math.abs(api.height - star.height)).toBeLessThanOrEqual(1);
+  const lines = await box.locator("[data-medali-stage-line]").evaluateAll((els) =>
+    els.map((e) => {
+      const r = e.getBoundingClientRect();
+      const lh = parseFloat(getComputedStyle(e).fontSize) * 1.4;
+      return r.height / lh;
+    }));
+  expect(lines.length).toBe(2);
+  for (const n of lines) expect(n, "단계 줄이 한 줄").toBeLessThan(1.5);
+  // 연속 0일이면 "연속 N일"을 보이지 않음(기록 없음)
+  await expect(box.locator("[data-medali-streak]")).toHaveText("");
+  await expect(box.getByText("연속", { exact: false })).toHaveCount(0);
 });
 
 test("요약 상자(게임방 명찰)", async ({ page }) => {
