@@ -30,7 +30,7 @@ import { ProfileAvatar, profileName } from "@/components/BottomTabs";
 import { usePlan, PAYWALL_PATH, Tier, TIER_LABEL, isPreviewBuild, isReviewAccount } from "@/lib/plan";
 import { getSession, onSessionChange, signOut, deleteAccount, PublicSession } from "@/lib/account";
 import { askLocalWipe } from "@/lib/localWipe";
-import { billingAvailable, manageSubscription } from "@/lib/billing";
+import { billingAvailable, manageSubscription, recheckSubscription } from "@/lib/billing";
 import { usePlusPricing } from "@/lib/playOffers";
 import { canceledUntilText } from "@/lib/plusCopy";
 import { isStoreApp, storeAppVersion, hasNativeFileSave, saveFileNative, PRIVACY_URL, TERMS_URL, BUSINESS_INFO_URL } from "@/lib/platform";
@@ -301,6 +301,14 @@ const MyInfo = () => {
   const review = isReviewAccount();
   const [session, setSession] = useState<PublicSession | null>(getSession());
   useEffect(() => onSessionChange(setSession), []);
+  // 해지 반영 안전망(2026-11-24): 내 정보를 열 때 유료 플랜이면 구매를 한 번 다시 확인합니다(Play 복원 → 서버 확인 → 등급).
+  // Play 구독 관리에서 돌아온 신호를 놓쳐도(2026-11-24 9:42 S21) 여기서 "정기 결제 취소됨"이 맞게 나오게. 30초에 한 번까지.
+  useEffect(() => {
+    if (!storeApp || preview || !billingAvailable()) return;
+    const s = getSession();
+    if (s && s.plan && (s.plan.tier === "plus" || s.plan.tier === "trial")) recheckSubscription({ throttle: true }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const memberProfile = getMemberProfile();
   const [nick, setNick] = useState(() => profileName(getSession()));
