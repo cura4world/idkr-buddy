@@ -10,6 +10,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Flame, Star } from "lucide-react";
 import { MEDALI_COLORS } from "@/lib/medali";
 import { MEDALI_HELP, MEDALI_LADDER } from "@/lib/medaliHelp";
+import { useOutsideTapClose } from "@/hooks/useOutsideTapClose";
 
 export type MedaliHelpKind = "api" | "bintang";
 
@@ -21,21 +22,8 @@ const BUBBLE_BG = "#1F2A30";
 const TITLE_COLOR: Record<MedaliHelpKind, string> = { api: "#F0936A", bintang: "#E3B85C" };
 const HELP_BTN_ATTR = "data-medali-help-btn";
 
-// 다음 click 하나를 먹습니다(600ms 안에 오지 않으면 그냥 풀림). 말풍선이 사라진 뒤에도 남아 있어야 하므로 컴포넌트 밖에 둡니다.
-function swallowNextClick(): void {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  const onClick = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    done();
-  };
-  const done = () => {
-    try { document.removeEventListener("click", onClick, true); } catch (e) {}
-    if (timer) clearTimeout(timer);
-  };
-  try { document.addEventListener("click", onClick, true); } catch (e) {}
-  timer = setTimeout(done, 600);
-}
+// ⓘ 단추는 바깥으로 치지 않습니다(단추가 스스로 다른 칸 설명으로 바꾸거나 닫음)
+const isHelpButton = (el: Element): boolean => !!el.closest("[" + HELP_BTN_ATTR + "]");
 
 /** ⓘ 단추 — 보이는 원은 20px, 누르는 영역은 32px. 칸을 눌러 훈장 창을 여는 동작과 겹치지 않게 전파를 막습니다. */
 export function MedaliHelpButton({
@@ -108,26 +96,8 @@ export function MedaliHelpBubble({
     try { el.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {}
   }, [kind]);
 
-  // 바깥 누르기 → 닫고, 그 누르기는 먹습니다. ⓘ 단추를 누른 것은 단추가 스스로 처리합니다(다른 칸 설명으로 바꾸기·닫기).
-  // 닫히면 말풍선이 먼저 사라지므로(click 보다 앞), 먹는 일은 말풍선과 따로 사는 한 번짜리 리스너(swallowNextClick)가 합니다.
-  useEffect(() => {
-    const isInside = (t: EventTarget | null): boolean => {
-      const n = t as Node | null;
-      if (!n) return false;
-      if (ref.current && ref.current.contains(n)) return true;
-      const el = (n as Element).closest ? (n as Element) : n.parentElement;
-      return !!(el && el.closest && el.closest("[" + HELP_BTN_ATTR + "]"));
-    };
-    const onDown = (e: PointerEvent) => {
-      if (isInside(e.target)) return;
-      swallowNextClick();
-      onClose();
-    };
-    document.addEventListener("pointerdown", onDown, true);
-    return () => {
-      document.removeEventListener("pointerdown", onDown, true);
-    };
-  }, [onClose]);
+  // 바깥 누르기 → 닫고, 그 누르기는 먹습니다(공용 hooks/useOutsideTapClose — 명찰 요약 상자와 같은 코드).
+  useOutsideTapClose(true, ref, onClose, isHelpButton);
 
   const Icon = kind === "api" ? Flame : Star;
 
