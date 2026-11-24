@@ -169,7 +169,8 @@ src/
     sheet/AppSheet.tsx       모든 옵션 창(입력·고르기·확인·안내)의 공통 틀 — 새 창은 이것(또는 FormSheet·ConfirmSheet)으로
     PlayButton.tsx           수정 금지
     MedaliBadge.tsx          헤더 명찰 캡슐 (불꽃 + 별)
-    MedaliSheet.tsx          훈장 창 — view="summary"(명찰, 요약) / "detail"(내 정보 훈장 칸·관리자판 명찰, 자세히)
+    MedaliSheet.tsx          훈장 자세히 창(내 정보 훈장 칸 — 누른 칸의 탭, 관리자판·회원판 명찰) + 요약 내용 MedaliSummaryBody (계산은 useMedaliData 한 곳)
+    MedaliPopover.tsx        공개판 홈·게임방 명찰 바로 아래 떠 있는 요약 상자 (AppSheet 의 예외, DECISIONS 28·29장)
     MedaliWeekCompare.tsx    "지난주보다 ±N점 · 이번 달 별 +N개" 한 줄 (내 정보·요약 창 공용)
     MedaliNudge.tsx          게임을 며칠 안 하면 뜨는 말풍선
     MedaliHelpBubble.tsx     내 정보 훈장 칸 ⓘ 설명 말풍선 (AppSheet 의 예외, DECISIONS 29장)
@@ -230,7 +231,7 @@ src/
   lib/wordbookGroups.ts·wordbookAccess.ts 단어장 묶음·성경과 신앙 숨김 · lib/sharedIdMigration.ts 단어장 ID 이전 ·
   lib/illust.ts·illustFit.ts + data/illust/ 색연필 그림(README 가 정본) · lib/kataHariIni.ts + data/kataHariIniWords.ts
   퍼즐 정답 동결본(맨 끝에만 붙임) · lib/mapPhotos.ts 지도 사진 고정 목록(scripts/build-map-photos.mjs, Actions 에서 생성) ·
-  hooks/useBackClose.ts 창·시트 뒤로가기 닫기 · components/BottomTabs·PlusLockBox·PreviewPanel·WordIllust·LevelCircles·WordMiniSheet ·
+  hooks/useBackClose.ts 창·시트 뒤로가기 닫기 · hooks/useOutsideTapClose.ts 떠 있는 상자 바깥 누르기 닫기(그 누르기는 먹음, ⓘ 말풍선·명찰 요약 상자) · components/BottomTabs·PlusLockBox·PreviewPanel·WordIllust·LevelCircles·WordMiniSheet ·
   components/WebGate.tsx 스토어 앱이 아니고 회원키·예전 설정도 없는 방문자에게 앱 대신 보이는 안내 화면(회원키 입력 포함, 2026-11-14) ·
   components/ErrorBoundary.tsx 화면 오류 시 흰 화면 대신 "다시 열기" · lib/playOffers.ts Play 가격(가격을 보이는 곳은 모두 이것을 씀, 체험 제안은 고르지 않음) ·
   lib/tasteAccess.ts 무료 맛보기 범위 + lib/plusLock.ts·components/PlusLockSheet.tsx 잠긴 항목 공용 안내 창 + components/LockMark.tsx 공용 자물쇠 ·
