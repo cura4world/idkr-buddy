@@ -6,13 +6,19 @@
 //
 // 설정은 저장 방식을 새로 만들지 않고 기존 lib(fontScale·tts·medaliSync·account·billing)와
 // 기존 창(SettingsDialog·MedaliSheet)을 그대로 씁니다.
-// 공개판에는 서버가 아직 없는 줄(서버 자동 백업·회원키·친구 비교)을 보이지 않습니다(QA Q01) —
+// 공개판에는 서버가 아직 없는 줄(서버 자동 백업·회원키)을 보이지 않습니다(QA Q01) —
 // 새 폰으로 옮기기는 백업 파일(저장·불러오기)로 합니다.
 // 등급 판단은 usePlan() 하나로만 합니다. 이메일은 보이지 않습니다(결정 문서 11/10).
 //
 // 공부 시간은 앱을 켜 둔 시간(usageTimer → Medali 일일 로그의 usageMs)입니다. 날마다 이미 쌓이고 있습니다.
+//
+// 2026-11-24 (Arga 승인 "내 정보·훈장 묶음")
+//   · 글꼴: 화면 안 한글·숫자를 모두 Pretendard(font-gothic). 위계는 굵기·크기·색으로만, 숫자는 700 + tabular-nums.
+//   · 배치: 글자 100%·412px 에서 첫 화면에 훈장 카드 끝까지(프로필 40px 사진·회원 카드 한 줄 가격·공부 기록 숫자 70%·막대 절반).
+//   · 훈장 칸 제목 옆 ⓘ → 작은 말풍선(MedaliHelpBubble, 문구는 lib/medaliHelp.ts).
+//   · 두 사람 순위 줄을 빼고 "지난주보다 +N점 · 이번 달 별 +N개"(이 폰 기록만, 서버 없음).
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import FormSheet, { FORM_FIELD_CLASS, FORM_INPUT_CLASS, FormPrimaryButton } from "@/components/FormSheet";
@@ -23,7 +29,7 @@ import AppSheet, { ChoiceGroup, ChoiceRow, ConfirmSheet, SHEET, SheetButton } fr
 import { useBackClose } from "@/hooks/useBackClose";
 import { buildBackupFile, describeSummary, formatBytes, getBackupFileSavedAt, markBackupFileSaved } from "@/lib/transfer";
 import MedaliSheet from "@/components/MedaliSheet";
-import PlusLockBox from "@/components/PlusLockBox";
+import { MedaliHelpBubble, MedaliHelpButton, MedaliHelpKind } from "@/components/MedaliHelpBubble";
 import { ProfileAvatar, profileName } from "@/components/BottomTabs";
 import { usePlan, PAYWALL_PATH, Tier, TIER_LABEL, isPreviewBuild, isReviewAccount } from "@/lib/plan";
 import { getSession, onSessionChange, signOut, deleteAccount, PublicSession } from "@/lib/account";
@@ -37,15 +43,17 @@ import { getMemberProfile } from "@/lib/member";
 import { applyFontScale, getFontStep, getStepCount, setFontStep } from "@/lib/fontScale";
 import { getTtsVoice, setTtsVoice, TTS_VOICES, TtsVoiceId, clearTtsCache } from "@/lib/tts";
 import { clearPercakapanAudioCache } from "@/lib/percakapanAudio";
-import { getMyMedaliId, setMyMedaliId, isValidMedaliId, loadPeerCache, syncMedali } from "@/lib/medaliSync";
-import { medaliEngine, loadMedaliCache, listMyRawLogs, loadOthers, mergeDay, dateKey, DailyLog } from "@/lib/medali";
+import { getMyMedaliId, setMyMedaliId, isValidMedaliId } from "@/lib/medaliSync";
+import {
+  medaliEngine, loadMedaliCache, listMyRawLogs, loadOthers, mergeDay, dateKey, DailyLog,
+  lastWeekPoints, countMonthStars, listWordRecords,
+} from "@/lib/medali";
 
 // ── 색 (시안 그대로) ─────────────────────────────────────────────
 const INK = "#1D1F1E";
 const MUTED = "#646C72";
 const FAINT = "#9AA1A6";
 const LINE = "#EEF1F3";
-const DEEP = "#104B60";
 const TEAL = "#2C6D63";
 const CARD_SHADOW = "0 1px 3px rgba(16,40,50,0.06)";
 
@@ -124,7 +132,7 @@ const I_USERX = (
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <p
     className="font-gothic"
-    style={{ margin: "14px 4px 0", fontSize: rem(13), fontWeight: 700, letterSpacing: "0.02em", color: "#3B4245" }}
+    style={{ margin: "6px 4px -2px", fontSize: rem(12), fontWeight: 700, letterSpacing: "0.02em", color: "#7A8287" }}
   >
     {children}
   </p>
@@ -154,10 +162,10 @@ const Row = ({ icon, label, value, onClick, last, danger, chevron = true, right,
     type="button"
     onClick={onClick}
     className="w-full flex items-center gap-3 text-left active:bg-black/[0.03] transition-colors"
-    style={{ minHeight: 52, padding: "0 12px 0 16px", borderBottom: last ? "0" : "1px solid " + LINE }}
+    style={{ minHeight: 46, padding: "0 12px 0 16px", borderBottom: last ? "0" : "1px solid " + LINE }}
   >
     <span className="flex shrink-0" style={{ color: danger ? "#B5524A" : MUTED }}>{icon}</span>
-    <span className="flex-1 min-w-0 truncate" style={{ fontSize: rem(14), color: danger ? "#B5524A" : INK }}>
+    <span className="flex-1 min-w-0 truncate" style={{ fontSize: rem(14.5), fontWeight: 500, color: danger ? "#B5524A" : INK }}>
       {label}
     </span>
     {value ? (
@@ -333,7 +341,23 @@ const MyInfo = () => {
     medaliEngine.refresh();
     return off;
   }, []);
-  const peer = storeApp ? null : loadPeerCache();
+  // 지난주의 나와 비교(2026-11-24) — 이 폰에 쌓인 날짜별 기록만 씁니다(서버 없음). null = 아직 계산 전
+  const [weekCmp, setWeekCmp] = useState<{ hasHistory: boolean; lastWeek: number; monthStars: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.all([lastWeekPoints(), listWordRecords()])
+      .then(([lw, words]) => {
+        if (alive) setWeekCmp({ hasHistory: lw.hasHistory, lastWeek: lw.points, monthStars: countMonthStars(words) });
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  // 훈장 칸 설명 말풍선 — 한 번에 하나. 뒤로가기는 아래 useBackClose(help)
+  const [help, setHelp] = useState<MedaliHelpKind | null>(null);
+  const helpBtnApi = useRef<HTMLButtonElement>(null);
+  const helpBtnBintang = useRef<HTMLButtonElement>(null);
+  const closeHelp = useCallback(() => setHelp(null), []);
 
   // 훈장 팝업 — 폰의 뒤로가기로 팝업만 닫히게 히스토리를 한 칸 쌓습니다(홈과 같은 방식)
   const [medaliOpen, setMedaliOpen] = useState(false);
@@ -440,8 +464,7 @@ const MyInfo = () => {
     setNick(v);
     setNickOpen(false);
     toast("닉네임을 바꿨습니다: " + v);
-    // 관리자판·회원판은 이 이름으로 기기끼리 점수를 맞춥니다(공개판은 회원키가 없어 요청하지 않음)
-    syncMedali(true).catch(() => {});
+    // 닉네임은 이 기기에만 저장합니다. 훈장 기기 합치기는 회원키로 하므로 닉네임과 무관합니다(2026-11-24).
   };
 
   // 글자 크기·읽기 음성 — 2026-11-24 옵션 창 통일: 창 안에서 고르는 것은 초안, "완료"를 눌러야 적용합니다.
@@ -571,6 +594,7 @@ const MyInfo = () => {
   useBackClose(moveOpen, () => setMoveOpen(false));
   useBackClose(ttsConfirm, () => setTtsConfirm(false));
   useBackClose(deleteConfirm, () => setDeleteConfirm(false));
+  useBackClose(help !== null, closeHelp);
 
   // ── 화면 ──
   const badge = tierBadge(tier);
@@ -581,16 +605,13 @@ const MyInfo = () => {
       : EDITION_LABEL[getEdition()];
   const until = session && session.plan && typeof session.plan.until === "number" ? session.plan.until : 0;
   const period = planPeriod(session);
-  // 회원 구역 Plus 상자의 요금 두 줄 — Play 에서 받은 가격으로만 만듭니다(월 환산 = Play 연 가격 ÷ 12).
+  // 회원 카드의 요금 한 줄 — Play 에서 받은 가격으로만 만듭니다(월 환산 = Play 연 가격 ÷ 12, 2026-11-24 두 줄 → 한 줄).
   // 아직 못 받았으면 금액 대신 소개 문구를 보입니다. 고정 원화 금액은 미리보기 빌드의 대체값뿐입니다.
-  const plusLines: [string, string] = pricing.state === "ready" && pricing.monthlyPrice
-    ? [
-        "월 " + pricing.monthlyPrice + ",",
-        pricing.yearlyPerMonth
-          ? "연간 구독 시 월 " + pricing.yearlyPerMonth
-          : pricing.yearlyPrice ? "연간 구독 시 연 " + pricing.yearlyPrice : "언제든 해지할 수 있습니다",
-      ]
-    : ["단어장·게임·회화집·지도까지", "모든 기능이 열립니다"];
+  const plusLine: string = pricing.state === "ready" && pricing.monthlyPrice
+    ? "월 " + pricing.monthlyPrice + (pricing.yearlyPerMonth
+        ? " · 연간 구독 시 월 " + pricing.yearlyPerMonth
+        : pricing.yearlyPrice ? " · 연간 구독 시 연 " + pricing.yearlyPrice : "")
+    : "단어장·게임·회화집·지도까지 모든 기능이 열립니다";
   const tail = memberKeyTail(session);
   const hm = splitHM(view.totalMs);
 
@@ -601,33 +622,38 @@ const MyInfo = () => {
   const diffSame = Math.abs(view.diffMs) < 60000;
   const diffText = (view.diffMs > 0 ? "+" : "−") + hmText(view.diffMs);
 
-  const ranking: { name: string; me: boolean; pts: number; initial: string }[] = [
-    { name: displayName, me: true, pts: medal.week, initial: displayName.charAt(0).toUpperCase() },
-  ];
-  if (peer && peer.id) {
-    ranking.push({ name: peer.id, me: false, pts: peer.weekPoints || 0, initial: peer.id.charAt(0).toUpperCase() });
-    ranking.sort((a, b) => b.pts - a.pts);
-  }
+  // "지난주보다 +12점 · 이번 달 별 +5개". 첫 주(이번 주 월요일보다 앞선 기록 없음)는 비교 대신 안내 한 줄.
+  const weekDiff = weekCmp ? medal.week - weekCmp.lastWeek : 0;
+  const weekDiffNode = !weekCmp ? null : weekDiff === 0 ? (
+    "지난주와 같습니다"
+  ) : (
+    <>
+      지난주보다{" "}
+      <b className="tabular-nums" style={{ fontWeight: 700, color: weekDiff > 0 ? TEAL : MUTED }}>
+        {(weekDiff > 0 ? "+" : "−") + Math.abs(weekDiff)}점
+      </b>
+    </>
+  );
 
   const version = storeAppVersion() || "2.0";
 
   return (
     <div
-      className="w-full max-w-lg mx-auto bg-background overflow-x-clip"
+      className="w-full max-w-lg mx-auto bg-background overflow-x-clip font-gothic"
       style={{ minHeight: "calc(100dvh - var(--kata-tabbar-h, 0px))", color: INK }}
     >
       <header className="flex items-center px-4" style={{ height: 56, borderBottom: "1px solid #E3E8EB" }}>
         <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">PROFIL SAYA</h1>
       </header>
 
-      <div className="flex flex-col" style={{ padding: "16px 16px 24px", gap: 10 }}>
+      <div className="flex flex-col" style={{ padding: "12px 16px 24px", gap: 10 }}>
         {/* ── 프로필 ── */}
-        <Card style={{ padding: "18px 16px" }}>
-          <div className="flex items-center" style={{ gap: 14 }}>
-            <ProfileAvatar size={56} fontPx={22} session={session} name={displayName} />
+        <Card style={{ padding: "12px 14px" }}>
+          <div className="flex items-center" style={{ gap: 12 }}>
+            <ProfileAvatar size={40} fontPx={16} session={session} name={displayName} />
             <span className="flex-1 min-w-0">
               <span className="flex items-center" style={{ gap: 8 }}>
-                <span className="truncate" style={{ fontSize: rem(16.5), fontWeight: 600 }}>{displayName}</span>
+                <span className="truncate" style={{ fontSize: rem(15.5), fontWeight: 700 }}>{displayName}</span>
                 <span
                   className="shrink-0 flex items-center font-gothic"
                   style={{ height: 22, padding: "0 9px", borderRadius: 11, background: badge.bg, color: badge.fg, fontSize: rem(10.5), fontWeight: 700 }}
@@ -635,7 +661,7 @@ const MyInfo = () => {
                   {badge.text}
                 </span>
               </span>
-              <span className="block font-gothic" style={{ marginTop: 4, fontSize: rem(11.5), color: MUTED }}>{subLine}</span>
+              <span className="block font-gothic" style={{ marginTop: 2, fontSize: rem(12), color: MUTED }}>{subLine}</span>
             </span>
           </div>
         </Card>
@@ -644,12 +670,26 @@ const MyInfo = () => {
         <SectionTitle>회원</SectionTitle>
         {tier === "free" ? (
           <>
-            <PlusLockBox
-              title="Kata kata Plus"
-              lines={plusLines}
+            {/* 2026-11-24: 공용 귤색 상자(PlusLockBox) 대신 한 줄 가격 + 청록 주 단추. 카드 전체가 눌립니다 */}
+            <button
+              type="button"
               onClick={() => navigate(PAYWALL_PATH)}
-              wholeBox
-            />
+              className="w-full flex items-center text-left bg-white active:bg-black/[0.03] transition-colors"
+              style={{ borderRadius: 20, boxShadow: CARD_SHADOW, padding: "10px 12px 10px 16px", gap: 12, minHeight: 60 }}
+            >
+              <span className="flex-1 min-w-0">
+                <span className="block" style={{ fontSize: rem(14.5), fontWeight: 700 }}>Kata kata Plus</span>
+                <span className="block break-keep tabular-nums" style={{ marginTop: 2, fontSize: rem(12), lineHeight: 1.4, color: MUTED }}>
+                  {plusLine}
+                </span>
+              </span>
+              <span
+                className="shrink-0 flex items-center"
+                style={{ height: 36, padding: "0 14px", borderRadius: 10, background: TEAL, color: "#FFFFFF", fontSize: rem(13), fontWeight: 700 }}
+              >
+                자세히 보기
+              </span>
+            </button>
             {/* 공개판 회원키 입력은 서버가 생기면 다시 넣습니다(QA Q01 — 그 전에는 링크를 보이지 않음) */}
           </>
         ) : tier === "plus" ? (
@@ -705,12 +745,12 @@ const MyInfo = () => {
 
         {/* ── 공부 기록 ── */}
         <SectionTitle>공부 기록</SectionTitle>
-        <Card style={{ padding: "16px 16px 14px" }}>
+        <Card style={{ padding: "12px 14px 10px" }}>
           <div className="flex items-center justify-between">
             <span className="font-gothic" style={{ fontSize: rem(12), fontWeight: 600, color: MUTED }}>공부 시간</span>
             <span
               className="flex font-gothic"
-              style={{ height: 30, borderRadius: 15, background: "#F1F4F5", padding: 3, boxSizing: "border-box", fontSize: rem(11), fontWeight: 600 }}
+              style={{ height: 28, borderRadius: 14, background: "#F1F4F5", padding: 3, boxSizing: "border-box", fontSize: rem(11), fontWeight: 600 }}
             >
               {([0, 1] as const).map((b) => (
                 <button
@@ -734,17 +774,17 @@ const MyInfo = () => {
           </div>
           {/* 첫 줄: 작은 "이번 달" + 큰 "6시간 24분" + 작은 "하루 평균 16분", 둘째 줄: "지난달 같은 기간보다 …"
               (2026-11-23 Arga 19). 좁은 화면·큰 글자에서는 "하루 평균"이 넘치지 않고 다음 줄로 내려갑니다(flex-wrap). */}
-          <p className="flex flex-wrap items-baseline" style={{ margin: "10px 0 0", columnGap: 6, rowGap: 0 }}>
+          <p className="flex flex-wrap items-baseline" style={{ margin: "6px 0 0", columnGap: 6, rowGap: 0 }}>
             <span className="font-gothic" style={{ fontSize: rem(11.5), color: MUTED }}>{monthBack === 0 ? "이번 달" : "지난달"}</span>
             <span className="inline-flex items-baseline" style={{ gap: 6 }}>
               {hm.h > 0 ? (
                 <>
-                  <span className="font-word" style={{ fontSize: rem(27.5), fontWeight: 600, color: DEEP }}>{hm.h}</span>
-                  <span style={{ fontSize: rem(13) }}>시간</span>
+                  <span className="tabular-nums" style={{ fontSize: rem(19.5), fontWeight: 700, color: TEAL }}>{hm.h}</span>
+                  <span style={{ fontSize: rem(12.5), fontWeight: 500 }}>시간</span>
                 </>
               ) : null}
-              <span className="font-word" style={{ fontSize: rem(27.5), fontWeight: 600, color: DEEP }}>{hm.m}</span>
-              <span style={{ fontSize: rem(13) }}>분</span>
+              <span className="tabular-nums" style={{ fontSize: rem(19.5), fontWeight: 700, color: TEAL }}>{hm.m}</span>
+              <span style={{ fontSize: rem(12.5), fontWeight: 500 }}>분</span>
             </span>
             <span className="font-gothic whitespace-nowrap" style={{ fontSize: rem(11.5), color: MUTED }}>하루 평균 {hmText(view.avgMs)}</span>
           </p>
@@ -758,7 +798,7 @@ const MyInfo = () => {
               </>
             )}
           </p>
-          <div className="relative flex" style={{ marginTop: 10, height: 64, gap: 3 }} aria-hidden="true">
+          <div className="relative flex" style={{ marginTop: 8, height: 32, gap: 3 }} aria-hidden="true">
             {refPct > 0 ? (
               <span className="absolute left-0 right-0" style={{ bottom: refPct + "%", borderTop: "1.5px dashed #C9CFD3" }} />
             ) : null}
@@ -774,7 +814,7 @@ const MyInfo = () => {
               );
             })}
           </div>
-          <div className="flex justify-between font-gothic" style={{ marginTop: 6, fontSize: rem(10.5), color: FAINT }}>
+          <div className="flex justify-between font-gothic" style={{ marginTop: 4, fontSize: rem(10.5), color: FAINT }}>
             <span>{view.month + 1}월 1일</span>
             <span className="flex items-center" style={{ gap: 4 }}>
               <span style={{ width: 12, borderTop: "1.5px dashed #C9CFD3" }} />
@@ -784,72 +824,96 @@ const MyInfo = () => {
           </div>
         </Card>
 
-        {/* ── 훈장 ── */}
+        {/* ── 훈장 ── 칸을 누르면 훈장 창, 제목 줄 오른쪽 ⓘ 는 설명 말풍선(칸 누르기와 겹치지 않게 칸 밖의 형제 단추) */}
         <SectionTitle>훈장</SectionTitle>
-        <Card style={{ padding: 16 }}>
-          <div className="grid grid-cols-2" style={{ gap: 10 }}>
-            <button
-              type="button"
-              onClick={openMedali}
-              className="text-left active:opacity-80"
-              style={{ borderRadius: 14, background: "#FBF1EC", padding: "12px 10px 12px 12px" }}
-            >
-              <p className="flex items-center font-gothic" style={{ margin: 0, gap: 5, fontSize: rem(11), fontWeight: 600, color: "#B5643C" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="#E8875A" aria-hidden="true">
-                  <path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" />
-                </svg>
-                이번 주 불꽃
-              </p>
-              <p className="font-word" style={{ margin: "4px 0 0", fontSize: rem(22), fontWeight: 600, color: INK }}>
-                {medal.week}
-                <span className="font-gothic" style={{ fontSize: rem(11), fontWeight: 500, color: MUTED }}> 점</span>
-              </p>
-              <p className="font-gothic" style={{ margin: "4px 0 0", fontSize: rem(10.5), lineHeight: 1.5, letterSpacing: "-0.02em", color: "#8A6A5A", wordBreak: "keep-all" }}>
-                {/* 줄바꿈 없이 한 줄로 이어 씀(2026-11-23 Arga 15). 좁으면 저절로 줄이 바뀝니다 */}
-                공부하며 쌓이는 이번 주 점수, 매주 월요일 갱신
-              </p>
-            </button>
-            <button
-              type="button"
-              onClick={openMedali}
-              className="text-left active:opacity-80"
-              style={{ borderRadius: 14, background: "#FBF5E6", padding: "12px 10px 12px 12px" }}
-            >
-              <p className="flex items-center font-gothic" style={{ margin: 0, gap: 5, fontSize: rem(11), fontWeight: 600, color: "#94723A" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="#E0B04A" aria-hidden="true">
-                  <path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.3 6L12 16.4 6.6 19.4l1.3-6L3.4 9.3l6-.7z" />
-                </svg>
-                모은 별
-              </p>
-              <p className="font-word" style={{ margin: "4px 0 0", fontSize: rem(22), fontWeight: 600, color: INK }}>
-                {medal.stars}
-                <span className="font-gothic" style={{ fontSize: rem(11), fontWeight: 500, color: MUTED }}> 단어</span>
-              </p>
-              <p className="font-gothic" style={{ margin: "4px 0 0", fontSize: rem(10.5), lineHeight: 1.5, letterSpacing: "-0.02em", color: "#8A7A55", wordBreak: "keep-all" }}>
-                여러 번 맞혀 확실히 외운<br />단어 수, 계속 누적
-              </p>
-            </button>
-          </div>
-          <div className="flex flex-col" style={{ marginTop: 12, borderTop: "1px solid " + LINE, paddingTop: 12, gap: 10 }}>
-            {ranking.map((r) => (
-              <div key={(r.me ? "me-" : "peer-") + r.name} className="flex items-center" style={{ gap: 10 }}>
-                <span
-                  className="shrink-0 flex items-center justify-center font-gothic"
-                  style={{
-                    width: 30, height: 30, borderRadius: 15, fontSize: rem(11), fontWeight: 700,
-                    background: r.me ? "#E9E4F5" : "#E6F0EC", color: r.me ? "#5B4A8A" : "#3F7F6E",
-                  }}
-                >
-                  {r.initial || "K"}
+        <Card style={{ padding: 12 }}>
+          <div className="relative grid grid-cols-2" style={{ gap: 8 }}>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={openMedali}
+                className="w-full text-left active:opacity-80"
+                style={{ borderRadius: 14, background: "#FBF1EC", padding: "10px 10px 10px 12px" }}
+              >
+                <span className="flex items-center" style={{ gap: 5, minHeight: 20, paddingRight: 24, fontSize: rem(12), fontWeight: 700, color: "#B5643C" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#E8875A" aria-hidden="true" className="shrink-0">
+                    <path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" />
+                  </svg>
+                  이번 주 불꽃
                 </span>
-                <span className="flex-1 min-w-0 truncate" style={{ fontSize: rem(13.5) }}>
-                  {r.name}
-                  {r.me ? <span className="font-gothic" style={{ fontSize: rem(10.5), color: FAINT }}> 나</span> : null}
+                <span className="block tabular-nums" style={{ marginTop: 2, fontSize: rem(21), fontWeight: 700, lineHeight: 1.3, color: INK }}>
+                  {medal.week}
+                  <span style={{ fontSize: rem(11.5), fontWeight: 500, color: MUTED }}> 점</span>
                 </span>
-                <span className="font-word" style={{ fontSize: rem(14), fontWeight: 600 }}>{r.pts}</span>
-              </div>
-            ))}
+                <span className="block" style={{ marginTop: 1, fontSize: rem(11), lineHeight: 1.45, color: "#8A6A5A", wordBreak: "keep-all" }}>
+                  이번 주 열정 점수
+                </span>
+              </button>
+              <span className="absolute" style={{ top: 4, right: 4 }}>
+                <MedaliHelpButton
+                  kind="api"
+                  open={help === "api"}
+                  onToggle={() => setHelp(help === "api" ? null : "api")}
+                  bg="#F5DCCF"
+                  fg="#9A4F2A"
+                  buttonRef={helpBtnApi}
+                />
+              </span>
+            </div>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={openMedali}
+                className="w-full text-left active:opacity-80"
+                style={{ borderRadius: 14, background: "#FBF5E6", padding: "10px 10px 10px 12px" }}
+              >
+                <span className="flex items-center" style={{ gap: 5, minHeight: 20, paddingRight: 24, fontSize: rem(12), fontWeight: 700, color: "#94723A" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#E0B04A" aria-hidden="true" className="shrink-0">
+                    <path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.3 6L12 16.4 6.6 19.4l1.3-6L3.4 9.3l6-.7z" />
+                  </svg>
+                  모은 별
+                </span>
+                <span className="block tabular-nums" style={{ marginTop: 2, fontSize: rem(21), fontWeight: 700, lineHeight: 1.3, color: INK }}>
+                  {medal.stars}
+                  <span style={{ fontSize: rem(11.5), fontWeight: 500, color: MUTED }}> 단어</span>
+                </span>
+                <span className="block" style={{ marginTop: 1, fontSize: rem(11), lineHeight: 1.45, color: "#8A7A55", wordBreak: "keep-all" }}>
+                  지금까지 외운 단어
+                </span>
+              </button>
+              <span className="absolute" style={{ top: 4, right: 4 }}>
+                <MedaliHelpButton
+                  kind="bintang"
+                  open={help === "bintang"}
+                  onToggle={() => setHelp(help === "bintang" ? null : "bintang")}
+                  bg="#F3E6C4"
+                  fg="#7A5A1E"
+                  buttonRef={helpBtnBintang}
+                />
+              </span>
+            </div>
+            {help ? (
+              <MedaliHelpBubble
+                kind={help}
+                anchor={help === "api" ? helpBtnApi.current : helpBtnBintang.current}
+                onClose={closeHelp}
+              />
+            ) : null}
           </div>
+          {/* 지난주의 나와 비교 — 두 사람 순위 줄 자리(2026-11-24). 계산 전에는 비워 둡니다(높이는 유지) */}
+          <p className="break-keep" style={{ margin: "10px 2px 0", minHeight: 18, fontSize: rem(12), lineHeight: 1.5, color: MUTED }}>
+            {!weekCmp ? null : !weekCmp.hasHistory ? (
+              "다음 주부터 지난주와 비교해 드립니다"
+            ) : (
+              <>
+                {weekDiffNode}
+                {" · 이번 달 별 "}
+                <b className="tabular-nums" style={{ fontWeight: 700, color: weekCmp.monthStars > 0 ? TEAL : MUTED }}>
+                  +{weekCmp.monthStars}개
+                </b>
+              </>
+            )}
+          </p>
         </Card>
 
         {/* ── 설정 ── */}
@@ -899,7 +963,7 @@ const MyInfo = () => {
         open={nickOpen}
         onClose={() => setNickOpen(false)}
         title="닉네임"
-        desc="훈장 점수 옆에 보이는 이름입니다. 한글·영문·숫자 6자 이내로 적어 주세요."
+        desc="내 정보 맨 위에 보이는 이름입니다. 한글·영문·숫자 6자 이내로 적어 주세요."
         icon={<UserRound size={20} strokeWidth={1.8} />}
         onSubmit={(e) => { e.preventDefault(); saveNick(); }}
         dirty={nickInput.trim() !== nickInitialRef.current.trim()}
