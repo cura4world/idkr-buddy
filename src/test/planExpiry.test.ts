@@ -1,11 +1,11 @@
-// 구독 만료 순간의 재확인 (2026-11-23 내부 테스트 1장)
-//   · 만료 시각 + 3초에 다시 확인(시계) / 같은 만료 시각으로는 한 번만 / 실패하면 60초 뒤 한 번만 더
-//   · 만료 시각이 지나는 순간 등급 구독자에게 알림(잠긴 화면이 바로 다시 판단)
+// 구독 만료 순간의 재확인 (2026-11-23 내부 테스트 1장, 2026-11-24 갱신 확인 유예)
+//   · 만료 시각 + 3초에 다시 확인(시계) / 같은 만료 시각으로는 한 차례만 / 서버가 아직이면 만료 + 60초·+ 3분에 한 번씩 더
+//   · 만료 시각이 막 지나도 유예 10분 동안은 Plus, 서버가 무료로 답하면 바로 무료, 유예가 끝나면 무료(그때 구독자에게 알림)
 //   · 강제 재확인은 "한 번만·10분 간격"을 무시 / 최근 유료 계정 판단 / 구독 관리 화면에서 돌아옴
 // 시계·타이머·네이티브 통로·서버는 가짜입니다.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createExpiryWatcher, EXPIRY_DELAY_MS, EXPIRY_RETRY_MS, ExpiryPlan } from "@/lib/planExpiry";
+import { createExpiryWatcher, EXPIRY_DELAY_MS, RECHECK_OFFSETS_MS, ExpiryPlan } from "@/lib/planExpiry";
 
 const SESSION_KEY = "kata-public-session";
 
@@ -80,16 +80,35 @@ describe("만료 시계 (planExpiry)", () => {
     expect(reasons).toEqual(["timer"]);
   });
 
-  it("다시 확인해도 서버가 아직 갱신을 못 받았으면 60초 뒤 한 번만 더 하고 멈춘다(무한 반복 없음)", async () => {
+  it("다시 확인해도 서버가 아직 갱신을 못 받았으면 만료 + 60초·+ 3분에 한 번씩 더 하고 멈춘다(무한 반복 없음)", async () => {
+    expect(RECHECK_OFFSETS_MS).toEqual([3000, 60 * 1000, 3 * 60 * 1000]);
     const until = Date.now() + 1000;
     const { reasons, w } = setup({ tier: "plus", until }); // plan 이 바뀌지 않음
     w.sync();
     await vi.advanceTimersByTimeAsync(1000 + EXPIRY_DELAY_MS);
     expect(reasons).toEqual(["timer"]);
     w.sync(); // refreshMe 가 같은 세션을 다시 저장해도 재시도 타이머를 지우지 않음
-    await vi.advanceTimersByTimeAsync(EXPIRY_RETRY_MS);
+    await vi.advanceTimersByTimeAsync(60 * 1000 - EXPIRY_DELAY_MS - 1); // 만료 + 60초 직전
+    expect(reasons).toEqual(["timer"]);
+    await vi.advanceTimersByTimeAsync(1);
     expect(reasons).toEqual(["timer", "timer-retry"]);
+    await vi.advanceTimersByTimeAsync(2 * 60 * 1000); // 만료 + 3분
+    expect(reasons).toEqual(["timer", "timer-retry", "timer-retry"]);
     await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+    expect(reasons).toEqual(["timer", "timer-retry", "timer-retry"]);
+  });
+
+  it("첫 재시도에서 갱신이 확인되면 그 뒤 재시도는 하지 않는다", async () => {
+    const until = Date.now() + 1000;
+    let n = 0;
+    const { reasons, w } = setup({ tier: "plus", until }, (b) => {
+      n++;
+      if (n === 2) b.p = { tier: "plus", until: until + 30 * 24 * 3600 * 1000 }; // 두 번째 확인 때 갱신됨
+    });
+    w.sync();
+    await vi.advanceTimersByTimeAsync(1000 + 60 * 1000);
+    expect(reasons).toEqual(["timer", "timer-retry"]);
+    await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
     expect(reasons).toEqual(["timer", "timer-retry"]);
   });
 
@@ -136,22 +155,79 @@ describe("만료 순간의 등급 알림 (plan.ts)", () => {
     delete (window as unknown as { KataStore?: unknown }).KataStore;
   });
 
-  it("만료 시각이 지나는 순간 onTierChange 구독자가 불리고, 그때 등급은 무료다", async () => {
-    vi.resetModules();
+  function saveStoreSession(plan: { tier: string; until: number }): void {
     (window as unknown as { KataStore: unknown }).KataStore = {};
-    const until = Date.now() + 2000;
     localStorage.setItem(SESSION_KEY, JSON.stringify({
       token: "t", user: { id: "g_1", email: "", name: "A", picture: "" },
-      plan: { tier: "plus", until }, accountId: "a", savedAt: Date.now(),
+      plan, accountId: "a", savedAt: Date.now(),
     }));
+  }
+
+  it("만료 시각이 막 지나도 갱신 확인 유예(10분) 동안은 Plus, 유예가 끝나는 순간 구독자가 불리고 무료다", async () => {
+    vi.resetModules();
+    const until = Date.now() + 2000;
+    saveStoreSession({ tier: "plus", until });
     const plan = await import("@/lib/plan");
     const platform = await import("@/lib/platform");
     if (!platform.isStoreApp()) return; // 스토어 판정 방식이 바뀌면 이 시험은 건너뜀(아래 기대가 무의미)
+    expect(plan.RENEW_GRACE_MS).toBe(10 * 60 * 1000);
     const seen: string[] = [];
     plan.onTierChange(() => seen.push(plan.getTier()));
     expect(plan.getTier()).toBe("plus");
-    await vi.advanceTimersByTimeAsync(2100);
+    await vi.advanceTimersByTimeAsync(2100); // 만료 직후
+    expect(plan.getTier()).toBe("plus");
+    expect(seen).toEqual([]); // 만료 순간에 잠그지 않음
+    await vi.advanceTimersByTimeAsync(plan.RENEW_GRACE_MS); // 유예 끝
     expect(seen).toEqual(["free"]);
+    expect(plan.getTier()).toBe("free");
+  });
+
+  it("유예 중에 서버가 무료로 답하면(세션 plan 이 free) 유예 없이 바로 무료", async () => {
+    vi.resetModules();
+    saveStoreSession({ tier: "plus", until: Date.now() - 5000 });
+    const plan = await import("@/lib/plan");
+    const account = await import("@/lib/account");
+    const platform = await import("@/lib/platform");
+    if (!platform.isStoreApp()) return;
+    expect(plan.getTier()).toBe("plus"); // 유예 중
+    const seen: string[] = [];
+    plan.onTierChange(() => seen.push(plan.getTier()));
+    account.updateSessionPlan({ tier: "free", until: 0 } as never);
+    expect(plan.getTier()).toBe("free");
+    expect(seen[seen.length - 1]).toBe("free");
+  });
+
+  it("유예 중에 서버가 갱신된 만료 시각을 주면 Plus 그대로", async () => {
+    vi.resetModules();
+    saveStoreSession({ tier: "plus", until: Date.now() - 5000 });
+    const plan = await import("@/lib/plan");
+    const account = await import("@/lib/account");
+    const platform = await import("@/lib/platform");
+    if (!platform.isStoreApp()) return;
+    account.updateSessionPlan({ tier: "plus", until: Date.now() + 5 * 60 * 1000 } as never);
+    expect(plan.getTier()).toBe("plus");
+  });
+
+  it("유예는 막 만료된 유료 플랜에만 — special·심사용·관리자는 만료 시각이 지나면 그대로 무료", async () => {
+    vi.resetModules();
+    const plan = await import("@/lib/plan");
+    const now = Date.now();
+    expect(plan.inRenewGrace({ tier: "plus", until: now - 1 }, now)).toBe(true);
+    expect(plan.inRenewGrace({ tier: "trial", until: now - 1 }, now)).toBe(true);
+    expect(plan.inRenewGrace({ tier: "plus", until: now - plan.RENEW_GRACE_MS }, now)).toBe(false);
+    expect(plan.inRenewGrace({ tier: "plus", until: now + 1000 }, now)).toBe(false); // 아직 이용 중(유예 아님)
+    expect(plan.inRenewGrace({ tier: "special", until: now - 1 }, now)).toBe(false);
+    expect(plan.inRenewGrace({ tier: "review", until: now - 1 }, now)).toBe(false);
+    expect(plan.inRenewGrace({ tier: "admin", until: now - 1 }, now)).toBe(false);
+    expect(plan.inRenewGrace({ tier: "free", until: 0 }, now)).toBe(false);
+    expect(plan.inRenewGrace(null, now)).toBe(false);
+
+    vi.resetModules();
+    saveStoreSession({ tier: "special", until: Date.now() - 5000 });
+    const plan2 = await import("@/lib/plan");
+    const platform = await import("@/lib/platform");
+    if (!platform.isStoreApp()) return;
+    expect(plan2.getTier()).toBe("free");
   });
 });
 
@@ -190,6 +266,12 @@ describe("강제 재확인·최근 유료·구독 관리에서 돌아옴 (billin
     expect(b.isLapsedPaidPlan({ tier: "special", until: now - 1 }, now)).toBe(false);
     expect(b.isLapsedPaidPlan({ tier: "review", until: now - 1 } as never, now)).toBe(false);
     expect(b.isLapsedPaidPlan(null, now)).toBe(false);
+    // 구독 중으로 보여 줄 플랜 — 이용 중 + 갱신 확인 유예(10분)
+    expect(b.isPaidOrRenewingPlan({ tier: "plus", until: now + 1 }, now)).toBe(true);
+    expect(b.isPaidOrRenewingPlan({ tier: "plus", until: now - 1 }, now)).toBe(true);
+    expect(b.isPaidOrRenewingPlan({ tier: "plus", until: now - 10 * 60 * 1000 }, now)).toBe(false);
+    expect(b.isPaidOrRenewingPlan({ tier: "free", until: 0 }, now)).toBe(false);
+    expect(b.isPaidOrRenewingPlan(null, now)).toBe(false);
   });
 
   it("조용한 재확인은 한 번 끝나면 다시 하지 않지만, force 면 바로 다시 Play·서버에 묻는다", async () => {
@@ -216,7 +298,7 @@ describe("강제 재확인·최근 유료·구독 관리에서 돌아옴 (billin
     expect(restores).toBe(1);
 
     // 강제 — 10분이 안 지났어도 바로
-    const p2 = b.autoRestoreOnce(true, { force: true, reason: "timer" });
+    const p2 = b.autoRestoreOnce(true, { force: true });
     await vi.advanceTimersByTimeAsync(10);
     await p2;
     expect(restores).toBe(2);
