@@ -658,13 +658,18 @@ export async function listWeekLogs(): Promise<DailyLog[]> {
   }
 }
 
-// 지난주(월~일) 불꽃 점수 — 내 정보의 "지난주보다 +N점"(2026-11-24). 이번 주 점수와 같은 방법(내 기기 + 다른 기기 몫,
-// 날짜마다 합친 뒤 하루 상한)으로 셉니다. hasHistory: 이번 주 월요일보다 앞선 기록이 하나라도 있는가(없으면 첫 주라 비교하지 않음).
+// 지난주 같은 기간의 불꽃 점수 — 내 정보의 "지난주보다 +N점"(2026-11-24).
+// 이번 주 월요일~오늘과 맞대도록 지난주 월요일~같은 요일까지만 셉니다(월요일엔 월요일끼리, 일요일이면 지난주 전체).
+// 이번 주 점수와 같은 방법(내 기기 + 다른 기기 몫, 날짜마다 합친 뒤 하루 상한)으로 셉니다.
+// hasHistory: 이번 주 월요일보다 앞선 기록이 하나라도 있는가(없으면 첫 주라 비교하지 않음).
 export async function lastWeekPoints(now: Date = new Date()): Promise<{ hasHistory: boolean; points: number }> {
   try {
     const thisMon = mondayOf(now);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const elapsed = Math.round((today.getTime() - thisMon.getTime()) / 86400000); // 월=0 … 일=6
     const from = dateKey(addDays(thisMon, -7));
-    const until = dateKey(thisMon); // 이 날은 넣지 않음
+    const lastSame = dateKey(addDays(thisMon, -7 + elapsed)); // 지난주의 같은 요일(이 날까지 넣음)
+    const until = dateKey(thisMon); // 이번 주 월요일 — hasHistory 판단용
     const others = loadOthers();
     const all = await getAll<DailyLog>(STORE_DAILY);
     const mineByDate: Record<string, DailyLog> = {};
@@ -679,7 +684,7 @@ export async function lastWeekPoints(now: Date = new Date()): Promise<{ hasHisto
     let points = 0;
     for (const d of dates) {
       if (d < until) hasHistory = true;
-      if (d >= from && d < until) points += mergeDay(mineByDate[d] || null, others, d).total;
+      if (d >= from && d <= lastSame) points += mergeDay(mineByDate[d] || null, others, d).total;
     }
     return { hasHistory, points };
   } catch {
