@@ -4,7 +4,7 @@
 //   · 훈장 칸 ⓘ → 말풍선: 한 번에 하나, "알겠어요"·뒤로가기·바깥 누르기로 닫힘, 바깥 누르기는 뒤 줄을 누르지 않음, 칸 누르기(훈장 창)와 겹치지 않음
 //   · 두 사람 순위 줄이 없고 "지난주와 비교" 줄이 있다
 
-import { test, expect, setupPreview, openApp, FONT_STEP_100 } from "../fixtures";
+import { test, expect, setupPreview, openApp, appPath, FONT_STEP_100 } from "../fixtures";
 
 const FONT_STEP_125 = 8;
 
@@ -88,7 +88,8 @@ test("훈장 설명 말풍선 — 하나씩, 알겠어요·뒤로가기·바깥 
   // 바깥 누르기 → 닫히고, 그 누르기로 뒤의 단추(회원 카드 → 구독 화면)가 눌리지 않음
   await apiBtn.click();
   await expect(apiBubble).toBeVisible();
-  const plusCard = page.getByRole("button", { name: new RegExp("Kata kata Plus") });
+  // 회원 카드는 2026-11-25 부터 단추가 아니라 누르기만 받는 상자(단추는 안쪽 "Plus 자세히 보기" 하나) — 제목 글자로 찾음
+  const plusCard = page.getByText("Kata kata Plus", { exact: true });
   const pb = await plusCard.boundingBox();
   expect(pb).toBeTruthy();
   if (pb) await page.mouse.click(pb.x + 40, pb.y + pb.height / 2);
@@ -100,4 +101,25 @@ test("훈장 설명 말풍선 — 하나씩, 알겠어요·뒤로가기·바깥 
   // 칸 자체를 누르면 예전처럼 훈장 창
   await page.getByRole("button", { name: new RegExp("열정 점수") }).click();
   await expect(medaliSheet).toBeVisible();
+});
+
+// 2026-11-25: 회원 칸 오른쪽 단추 = 홈 Plus 카드와 같은 공용 "Plus / 자세히 보기"(components/PlusMoreButton)
+test("무료 회원 칸 — 단추는 'Plus 자세히 보기' 하나, 홈 Plus 카드 단추와 같은 모양, 누르면 구독 화면", async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 840 });
+  await setupPreview(page, { tier: "free", fontStep: FONT_STEP_100 });
+  const look = (sel: string) => page.locator(sel).first().evaluate((e) => {
+    const s = getComputedStyle(e);
+    const r = e.getBoundingClientRect();
+    return [s.backgroundColor, s.color, s.fontSize, s.fontWeight, s.fontFamily, s.lineHeight, s.paddingLeft, s.borderTopLeftRadius, Math.round(r.height), (e.textContent || "").trim()].join(" | ");
+  });
+  await openApp(page, "");
+  const home = await look('[data-fit-anchor="plus"] [data-plus-more]');
+  await openApp(page, "me");
+  const btn = page.getByRole("button", { name: "Plus 자세히 보기", exact: true });
+  await expect(btn).toHaveCount(1);
+  // 예전처럼 카드 글 전체가 단추 이름이 되지 않음
+  await expect(page.getByRole("button", { name: new RegExp("Kata kata Plus") })).toHaveCount(0);
+  expect(await look("[data-plus-more]")).toBe(home);
+  await btn.click();
+  await expect.poll(() => appPath(page)).toBe("/plus");
 });
