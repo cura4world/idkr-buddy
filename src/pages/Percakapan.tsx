@@ -29,6 +29,7 @@ import { usePlan } from "@/lib/plan";
 import { isStoreApp } from "@/lib/platform";
 import LevelCircles from "@/components/LevelCircles";
 import FormSheet, { FORM_FIELD_CLASS, FormLabel, FormPrimaryButton } from "@/components/FormSheet";
+import { ConfirmSheet } from "@/components/sheet/AppSheet";
 import { useCompactPill } from "@/lib/useCompactPill";
 import { aiErrorToast } from "@/lib/aiErrors";
 import { lastQuotaNotice } from "@/lib/aiProxy";
@@ -525,39 +526,18 @@ const Percakapan = () => {
               </div>
       </FormSheet>
 
-      {/* 백업이 있을 때 물어보는 시트 */}
-      {restoreOpen ? (
-        <>
-          <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-[2px]" onClick={handleLater} />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="백업 불러오기"
-            className="fixed z-50 left-1/2 -translate-x-1/2 top-[22%] w-[min(92vw,22rem)] rounded-2xl bg-card border border-border/60 shadow-2xl shadow-black/40 px-5 py-5"
-          >
-            <p className="text-[0.9375rem] leading-relaxed text-card-foreground">
-              내가 만든 대화 {restoreCount}개를 찾았습니다. 불러오시겠습니까?
-            </p>
-            <div className="mt-5 flex gap-2">
-              <button
-                type="button"
-                onClick={handleLater}
-                className="flex-1 h-11 rounded-[13px] border border-border text-[0.875rem] font-gothic text-foreground/80 active:bg-muted"
-              >
-                나중에
-              </button>
-              <button
-                type="button"
-                onClick={handleRestore}
-                disabled={restoring}
-                className="flex-1 h-11 rounded-[13px] bg-primary text-[0.875rem] font-medium text-white disabled:opacity-60"
-              >
-                {restoring ? "불러오는 중..." : "불러오기"}
-              </button>
-            </div>
-          </div>
-        </>
-      ) : null}
+      {/* 백업이 있을 때 물어보는 창 — 앱 공통 틀의 확인 창(제목은 예전 창 이름 "백업 불러오기"). 뒤로가기는 위 useBackClose(restoreOpen) */}
+      <ConfirmSheet
+        open={restoreOpen}
+        onCancel={handleLater}
+        onConfirm={handleRestore}
+        title="백업 불러오기"
+        icon={<RotateCcw size={20} strokeWidth={1.8} />}
+        message={<>내가 만든 대화 {restoreCount}개를 찾았습니다. 불러오시겠습니까?</>}
+        confirmLabel={restoring ? "불러오는 중..." : "불러오기"}
+        cancelLabel="나중에"
+        busy={restoring}
+      />
     </div>
   );
 };
