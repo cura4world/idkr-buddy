@@ -8,6 +8,13 @@
 //   오늘의 이야기  맛보기 3편 (src/data/storySamples.ts — 여기서 다루지 않음)
 //   인도네시아 이해  허브와 맨 위 '오늘의 인도네시아' 카드(그림·제목)는 보임. 카드 안·다른 메뉴·지도는 자물쇠
 //   게임        오늘의 단어 퍼즐만 (나머지 6종 자물쇠)
+//   단어장 만들기  Plus 기능(2026-11-24). 기본 "내 단어장"에 담기·고치기는 모두 무료
+//
+// Plus 때 만든 것은 무료가 되어도 지우지 않고 읽기 전용으로 남깁니다(2026-11-24 사용자 결정, DECISIONS 맛보기 절).
+//   직접 만든 단어장 — 열기·카드·퀴즈·단어 담기·삭제·이름 바꾸기 그대로(canOpenWordbook)
+//   직접 만든 대화   — 글은 열림(canOpenScene), 듣기·대화 만들기는 Plus
+//   불러온 이야기    — 글은 열림, 듣기·새 이야기 불러오기는 Plus
+//   멈추는 것은 새로 만들기와 듣기뿐입니다.
 //
 // 잠긴 항목을 누르면 같은 안내 창이 뜹니다(openPlusLock → components/PlusLockSheet.tsx).
 
@@ -42,6 +49,15 @@ export function canOpenWordbook(cat: WordbookLike | null | undefined, plus: bool
   return plus || isTasteWordbook(cat);
 }
 
+/**
+ * 새 단어장을 만들 수 있는가(무료 false). 단어장을 새로 만드는 길은 모두 이것을 봅니다 —
+ * 내 단어장 + 메뉴 "단어장 만들기", 담을 단어장 창 "새 단어장 만들기", 내 단어장 "묶기"(CategoryDetail·WordbookPickerSheet).
+ * 백업 불러오기는 내 것을 되살리는 길이라 여기서 막지 않습니다.
+ */
+export function canCreateWordbook(plus: boolean): boolean {
+  return plus;
+}
+
 /** 무료 맛보기 회화 장면인가 */
 export function isTasteScene(sceneId: string | null | undefined): boolean {
   return sceneId === TASTE_SCENE_ID;
@@ -56,7 +72,9 @@ export function canOpenScene(scene: { id: string; custom?: boolean } | null | un
 
 // ── 잠금 안내 문구 ───────────────────────────────────────────
 export const LOCK_TITLE_WORDBOOK = "02 단어장부터는 Plus 회원 기능입니다";
+export const LOCK_TITLE_WORDBOOK_MAKE = "단어장 만들기는 Plus 회원 기능입니다";
 export const LOCK_TITLE_SCENE = "이 대화는 Plus 회원 기능입니다";
+export const LOCK_TITLE_SCENE_LISTEN = "듣기는 Plus 회원 기능입니다";
 export const LOCK_TITLE_PERCAKAPAN_MAKE = "대화 만들기는 Plus 회원 기능입니다";
 export const LOCK_TITLE_INSIGHT = "인도네시아 이해는 Plus 회원 기능입니다";
 export const LOCK_TITLE_CARD = "오늘의 카드 자세히 보기는 Plus 회원 기능입니다";
