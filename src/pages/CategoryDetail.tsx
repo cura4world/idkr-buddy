@@ -14,7 +14,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Copy, Trash2, X, ChevronDown, ChevronUp, FileSpreadsheet, FolderPlus, Plus } from "lucide-react";
+import { ArrowLeft, Copy, Trash2, X, ChevronDown, ChevronUp, FileSpreadsheet, FolderInput, FolderPlus, Plus } from "lucide-react";
+import AppSheet, { ChoiceRow, SHEET } from "@/components/sheet/AppSheet";
 import { toast } from "sonner";
 import { isStoreApp } from "@/lib/platform";
 import { usePlan } from "@/lib/plan";
@@ -1506,40 +1507,30 @@ export default function CategoryDetail({ fixedId, asTab }: { fixedId?: string; a
           </div>
         </div>
       )}
-      <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
-        <DialogContent className="max-w-sm mx-auto bg-card">
-          <DialogHeader>
-            <DialogTitle className="font-body text-black">옮길 단어장을 고르세요</DialogTitle>
-          </DialogHeader>
-          {moveTargets.length === 0 ? (
-            <p className="font-body text-[0.8125rem] leading-relaxed text-muted-foreground">
-              보관한 단어장이 없습니다. 먼저 단어장을 만들어 주세요.
-            </p>
-          ) : (
-            <div className="max-h-72 overflow-y-auto rounded-xl border border-border">
-              {moveTargets.map((cat, i) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => handleMoveTo(cat)}
-                  className={
-                    "w-full flex items-center gap-3 px-3 py-2.5 text-left active:bg-muted " +
-                    (i === moveTargets.length - 1 ? "" : "border-b border-border")
-                  }
-                >
-                  <CategoryTile value={cat.emoji} fallbackBg="#FFFFFF" className="w-8 h-8 rounded-full border border-border" iconSize={16} emojiClassName="text-[0.9375rem]" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[0.875rem] text-foreground truncate">{cat.name}</span>
-                    <span className="mt-0.5 block font-word text-[0.6875rem] text-muted-foreground">
-                      {getWordsByCategory(cat.id).length}단어
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* 옮길 단어장 — 앱 공통 틀(고르기). 줄을 누르면 바로 옮김(동작 그대로). 뒤로가기는 위 useBackClose(moveOpen) */}
+      <AppSheet
+        open={moveOpen}
+        onClose={() => setMoveOpen(false)}
+        title="옮길 단어장을 고르세요"
+        icon={<FolderInput size={20} strokeWidth={1.8} />}
+      >
+        {moveTargets.length === 0 ? (
+          <p className="m-0 py-3 text-center font-gothic text-[0.8125rem] leading-relaxed break-keep" style={{ color: SHEET.mute }}>
+            보관한 단어장이 없습니다. 먼저 단어장을 만들어 주세요.
+          </p>
+        ) : (
+          moveTargets.map((cat) => (
+            <ChoiceRow
+              key={cat.id}
+              mode="action"
+              onClick={() => handleMoveTo(cat)}
+              leading={<CategoryTile value={cat.emoji} fallbackBg="#FFFFFF" className="w-8 h-8 rounded-full border border-border" iconSize={16} emojiClassName="text-[0.9375rem]" />}
+              title={<span className="block truncate">{cat.name}</span>}
+              trailing={getWordsByCategory(cat.id).length + "단어"}
+            />
+          ))
+        )}
+      </AppSheet>
       </div>
     </div>
   );
