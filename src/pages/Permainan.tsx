@@ -8,7 +8,7 @@
 // BottomTabs 가 화면 흐름 끝에 직접 두므로 여기서는 높이만 막대만큼 줄입니다(--kata-tabbar-h).
 // 관리자판·회원판에는 탭 막대가 없어 예전처럼 뒤로가기를 둡니다.
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { goBackOr } from "@/lib/nav";
@@ -21,6 +21,7 @@ import { LOCK_TITLE_GAME } from "@/lib/tasteAccess";
 import { isStoreApp } from "@/lib/platform";
 import { currentStreak } from "@/lib/kataHariIni";
 import MedaliSheet from "@/components/MedaliSheet";
+import MedaliPopover from "@/components/MedaliPopover";
 import MedaliPill from "@/components/game/MedaliPill";
 import PlusLockBox from "@/components/PlusLockBox";
 import {
@@ -128,6 +129,16 @@ const Permainan = () => {
     }
   };
 
+  // 명찰 요약 상자(2026-11-24) — 공개판(스토어·미리보기)만. 명찰 바로 아래 떠 있는 상자이고 뒤로가기는 상자가 스스로 합니다.
+  // 관리자판·회원판은 내 정보로 갈 길이 없어 위의 자세히 창(MedaliSheet)을 엽니다.
+  const [medaliPop, setMedaliPop] = useState(false);
+  const medaliBadgeRef = useRef<HTMLButtonElement>(null);
+  const closeMedaliPop = useCallback(() => setMedaliPop(false), []);
+  const onMedaliPill = () => {
+    if (store) setMedaliPop((v) => !v);
+    else openMedali();
+  };
+
   useEffect(() => {
     const onPop = () => {
       if (!medaliOpenRef.current) return;
@@ -178,7 +189,7 @@ const Permainan = () => {
         <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">
           PERMAINAN
         </h1>
-        {plus ? <MedaliPill onClick={openMedali} /> : null}
+        {plus ? <MedaliPill onClick={onMedaliPill} buttonRef={medaliBadgeRef} expanded={store ? medaliPop : undefined} /> : null}
       </header>
 
       <div className="px-4 pt-4 flex flex-col gap-2.5">
@@ -244,8 +255,9 @@ const Permainan = () => {
         ) : null}
       </div>
 
-      {/* 게임방 명찰 → 공개판은 요약 창, 관리자판·회원판은 자세히 창(내 정보로 갈 길이 없음, 2026-11-24) */}
-      <MedaliSheet view={store ? "summary" : "detail"} open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
+      {/* 게임방 명찰 → 공개판은 명찰 아래 요약 상자, 관리자판·회원판은 자세히 창(내 정보로 갈 길이 없음, 2026-11-24) */}
+      <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
+      <MedaliPopover open={medaliPop} anchor={medaliBadgeRef.current} onClose={closeMedaliPop} />
     </div>
   );
 };
