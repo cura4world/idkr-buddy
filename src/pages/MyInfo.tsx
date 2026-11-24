@@ -16,14 +16,10 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import SettingsDialog, { REOPEN_SETTINGS_KEY } from "@/components/SettingsDialog";
 import BackupRestoreDialog from "@/components/BackupRestoreDialog";
 import { ArchiveRestore, AudioLines, Type } from "lucide-react";
-import AppSheet, { ChoiceRow, SHEET, SheetButton } from "@/components/sheet/AppSheet";
+import AppSheet, { ChoiceRow, ConfirmSheet, SHEET, SheetButton } from "@/components/sheet/AppSheet";
 import { useBackClose } from "@/hooks/useBackClose";
 import { buildBackupFile, describeSummary, formatBytes, getBackupFileSavedAt, markBackupFileSaved } from "@/lib/transfer";
 import MedaliSheet from "@/components/MedaliSheet";
@@ -1006,44 +1002,40 @@ const MyInfo = () => {
       {/* 백업 파일 불러오기 — 뒤로가기는 이 창만 닫습니다(설정 창과 같은 방식) */}
       <BackupRestoreDialog open={restoreOpen} onOpenChange={setRestoreOpen} />
 
-      {/* ── 저장된 읽기 음성 비우기 ── */}
-      <AlertDialog open={ttsConfirm} onOpenChange={setTtsConfirm}>
-        <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-body text-[0.9375rem] text-gray-900">저장된 읽기 음성을 비우시겠습니까?</AlertDialogTitle>
-            <AlertDialogDescription className="font-gothic text-[0.6875rem] leading-relaxed">
-              {/* 등급에 맞게 알립니다 — 무료는 Plus 음성을 다시 받을 수 없고, Plus 는 한도를 다시 씁니다(출시 전 점검 D-13) */}
-              {!publicLike
-                ? "이 폰에 받아 둔 음성 파일이 지워집니다. 다음에 들으면 새로 받아 옵니다."
-                : tier === "free"
-                  ? "이 폰에 받아 둔 음성 파일이 지워집니다. Plus에서 받은 이야기·회화집 음성은 무료 등급에서 다시 받을 수 없습니다."
-                  : "이 폰에 받아 둔 음성 파일이 지워집니다. 다음 날 다시 들으면 듣기 횟수를 다시 씁니다."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-body">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearTts} className="font-body bg-red-600 hover:bg-red-700 text-white">비우기</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* ── 저장된 읽기 음성 비우기 — 앱 공통 틀의 확인 창. 뒤로가기는 위 useBackClose(ttsConfirm) ── */}
+      <ConfirmSheet
+        open={ttsConfirm}
+        onCancel={() => setTtsConfirm(false)}
+        onConfirm={() => { setTtsConfirm(false); handleClearTts(); }}
+        title="저장된 읽기 음성을 비우시겠습니까?"
+        message={
+          // 등급에 맞게 알립니다 — 무료는 Plus 음성을 다시 받을 수 없고, Plus 는 한도를 다시 씁니다(출시 전 점검 D-13)
+          !publicLike
+            ? "이 폰에 받아 둔 음성 파일이 지워집니다. 다음에 들으면 새로 받아 옵니다."
+            : tier === "free"
+              ? "이 폰에 받아 둔 음성 파일이 지워집니다. Plus에서 받은 이야기·회화집 음성은 무료 등급에서 다시 받을 수 없습니다."
+              : "이 폰에 받아 둔 음성 파일이 지워집니다. 다음 날 다시 들으면 듣기 횟수를 다시 씁니다."
+        }
+        confirmLabel="비우기"
+        danger
+      />
 
-      {/* ── 계정 삭제 (Play 정책: 앱 안에서 직접 지울 수 있어야 함) ── */}
-      <AlertDialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
-        <AlertDialogContent className="bg-card w-[calc(100vw-3rem)] max-w-xs gap-3 p-5">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-body text-[0.9375rem] text-gray-900">계정을 삭제하시겠습니까?</AlertDialogTitle>
-            <AlertDialogDescription className="font-gothic text-[0.6875rem] leading-relaxed">
-              서버의 계정·사용 기록·구독 연결이 삭제되고 되돌릴 수 없습니다. 이 폰의 단어장을 지울지는 삭제한 뒤에 묻습니다.
-              단어장도 지울 생각이면 먼저 "백업 파일 저장"으로 백업해 두세요.
-              구독 중이라면 결제는 Google Play에서 따로 해지해야 합니다.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-body">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="font-body bg-red-600 hover:bg-red-700 text-white">계정 삭제</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* ── 계정 삭제 (Play 정책: 앱 안에서 직접 지울 수 있어야 함) — 앱 공통 틀의 확인 창. 뒤로가기는 위 useBackClose(deleteConfirm) ── */}
+      <ConfirmSheet
+        open={deleteConfirm}
+        onCancel={() => setDeleteConfirm(false)}
+        onConfirm={() => { setDeleteConfirm(false); handleDelete(); }}
+        title="계정을 삭제하시겠습니까?"
+        message={
+          <>
+            서버의 계정·사용 기록·구독 연결이 삭제되고 되돌릴 수 없습니다. 이 폰의 단어장을 지울지는 삭제한 뒤에 묻습니다.
+            단어장도 지울 생각이면 먼저 "백업 파일 저장"으로 백업해 두세요.
+            구독 중이라면 결제는 Google Play에서 따로 해지해야 합니다.
+          </>
+        }
+        confirmLabel="계정 삭제"
+        danger
+      />
 
       <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
