@@ -11,7 +11,15 @@ const shortNum = (n: number): string => {
   return v > 999 ? "999+" : String(v);
 };
 
-export default function MedaliPill({ onClick }: { onClick?: () => void }) {
+export default function MedaliPill({
+  onClick, buttonRef, expanded,
+}: {
+  onClick?: () => void;
+  /** 명찰 요약 상자(MedaliPopover)가 꼬리를 맞출 단추 */
+  buttonRef?: React.Ref<HTMLButtonElement>;
+  /** 요약 상자가 열려 있는가(공개판). 주지 않으면 aria-expanded 를 달지 않습니다 */
+  expanded?: boolean;
+}) {
   const [view, setView] = useState(() => {
     const c = loadMedaliCache();
     return { week: c.apiWeekPoints, stars: c.confirmedCount };
@@ -27,9 +35,12 @@ export default function MedaliPill({ onClick }: { onClick?: () => void }) {
 
   return (
     <button
+      ref={buttonRef}
       type="button"
       onClick={onClick}
       title="Medali"
+      aria-haspopup={expanded === undefined ? undefined : "dialog"}
+      aria-expanded={expanded}
       className="h-8 px-[11px] rounded-2xl bg-white flex items-center gap-2 shrink-0 font-word text-[13.5px] font-semibold tabular-nums active:opacity-80"
       style={{ border: "1px solid " + G.hair }}
     >
