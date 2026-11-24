@@ -13,8 +13,29 @@ import { loadSaveTargets, loadSaveTargetId } from "@/lib/saveTarget";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import { CategoryGlyph } from "@/components/CategoryIcon";
 import AppSheet, { ChoiceGroup, ChoiceRow, SHEET, SheetButton } from "@/components/sheet/AppSheet";
+import LockMark from "@/components/LockMark";
+import { usePlan } from "@/lib/plan";
+import { openPlusLock } from "@/lib/plusLock";
+import { canCreateWordbook, LOCK_TITLE_WORDBOOK_MAKE } from "@/lib/tasteAccess";
 
 const MY_WORDBOOK_ID = "my-wordbook";
+
+// 이 시트를 닫은 뒤 다음 창(단어장 만들기·잠금 안내)을 엽니다. 여는 쪽이 history.back() 으로 시트를 닫는 화면
+// (이야기·문장 상세 등)에서는 그 뒤로가기가 끝나기 전에 새 창이 칸을 쌓으면, 뒤로가기가 새 창의 칸을 대신 빼서
+// 새 창은 바로 닫히고 시트는 남았습니다(2026-11-24 화면 테스트에서 발견 — Plus 의 "새 단어장 만들기"도 안 열렸음).
+// 뒤로가기(popstate)가 오면 그 다음에, 오지 않는 화면이면 잠시 뒤에 엽니다.
+function openAfterClose(fn: () => void) {
+  let done = false;
+  const go = () => {
+    if (done) return;
+    done = true;
+    window.removeEventListener("popstate", onPop);
+    fn();
+  };
+  const onPop = () => setTimeout(go, 0);
+  window.addEventListener("popstate", onPop);
+  setTimeout(go, 300);
+}
 
 interface Props {
   open: boolean;
@@ -28,6 +49,9 @@ export default function WordbookPickerSheet({ open, onOpenChange, targetId, onPi
   const [targets, setTargets] = useState<Category[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [addOpen, setAddOpen] = useState(false);
+  // 새 단어장 만들기는 Plus 기능(2026-11-24). 기존 단어장 고르기는 무료도 그대로입니다.
+  const plan = usePlan();
+  const makeLocked = !canCreateWordbook(plan.plus);
 
   // 열릴 때마다 목록과 단어 수를 새로 읽습니다 (담는 사이에 개수가 늘기 때문에).
   useEffect(() => {
@@ -61,15 +85,24 @@ export default function WordbookPickerSheet({ open, onOpenChange, targetId, onPi
         icon={<BookmarkPlus size={20} strokeWidth={1.8} />}
         zIndex={55}
         footer={
-          // 시트를 먼저 닫고 다이얼로그를 엽니다 (히스토리가 겹치지 않도록)
-          <SheetButton variant="secondary" onClick={() => { onOpenChange(false); setAddOpen(true); }}>
-            <Plus size={16} strokeWidth={2} /> 새 단어장 만들기
+          // 시트를 먼저 닫고 다이얼로그(무료는 공용 잠금 안내 창)를 엽니다 (히스토리가 겹치지 않도록)
+          <SheetButton
+            variant="secondary"
+            onClick={() => {
+              openAfterClose(() => {
+                if (makeLocked) openPlusLock(LOCK_TITLE_WORDBOOK_MAKE);
+                else setAddOpen(true);
+              });
+              onOpenChange(false);
+            }}
+          >
+            {makeLocked ? <LockMark size={14} /> : <Plus size={16} strokeWidth={2} />} 새 단어장 만들기
           </SheetButton>
         }
       >
         {targets.length === 0 ? (
           <p className="m-0 py-3 text-center font-gothic text-[0.8125rem] leading-relaxed break-keep" style={{ color: SHEET.mute }}>
-            담을 단어장이 없습니다. 아래에서 새 단어장을 만들어 주세요.
+            {makeLocked ? "담을 단어장이 없습니다." : "담을 단어장이 없습니다. 아래에서 새 단어장을 만들어 주세요."}
           </p>
         ) : (
           <ChoiceGroup mode="single" label="담을 단어장">
