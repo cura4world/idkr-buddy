@@ -165,7 +165,8 @@ src/
     SavedWords.tsx / SavedStudyMode.tsx / SavedQuizMode.tsx
     NotFound.tsx       404
   components/
-    BiblePicker.tsx / BibleAudioButton.tsx / BibleAudioSeekBar.tsx
+    BibleDial.tsx / BibleAudioButton.tsx / BibleAudioSeekBar.tsx
+    sheet/AppSheet.tsx       모든 옵션 창(입력·고르기·확인·안내)의 공통 틀 — 새 창은 이것(또는 FormSheet·ConfirmSheet)으로
     PlayButton.tsx           수정 금지
     MedaliBadge.tsx          헤더 명찰 캡슐 (불꽃 + 별)
     MedaliSheet.tsx          훈장 팝업 (명찰을 누르면 올라옴)
