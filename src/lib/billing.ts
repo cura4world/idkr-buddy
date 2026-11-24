@@ -13,45 +13,13 @@
 // Google 이 환불하므로, 사용자에게 다시 결제하라고 하지 않습니다(2026-11-14 출시 전 점검 B-03·B-14).
 
 import { expireSession, getSession, publicPost, updateSessionPlan, PublicPlan } from "@/lib/account";
+import { inRenewGrace } from "@/lib/plan";
 
 export const PLUS_PRODUCT_ID = "plus";
 const QUERY_TIMEOUT_MS = 15000;
 const PURCHASE_TIMEOUT_MS = 10 * 60 * 1000;
 /** Play 응답 코드 7 (ITEM_ALREADY_OWNED) — 네이티브가 "BILLING_" + 코드로 넘겨 줍니다. */
 const CODE_ALREADY_OWNED = "BILLING_7";
-
-// ── 일시 진단 기록 (2026-11-23 내부 테스트 1장 D) ─────────────────
-// 구독 갱신 직후 무료로 보이던 원인을 폰 logcat 으로 확인하려는 임시 장치입니다. 웹뷰가 콘솔 글을 logcat 의
-// chromium 줄로 내보내므로 `adb logcat | findstr KKBilling` 으로 봅니다. 구매 토큰·이메일·계정 ID 는 남기지 않습니다.
-// 원인이 확인되면 상수만 끄지 말고 billingLog 와 부르는 곳을 코드째 걷어냅니다(CLAUDE.md 원인 찾기 3).
-const DEBUG_BILLING_LOG = true;
-
-function isoOrDash(ms: unknown): string {
-  try {
-    return typeof ms === "number" && ms > 0 ? new Date(ms).toISOString() : "-";
-  } catch (e) {
-    return "-";
-  }
-}
-
-/** 진단 한 줄. fields 의 값은 결과 코드·등급·시각·호출 이유 같은 민감하지 않은 것만 넣습니다. */
-export function billingLog(fields: Record<string, string | number | boolean | undefined>): void {
-  if (!DEBUG_BILLING_LOG) return;
-  try {
-    const parts: string[] = [];
-    Object.keys(fields).forEach((k) => {
-      const v = fields[k];
-      if (v === undefined) return;
-      parts.push(k + "=" + (k === "until" || k === "untilBefore" ? isoOrDash(v) : String(v)));
-    });
-    console.info("[KKBilling] " + parts.join(" "));
-  } catch (e) {}
-}
-
-function sessionTierText(): string {
-  const s = getSession();
-  return s && s.plan ? String(s.plan.tier) : "none";
-}
 
 export interface PlanOffer {
   productId: string;
@@ -221,6 +189,15 @@ export function isLapsedPaidPlan(plan: PublicPlan | null | undefined, now: numbe
   return (plan.tier === "plus" || plan.tier === "trial") && typeof plan.until === "number" && plan.until > 0 && plan.until <= now;
 }
 
+/**
+ * 구독 중으로 보여 줄 플랜인가 — 이용 중이거나, 만료 시각이 막 지나 갱신 확인을 기다리는 중(plan.ts 의 유예 10분).
+ * 유예 동안 등급(getTier)은 Plus 인데 구독 상자·구독 관리 줄만 사라지지 않게 화면 표시에 씁니다(2026-11-24).
+ */
+export function isPaidOrRenewingPlan(plan: PublicPlan | null | undefined, now: number = Date.now()): boolean {
+  if (!plan) return false;
+  return isPaidPlan(plan) || inRenewGrace(plan, now);
+}
+
 // ── 서버 검증 ────────────────────────────────────────────────
 
 // (이 프로젝트의 tsconfig 는 strict 가 아니라 true/false 로는 갈래를 못 좁힙니다 — 글자 값으로 구분합니다.)
@@ -266,17 +243,11 @@ type VerifyAllResult =
   | { status: "error"; code: string };
 
 /** 결제가 끝난(PURCHASED) 구매들을 차례로 검증합니다. 하나라도 유효하면 끝. */
-async function verifyAll(mine: PurchaseInfo[], reason: string = "verify"): Promise<VerifyAllResult> {
+async function verifyAll(mine: PurchaseInfo[]): Promise<VerifyAllResult> {
   const pending: PurchaseInfo[] = [];
   let code = "NOT_VALID";
   for (const p of mine) {
-    const before = sessionTierText();
     const r = await verify(p);
-    if (r.kind === "answered") {
-      billingLog({ reason, result: r.valid ? "valid" : "not-valid", until: r.plan.until, tier: before + "->" + r.plan.tier, autoRenew: r.plan.autoRenew });
-    } else {
-      billingLog({ reason, result: "failed", code: r.code, retry: r.retry, tier: before });
-    }
     if (r.kind === "answered") {
       if (r.valid) return { status: "plus", plan: r.plan };
       continue; // 서버가 답했지만 끝난 구매(환불·만료)
@@ -464,9 +435,8 @@ const QUIET_AGAIN_GAP_MS = 10 * 60 * 1000;
  *   · 끝나면(또는 건너뛰면) 풀리는 Promise 를 돌려줍니다. 예전처럼 결과를 기다리지 않고 불러도 됩니다.
  */
 let quietRun: Promise<void> | null = null;
-export function autoRestoreOnce(again = false, opts?: { force?: boolean; reason?: string }): Promise<void> {
+export function autoRestoreOnce(again = false, opts?: { force?: boolean }): Promise<void> {
   const force = !!(opts && opts.force);
-  const reason = (opts && opts.reason) || (again ? "visible" : "start");
   const s = getSession();
   if (!billingAvailable() || !s) return Promise.resolve();
   if (quietBusy) return quietRun || Promise.resolve();
@@ -487,20 +457,13 @@ export function autoRestoreOnce(again = false, opts?: { force?: boolean; reason?
   }
   quietBusy = true;
   quietAt = now;
-  billingLog({ reason, step: "restore-start", until: s.plan.until, tier: s.plan.tier });
   quietRun = ownedFromPlay()
     .then(async (owned) => {
-      if (owned === null) { // Play 가 답하지 않음 → 다음에 다시
-        billingLog({ reason, step: "restore", result: "play-no-answer" });
-        return;
-      }
+      if (owned === null) return; // Play 가 답하지 않음 → 다음에 다시
       quietDoneFor = uid;
       const mine = owned.filter(isMine);
-      if (mine.length === 0) {
-        billingLog({ reason, step: "restore", result: "no-purchase" });
-        return;
-      }
-      const r = await verifyAll(mine, reason);
+      if (mine.length === 0) return;
+      const r = await verifyAll(mine);
       if (r.status === "verifying") startVerifyRetry(r.pending);
     })
     .catch(() => {})
@@ -561,13 +524,12 @@ export async function purchase(offer: PlanOffer): Promise<PurchaseOutcome> {
     return { status: "error", code: "FAILED" };
   }
   const ev = await wait;
-  billingLog({ reason: "purchase", step: "play-result", result: ev.type, code: ev.code });
   if (ev.type === "canceled") return { status: "canceled" };
   if (ev.type === "error") {
     const code = ev.code || "FAILED";
     // 이미 보유: 새로 살 수 없으므로 구매 복원 흐름으로 바로 넘깁니다(B-11).
     if (code === CODE_ALREADY_OWNED) {
-      const r = await restoreDetailed("purchase-owned");
+      const r = await restoreDetailed();
       if (r.status === "plus") return { status: "plus", plan: r.plan, restored: true };
       if (r.status === "verifying") return { status: "verifying" };
       return { status: "error", code: r.status === "error" ? r.code : code };
@@ -580,7 +542,7 @@ export async function purchase(offer: PlanOffer): Promise<PurchaseOutcome> {
   if (mine.every((p) => p.state === "PENDING")) return { status: "pending" };
   const paid = mine.filter(isMine);
   if (paid.length === 0) return { status: "error", code: "NO_PURCHASE" };
-  const r = await verifyAll(paid, "purchase");
+  const r = await verifyAll(paid);
   if (r.status === "plus") return { status: "plus", plan: r.plan };
   if (r.status === "verifying") {
     startVerifyRetry(r.pending);
@@ -599,20 +561,13 @@ export type RestoreOutcome =
 
 /**
  * 이미 산 구독을 이 계정에 다시 연결합니다. 왜 안 됐는지까지 돌려줍니다.
- * reason: 진단 기록에 남길 호출 이유(기본 "restore").
  */
-export async function restoreDetailed(reason: string = "restore"): Promise<RestoreOutcome> {
+export async function restoreDetailed(): Promise<RestoreOutcome> {
   const owned = await ownedFromPlay();
-  if (owned === null) {
-    billingLog({ reason, step: "restore", result: "play-no-answer" });
-    return { status: "error", code: "RESTORE_FAILED" };
-  }
+  if (owned === null) return { status: "error", code: "RESTORE_FAILED" };
   const mine = owned.filter(isMine);
-  if (mine.length === 0) {
-    billingLog({ reason, step: "restore", result: "no-purchase" });
-    return { status: "none" };
-  }
-  const r = await verifyAll(mine, reason);
+  if (mine.length === 0) return { status: "none" };
+  const r = await verifyAll(mine);
   if (r.status === "plus") return { status: "plus", plan: r.plan };
   if (r.status === "verifying") {
     startVerifyRetry(r.pending);
