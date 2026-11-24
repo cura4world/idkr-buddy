@@ -167,11 +167,11 @@ test("미리 알림 문장 — Plus 화면 혜택 아래, 내 정보 구독 관�
   await openApp(page, "me");
   const note = page.locator("[data-keep-creations]");
   await expect(note).toHaveText(KEEP);
-  // 구독 관리 줄 바로 아래
-  const manage = await page.getByText("구독 관리", { exact: true }).boundingBox();
+  // Plus 회원 칸(2026-11-25 부터 공용 카드, "구독 / 관리" 알약이 그 안) 바로 아래
+  const card = await page.locator('[data-testid="plus-member-card"]').boundingBox();
   const nb = await note.boundingBox();
-  expect(manage && nb).toBeTruthy();
-  if (manage && nb) expect(nb.y).toBeGreaterThan(manage.y);
+  expect(card && nb).toBeTruthy();
+  if (card && nb) expect(nb.y).toBeGreaterThanOrEqual(card.y + card.height);
 });
 
 test("무료 — 내 정보에는 미리 알림 문장이 없음(구독 관리 줄이 없음)", async ({ page }) => {
