@@ -26,6 +26,7 @@ import { needsMedaliId, syncMedali } from "@/lib/medaliSync";
 import { getEdition, takeRevokedNotice } from "@/lib/access";
 import { isStoreApp } from "@/lib/platform";
 import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
+import VoiceSearchPill from "@/components/VoiceSearchPill";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import { LOCK_BUTTON_SUB } from "@/lib/plusCopy";
 import { isWordbookVisible } from "@/lib/wordbookAccess";
@@ -1038,29 +1039,21 @@ const Index = () => {
                   autoCapitalize="none"
                   autoCorrect="off"
                 />
-                {/* 음성 검색 언어 (한 / IN) — 누를 때마다 바뀌고 기기에 기억합니다 */}
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => setVoiceLang(voiceLang === "ko" ? "id" : "ko")}
-                  aria-label={voiceLang === "ko" ? "음성 검색 언어: 한국어 (누르면 인도네시아어)" : "음성 검색 언어: 인도네시아어 (누르면 한국어)"}
-                  className="shrink-0 flex items-center justify-center rounded-full font-gothic"
-                  style={{ width: 28, height: 24, borderRadius: 12, background: "#EEF3F2", color: "#2C6D63", fontSize: 11, fontWeight: 700, letterSpacing: "0.02em" }}
-                >
-                  {voiceLangLabel(voiceLang)}
-                </button>
-                <button
-                  type="button"
-                  onClick={startVoice}
-                  aria-label="음성 검색"
-                  className="shrink-0 flex items-center justify-center rounded-full"
-                  style={{ width: 34, height: 36, color: listening ? "#DC2626" : "#646C72" }}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                    <rect x="9" y="2" width="6" height="12" rx="3" />
-                    <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4" />
-                  </svg>
-                </button>
+                {/* 음성 검색 언어(한 / IN, 누를 때마다 바뀌고 기기에 기억) | 마이크 — 한 알약(사전 검색창과 같은 부품) */}
+                <VoiceSearchPill
+                  langLabel={voiceLangLabel(voiceLang)}
+                  onToggleLang={() => setVoiceLang(voiceLang === "ko" ? "id" : "ko")}
+                  langAriaLabel={voiceLang === "ko" ? "음성 검색 언어: 한국어 (누르면 인도네시아어)" : "음성 검색 언어: 인도네시아어 (누르면 한국어)"}
+                  onMic={startVoice}
+                  listening={listening}
+                  micAriaLabel="음성 검색"
+                  micIcon={
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                      <rect x="9" y="2" width="6" height="12" rx="3" />
+                      <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4" />
+                    </svg>
+                  }
+                />
               </div>
               <button
                 type="button"
@@ -1454,7 +1447,8 @@ const Index = () => {
         {/* 검색 */}
         <div ref={searchAreaRef} className="relative mt-5">
           <div className="flex items-center gap-2 min-w-0">
-          <div className="flex-1 min-w-0 h-[46px] flex items-center gap-2 rounded-full bg-card px-4">
+          {/* 오른쪽 여백은 px 고정 6 — 음성 알약(px 고정)이 글자 크기와 상관없이 둥근 끝과 나란하게(홈·사전 검색창과 같음, 2026-11-24) */}
+          <div className="flex-1 min-w-0 h-[46px] flex items-center gap-2 rounded-full bg-card pl-4" style={{ paddingRight: 6 }}>
             <Search size={18} className="shrink-0 text-muted-foreground" />
             <input
               ref={searchInputRef}
@@ -1475,24 +1469,16 @@ const Index = () => {
               autoCapitalize="none"
               autoCorrect="off"
             />
-            {/* 음성 검색 언어 (한 / IN) */}
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setVoiceLang(voiceLang === "ko" ? "id" : "ko")}
-              className="shrink-0 h-6 w-7 rounded-full bg-muted text-primary font-gothic text-[11px] font-bold"
-              title="음성 검색 언어 바꾸기"
-            >
-              {voiceLangLabel(voiceLang)}
-            </button>
-            <button
-              type="button"
-              onClick={startVoice}
-              className={"shrink-0 " + (listening ? "text-red-500" : "text-muted-foreground")}
-              title="음성 검색"
-            >
-              <Mic size={18} />
-            </button>
+            {/* 음성 검색 언어(한 / IN) | 마이크 — 한 알약(공개판 홈·사전 검색창과 같은 부품) */}
+            <VoiceSearchPill
+              langLabel={voiceLangLabel(voiceLang)}
+              onToggleLang={() => setVoiceLang(voiceLang === "ko" ? "id" : "ko")}
+              langTitle="음성 검색 언어 바꾸기"
+              onMic={startVoice}
+              listening={listening}
+              micTitle="음성 검색"
+              micIcon={<Mic size={18} />}
+            />
           </div>
           <button
             type="button"
