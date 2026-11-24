@@ -21,8 +21,7 @@ import SettingsDialog, { REOPEN_SETTINGS_KEY } from "@/components/SettingsDialog
 import MedaliBadge from "@/components/MedaliBadge";
 import MedaliNudge from "@/components/MedaliNudge";
 import MedaliSheet from "@/components/MedaliSheet";
-import MedaliIdDialog from "@/components/MedaliIdDialog";
-import { needsMedaliId, syncMedali } from "@/lib/medaliSync";
+import { syncMedali } from "@/lib/medaliSync";
 import { getEdition, takeRevokedNotice } from "@/lib/access";
 import { isStoreApp } from "@/lib/platform";
 import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
@@ -246,15 +245,9 @@ const Index = () => {
     } catch (e) {}
   }, []);
 
-  // 짝꿍 비교용 아이디. 없으면 첫 진입에 닫을 수 없는 팝업이 떠서 받습니다.
-  // 태블릿·세컨폰처럼 "사용 안 함"을 고른 기기는 다시 묻지 않습니다.
-  const [needId, setNeedId] = useState(false);
+  // 회원키가 있는 기기끼리 훈장 점수를 맞춥니다 (받기 → 재계산 → 올리기, 5분에 한 번).
+  // 회원키가 없으면(공개판) 요청하지 않습니다. 두 사람 비교·아이디 정하기 창은 2026-11-24 뺐습니다.
   useEffect(() => {
-    if (needsMedaliId()) {
-      setNeedId(true);
-      return;
-    }
-    // 아이디가 있으면 기기끼리 점수를 맞춥니다 (받기 → 재계산 → 올리기, 5분에 한 번)
     syncMedali().catch(() => {});
 
     // 밖에서 오프라인으로 쓰다가 Wi-Fi에 붙는 경우가 있어, 화면이 다시 보일 때도 맞춥니다.
@@ -1354,7 +1347,6 @@ const Index = () => {
 
         {kindSheet}
         <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
-        <MedaliIdDialog open={needId} onDone={() => setNeedId(false)} />
       </div>
     );
   }
@@ -1668,7 +1660,6 @@ const Index = () => {
 
       <MedaliSheet open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-      <MedaliIdDialog open={needId} onDone={() => setNeedId(false)} />
     </div>
   );
 };
