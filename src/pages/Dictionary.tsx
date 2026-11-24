@@ -33,6 +33,7 @@ import { dropReturnTicket } from "@/lib/readReturn";
 import { medaliEngine } from "@/lib/medali";
 import { useBackClose } from "@/hooks/useBackClose";
 import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchLang";
+import VoiceSearchPill from "@/components/VoiceSearchPill";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // TTS: AndroidTTS 우선, 없으면 speechSynthesis 폴백 (프로젝트 공통 패턴)
@@ -960,7 +961,9 @@ const Dictionary = () => {
         {/* 검색창 (시안: 46px 알약 + 청록 동그라미 "검색") */}
         <div ref={histAreaRef} className={`relative ${isHome ? "mb-2" : "mb-1"}`}>
         <div className="flex items-center gap-2 min-w-0">
-          <div className="flex-1 min-w-0 h-[46px] flex items-center gap-2 bg-card border border-[#E3E8EB] rounded-full pl-4 pr-1.5">
+          {/* 오른쪽 여백은 px 고정 — 음성 알약(px 고정)이 글자 크기와 상관없이 둥근 끝과 나란하게(2026-11-24).
+              테두리 1px 가 있어 5 + 1 = 6px 로 위아래 여백(6px)과 같게 */}
+          <div className="flex-1 min-w-0 h-[46px] flex items-center gap-2 bg-card border border-[#E3E8EB] rounded-full pl-4" style={{ paddingRight: 5 }}>
             <Search size={18} className="text-[#2C6D63] shrink-0" />
             <input
               ref={inputRef}
@@ -983,26 +986,18 @@ const Dictionary = () => {
               autoCapitalize="none"
               autoCorrect="off"
             />
-            {/* 음성 검색 언어 (한 / IN) — 누를 때마다 바뀝니다 */}
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setVoiceLang(voiceLang === "ko" ? "id" : "ko")}
-              className="shrink-0 h-6 w-7 rounded-full bg-[#EEF3F2] text-[#2C6D63] font-gothic text-[11px] font-bold"
-              title="음성 검색 언어 바꾸기"
-              aria-label={voiceLang === "ko" ? "음성 검색 언어: 한국어" : "음성 검색 언어: 인도네시아어"}
-            >
-              {voiceLangLabel(voiceLang)}
-            </button>
-            {/* 마이크 */}
-            <button
-              onClick={startVoice}
-              className={`shrink-0 w-9 h-9 flex items-center justify-center ${listening ? "text-red-500" : "text-[#646C72] hover:text-primary"}`}
-              title="음성 검색"
-              aria-label="음성 검색"
-            >
-              <Mic size={18} strokeWidth={1.8} />
-            </button>
+            {/* 음성 검색 언어(한 / IN, 누를 때마다 바뀜) | 마이크 — 한 알약(홈 검색창과 같은 부품) */}
+            <VoiceSearchPill
+              langLabel={voiceLangLabel(voiceLang)}
+              onToggleLang={() => setVoiceLang(voiceLang === "ko" ? "id" : "ko")}
+              langTitle="음성 검색 언어 바꾸기"
+              langAriaLabel={voiceLang === "ko" ? "음성 검색 언어: 한국어" : "음성 검색 언어: 인도네시아어"}
+              onMic={startVoice}
+              listening={listening}
+              micTitle="음성 검색"
+              micAriaLabel="음성 검색"
+              micIcon={<Mic size={18} strokeWidth={1.8} />}
+            />
           </div>
           <button
             onClick={() => handleSearch()}
