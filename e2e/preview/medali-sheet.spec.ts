@@ -37,6 +37,10 @@ test("요약 창(홈 명찰) — 360px·100% 에서 스크롤 없이, 탭·단�
   await expect(sheet.getByRole("button")).toHaveCount(1);
   await expect(sheet.getByRole("button", { name: "닫기", exact: true })).toHaveCount(1);
   await expect(sheet.getByText("자세히 보기")).toHaveCount(0);
+  // 다음 단계 문구는 단계 이름을 넣은 꼴 — 두 창이 같은 글(2026-11-24). 기록 없음: 0점 → Perunggu 30점, 별 0 → Tanah II 12개
+  await expect(sheet.getByText("Perunggu까지 30점")).toBeVisible();
+  await expect(sheet.getByText("Tanah II까지 12개")).toBeVisible();
+  await expect(sheet.getByText("다음 단계까지", { exact: false })).toHaveCount(0);
   await expect(sheet.getByText(API_BODY, { exact: false })).toHaveCount(0);
   await expect(sheet.getByText(STAR_BODY, { exact: false })).toHaveCount(0);
   expect(await noInnerScroll(page)).toBe(true);
@@ -67,6 +71,8 @@ test("자세히 창(내 정보 훈장 칸) — 설명 문단 없음, 알약 탭,
   await star.click();
   await expect(star).toHaveAttribute("aria-pressed", "true");
   await expect(sheet.locator("[data-medali-stage-row]")).toHaveCount(6);
+  await expect(sheet.getByText("Tanah II까지 12개")).toBeVisible();
+  await expect(sheet.getByText("다음 단계까지", { exact: false })).toHaveCount(0);
   await expect(sheet.getByText(STAR_BODY, { exact: false })).toHaveCount(0);
   await page.goBack();
   await expect(sheet).toHaveCount(0);
