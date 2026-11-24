@@ -9,12 +9,14 @@ import { LOCK_BUTTON_SUB } from "@/lib/plusCopy";
 
 export const PLUS_MORE_LABEL = "Plus " + LOCK_BUTTON_SUB;
 
-const PILL_CLASS = "shrink-0 flex items-center justify-center text-center text-white font-gothic";
+// text-white 는 색 지정(style.color)으로 — 관리 알약이 같은 틀에 다른 글자색을 쓰게(2026-11-25)
+const PILL_CLASS = "shrink-0 flex items-center justify-center text-center font-gothic";
 const PILL_STYLE: React.CSSProperties = {
   height: 42,
   padding: "0 13px",
   borderRadius: 21,
   background: "#8A6A12",
+  color: "#FFFFFF",
   // 글자 크기는 '오늘의 이야기' 맨 위 Plus 상자 버튼(PlusLockBox 10.5px)과 같게(2026-11-23 Arga 5)
   fontSize: "0.65625rem",
   fontWeight: 700,
@@ -57,5 +59,27 @@ const PlusMoreButton = ({ as = "button", onClick }: Props) => {
     </button>
   );
 };
+
+/**
+ * "구독 / 관리" 알약 — 내 정보 Plus 회원 칸(2026-11-25). PlusMoreButton 과 같은 크기·글자, 색만 흰 바탕 + 테두리 #D9C27A + 글자 #8A6A12.
+ * 화면 읽기 이름 "구독 관리"
+ */
+export const PlusManageButton = ({ onClick }: { onClick: () => void }) => (
+  <button
+    type="button"
+    data-plus-manage
+    aria-label="구독 관리"
+    onClick={(e) => {
+      e.stopPropagation();
+      onClick();
+    }}
+    className={PILL_CLASS + " active:opacity-90"}
+    style={{ ...PILL_STYLE, background: "#FFFFFF", border: "1px solid #D9C27A", color: "#8A6A12" }}
+  >
+    구독
+    <br />
+    관리
+  </button>
+);
 
 export default PlusMoreButton;
