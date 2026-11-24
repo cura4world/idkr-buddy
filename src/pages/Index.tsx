@@ -30,6 +30,7 @@ import VoiceSearchPill from "@/components/VoiceSearchPill";
 import AppSheet, { ChoiceGroup, ChoiceRow, SheetButton } from "@/components/sheet/AppSheet";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
 import PlusMoreButton from "@/components/PlusMoreButton";
+import PlusCard from "@/components/PlusCard";
 import { isWordbookVisible } from "@/lib/wordbookAccess";
 import { listCategories as listPercakapanCategories } from "@/lib/percakapan";
 import {
@@ -1306,33 +1307,15 @@ const Index = () => {
 
           {/* Plus 줄 — 무료에게만 (Plus·Special Member·관리자에게는 사라집니다) */}
           {!plus ? (
-            <button
-              type="button"
+            // 겉모양은 내 정보 회원 칸과 같은 공용 카드(components/PlusCard, 2026-11-25). 카드 전체가 단추라 알약은 겉모양만
+            <PlusCard
+              as="button"
               onClick={() => navigate(PAYWALL_PATH)}
-              data-fit-anchor="plus"
-              className="w-full flex items-center text-left active:opacity-90"
-              style={{ gap: 12, padding: fitPx(11, 7) + " 12px " + fitPx(11, 7) + " 14px", background: "#FFF6DC", border: "1px solid #F1E0AE", borderRadius: 16 }}
-            >
-              <span
-                className="shrink-0 flex items-center justify-center bg-white"
-                style={{ width: 32, height: 32, borderRadius: 9 }}
-              >
-                <svg width="22" height="22" viewBox="-26 -26 52 52" aria-hidden="true">
-                  {[0, 72, 144, 216, 288].map((r) => (
-                    <path key={r} d={FLOWER_PETAL} fill="#D9A94A" transform={"rotate(" + r + ")"} />
-                  ))}
-                  <circle r="5" fill="#8A6A12" />
-                </svg>
-              </span>
-              <span className="flex-1 min-w-0 flex flex-col" style={{ gap: 2 }}>
-                <span style={{ fontSize: hrem(15) }}>Kata kata Plus</span>
-                <span className="font-gothic" style={{ fontSize: hrem(11.5), color: "#6E5612" }}>
-                  회화집·게임·듣기 모두 열기
-                </span>
-              </span>
-              {/* "Plus / 자세히 보기" 알약 — 내 정보 회원 칸과 같은 공용 조각(2026-11-25). 카드 전체가 단추라 겉모양만 */}
-              <PlusMoreButton as="span" />
-            </button>
+              fitAnchor="plus"
+              padY={fitPx(11, 7)}
+              sub={["회화집·게임·듣기 모두 열기"]}
+              right={<PlusMoreButton as="span" />}
+            />
           ) : null}
         </div>
 
