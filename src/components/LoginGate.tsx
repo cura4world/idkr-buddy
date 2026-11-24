@@ -21,6 +21,7 @@ import {
   autoRestoreOnce,
   isLapsedPaidPlan,
   onVerifyEvent,
+  recheckSubscription,
   resumeVerifyIfNeeded,
   retryVerifyNow,
   takeManageReturn,
@@ -118,9 +119,7 @@ const LoginGate = ({ children }: { children: React.ReactNode }) => {
       if (!getSession()) return Promise.resolve();
       lastForcedAt = Date.now();
       lastRefreshAt = lastForcedAt;
-      return autoRestoreOnce(true, { force: true })
-        .then(() => refreshMe().catch(() => null))
-        .then(() => undefined);
+      return recheckSubscription().then(() => undefined); // 공용 강제 재확인(billing.ts) — 내 정보 화면도 같은 길
     };
 
     // 유료 등급의 만료 시각 + 3초(서버가 아직이면 + 60초·+ 3분)에 다시 확인하는 시계(src/lib/planExpiry.ts).
