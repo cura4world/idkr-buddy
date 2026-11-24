@@ -44,9 +44,8 @@ export default function EditCategoryDialog({ open, onOpenChange, onUpdated, cate
       title="이름 바꾸기"
       desc="이름과 아이콘을 바꾸세요"
       icon={<Pencil size={20} strokeWidth={1.8} />}
-      tileBg="#E2E6F3"
-      tileInk="#2F3E7C"
       onSubmit={handleSubmit}
+      dirty={name !== currentName || icon !== currentEmoji}
       footer={
         <FormPrimaryButton type="submit" disabled={!name.trim()} muted={!name.trim()}>
           저장
