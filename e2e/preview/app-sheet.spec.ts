@@ -149,6 +149,43 @@ test("글자 크기 — 고르는 동안 미리 보이고, X 는 원래 크기�
   expect(await saved()).not.toBe(step0);
 });
 
+test("창이 열려도 뒤 화면 위치와 고정 머리는 그대로(창을 닫으면 그 자리)", async ({ page }) => {
+  await setupPreview(page, { tier: "plus" });
+  await openApp(page, "");
+  await page.evaluate(() => {
+    const words = JSON.parse(localStorage.getItem("kata-words") || "[]");
+    for (let i = 0; i < 60; i++) {
+      words.push({ id: "w_e2e_" + i, word: "kata" + i, meaning: "뜻 " + i, example: "", exampleMeaning: "", categoryId: "my-wordbook", createdAt: Date.now() - i });
+    }
+    localStorage.setItem("kata-words", JSON.stringify(words));
+  });
+  await openApp(page, "category/my-wordbook");
+  await page.mouse.wheel(0, 900);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300);
+  const y0 = await page.evaluate(() => window.scrollY);
+  const header = page.locator("header.sticky").first();
+  const h0 = await header.boundingBox();
+  expect(h0 && Math.abs(h0.y)).toBeLessThanOrEqual(1);
+
+  await page.getByRole("button", { name: "추가하기", exact: true }).click();
+  await page.getByRole("menuitem").filter({ hasText: "단어 추가" }).click();
+  const sheet = page.getByRole("dialog", { name: "단어 추가", exact: true });
+  await expect(sheet).toBeVisible();
+  const h1 = await header.boundingBox();
+  expect(h1 && Math.abs(h1.y)).toBeLessThanOrEqual(1); // 머리가 화면 위에 그대로
+  expect(await page.evaluate(() => window.scrollY)).toBe(y0);
+  await page.mouse.move(180, 60); // 어두운 배경 위에서 굴려도 뒤 화면은 움직이지 않음
+  await page.mouse.wheel(0, 600);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.scrollY)).toBe(y0);
+
+  await sheet.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(sheet).toHaveCount(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(y0);
+  const h2 = await header.boundingBox();
+  expect(h2 && Math.abs(h2.y)).toBeLessThanOrEqual(1);
+});
+
 test("고르기 줄 — 화면 낭독용 묶음(radiogroup·group)과 선택 여부(checked)", async ({ page }) => {
   await setupPreview(page, { tier: "plus" });
   await openApp(page, "me");
