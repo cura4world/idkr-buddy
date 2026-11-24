@@ -20,7 +20,7 @@ import { isPreviewBuild, isReviewAccount, usePlan } from "@/lib/plan";
 import {
   billingAvailable,
   isLapsedPaidPlan,
-  isPaidPlan,
+  isPaidOrRenewingPlan,
   isVerifyingPurchase,
   manageSubscription,
   onVerifyEvent,
@@ -329,7 +329,8 @@ const Plus = () => {
 
   const entitled = tier !== "free";
   const staff = tier === "special" || tier === "admin";
-  const paidUntil = session && isPaidPlan(session.plan) ? session.plan.until : 0;
+  // 만료 시각이 막 지나 갱신 확인을 기다리는 동안(유예 10분)도 구독 문구를 그대로 둡니다(2026-11-24)
+  const paidUntil = session && isPaidOrRenewingPlan(session.plan) ? session.plan.until : 0;
 
   const close = () => goBackOr(navigate, location.key, "/");
 
@@ -343,7 +344,7 @@ const Plus = () => {
     const s0 = getSession();
     if (s0 && isLapsedPaidPlan(s0.plan)) {
       setChecking(true);
-      const rr = await restoreDetailed("purchase-precheck");
+      const rr = await restoreDetailed();
       setChecking(false);
       if (rr.status === "plus") { toast(TOAST_RESTORED); return; }
       if (rr.status === "verifying") { toast(TOAST_VERIFYING); return; }
