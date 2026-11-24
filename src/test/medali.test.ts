@@ -48,11 +48,21 @@ describe("불꽃 주간 집계 (월~일)", () => {
     expect(medaliEngine.getState().streak).toBe(2);
   });
 
-  it("지난주 점수는 월~일 날짜별 합계(일요일 포함)이고, 앞선 기록이 있으면 비교한다", async () => {
+  // 쌓인 기록: 11-22(일) 게임 15점, 11-23(월) 퀴즈 5점
+  it("지난주는 같은 기간만 — 화요일이면 지난주 월·화까지(일요일 점수는 아직 안 들어감)", async () => {
     vi.setSystemTime(TUE);
-    const lw = await lastWeekPoints(TUE);
-    // 지난주(11-16 ~ 11-22)에 쌓인 것은 일요일 게임 15점뿐, 이번 주 월요일 퀴즈 5점은 들어가지 않음
+    const lw = await lastWeekPoints(TUE); // 11-24(화) → 지난주 11-16(월) ~ 11-17(화)
+    expect(lw).toEqual({ hasHistory: true, points: 0 });
+  });
+
+  it("일요일이면 지난주 월~일 전체(일요일 포함)", async () => {
+    const lw = await lastWeekPoints(new Date(2026, 10, 29, 20, 0, 0)); // 11-29(일) → 지난주 11-16 ~ 11-22
     expect(lw).toEqual({ hasHistory: true, points: 15 });
+  });
+
+  it("월요일엔 월요일끼리", async () => {
+    const lw = await lastWeekPoints(new Date(2026, 10, 30, 9, 0, 0)); // 11-30(월) → 지난주 11-23(월) 하루
+    expect(lw).toEqual({ hasHistory: true, points: 5 });
   });
 
   it("이번 주 월요일보다 앞선 기록이 없으면 첫 주로 본다", async () => {
