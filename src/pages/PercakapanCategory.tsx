@@ -6,7 +6,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { ArrowLeft, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, MessagesSquare, Pencil, Trash2 } from "lucide-react";
+import AppSheet, { ChoiceRow, SHEET, SheetButton, SheetButtonRow } from "@/components/sheet/AppSheet";
+import { FORM_FIELD_CLASS, FORM_INPUT_CLASS } from "@/components/FormSheet";
 import LockMark from "@/components/LockMark";
 import { openPlusLock } from "@/lib/plusLock";
 import { canOpenScene, LOCK_TITLE_SCENE } from "@/lib/tasteAccess";
@@ -117,6 +119,12 @@ const PercakapanCategory = () => {
 
   // 폰의 뒤로가기는 롱프레스 메뉴만 닫습니다(화면을 떠나지 않음)
   useBackClose(!!menuScene, () => setMenuScene(null));
+
+  // 메뉴 창이 닫히며 내려가는 동안에도 마지막 내용(장면 이름·이름 바꾸기 중인지)을 그대로 보여 줍니다
+  const lastMenuRef = useRef<{ scene: PercakapanScene | null; renaming: boolean }>({ scene: null, renaming: false });
+  if (menuScene) lastMenuRef.current = { scene: menuScene, renaming };
+  const mScene = menuScene || lastMenuRef.current.scene;
+  const mRenaming = menuScene ? renaming : lastMenuRef.current.renaming;
 
   const handleOpenScene = (s: PercakapanScene) => {
     // 롱프레스로 메뉴가 뜬 직후의 click 은 무시합니다
@@ -249,77 +257,45 @@ const PercakapanCategory = () => {
         )}
       </div>
 
-      {/* 롱프레스 메뉴 */}
-      {menuScene ? (
-        <>
-          <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-[2px]" onClick={closeMenu} />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="대화 관리"
-            className="fixed z-50 left-1/2 -translate-x-1/2 top-[26%] w-[min(88vw,20rem)] rounded-2xl bg-card border border-border/60 shadow-2xl shadow-black/40 overflow-hidden"
-          >
-            <div className="flex items-start justify-between gap-2 px-4 pt-3.5">
-              <span className="min-w-0 flex-1 truncate font-body text-[0.9375rem] font-semibold text-card-foreground">
-                {menuScene.title}
-              </span>
-              <button
-                type="button"
-                onClick={closeMenu}
-                className="-mt-0.5 -mr-1 p-1 text-muted-foreground/60 hover:text-muted-foreground"
-                title="닫기"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {renaming ? (
-              <div className="px-4 pb-4 pt-3">
-                <input
-                  value={renameText}
-                  onChange={(e) => setRenameText(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-[0.875rem] text-card-foreground outline-none focus:border-primary"
-                  autoFocus
-                />
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRenaming(false)}
-                    className="flex-1 h-10 rounded-[11px] border border-border text-[0.84375rem] font-gothic text-foreground/80 active:bg-muted"
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRenameSave}
-                    disabled={renameText.trim() === ""}
-                    className="flex-1 h-10 rounded-[11px] bg-primary text-[0.84375rem] font-medium text-white disabled:opacity-50"
-                  >
-                    저장
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setRenaming(true)}
-                  className="w-full border-b border-border px-4 py-3.5 text-left text-[0.875rem] font-gothic text-foreground active:bg-muted/60"
-                >
-                  이름 바꾸기
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDeleteClick}
-                  className="w-full px-4 py-3.5 text-left text-[0.875rem] font-gothic text-red-500/90 active:bg-muted/60"
-                >
-                  {confirmDelete ? "한 번 더 누르면 삭제" : "삭제"}
-                </button>
-              </div>
-            )}
+      {/* 롱프레스 메뉴 — 앱 공통 틀(고르기: 누르면 바로 실행). 이름 바꾸기 중에는 입력 창(글을 고쳤으면 끌기·바깥으로 안 닫힘).
+          뒤로가기는 위 useBackClose(menuScene). 닫히는 동안에는 마지막 내용을 그대로 보여 줍니다. */}
+      <AppSheet
+        open={!!menuScene}
+        onClose={closeMenu}
+        title={mScene ? mScene.title : ""}
+        icon={mRenaming ? <Pencil size={20} strokeWidth={1.8} /> : <MessagesSquare size={20} strokeWidth={1.8} />}
+        dirty={mRenaming && !!mScene && renameText.trim() !== mScene.title}
+        footer={
+          mRenaming ? (
+            <SheetButtonRow>
+              <SheetButton variant="secondary" onClick={() => setRenaming(false)}>취소</SheetButton>
+              <SheetButton onClick={handleRenameSave} disabled={renameText.trim() === ""} muted={renameText.trim() === ""}>저장</SheetButton>
+            </SheetButtonRow>
+          ) : undefined
+        }
+      >
+        {mRenaming ? (
+          <div className={FORM_FIELD_CLASS} style={{ minHeight: 44 }}>
+            <input
+              value={renameText}
+              onChange={(e) => setRenameText(e.target.value)}
+              className={FORM_INPUT_CLASS + " font-body"}
+              style={{ color: SHEET.txt }}
+              autoFocus
+            />
           </div>
-        </>
-      ) : null}
+        ) : (
+          <>
+            <ChoiceRow mode="action" onClick={() => setRenaming(true)} leading={<Pencil size={17} strokeWidth={1.8} color={SHEET.label} />} title="이름 바꾸기" />
+            <ChoiceRow
+              mode="action"
+              onClick={handleDeleteClick}
+              leading={<Trash2 size={17} strokeWidth={1.8} color={SHEET.danger} />}
+              title={<span style={{ color: SHEET.danger }}>{confirmDelete ? "한 번 더 누르면 삭제" : "삭제"}</span>}
+            />
+          </>
+        )}
+      </AppSheet>
     </div>
   );
 };
