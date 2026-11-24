@@ -29,6 +29,7 @@ import AppSheet, { ChoiceGroup, ChoiceRow, ConfirmSheet, SHEET, SheetButton } fr
 import { useBackClose } from "@/hooks/useBackClose";
 import { buildBackupFile, describeSummary, formatBytes, getBackupFileSavedAt, markBackupFileSaved } from "@/lib/transfer";
 import MedaliSheet from "@/components/MedaliSheet";
+import type { MedaliSheetTab } from "@/components/MedaliSheet";
 import { MedaliWeekCompareText, useMedaliWeekCompare } from "@/components/MedaliWeekCompare";
 import { MedaliHelpBubble, MedaliHelpButton, MedaliHelpKind } from "@/components/MedaliHelpBubble";
 import { ProfileAvatar, profileName } from "@/components/BottomTabs";
@@ -354,6 +355,12 @@ const MyInfo = () => {
   const [medaliOpen, setMedaliOpen] = useState(false);
   const medaliOpenRef = useRef(false);
   const medaliPushedRef = useRef(false);
+  // 누른 칸의 탭으로 엽니다(2026-11-24): 불꽃 칸 → 불꽃 탭, 별 칸 → 별 탭
+  const [medaliTab, setMedaliTab] = useState<MedaliSheetTab>("api");
+  const openMedaliTab = (t: MedaliSheetTab) => {
+    setMedaliTab(t);
+    openMedali();
+  };
   const openMedali = () => {
     if (medaliOpenRef.current) return;
     medaliOpenRef.current = true;
@@ -809,7 +816,7 @@ const MyInfo = () => {
             <div className="relative">
               <button
                 type="button"
-                onClick={openMedali}
+                onClick={() => openMedaliTab("api")}
                 className="w-full text-left active:opacity-80"
                 style={{ borderRadius: 14, background: "#FBF1EC", padding: "10px 10px 10px 12px" }}
               >
@@ -841,7 +848,7 @@ const MyInfo = () => {
             <div className="relative">
               <button
                 type="button"
-                onClick={openMedali}
+                onClick={() => openMedaliTab("bintang")}
                 className="w-full text-left active:opacity-80"
                 style={{ borderRadius: 14, background: "#FBF5E6", padding: "10px 10px 10px 12px" }}
               >
@@ -1072,7 +1079,7 @@ const MyInfo = () => {
       />
 
       {/* 내 정보 훈장 칸 → 자세히 창(2026-11-24). 명찰(홈·게임방)은 요약 창 */}
-      <MedaliSheet view="detail" open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
+      <MedaliSheet initialTab={medaliTab} open={medaliOpen} onOpenChange={(o) => { if (!o) closeMedali(); }} />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
