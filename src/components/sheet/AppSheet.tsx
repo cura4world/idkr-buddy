@@ -61,18 +61,18 @@ let openSheetCount = 0;
 const openSheetListeners = new Set<() => void>();
 // 창이 떠 있는 동안 뒤 화면이 함께 밀리지 않게 잠급니다(훈장 창이 하던 것을 모든 창에 — 2026-11-24).
 // touch-action 은 건드리지 않습니다(body 에 none 을 주면 창 안쪽 스크롤까지 막힘).
-let savedOverflow: { html: string; body: string } | null = null;
+// html 에만 겁니다 — html·body 둘 다 hidden 이면 body 가 따로 스크롤 상자가 되어, 내려 둔 화면의 고정 머리(sticky)가
+// 화면이 아니라 body 맨 위에 붙어 사라졌습니다(2026-11-24 설교문 전체 지우기 확인, 단어장 등 sticky 머리 화면 모두).
+let savedOverflow: string | null = null;
 function setOpenSheetDelta(d: number): void {
   const before = openSheetCount;
   openSheetCount = Math.max(0, openSheetCount + d);
   try {
     if (before === 0 && openSheetCount > 0) {
-      savedOverflow = { html: document.documentElement.style.overflow, body: document.body.style.overflow };
+      savedOverflow = document.documentElement.style.overflow;
       document.documentElement.style.overflow = "hidden";
-      document.body.style.overflow = "hidden";
-    } else if (before > 0 && openSheetCount === 0 && savedOverflow) {
-      document.documentElement.style.overflow = savedOverflow.html;
-      document.body.style.overflow = savedOverflow.body;
+    } else if (before > 0 && openSheetCount === 0 && savedOverflow !== null) {
+      document.documentElement.style.overflow = savedOverflow;
       savedOverflow = null;
     }
   } catch (e) {}
