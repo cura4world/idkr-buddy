@@ -4,12 +4,15 @@
 // 2026-11-11 사용자 요청으로 단어 24 → 22.5px, 뜻 16 → 14.5px, 버튼 높이 46 → 40px.
 // 2026-11-18 사용자 요청으로 단어 22.5 → 21px, 아래 버튼 글자 14 → 13px, "AI가 만든 내용입니다" 글자 숨김(신고 단추는 남김),
 //   뜻을 찾는 동안 ⌄ 칸도 왼쪽 담기 칸과 같은 옅은 초록으로 — 두 칸이 함께 진해집니다.
+// 2026-11-24 옵션 창 통일: 앱 공통 틀(AppSheet, 안내). 머리 아이콘 칸 + 제목 자리에 인니어 단어(Lora)·발음 단추 + X,
+//   담기·사전 단추는 바닥에 고정. 부르는 쪽이 열릴 때만 그리므로 올라오는 움직임만 있고 닫힐 때는 바로 사라집니다.
 // 앱의 단어 팝업은 모두 이것 하나를 씁니다(이야기·회화집·오늘의 문장, 관리자판의 뉴스·묵상·기도·성경·설교문·일대일).
 // 모양을 고칠 때는 여기만 고치면 모든 화면이 같이 바뀝니다.
 
-import { Check, ChevronDown, Copy, Loader2, Plus, Volume1, X } from "lucide-react";
+import { BookOpen, Check, ChevronDown, Copy, Loader2, Plus, Volume1 } from "lucide-react";
 import { useBackClose } from "@/hooks/useBackClose";
 import AiReportButton from "@/components/AiReportButton";
+import AppSheet from "@/components/sheet/AppSheet";
 
 interface Props {
   word: string;
@@ -63,29 +66,93 @@ const WordMiniSheet = ({
   const grey = saved || !saveTargetId;
   // 폰의 뒤로가기는 이 시트만 닫습니다(이야기 카드·회화 읽기 화면은 그대로). 시트는 열릴 때만 그려집니다.
   useBackClose(manageBack !== false, onClose);
-  return (
-    <div className="fixed inset-0 z-50" onClick={onClose}>
-      <div className="absolute inset-0" style={{ background: "rgba(20,30,35,0.38)" }} />
-      <div
-        className={"absolute bottom-0 left-0 right-0 " + widthClass + " mx-auto bg-white"}
-        style={{
-          borderRadius: "22px 22px 0 0",
-          padding: "10px 20px calc(26px + env(safe-area-inset-bottom)) 20px",
-        }}
-        onClick={(e) => e.stopPropagation()}
+
+  const footerEl = (
+    <div className="flex gap-2">
+      <div className="flex-1 min-w-0 flex overflow-hidden rounded-[14px] font-gothic text-[0.8125rem] font-semibold">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saved || saveDisabled || !saveTargetId}
+          className="flex-1 min-w-0 h-[40px] flex items-center justify-center gap-1.5 px-2 disabled:cursor-default"
+          style={
+            grey
+              ? { background: "#F1F4F5", color: "#9AA1A6" }
+              : { background: TEAL, color: "#FFFFFF", opacity: saveDisabled ? 0.55 : 1, transition: FADE }
+          }
+        >
+          {saved ? <Check size={15} strokeWidth={2.4} className="shrink-0" /> : <Plus size={15} strokeWidth={2.4} className="shrink-0" />}
+          <span className="truncate">
+            {saved ? "담음" : saveTargetId ? saveTargetName + "에 담기" : "단어장을 먼저 만들어 주세요"}
+          </span>
+        </button>
+        {/* 담긴 뒤에도 다른 단어장에는 담을 수 있어야 하므로 ⌄ 는 잠그지 않습니다 */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPickTarget();
+          }}
+          title="담을 단어장 고르기"
+          aria-label="담을 단어장 고르기"
+          className="shrink-0 w-11 h-[40px] flex items-center justify-center"
+          style={
+            grey
+              ? { background: "#F1F4F5", color: "#9AA1A6", borderLeft: "1px solid #E3E7EA" }
+              : {
+                  background: TEAL,
+                  color: "#FFFFFF",
+                  borderLeft: "1px solid rgba(255,255,255,0.3)",
+                  // 색만 왼쪽 칸과 맞춥니다. 누르는 것은 막지 않습니다(위 설명)
+                  opacity: saveDisabled ? 0.55 : 1,
+                  transition: FADE,
+                }
+          }
+        >
+          <ChevronDown size={15} strokeWidth={2.4} />
+        </button>
+      </div>
+      {/* 복사는 글자 대신 아이콘 — "내 단어장에 담기" 글자가 잘리지 않게 폭을 아낍니다 */}
+      {onCopy ? (
+        <button
+          type="button"
+          onClick={onCopy}
+          className="shrink-0 w-10 h-[40px] rounded-[14px] flex items-center justify-center"
+          style={{ background: "#F1F4F5", color: "#1D1F1E" }}
+          title="복사"
+          aria-label="복사"
+        >
+          <Copy size={16} strokeWidth={2} />
+        </button>
+      ) : null}
+      <button
+        type="button"
+        onClick={onDictionary}
+        className="shrink-0 h-[40px] px-3.5 rounded-[14px] font-gothic text-[0.8125rem] font-semibold"
+        style={{ background: "#F1F4F5", color: "#1D1F1E" }}
       >
-        <div className="mx-auto mb-[14px] h-1 w-9 rounded-full" style={{ background: "#DDE3E6" }} />
-        <div className="flex items-center gap-2.5 min-w-0">
-          <p
-            className="min-w-0 break-words font-word text-[1.3125rem] font-semibold leading-tight"
-            style={{ color: "#104B60" }}
-          >
+        사전에서 보기
+      </button>
+    </div>
+  );
+
+  return (
+    <AppSheet
+      open
+      onClose={onClose}
+      title={word}
+      icon={<BookOpen size={20} strokeWidth={1.8} />}
+      widthClass={widthClass}
+      titleNode={
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="min-w-0 break-words font-word text-[1.3125rem] font-semibold leading-tight" style={{ color: "#104B60" }}>
             {word}
-          </p>
+          </span>
           {onSpeak ? (
             <button
               type="button"
               onClick={onSpeak}
+              onPointerDown={(e) => e.stopPropagation()}
               className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
               style={{ background: "#E2F1EC", color: TEAL }}
               title="발음 듣기"
@@ -94,108 +161,31 @@ const WordMiniSheet = ({
               <Volume1 size={16} strokeWidth={2} />
             </button>
           ) : null}
-          <span className="flex-1" />
-          <button
-            type="button"
-            onClick={onClose}
-            className="shrink-0 w-[34px] h-[34px] rounded-full flex items-center justify-center"
-            style={{ background: "#F1F4F5", color: "#646C72" }}
-            title="닫기"
-            aria-label="닫기"
-          >
-            <X size={15} strokeWidth={2.2} />
-          </button>
+        </span>
+      }
+      footer={footerEl}
+    >
+      {loading ? (
+        <div className="flex items-center gap-2 font-gothic text-[0.875rem]" style={{ color: "#9AA1A6" }}>
+          <Loader2 size={15} className="animate-spin" /> 뜻을 찾는 중...
         </div>
-
-        {loading ? (
-          <div className="mt-2 flex items-center gap-2 font-gothic text-[0.875rem]" style={{ color: "#9AA1A6" }}>
-            <Loader2 size={15} className="animate-spin" /> 뜻을 찾는 중...
-          </div>
-        ) : (
-          <>
-            <p className="mt-2 break-words font-gothic text-[0.90625rem] font-semibold" style={{ color: "#1D1F1E" }}>
-              {meaning}
+      ) : (
+        <div>
+          <p className="m-0 break-words font-gothic text-[0.90625rem] font-semibold" style={{ color: "#1D1F1E" }}>
+            {meaning}
+          </p>
+          {info ? (
+            <p className="m-0 mt-1 break-words font-gothic text-[0.8125rem] leading-[1.6]" style={{ color: "#646C72" }}>
+              {info}
             </p>
-            {info ? (
-              <p className="mt-1 break-words font-gothic text-[0.8125rem] leading-[1.6]" style={{ color: "#646C72" }}>
-                {info}
-              </p>
-            ) : null}
-            {/* AI 가 만든 풀이 신고 — 스토어 앱(공개판)에서만 보입니다(2026-11-14 P-05) */}
-            {meaning && !saveDisabled ? (
-              <AiReportButton feature="word" input={word} output={meaning + (info ? " / " + info : "")} className="mt-1" />
-            ) : null}
-          </>
-        )}
-
-        <div className="mt-4 flex gap-2">
-          <div className="flex-1 min-w-0 flex overflow-hidden rounded-[14px] font-gothic text-[0.8125rem] font-semibold">
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={saved || saveDisabled || !saveTargetId}
-              className="flex-1 min-w-0 h-[40px] flex items-center justify-center gap-1.5 px-2 disabled:cursor-default"
-              style={
-                grey
-                  ? { background: "#F1F4F5", color: "#9AA1A6" }
-                  : { background: TEAL, color: "#FFFFFF", opacity: saveDisabled ? 0.55 : 1, transition: FADE }
-              }
-            >
-              {saved ? <Check size={15} strokeWidth={2.4} className="shrink-0" /> : <Plus size={15} strokeWidth={2.4} className="shrink-0" />}
-              <span className="truncate">
-                {saved ? "담음" : saveTargetId ? saveTargetName + "에 담기" : "단어장을 먼저 만들어 주세요"}
-              </span>
-            </button>
-            {/* 담긴 뒤에도 다른 단어장에는 담을 수 있어야 하므로 ⌄ 는 잠그지 않습니다 */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPickTarget();
-              }}
-              title="담을 단어장 고르기"
-              aria-label="담을 단어장 고르기"
-              className="shrink-0 w-11 h-[40px] flex items-center justify-center"
-              style={
-                grey
-                  ? { background: "#F1F4F5", color: "#9AA1A6", borderLeft: "1px solid #E3E7EA" }
-                  : {
-                      background: TEAL,
-                      color: "#FFFFFF",
-                      borderLeft: "1px solid rgba(255,255,255,0.3)",
-                      // 색만 왼쪽 칸과 맞춥니다. 누르는 것은 막지 않습니다(위 설명)
-                      opacity: saveDisabled ? 0.55 : 1,
-                      transition: FADE,
-                    }
-              }
-            >
-              <ChevronDown size={15} strokeWidth={2.4} />
-            </button>
-          </div>
-          {/* 복사는 글자 대신 아이콘 — "내 단어장에 담기" 글자가 잘리지 않게 폭을 아낍니다 */}
-          {onCopy ? (
-            <button
-              type="button"
-              onClick={onCopy}
-              className="shrink-0 w-10 h-[40px] rounded-[14px] flex items-center justify-center"
-              style={{ background: "#F1F4F5", color: "#1D1F1E" }}
-              title="복사"
-              aria-label="복사"
-            >
-              <Copy size={16} strokeWidth={2} />
-            </button>
           ) : null}
-          <button
-            type="button"
-            onClick={onDictionary}
-            className="shrink-0 h-[40px] px-3.5 rounded-[14px] font-gothic text-[0.8125rem] font-semibold"
-            style={{ background: "#F1F4F5", color: "#1D1F1E" }}
-          >
-            사전에서 보기
-          </button>
+          {/* AI 가 만든 풀이 신고 — 스토어 앱(공개판)에서만 보입니다(2026-11-14 P-05) */}
+          {meaning && !saveDisabled ? (
+            <AiReportButton feature="word" input={word} output={meaning + (info ? " / " + info : "")} className="mt-1" />
+          ) : null}
         </div>
-      </div>
-    </div>
+      )}
+    </AppSheet>
   );
 };
 
