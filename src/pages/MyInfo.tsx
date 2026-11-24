@@ -18,7 +18,8 @@
 //   · 훈장 칸 제목 옆 ⓘ → 작은 말풍선(MedaliHelpBubble, 문구는 lib/medaliHelp.ts).
 //   · 두 사람 순위 줄을 빼고 "지난주보다 +N점 · 이번 달 별 +N개"(이 폰 기록만, 서버 없음).
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { placeChartLabels, shortHM, type ChartLabelLayout } from "@/lib/studyChartLabels";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import FormSheet, { FORM_FIELD_CLASS, FORM_INPUT_CLASS, FormPrimaryButton } from "@/components/FormSheet";
@@ -269,6 +270,134 @@ function koDate(t: number): string {
   const d = new Date(t);
   return d.getFullYear() + "년 " + (d.getMonth() + 1) + "월 " + d.getDate() + "일";
 }
+
+// ── 공부 시간 막대 그래프 ─────────────────────────────────────────
+// 2026-11-25 지시서 A: 칸·그래프 높이는 그대로(32px). 막대 색 세 단계(오늘 #2C6D63 · 어제 #467D73 · 그 전 #9CC5BB),
+// 어제·오늘 숫자(흰 테두리 글자, 자리는 lib/studyChartLabels.ts 의 순수 함수가 실제 글자 폭으로 계산),
+// 지난달 하루 평균 점선 #9AA1A6 을 막대 위에, 설명 줄 끝에 평균 값. "지난달" 보기는 점선 색·평균 값만(숫자·색 단계 없음).
+const CHART_H = 32;
+const BAR_GAP = 3;
+const BAR_TODAY = TEAL;
+const BAR_YESTERDAY = "#467D73";
+const BAR_PAST = "#9CC5BB";
+const REF_LINE = "#9AA1A6";
+// 상자 없이 흰 테두리만 — 막대·점선과 겹쳐도 읽히게
+const WHITE_OUTLINE =
+  "-1px -1px 0 #FFFFFF, 1px -1px 0 #FFFFFF, -1px 1px 0 #FFFFFF, 1px 1px 0 #FFFFFF, 0 -1.5px 0 #FFFFFF, 0 1.5px 0 #FFFFFF, -1.5px 0 0 #FFFFFF, 1.5px 0 0 #FFFFFF, 0 0 3px #FFFFFF";
+
+/** 막대 높이(%) — 몇 분만 쓴 날·앞으로의 날은 3% */
+function barPct(ms: number, barMax: number, future: boolean): number {
+  return future || ms <= 0 ? 3 : Math.max(3, Math.round((ms / barMax) * 100));
+}
+
+const StudyBars = ({ view, dayLabels, prevName }: { view: MonthView; dayLabels: boolean; prevName: string }) => {
+  // 막대 높이의 기준 — 몇 분만 쓴 날이 막대를 꽉 채우지 않게 최소 30분으로 잡습니다
+  const barMax = Math.max(30 * 60000, view.refAvgMs, ...view.dayMs);
+  const refPct = view.refAvgMs > 0 ? Math.min(100, (view.refAvgMs / barMax) * 100) : 0;
+  const ti = view.todayIdx;
+  // 숫자는 막대와 같은 자료(view.dayMs)에서. 0분이면 숨김, 1일에는 어제 숫자 없음
+  const yText = dayLabels && ti >= 1 ? shortHM(view.dayMs[ti - 1]) : "";
+  const tText = dayLabels && ti >= 0 ? shortHM(view.dayMs[ti]) : "";
+  const yPct = ti >= 1 ? barPct(view.dayMs[ti - 1], barMax, false) : 0;
+  const tPct = ti >= 0 ? barPct(view.dayMs[ti], barMax, false) : 0;
+
+  const chartRef = useRef<HTMLDivElement>(null);
+  const yRef = useRef<HTMLSpanElement>(null);
+  const tRef = useRef<HTMLSpanElement>(null);
+  const [layout, setLayout] = useState<ChartLabelLayout | null>(null);
+  const [tick, setTick] = useState(0);
+
+  useLayoutEffect(() => {
+    const c = chartRef.current;
+    if (!c || (!yText && !tText)) {
+      setLayout(null);
+      return;
+    }
+    const size = (el: HTMLElement | null) => {
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { w: r.width, h: r.height };
+    };
+    const next = placeChartLabels({
+      chartW: c.clientWidth,
+      chartH: CHART_H,
+      days: view.days,
+      gap: BAR_GAP,
+      todayIdx: ti,
+      yesterdayBarH: (CHART_H * yPct) / 100,
+      todayBarH: (CHART_H * tPct) / 100,
+      yesterday: yText ? size(yRef.current) : null,
+      today: tText ? size(tRef.current) : null,
+    });
+    setLayout((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+  }, [yText, tText, yPct, tPct, ti, view.days, tick]);
+
+  // 폭이 바뀌거나(회전·넓게 보기) 글꼴이 늦게 실리면 다시 잽니다
+  useEffect(() => {
+    const c = chartRef.current;
+    let ro: ResizeObserver | null = null;
+    try {
+      ro = new ResizeObserver(() => setTick((n) => n + 1));
+      if (c) ro.observe(c);
+    } catch (e) {}
+    try {
+      const d = document as Document & { fonts?: { ready?: Promise<unknown> } };
+      if (d.fonts && d.fonts.ready) d.fonts.ready.then(() => setTick((n) => n + 1)).catch(() => {});
+    } catch (e) {}
+    return () => { if (ro) ro.disconnect(); };
+  }, []);
+
+  const labelStyle = (color: string, p: { x: number; y: number } | null | undefined): React.CSSProperties => ({
+    position: "absolute",
+    left: p ? p.x : 0,
+    top: p ? p.y : 0,
+    visibility: p ? "visible" : "hidden",
+    zIndex: 2,
+    whiteSpace: "nowrap",
+    fontSize: rem(11),
+    fontWeight: 700,
+    lineHeight: 1.15,
+    color,
+    textShadow: WHITE_OUTLINE,
+    pointerEvents: "none",
+  });
+
+  return (
+    <>
+      <div ref={chartRef} data-study-chart className="relative flex" style={{ marginTop: 8, height: CHART_H, gap: BAR_GAP }} aria-hidden="true">
+        {view.dayMs.map((ms, i) => {
+          const future = view.todayIdx >= 0 && i > view.todayIdx;
+          const h = barPct(ms, barMax, future);
+          // "지난달" 보기는 todayIdx = -1 이라 오늘·어제 색이 저절로 없음
+          const bg = future ? LINE : i === ti ? BAR_TODAY : ti >= 1 && i === ti - 1 ? BAR_YESTERDAY : BAR_PAST;
+          return (
+            <span key={i} className="flex-1 flex flex-col justify-end" style={{ height: "100%" }}>
+              <span data-bar={i === ti ? "today" : i === ti - 1 ? "yesterday" : undefined} style={{ height: h + "%", borderRadius: 3, background: bg }} />
+            </span>
+          );
+        })}
+        {/* 지난달 하루 평균 점선 — 막대 위에 */}
+        {refPct > 0 ? (
+          <span className="absolute left-0 right-0" style={{ bottom: refPct + "%", borderTop: "1.5px dashed " + REF_LINE, zIndex: 1 }} />
+        ) : null}
+        {yText ? (
+          <span ref={yRef} data-day-label="yesterday" style={labelStyle(BAR_YESTERDAY, layout && layout.yesterday)}>어제 {yText}</span>
+        ) : null}
+        {tText ? (
+          <span ref={tRef} data-day-label="today" style={labelStyle(BAR_TODAY, layout && layout.today)}>오늘 {tText}</span>
+        ) : null}
+      </div>
+      <div className="flex justify-between items-start font-gothic" style={{ marginTop: 4, gap: 8, fontSize: rem(10.5), color: FAINT }}>
+        <span className="shrink-0">{view.month + 1}월 1일</span>
+        <span data-ref-legend className="flex items-center justify-center break-keep text-center" style={{ gap: 4 }}>
+          <span className="shrink-0" style={{ width: 12, borderTop: "1.5px dashed " + REF_LINE }} />
+          <span>{prevName} 하루 평균{view.refAvgMs > 0 ? " " + hmText(view.refAvgMs) : ""}</span>
+        </span>
+        <span className="shrink-0">{view.days}일</span>
+      </div>
+    </>
+  );
+};
 
 // ── 등급 배지 ────────────────────────────────────────────────────
 function tierBadge(t: Tier): { text: string; bg: string; fg: string } {
@@ -614,9 +743,6 @@ const MyInfo = () => {
   const tail = memberKeyTail(session);
   const hm = splitHM(view.totalMs);
 
-  // 막대 높이의 기준 — 몇 분만 쓴 날이 막대를 꽉 채우지 않게 최소 30분으로 잡습니다
-  const barMax = Math.max(30 * 60000, view.refAvgMs, ...view.dayMs);
-  const refPct = view.refAvgMs > 0 ? Math.min(100, (view.refAvgMs / barMax) * 100) : 0;
   const prevName = monthBack === 0 ? "지난달" : "전달";
   const diffSame = Math.abs(view.diffMs) < 60000;
   const diffText = (view.diffMs > 0 ? "+" : "−") + hmText(view.diffMs);
@@ -793,30 +919,7 @@ const MyInfo = () => {
               </>
             )}
           </p>
-          <div className="relative flex" style={{ marginTop: 8, height: 32, gap: 3 }} aria-hidden="true">
-            {refPct > 0 ? (
-              <span className="absolute left-0 right-0" style={{ bottom: refPct + "%", borderTop: "1.5px dashed #C9CFD3" }} />
-            ) : null}
-            {view.dayMs.map((ms, i) => {
-              const future = view.todayIdx >= 0 && i > view.todayIdx;
-              const today = i === view.todayIdx;
-              const h = future || ms <= 0 ? 3 : Math.max(3, Math.round((ms / barMax) * 100));
-              const bg = future ? LINE : today ? TEAL : "#9CC5BB";
-              return (
-                <span key={i} className="flex-1 flex flex-col justify-end" style={{ height: "100%" }}>
-                  <span style={{ height: h + "%", borderRadius: 3, background: bg }} />
-                </span>
-              );
-            })}
-          </div>
-          <div className="flex justify-between font-gothic" style={{ marginTop: 4, fontSize: rem(10.5), color: FAINT }}>
-            <span>{view.month + 1}월 1일</span>
-            <span className="flex items-center" style={{ gap: 4 }}>
-              <span style={{ width: 12, borderTop: "1.5px dashed #C9CFD3" }} />
-              {prevName} 하루 평균
-            </span>
-            <span>{view.days}일</span>
-          </div>
+          <StudyBars view={view} dayLabels={monthBack === 0} prevName={prevName} />
         </Card>
 
         {/* ── 훈장 ── 칸을 누르면 훈장 창, 제목 줄 오른쪽 ⓘ 는 설명 말풍선(칸 누르기와 겹치지 않게 칸 밖의 형제 단추) */}
