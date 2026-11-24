@@ -1,7 +1,7 @@
 // 관리자판 옵션 창(2026-11-24 옵션 창 통일 묶음 4)
 //   · 설정 창이 아래 시트가 되고, 안의 확인 창은 폰 뒤로가기로 확인 창만 닫힘(예전에는 설정 창이 닫히고 확인 창이 남았음)
 //   · 설정 창 안에서 연 CSV 가져오기 창이 설정 상자에 갇히지 않고 화면 바닥에 붙음
-//   · 첫 진입 아이디 정하기 창은 X 가 없고 바깥 누르기·ESC 로 닫히지 않음
+//   · 훈장 두 사람 비교를 뺀 뒤(2026-11-24): 첫 진입에 아이디 정하기 창이 뜨지 않고, 설정 창에 Medali 아이디 칸이 없음
 // 관리자판 = 예전 설교문 서버 설정이 남은 기기(src/lib/access.ts getEdition). 시험용 주소는 실제로 부르지 않습니다.
 
 import type { Page } from "@playwright/test";
@@ -13,23 +13,23 @@ async function asAdmin(page: Page, extra: Record<string, string> = {}) {
   await seedStorage(page, { "sermon-base": "https://e2e.invalid", "sermon-key": "e2e-admin", ...extra });
 }
 
-test("아이디 정하기 — X 가 없고 바깥·ESC 로 닫히지 않으며, 시작하기로 닫힌다", async ({ page }) => {
-  await asAdmin(page);
+test("훈장 아이디 — 첫 진입에 정하기 창이 없고, 설정 창에도 아이디 칸이 없다", async ({ page }) => {
+  await asAdmin(page, { "medali-peer-cache": "{\"id\":\"old\"}", "medali-last-push": "1" });
   await openApp(page, "");
-  const sheet = page.getByRole("dialog", { name: "앱에서 사용할 아이디를 입력하세요" });
-  await expect(sheet).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "닫기", exact: true })).toHaveCount(0);
-  await page.mouse.click(20, 40);
-  await page.keyboard.press("Escape");
-  await expect(sheet).toBeVisible();
-  await sheet.getByRole("textbox", { name: "아이디" }).fill("e2e1");
-  await sheet.getByRole("button", { name: "시작하기", exact: true }).click();
-  await expect(sheet).toHaveCount(0);
-  expect(await page.evaluate(() => localStorage.getItem("medali-my-id"))).toBe("e2e1");
+  await expect(page.locator('button[title="설정"]:visible').first()).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "앱에서 사용할 아이디를 입력하세요" })).toHaveCount(0);
+  // 쓰지 않게 된 비교용 저장 키는 앱 시작 때 지워집니다
+  expect(await page.evaluate(() => localStorage.getItem("medali-peer-cache"))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem("medali-last-push"))).toBeNull();
+  await page.locator('button[title="설정"]:visible').first().click();
+  const settings = page.getByRole("dialog", { name: "설정", exact: true });
+  await expect(settings).toBeVisible();
+  await expect(settings.getByText("Medali 아이디")).toHaveCount(0);
+  await expect(settings.getByText("이 기기에서는 점수를 세지 않기")).toHaveCount(0);
 });
 
 test("설정 — 확인 창은 뒤로가기로 확인 창만 닫히고, 안에서 연 CSV 창은 화면 바닥에 붙는다", async ({ page }) => {
-  await asAdmin(page, { "medali-my-id": "e2e1" });
+  await asAdmin(page);
   await openApp(page, "");
   await page.locator('button[title="설정"]:visible').first().click();
   const settings = page.getByRole("dialog", { name: "설정", exact: true });
