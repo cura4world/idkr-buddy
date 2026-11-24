@@ -147,3 +147,33 @@ test("글자 크기 — 고르는 동안 미리 보이고, X 는 원래 크기�
   expect(await rootPx()).not.toBe(px0);
   expect(await saved()).not.toBe(step0);
 });
+
+// ── 묶음 2(확인): 아래 시트 확인 창 — 대상 이름 굵게, X·취소 = 그대로, 빨간 주 단추 = 실행 ──
+
+test("단어장 삭제 확인 — 이름 굵게, X 는 취소, 삭제를 눌러야 지움", async ({ page }) => {
+  await setupPreview(page, { tier: "plus" });
+  await openApp(page, "");
+  await page.evaluate(() => {
+    const cats = JSON.parse(localStorage.getItem("kata-categories") || "[]");
+    cats.push({ id: "cat_e2e_trip", name: "여행 단어", emoji: "✈️" });
+    localStorage.setItem("kata-categories", JSON.stringify(cats));
+  });
+  const hasCat = () => page.evaluate(() => JSON.parse(localStorage.getItem("kata-categories") || "[]").some((c: { id: string }) => c.id === "cat_e2e_trip"));
+  await openApp(page, "category/cat_e2e_trip");
+  const openConfirm = async () => {
+    await page.getByRole("button", { name: "더 보기" }).click();
+    await page.getByText("단어장 삭제", { exact: true }).first().click();
+    const d = page.getByRole("alertdialog", { name: "단어장 삭제" });
+    await expect(d).toBeVisible();
+    return d;
+  };
+  let d = await openConfirm();
+  await expect(d.locator("b", { hasText: "여행 단어" })).toBeVisible();
+  await d.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(d).toHaveCount(0);
+  expect(await hasCat()).toBe(true);
+  d = await openConfirm();
+  await d.getByRole("button", { name: "삭제", exact: true }).click();
+  await expect(d).toHaveCount(0);
+  await expect.poll(hasCat).toBe(false);
+});
