@@ -622,7 +622,8 @@ const MyInfo = () => {
   const diffSame = Math.abs(view.diffMs) < 60000;
   const diffText = (view.diffMs > 0 ? "+" : "−") + hmText(view.diffMs);
 
-  // "지난주보다 +12점 · 이번 달 별 +5개". 첫 주(이번 주 월요일보다 앞선 기록 없음)는 비교 대신 안내 한 줄.
+  // "지난주보다 +12점 · 이번 달 별 +5개". 이번 주 월요일~오늘 vs 지난주 월요일~같은 요일(lastWeekPoints).
+  // 첫 주(이번 주 월요일보다 앞선 기록 없음)는 비교 대신 안내 한 줄.
   const weekDiff = weekCmp ? medal.week - weekCmp.lastWeek : 0;
   const weekDiffNode = !weekCmp ? null : weekDiff === 0 ? (
     "지난주와 같습니다"
