@@ -16,6 +16,9 @@ export type MedaliHelpKind = "api" | "bintang";
 // 훈장 명찰(MedaliBadge)과 같은 아이콘 외곽선
 const STROKE = "rgba(255,255,255,0.55)";
 const BUBBLE_BG = "#1F2A30";
+// 제목 색 — 내 정보 칸 아이콘 색(#E8875A·#E0B04A)을 어두운 바탕용으로 밝힌 것(2026-11-24).
+// 바탕 #1F2A30 대비 명암비: 불꽃 6.34:1, 별 7.87:1 (기준 4.5:1 이상)
+const TITLE_COLOR: Record<MedaliHelpKind, string> = { api: "#F0936A", bintang: "#E3B85C" };
 const HELP_BTN_ATTR = "data-medali-help-btn";
 
 // 다음 click 하나를 먹습니다(600ms 안에 오지 않으면 그냥 풀림). 말풍선이 사라진 뒤에도 남아 있어야 하므로 컴포넌트 밖에 둡니다.
@@ -156,7 +159,7 @@ export function MedaliHelpBubble({
           style={{ top: -6, left: tailX - 7, width: 14, height: 14, background: BUBBLE_BG, transform: "rotate(45deg)", borderRadius: 2 }}
         />
       ) : null}
-      <p id={"medali-help-" + kind + "-title"} className="relative" style={{ margin: 0, fontSize: "0.875rem", fontWeight: 700, lineHeight: 1.4 }}>
+      <p id={"medali-help-" + kind + "-title"} className="relative" style={{ margin: 0, fontSize: "0.875rem", fontWeight: 700, lineHeight: 1.4, color: TITLE_COLOR[kind] }}>
         {text.title}
       </p>
       <p className="relative" style={{ margin: "6px 0 0", fontSize: "0.8125rem", lineHeight: 1.6, color: "rgba(255,255,255,0.88)", wordBreak: "keep-all" }}>
