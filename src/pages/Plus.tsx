@@ -549,19 +549,23 @@ const Plus = () => {
                     <span className={gothic} style={{ flex: "none", fontSize: "0.75rem", color: C.faint }}>{priceMissing}</span>
                   )}
                   {c.badge ? (
+                    // 할인 알약 — 글자를 가로·세로 가운데로(2026-11-25). line-height 22px 로만 맞추면 Pretendard 의 위쪽 여백 때문에
+                    // 글자 잉크가 알약 중심보다 1.25px 위에 떴습니다(412px·100% 실측). 가운데 정렬 + 줄 높이 1 + 위 0.05em 으로 −0.25px
                     <span
-                      className={"absolute " + gothic}
+                      data-discount-badge
+                      className={"absolute inline-flex items-center justify-center " + gothic}
                       style={{
                         top: -11,
                         right: 14,
                         height: 22,
-                        padding: "0 9px",
+                        padding: "0.05em 9px 0",
                         borderRadius: 11,
                         backgroundColor: C.gold,
                         color: "#FFFFFF",
                         fontSize: "0.6875rem",
                         fontWeight: 700,
-                        lineHeight: "22px",
+                        lineHeight: 1,
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {c.badge}
