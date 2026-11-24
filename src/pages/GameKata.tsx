@@ -320,7 +320,9 @@ const GameKata = () => {
       {!rec.done ? (
         <div className="mt-12 px-2 font-gothic text-[11.5px] leading-[1.6] break-keep text-center" style={{ color: G.sub }}>
           <p className="m-0">다섯 글자 인도네시아어 단어를 넣고 ‘확인’을 누르세요.</p>
-          <p className="m-0 mt-1 flex flex-wrap justify-center gap-x-2.5 gap-y-0.5">
+          {/* 칸 색은 색마다 한 줄(2026-11-24 Arga). 묶음은 가운데, 줄은 왼쪽 맞춤이라 색 칸이 세로로 나란히 섭니다 */}
+          <p className="m-0 mt-1 flex justify-center">
+            <span className="inline-flex flex-col items-start gap-y-0.5 text-left">
             <span className="inline-flex items-center gap-1">
               <span className="inline-block w-2.5 h-2.5 rounded-[3px]" style={{ background: MARK_BG.hit }} aria-hidden="true" />
               초록: 글자와 자리가 맞음
@@ -332,6 +334,7 @@ const GameKata = () => {
             <span className="inline-flex items-center gap-1">
               <span className="inline-block w-2.5 h-2.5 rounded-[3px]" style={{ background: MARK_BG.miss }} aria-hidden="true" />
               회색: 단어에 없는 글자
+            </span>
             </span>
           </p>
           <p className="m-0 mt-1">{MAX_TRIES}번 안에 맞혀 보세요.</p>
