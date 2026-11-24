@@ -3,6 +3,7 @@
 //   · 입력 창에 글을 넣었으면 끌기·바깥 누르기로 닫히지 않고 X 로만 닫힘
 //   · 내용이 길어도 주 단추는 창 바닥에 붙어 있음
 
+import fs from "node:fs";
 import type { Page } from "@playwright/test";
 import { test, expect, setupPreview, openApp } from "../fixtures";
 
@@ -176,4 +177,30 @@ test("단어장 삭제 확인 — 이름 굵게, X 는 취소, 삭제를 눌러�
   await d.getByRole("button", { name: "삭제", exact: true }).click();
   await expect(d).toHaveCount(0);
   await expect.poll(hasCat).toBe(false);
+});
+
+// ── 묶음 3(안내): 지도 사진 크게 보기 — 폰 뒤로가기는 사진만 닫고 지역 시트는 그대로(예전에는 시트가 닫히고 사진이 남았음) ──
+
+test("지도 사진 크게 보기 — 뒤로가기는 사진만 닫는다", async ({ page }) => {
+  await setupPreview(page, { tier: "plus" });
+  // 사진은 바깥 주소(wikimedia)라 시험에서는 앱에 있는 그림으로 대신 줍니다
+  const png = fs.readFileSync("e2e/card-sample.png");
+  await page.route("**/upload.wikimedia.org/**", (r) => r.fulfill({ status: 200, contentType: "image/png", body: png }));
+  await openApp(page, "map");
+  const pin = await page.waitForFunction(() => {
+    const g = document.querySelector('g[data-pin-id="Jakarta"]') as SVGGElement | null;
+    if (!g || getComputedStyle(g).opacity === "0") return null;
+    const r = g.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  const p = (await pin.jsonValue()) as { x: number; y: number };
+  await page.mouse.click(p.x, p.y);
+  const sheet = page.getByRole("dialog", { name: "자카르타" });
+  await expect(sheet).toBeVisible();
+  await page.waitForTimeout(600); // 열린 직후 0.5초는 시트 안 누름을 무시함
+  await sheet.locator("img[alt$='사진 1']").click();
+  await expect(page.getByAltText("확대 사진")).toBeVisible();
+  await page.goBack();
+  await expect(page.getByAltText("확대 사진")).toHaveCount(0);
+  await expect(sheet).toBeVisible();
 });
