@@ -18,6 +18,7 @@
 // 크기: 글자는 rem(글자 크기 85~125% 를 따름), 테두리·여백·아이콘 칸은 px.
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { CSSProperties, FormEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { Check, CircleHelp, Trash2, X } from "lucide-react";
 import { useBackClose } from "@/hooks/useBackClose";
@@ -122,6 +123,8 @@ export interface AppSheetProps {
   onSubmit?: (e: FormEvent<HTMLFormElement>) => void;
   /** true 면 어떤 방법으로도 닫히지 않습니다(만드는 중 등) */
   closeLocked?: boolean;
+  /** true 면 X 단추를 그리지 않고 어떤 방법으로도 닫히지 않습니다(처음 한 번 꼭 정해야 하는 창 — 아이디 정하기) */
+  noClose?: boolean;
   /** true 면 끌기·바깥 누르기로 닫히지 않습니다(입력 창에 글을 넣음) — X·취소로만 */
   dirty?: boolean;
   /** 폰 뒤로가기를 이 틀이 처리(useBackClose). 부르는 쪽이 이미 처리하면 false(기본) */
@@ -147,13 +150,16 @@ export interface AppSheetProps {
   onPanelClickCapture?: (e: ReactMouseEvent<HTMLDivElement>) => void;
   /** 머리를 끌어 닫기(기본 켬). 화면을 돌린 가로 보기처럼 끄는 방향이 맞지 않는 곳에서는 끕니다 */
   dragClose?: boolean;
+  /** true 면 부른 자리에 그대로 그립니다(기본은 body 에 그림). 돌린 화면(지도 가로 보기)처럼 부모 상자 안에 있어야 할 때만 */
+  inline?: boolean;
 }
 
 export default function AppSheet({
   open, onClose, title, desc, icon, tone = "teal", tileBg, tileInk, children, footer, onSubmit,
-  closeLocked, dirty, backClose, role = "dialog", zIndex = 50, gap = 8,
-  titleNode, widthClass = "max-w-lg", subHeader, bodyStyle, bodyPadding, maxHeight, onPanelClickCapture, dragClose = true,
+  closeLocked: closeLockedProp, noClose, dirty, backClose, role = "dialog", zIndex = 50, gap = 8,
+  titleNode, widthClass = "max-w-lg", subHeader, bodyStyle, bodyPadding, maxHeight, onPanelClickCapture, dragClose = true, inline,
 }: AppSheetProps) {
+  const closeLocked = !!closeLockedProp || !!noClose;
   const reduce = prefersReducedMotion();
   const [mounted, setMounted] = useState(open);
   // "동작 줄이기"면 움직임 없이 처음부터 제자리(화면 테스트도 이 설정으로 돕니다)
@@ -271,7 +277,9 @@ export default function AppSheet({
     <div className="shrink-0" style={{ padding: "12px 20px calc(16px + env(safe-area-inset-bottom))" }}>{footer}</div>
   ) : null;
 
-  return (
+  // body 에 그립니다 — 부모 상자에 transform·overflow 가 있으면(다른 창 안에서 연 창) fixed 가 그 상자에 갇혀
+  // 화면 바닥이 아니라 상자 안에 잘려 그려지기 때문입니다(2026-11-24, 설정 창 안 CSV 가져오기).
+  const node = (
     <div className="fixed inset-0" style={{ zIndex }} data-app-sheet="">
       <div
         className="absolute inset-0"
@@ -321,18 +329,20 @@ export default function AppSheet({
                 <span className="block mt-0.5 font-gothic text-[0.78125rem] leading-[1.45] break-keep" style={{ color: SHEET.sub }}>{desc}</span>
               ) : null}
             </span>
-            <button
-              type="button"
-              onClick={cancel}
-              onPointerDown={(e) => e.stopPropagation()}
-              disabled={closeLocked}
-              className="flex items-center justify-center shrink-0 rounded-full disabled:opacity-50"
-              style={{ width: 34, height: 34, background: SHEET.xBg, color: SHEET.sub }}
-              title="닫기"
-              aria-label="닫기"
-            >
-              <X size={15} strokeWidth={2.2} />
-            </button>
+            {noClose ? null : (
+              <button
+                type="button"
+                onClick={cancel}
+                onPointerDown={(e) => e.stopPropagation()}
+                disabled={closeLocked}
+                className="flex items-center justify-center shrink-0 rounded-full disabled:opacity-50"
+                style={{ width: 34, height: 34, background: SHEET.xBg, color: SHEET.sub }}
+                title="닫기"
+                aria-label="닫기"
+              >
+                <X size={15} strokeWidth={2.2} />
+              </button>
+            )}
           </div>
         </div>
         {subHeader ? <div className="shrink-0 mt-3">{subHeader}</div> : null}
@@ -350,6 +360,7 @@ export default function AppSheet({
       </div>
     </div>
   );
+  return inline || typeof document === "undefined" ? node : createPortal(node, document.body);
 }
 
 // ── 바닥 단추 ────────────────────────────────────────────────
