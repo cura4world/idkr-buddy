@@ -130,6 +130,10 @@ const ENT_RECHECK_MS = 60 * 60 * 1000; // 만료 뒤·무료로 내려간 뒤·P
 const ENT_ACK_RETRY_MS = 10 * 60 * 1000; // 확인(acknowledge)이 안 된 구매: 10분에 한 번까지 다시 시도
 const ENT_FREE_RECHECK_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // 무료로 내려간 뒤에도 30일 동안은 다시 묻는다
 const ENT_OUTAGE_GRACE_MS = 24 * 60 * 60 * 1000; // 만료 시각이 지났는데 Play 가 안 될 때: 하루까지는 지금 등급 유지
+// 갱신 반영 지연(2026-11-24): Play 가 "이용 중"이라면서 만료 시각은 아직 옛 값으로 답할 때, 이 시간 동안은 무료로 적지 않고
+// 1분 간격으로 다시 묻습니다. 테스트 구독(월간 5분)에서 갱신 순간 이렇게 답해 잠깐 무료로 적힌 것을 막습니다.
+const ENT_RENEW_PENDING_MS = 15 * 60 * 1000;
+const ENT_RENEW_RETRY_MS = 60 * 1000;
 const ACK_FAIL_TTL_SEC = 7 * 24 * 3600;
 const SPEC_TTL_SEC = 400 * 24 * 3600; // 로그인 전에 미리 준 등급의 수명
 const REPORT_TTL_SEC = 180 * 24 * 3600; // 신고 보관 기간
@@ -139,6 +143,11 @@ const VALID_SUB_STATES = [
   "SUBSCRIPTION_STATE_ACTIVE",
   "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
   "SUBSCRIPTION_STATE_CANCELED", // 자동 갱신만 꺼진 상태 — 만료 시각까지는 이용 가능
+];
+// 만료 시각이 막 지났어도 갱신을 기다릴 상태 — 자동 갱신이 살아 있는 것만(해지·만료·환불·보류는 바로 무료)
+const RENEW_WAIT_STATES = [
+  "SUBSCRIPTION_STATE_ACTIVE",
+  "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
 ];
 
 const AI_PATH_RE = new RegExp("^/ai/gemini/([A-Za-z0-9.\\-]+):generateContent$");
@@ -499,6 +508,7 @@ function isLegacyTrialEnt(ent) {
  *   이용 중(만료 전)      마지막 답에서 하루가 지났으면 — 환불·취소(권한 회수)는 만료 전에 일어납니다(B-01).
  *                        확인(acknowledge)이 안 된 구매는 10분에 한 번까지(B-04).
  *   만료 시각이 지남      만료 뒤에 아직 묻지 않았으면 바로, 그 뒤로는 한 시간에 한 번까지.
+ *                        단 갱신 반영을 기다리는 중(renewPending)이면 만료 뒤 15분 동안은 1분에 한 번까지(2026-11-24).
  *   무료로 내려감         구매 토큰이 있으면 내려간 뒤 30일 동안 한 시간에 한 번까지 — 갱신이 늦게 반영됐거나
  *                        결제 수단을 고쳐 구독이 살아난 사용자가 무료로 굳지 않게(B-02).
  */
@@ -511,6 +521,7 @@ function shouldAskPlay(ent, now) {
       if (ent.ackPending) return now - last > ENT_ACK_RETRY_MS;
       return now - checked > ENT_LIVE_RECHECK_MS && now - last > ENT_RECHECK_MS;
     }
+    if (ent.renewPending && now - ent.until < ENT_RENEW_PENDING_MS) return now - last > ENT_RENEW_RETRY_MS;
     return last < ent.until || now - last > ENT_RECHECK_MS;
   }
   if (ent.tier === "free") {
@@ -557,6 +568,9 @@ async function getPlan(env, uid) {
   if (staff) return staff;
   if (!isPaidTier(ent)) return { tier: "free", until: 0 };
   if (ent.until > now) return paidPlan(ent, ent.until);
+  // Play 가 "이용 중"이라면서 만료 시각을 아직 옛 값으로 답함(갱신 반영 지연) — 만료 뒤 15분까지는 Plus 그대로.
+  // 만료 시각은 옛 값 그대로 줍니다(앱은 갱신 확인 유예로 Plus 를 유지하며 다시 확인함). 예전 체험 기록은 받지 않습니다.
+  if (ent.renewPending && !isLegacyTrialEnt(ent) && now - ent.until < ENT_RENEW_PENDING_MS) return paidPlan(ent, ent.until);
   // 만료 시각은 지났는데 Play 가 답을 못 준 경우(일시 오류): 하루까지는 지금 등급을 유지하고 한 시간 뒤 다시 묻습니다.
   // Play 가 한 번이라도 답하면 ent 가 새로 쓰이므로(무료 또는 새 만료 시각) 이 길로 오지 않습니다.
   // 예전 체험 기록은 이 유예를 받지 않습니다 — 원래 체험 끝 시각까지만(2026-11-23 Arga 결정).
@@ -1155,6 +1169,20 @@ async function verifyWithPlay(env, uid, productId, purchaseToken) {
   // 끝난 구매(만료·환불된 옛 토큰)가 지금 이용 중인 다른 구매를 덮어써 무료로 만들지 않게 합니다.
   if (!valid && prevEnt && !sameToken && isPaidTier(prevEnt) && prevEnt.until > now) {
     return { valid: false, until: 0, ackPending: false, ent: prevEnt };
+  }
+
+  // 갱신 반영 지연(2026-11-24): Play 는 이용 중(ACTIVE·유예)이라는데 만료 시각이 막 지난 옛 값 — 갱신이 아직 반영되지 않았습니다.
+  // 만료 뒤 15분까지는 무료로 적지 않고 이전 유료 기록을 그대로 두고 표시(renewPending)만 합니다 → shouldAskPlay 가 1분 간격으로 다시 묻습니다.
+  // Play 기준으로는 이용 중이므로 valid 로 답합니다(앱이 결제창을 열어 "이미 가입" 오류가 나지 않게).
+  // 해지·만료·환불(CANCELED·EXPIRED 등)은 여기 오지 않고 지금처럼 바로 무료. 예전 체험 기록은 원래 끝까지만(유예 없음).
+  const renewPending = !valid && RENEW_WAIT_STATES.indexOf(sub.subscriptionState) >= 0 &&
+    until > 0 && until <= now && now - until < ENT_RENEW_PENDING_MS &&
+    !!prevEnt && sameToken && isPaidTier(prevEnt) && !isLegacyTrialEnt(prevEnt);
+  if (renewPending) {
+    const keep = Object.assign({}, prevEnt, { renewPending: true, checkedAt: now });
+    delete keep.triedAt;
+    await kvPutJson(env, "ent:" + uid, keep);
+    return { valid: true, renewPending: true, until: keep.until, ackPending: !!keep.ackPending, ent: keep };
   }
 
   const nextEnt = {
