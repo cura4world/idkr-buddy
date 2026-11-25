@@ -44,6 +44,18 @@ export function isPlayStoreApp(): boolean {
 }
 
 /** 스토어 앱 버전 ("1.0.N"). 스토어 앱이 아니면 빈 문자열. */
+/**
+ * 화면 쪽 빌드 번호(2026-11-25 ⑥) — "11.25-877"(빌드한 날·Actions 실행 번호), 미리보기 "…p", Actions 밖 "dev".
+ * 앱 껍데기 번호(storeAppVersion)는 화면을 고쳐도 그대로라, 앱 정보에 이 번호를 같이 보여 어느 화면 판인지 가립니다.
+ */
+export function webBuildLabel(): string {
+  try {
+    return typeof __WEB_BUILD__ === "string" && __WEB_BUILD__ ? __WEB_BUILD__ : "dev";
+  } catch (e) {
+    return "dev";
+  }
+}
+
 export function storeAppVersion(): string {
   const b = storeBridge();
   if (!b || typeof b.version !== "function") return "";
