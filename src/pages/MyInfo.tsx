@@ -279,6 +279,64 @@ const REF_LINE = "#9AA1A6";
 const WHITE_OUTLINE =
   "-1px -1px 0 #FFFFFF, 1px -1px 0 #FFFFFF, -1px 1px 0 #FFFFFF, 1px 1px 0 #FFFFFF, 0 -1.5px 0 #FFFFFF, 0 1.5px 0 #FFFFFF, -1.5px 0 0 #FFFFFF, 1.5px 0 0 #FFFFFF, 0 0 3px #FFFFFF";
 
+// ── 칸 높이 고정(2026-11-25) ──
+// 같은 화면 폭·같은 글자 크기에서는 기록 내용·"이번 달/지난달"과 상관없이 공부 시간 칸 높이가 같아야 합니다.
+// 줄이 꺾일 수 있는 줄마다 가장 긴 경우를 보이지 않게 같은 칸에 겹쳐 두어 그 높이를 자리로 잡습니다.
+// 가장 긴 경우 = 한 달 내내 켜 둔 744시간 59분 · 하루 평균 23시간 59분(실제로 나올 수 있는 가장 큰 값)
+const GHOST_TOTAL_H = 744;
+const GHOST_AVG = "23시간 59분";
+
+const ReserveLine = ({ ghost, children, style }: { ghost: React.ReactNode; children: React.ReactNode; style?: React.CSSProperties }) => (
+  <div className="grid" style={style}>
+    <div style={{ gridArea: "1 / 1", minWidth: 0 }}>{children}</div>
+    <div aria-hidden="true" style={{ gridArea: "1 / 1", minWidth: 0, visibility: "hidden" }}>{ghost}</div>
+  </div>
+);
+
+/** 작은 "이번 달" + 큰 "6시간 24분" + 작은 "하루 평균 16분". 좁은 화면·큰 글자에서는 "하루 평균"이 다음 줄로(flex-wrap, 2026-11-23 Arga 19) */
+const TotalLine = ({ label, h, m, avg }: { label: string; h: number; m: number; avg: string }) => (
+  <p className="flex flex-wrap items-baseline" style={{ margin: 0, columnGap: 6, rowGap: 0 }}>
+    <span className="font-gothic" style={{ fontSize: rem(11.5), color: MUTED }}>{label}</span>
+    <span className="inline-flex items-baseline" style={{ gap: 6 }}>
+      {h > 0 ? (
+        <>
+          <span className="tabular-nums" style={{ fontSize: rem(19.5), fontWeight: 700, color: TEAL }}>{h}</span>
+          <span style={{ fontSize: rem(12.5), fontWeight: 500 }}>시간</span>
+        </>
+      ) : null}
+      <span className="tabular-nums" style={{ fontSize: rem(19.5), fontWeight: 700, color: TEAL }}>{m}</span>
+      <span style={{ fontSize: rem(12.5), fontWeight: 500 }}>분</span>
+    </span>
+    <span className="font-gothic whitespace-nowrap" style={{ fontSize: rem(11.5), color: MUTED }}>하루 평균 {avg}</span>
+  </p>
+);
+
+/** "지난달 같은 기간보다 +1시간 5분" / "지난달 같은 기간과 같음" */
+const DiffLine = ({ prevName, same, up, text }: { prevName: string; same: boolean; up: boolean; text: string }) => (
+  <p className="font-gothic" style={{ margin: 0, fontSize: rem(11.5), color: MUTED }}>
+    {same ? (
+      prevName + " 같은 기간과 같음"
+    ) : (
+      <>
+        {prevName} 같은 기간보다{" "}
+        <b style={{ color: up ? TEAL : MUTED }}>{text}</b>
+      </>
+    )}
+  </p>
+);
+
+/** 그래프 아래 설명 줄: "11월 1일 · ---- 지난달 하루 평균 40분 · 30일" */
+const LegendRow = ({ month, prevName, avg, days, ghost = false }: { month: number; prevName: string; avg: string; days: number; ghost?: boolean }) => (
+  <div className="flex justify-between items-start font-gothic" style={{ gap: 8, fontSize: rem(10.5), color: FAINT }}>
+    <span className="shrink-0">{month}월 1일</span>
+    <span data-ref-legend={ghost ? undefined : ""} className="flex items-center justify-center break-keep text-center" style={{ gap: 4 }}>
+      <span className="shrink-0" style={{ width: 12, borderTop: "1.5px dashed " + REF_LINE }} />
+      <span>{prevName} 하루 평균{avg ? " " + avg : ""}</span>
+    </span>
+    <span className="shrink-0">{days}일</span>
+  </div>
+);
+
 /** 막대 높이(%) — 몇 분만 쓴 날·앞으로의 날은 3% */
 function barPct(ms: number, barMax: number, future: boolean): number {
   return future || ms <= 0 ? 3 : Math.max(3, Math.round((ms / barMax) * 100));
@@ -381,14 +439,10 @@ const StudyBars = ({ view, dayLabels, prevName }: { view: MonthView; dayLabels: 
           <span ref={tRef} data-day-label="today" style={labelStyle(BAR_TODAY, layout && layout.today)}>오늘 {tText}</span>
         ) : null}
       </div>
-      <div className="flex justify-between items-start font-gothic" style={{ marginTop: 4, gap: 8, fontSize: rem(10.5), color: FAINT }}>
-        <span className="shrink-0">{view.month + 1}월 1일</span>
-        <span data-ref-legend className="flex items-center justify-center break-keep text-center" style={{ gap: 4 }}>
-          <span className="shrink-0" style={{ width: 12, borderTop: "1.5px dashed " + REF_LINE }} />
-          <span>{prevName} 하루 평균{view.refAvgMs > 0 ? " " + hmText(view.refAvgMs) : ""}</span>
-        </span>
-        <span className="shrink-0">{view.days}일</span>
-      </div>
+      {/* 설명 줄도 가장 긴 경우("지난달 하루 평균 23시간 59분", 12월·31일)로 자리를 잡아 둠 — 값 있음/없음에 따라 줄 수가 바뀌어도 칸 높이 그대로 */}
+      <ReserveLine style={{ marginTop: 4 }} ghost={<LegendRow month={12} prevName="지난달" avg={GHOST_AVG} days={31} ghost />}>
+        <LegendRow month={view.month + 1} prevName={prevName} avg={view.refAvgMs > 0 ? hmText(view.refAvgMs) : ""} days={view.days} />
+      </ReserveLine>
     </>
   );
 };
@@ -863,30 +917,25 @@ const MyInfo = () => {
           </div>
           {/* 첫 줄: 작은 "이번 달" + 큰 "6시간 24분" + 작은 "하루 평균 16분", 둘째 줄: "지난달 같은 기간보다 …"
               (2026-11-23 Arga 19). 좁은 화면·큰 글자에서는 "하루 평균"이 넘치지 않고 다음 줄로 내려갑니다(flex-wrap). */}
-          <p className="flex flex-wrap items-baseline" style={{ margin: "6px 0 0", columnGap: 6, rowGap: 0 }}>
-            <span className="font-gothic" style={{ fontSize: rem(11.5), color: MUTED }}>{monthBack === 0 ? "이번 달" : "지난달"}</span>
-            <span className="inline-flex items-baseline" style={{ gap: 6 }}>
-              {hm.h > 0 ? (
-                <>
-                  <span className="tabular-nums" style={{ fontSize: rem(19.5), fontWeight: 700, color: TEAL }}>{hm.h}</span>
-                  <span style={{ fontSize: rem(12.5), fontWeight: 500 }}>시간</span>
-                </>
-              ) : null}
-              <span className="tabular-nums" style={{ fontSize: rem(19.5), fontWeight: 700, color: TEAL }}>{hm.m}</span>
-              <span style={{ fontSize: rem(12.5), fontWeight: 500 }}>분</span>
-            </span>
-            <span className="font-gothic whitespace-nowrap" style={{ fontSize: rem(11.5), color: MUTED }}>하루 평균 {hmText(view.avgMs)}</span>
-          </p>
-          <p className="font-gothic" style={{ margin: "2px 0 0", fontSize: rem(11.5), color: MUTED }}>
-            {diffSame ? (
-              prevName + " 같은 기간과 같음"
-            ) : (
+          {/* 2026-11-25 칸 높이 고정: 줄이 꺾일 수 있는 줄은 가장 긴 경우(보이지 않는 글)를 같은 칸에 겹쳐 두어,
+              기록·"이번 달/지난달"과 상관없이 같은 폭·같은 글자 크기면 칸 높이가 같습니다(ReserveLine) */}
+          {/* 두 줄을 한 묶음으로 자리를 잡아, 남는 자리는 두 줄 사이가 아니라 아래(그래프 위)에 생기게 */}
+          <ReserveLine
+            style={{ marginTop: 6 }}
+            ghost={
               <>
-                {prevName} 같은 기간보다{" "}
-                <b style={{ color: view.diffMs > 0 ? TEAL : MUTED }}>{diffText}</b>
+                <TotalLine label="이번 달" h={GHOST_TOTAL_H} m={59} avg={GHOST_AVG} />
+                <div style={{ marginTop: 2 }}>
+                  <DiffLine prevName="지난달" same={false} up text={"+" + GHOST_TOTAL_H + "시간 59분"} />
+                </div>
               </>
-            )}
-          </p>
+            }
+          >
+            <TotalLine label={monthBack === 0 ? "이번 달" : "지난달"} h={hm.h} m={hm.m} avg={hmText(view.avgMs)} />
+            <div style={{ marginTop: 2 }}>
+              <DiffLine prevName={prevName} same={diffSame} up={view.diffMs > 0} text={diffText} />
+            </div>
+          </ReserveLine>
           <StudyBars view={view} dayLabels={monthBack === 0} prevName={prevName} />
         </Card>
 
