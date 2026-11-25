@@ -266,8 +266,8 @@ function koDate(t: number): string {
 }
 
 // ── 공부 시간 막대 그래프 ─────────────────────────────────────────
-// 2026-11-25 지시서 A: 칸·그래프 높이는 그대로(32px). 막대 색 세 단계(오늘 #2C6D63 · 어제 #467D73 · 그 전 #9CC5BB),
-// 어제·오늘 숫자(흰 테두리 글자, 자리는 lib/studyChartLabels.ts 의 순수 함수가 실제 글자 폭으로 계산),
+// 2026-11-25 지시서 A: 막대 색 세 단계(오늘 #2C6D63 · 어제 #64998F · 그 전 #9CC5BB),
+// 어제·오늘 숫자(흰 테두리 글자, 자리는 lib/studyChartLabels.ts 의 순수 함수가 실제 글자 폭으로 계산 — 어제는 어제 막대 왼쪽, 오늘은 오늘 막대 오른쪽),
 // 지난달 하루 평균 점선 #9AA1A6 을 막대 위에, 설명 줄 끝에 평균 값. "지난달" 보기는 점선 색·평균 값만(숫자·색 단계 없음).
 // 그래프(막대) 영역 높이 — 2026-11-25 32 → 43px(4/3 = 42.67 을 반올림) → 같은 날 +16 = 59px.
 // 막대 비율·평균선·어제·오늘 숫자 자리는 이 값에 맞춰 그대로 비례
@@ -276,7 +276,9 @@ const CHART_H = 59;
 const CHART_GAP_TOP = 20;
 const BAR_GAP = 3;
 const BAR_TODAY = TEAL;
-const BAR_YESTERDAY = "#467D73";
+// 어제 막대는 오늘 #2C6D63 과 지난 날들 #9CC5BB 의 중간(2026-11-25, 예전 #467D73). 어제 숫자 색은 #467D73 그대로
+const BAR_YESTERDAY = "#64998F";
+const LABEL_YESTERDAY = "#467D73";
 const BAR_PAST = "#9CC5BB";
 const REF_LINE = "#9AA1A6";
 // 상자 없이 흰 테두리만 — 막대·점선과 겹쳐도 읽히게
@@ -359,7 +361,9 @@ const StudyBars = ({ view, dayLabels, prevName }: { view: MonthView; dayLabels: 
 
   const chartRef = useRef<HTMLDivElement>(null);
   const yRef = useRef<HTMLSpanElement>(null);
+  // 오늘 숫자는 한 줄·두 줄 두 모양을 늘 보이지 않게 재어 둡니다(보이는 쪽 글이 바뀌어도 잰 값이 흔들리지 않게)
   const tRef = useRef<HTMLSpanElement>(null);
+  const t2Ref = useRef<HTMLSpanElement>(null);
   const [layout, setLayout] = useState<ChartLabelLayout | null>(null);
   const [tick, setTick] = useState(0);
 
@@ -384,6 +388,7 @@ const StudyBars = ({ view, dayLabels, prevName }: { view: MonthView; dayLabels: 
       todayBarH: (CHART_H * tPct) / 100,
       yesterday: yText ? size(yRef.current) : null,
       today: tText ? size(tRef.current) : null,
+      todayTwoLine: tText ? size(t2Ref.current) : null,
     });
     setLayout((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
   }, [yText, tText, yPct, tPct, ti, view.days, tick]);
@@ -403,7 +408,8 @@ const StudyBars = ({ view, dayLabels, prevName }: { view: MonthView; dayLabels: 
     return () => { if (ro) ro.disconnect(); };
   }, []);
 
-  const labelStyle = (color: string, p: { x: number; y: number } | null | undefined): React.CSSProperties => ({
+  // 숫자 글씨 — 어제 보통(400), 오늘 굵게(700)(2026-11-25). 크기 11px·흰 테두리·줄 높이 1.15 는 같음
+  const labelStyle = (color: string, weight: number, p: { x: number; y: number } | null | undefined): React.CSSProperties => ({
     position: "absolute",
     left: p ? p.x : 0,
     top: p ? p.y : 0,
@@ -411,12 +417,13 @@ const StudyBars = ({ view, dayLabels, prevName }: { view: MonthView; dayLabels: 
     zIndex: 2,
     whiteSpace: "nowrap",
     fontSize: rem(11),
-    fontWeight: 400, // 2026-11-25 굵게(700) → 보통(400)
+    fontWeight: weight,
     lineHeight: 1.15,
     color,
     textShadow: WHITE_OUTLINE,
     pointerEvents: "none",
   });
+  const todayTwo = !!layout && layout.todayLines === 2;
 
   return (
     <>
@@ -437,10 +444,18 @@ const StudyBars = ({ view, dayLabels, prevName }: { view: MonthView; dayLabels: 
           <span className="absolute left-0 right-0" style={{ bottom: refPct + "%", borderTop: "1.5px dashed " + REF_LINE, zIndex: 1 }} />
         ) : null}
         {yText ? (
-          <span ref={yRef} data-day-label="yesterday" style={labelStyle(BAR_YESTERDAY, layout && layout.yesterday)}>어제 {yText}</span>
+          <span ref={yRef} data-day-label="yesterday" style={labelStyle(LABEL_YESTERDAY, 400, layout && layout.yesterday)}>어제 {yText}</span>
         ) : null}
         {tText ? (
-          <span ref={tRef} data-day-label="today" style={labelStyle(BAR_TODAY, layout && layout.today)}>오늘 {tText}</span>
+          <>
+            {/* 보이는 오늘 숫자 — 오른쪽에 한 줄이 안 들어가면 같은 자리에 두 줄 "오늘" / "2h 30m" */}
+            <span data-day-label="today" data-lines={todayTwo ? 2 : 1} style={labelStyle(BAR_TODAY, 700, layout && layout.today)}>
+              {todayTwo ? <>오늘<br />{tText}</> : <>오늘 {tText}</>}
+            </span>
+            {/* 재기 전용(보이지 않음) */}
+            <span ref={tRef} aria-hidden="true" style={labelStyle(BAR_TODAY, 700, null)}>오늘 {tText}</span>
+            <span ref={t2Ref} aria-hidden="true" style={labelStyle(BAR_TODAY, 700, null)}>오늘<br />{tText}</span>
+          </>
         ) : null}
       </div>
       {/* 설명 줄도 가장 긴 경우("지난달 하루 평균 23시간 59분", 12월·31일)로 자리를 잡아 둠 — 값 있음/없음에 따라 줄 수가 바뀌어도 칸 높이 그대로 */}
