@@ -11,7 +11,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { goBackOr } from "@/lib/nav";
-import { storeAppVersion, PRIVACY_URL, TERMS_URL, BUSINESS_INFO_URL } from "@/lib/platform";
+import { storeAppVersion, webBuildLabel, PRIVACY_URL, TERMS_URL, BUSINESS_INFO_URL } from "@/lib/platform";
 import { PhotoCreditsLink } from "@/pages/PhotoCredits";
 
 export const APP_INFO_PATH = "/about";
@@ -55,7 +55,13 @@ const AppInfo = () => {
         <section>
           <p className={SECTION}>버전</p>
           <div className={CARD + " px-4 py-3.5"} style={CARD_STYLE}>
-            <p className="font-gothic text-[0.9375rem] text-foreground">Kata kata {version}</p>
+            {/* 뒤의 " · 11.25-877" 은 화면 쪽 빌드 번호(흐리게, 2026-11-25 ⑥). 줄이 모자라면 그 부분만 다음 줄로 */}
+            <p className="font-gothic text-[0.9375rem] text-foreground">
+              Kata kata {version}{" "}
+              <span data-web-build className="whitespace-nowrap" style={{ color: "#8A9398" }}>
+                · {webBuildLabel()}
+              </span>
+            </p>
           </div>
         </section>
 
