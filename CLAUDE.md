@@ -232,7 +232,8 @@ src/
   lib/illust.ts·illustFit.ts + data/illust/ 색연필 그림(README 가 정본) · lib/kataHariIni.ts + data/kataHariIniWords.ts
   퍼즐 정답 동결본(맨 끝에만 붙임) · lib/mapPhotos.ts 지도 사진 고정 목록(scripts/build-map-photos.mjs, Actions 에서 생성) ·
   hooks/useBackClose.ts 창·시트 뒤로가기 닫기 · hooks/useOutsideTapClose.ts 떠 있는 상자 바깥 누르기 닫기(그 누르기는 먹음, ⓘ 말풍선·명찰 요약 상자) · components/BottomTabs·PlusLockBox·PreviewPanel·WordIllust·LevelCircles·WordMiniSheet ·
-  components/PlusMoreButton.tsx 홈 Plus 카드·내 정보 회원 칸이 같이 쓰는 "Plus / 자세히 보기" 금색 알약(화면 읽기 이름 "Plus 자세히 보기") ·
+  components/PlusMoreButton.tsx 홈 Plus 카드·내 정보 회원 칸이 같이 쓰는 "Plus / 자세히 보기" 금색 알약(화면 읽기 이름 "Plus 자세히 보기") + "구독 / 관리" 알약 ·
+  components/PlusCard.tsx "Kata kata Plus" 크림색 카드(홈 Plus 카드·내 정보 무료/Plus 회원 칸 공용) · lib/studyChartLabels.ts 내 정보 공부 시간 그래프의 어제·오늘 숫자 자리 계산(순수 함수) ·
   components/WebGate.tsx 스토어 앱이 아니고 회원키·예전 설정도 없는 방문자에게 앱 대신 보이는 안내 화면(회원키 입력 포함, 2026-11-14) ·
   components/ErrorBoundary.tsx 화면 오류 시 흰 화면 대신 "다시 열기" · lib/playOffers.ts Play 가격(가격을 보이는 곳은 모두 이것을 씀, 체험 제안은 고르지 않음) ·
   lib/tasteAccess.ts 무료 맛보기 범위 + lib/plusLock.ts·components/PlusLockSheet.tsx 잠긴 항목 공용 안내 창 + components/LockMark.tsx 공용 자물쇠 ·
