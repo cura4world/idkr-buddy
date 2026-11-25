@@ -87,6 +87,18 @@ test("④ 구독 화면 하단 탭 — 홈 Plus 카드면 홈, 내 정보면 내
   await expect(activeTab(page)).toContainText("내 정보");
 });
 
+test("⑥ 앱 정보 — 버전 옆에 화면 쪽 빌드 번호(흐리게, 한 덩어리)", async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 915 });
+  await setupPreview(page, { tier: "free", fontStep: FONT_STEP_100 });
+  await openApp(page, "about");
+  const build = page.locator("[data-web-build]");
+  // 이 PC 빌드는 "dev", Actions(E2E 워크플로, 미리보기 빌드)는 "11.25-80p" 꼴
+  await expect(build).toHaveText(new RegExp("^· (dev|[0-9]{1,2}\\.[0-9]{2}-[0-9]+p?)$"));
+  await expect(build).toHaveCSS("color", "rgb(138, 147, 152)");
+  await expect(build).toHaveCSS("white-space", "nowrap");
+  await expect(page.getByText("Kata kata", { exact: false }).first()).toBeVisible();
+});
+
 test("③ 카드 학습 — 단추 이름 9개, 무작위 자동 재생에만 작은 재생 표시", async ({ page }) => {
   await page.setViewportSize({ width: 412, height: 915 });
   await setupPreview(page, { tier: "free", fontStep: FONT_STEP_100 });
