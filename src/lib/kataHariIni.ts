@@ -1,5 +1,6 @@
 // src/lib/kataHariIni.ts
-// 오늘의 단어 퍼즐 (Kata Hari Ini) — 워들처럼 다섯 글자 인도네시아어 단어를 여섯 번 안에 맞힙니다.
+// 오늘의 단어 퍼즐 (Kata Hari Ini) — 워들처럼 인도네시아어 단어를 여섯 번 안에 맞힙니다.
+// 2026-11-25: 실력에 따라 4·5·6글자 단계(처음 5글자). 단계 규칙은 아래 "단계" 구역, 단계별 목록은 src/data/kataHariIniWords{4,·,6}.ts.
 //
 // - 하루 한 문제. "하루"는 한국 시간 자정 기준입니다(기기 시간대와 상관없이 모두 같은 날짜).
 // - 정답은 동결해 둔 목록(src/data/kataHariIniWords.ts)에서 고릅니다. 단어장 CSV·seed.json 과
@@ -13,9 +14,35 @@
 
 import { KATA_ANSWERS, KATA_EPOCH_DAY } from "@/data/kataHariIniWords";
 import { KATA_EXTRA_GUESSES } from "@/data/kataHariIniGuesses";
+import { KATA4_ANSWERS, KATA4_EPOCH_DAY } from "@/data/kataHariIniWords4";
+import { KATA4_EXTRA_GUESSES } from "@/data/kataHariIniGuesses4";
+import { KATA6_ANSWERS, KATA6_EPOCH_DAY } from "@/data/kataHariIniWords6";
+import { KATA6_EXTRA_GUESSES } from "@/data/kataHariIniGuesses6";
 
+/** 처음 단계(5글자) — 예전 화면·시험이 쓰던 이름 그대로 둡니다 */
 export const WORD_LEN = 5;
 export const MAX_TRIES = 6;
+
+/** 단계 = 글자 수 */
+export type KataLen = 4 | 5 | 6;
+export const LEVEL_START: KataLen = 5;
+export const LEVEL_MIN: KataLen = 4;
+export const LEVEL_MAX: KataLen = 6;
+/** 내려감: 푼 날 기준 이틀 연속 못 맞힘 */
+export const LEVEL_DOWN_FAILS = 2;
+/** 올라감: 세 번 연속 세 줄 안에(3번째 시도 이내) 맞힘 */
+export const LEVEL_UP_FASTS = 3;
+export const LEVEL_FAST_TRIES = 3;
+
+const LISTS: Record<KataLen, { answers: ReadonlyArray<readonly [string, string]>; epoch: number; extra: ReadonlyArray<string> }> = {
+  4: { answers: KATA4_ANSWERS, epoch: KATA4_EPOCH_DAY, extra: KATA4_EXTRA_GUESSES },
+  5: { answers: KATA_ANSWERS, epoch: KATA_EPOCH_DAY, extra: KATA_EXTRA_GUESSES },
+  6: { answers: KATA6_ANSWERS, epoch: KATA6_EPOCH_DAY, extra: KATA6_EXTRA_GUESSES },
+};
+
+export function isKataLen(n: unknown): n is KataLen {
+  return n === 4 || n === 5 || n === 6;
+}
 
 const STORE_KEY = "kata-hari-ini";
 const KEEP_DAYS = 120;
@@ -35,10 +62,22 @@ export interface DayRecord {
   won: boolean;
   hint: boolean;       // 뜻 힌트를 열어 봤는가
   recorded?: boolean;  // 훈장 기록을 남겼는가 (두 번 남기지 않도록)
+  len?: KataLen;       // 그날 문제의 글자 수 — 처음 연 순간의 단계로 고정(없으면 5글자, 단계 도입 전 기록)
+  counted?: boolean;   // 단계 판정에 이미 셌는가 (두 번 세지 않도록)
+}
+
+/** 단계 기록 — 지금 단계와 연속 기록(2026-11-25) */
+export interface LevelState {
+  cur: KataLen;        // 다음에 처음 여는 문제의 글자 수
+  fails: number;       // 푼 날 기준 연속으로 못 맞힌 날 수
+  fasts: number;       // 연속으로 세 줄 안에 맞힌 날 수
+  changedOn?: string;  // 단계가 바뀐 날(그날 문제를 끝낸 날)
+  changedTo?: KataLen;
 }
 
 interface StoreShape {
   days: Record<string, DayRecord>;
+  level?: LevelState;
 }
 
 // ── 날짜 (한국 시간) ───────────────────────────────────────────────
@@ -71,13 +110,15 @@ export function dayLabel(dayNumber: number): string {
 
 const isLowerAlpha = (c: string): boolean => c >= "a" && c <= "z";
 
-let cachedList: PuzzleWord[] | null = null;
+const cachedLists: Partial<Record<KataLen, PuzzleWord[]>> = {};
 
-/** 출제 순서 그대로의 정답 목록 (src/data/kataHariIniWords.ts) */
-export function answerList(): PuzzleWord[] {
-  if (cachedList) return cachedList;
-  cachedList = KATA_ANSWERS.map((p) => ({ word: p[0], meaning: p[1] }));
-  return cachedList;
+/** 출제 순서 그대로의 정답 목록 — 단계별 동결본(5글자 = src/data/kataHariIniWords.ts) */
+export function answerList(len: KataLen = WORD_LEN): PuzzleWord[] {
+  const hit = cachedLists[len];
+  if (hit) return hit;
+  const list = LISTS[len].answers.map((p) => ({ word: p[0], meaning: p[1] }));
+  cachedLists[len] = list;
+  return list;
 }
 
 /**
@@ -92,38 +133,40 @@ export function pickForDay(list: PuzzleWord[], dayNumber: number, epoch: number 
   return list[i];
 }
 
-/** 날짜 번호(한국 시간)의 정답 */
-export function answerForDay(dayNumber: number): PuzzleWord | null {
-  return pickForDay(answerList(), dayNumber);
+/** 날짜 번호(한국 시간)의 정답 — 같은 날 같은 단계끼리는 모두 같은 문제 */
+export function answerForDay(dayNumber: number, len: KataLen = WORD_LEN): PuzzleWord | null {
+  return pickForDay(answerList(len), dayNumber, LISTS[len].epoch);
 }
 
 /** 오늘(한국 시간)의 정답 */
-export function todayPuzzle(nowMs: number = Date.now()): PuzzleWord | null {
-  return answerForDay(kstDayNumber(nowMs));
+export function todayPuzzle(nowMs: number = Date.now(), len: KataLen = WORD_LEN): PuzzleWord | null {
+  return answerForDay(kstDayNumber(nowMs), len);
 }
 
 // ── 입력 검사 ─────────────────────────────────────────────────────
 
-/** 다섯 글자 소문자 알파벳인가 (모양 검사) */
-export function isValidGuess(guess: string): boolean {
+/** 그 단계 글자 수의 소문자 알파벳인가 (모양 검사) */
+export function isValidGuess(guess: string, len: KataLen = WORD_LEN): boolean {
   const g = String(guess || "");
-  if (g.length !== WORD_LEN) return false;
+  if (g.length !== len) return false;
   for (const c of g) if (!isLowerAlpha(c)) return false;
   return true;
 }
 
-let knownSet: Set<string> | null = null;
+const knownSets: Partial<Record<KataLen, Set<string>>> = {};
 
-/** 입력으로 받는 실제 단어인가 — 정답 목록 또는 추가 단어 목록에 있어야 합니다 */
-export function isKnownWord(guess: string): boolean {
+/** 입력으로 받는 실제 단어인가 — 그 단계의 정답 목록 또는 추가 단어 목록에 있어야 합니다 */
+export function isKnownWord(guess: string, len: KataLen = WORD_LEN): boolean {
   const g = String(guess || "");
-  if (!isValidGuess(g)) return false;
-  if (!knownSet) {
-    knownSet = new Set<string>();
-    for (const p of KATA_ANSWERS) knownSet.add(p[0]);
-    for (const w of KATA_EXTRA_GUESSES) knownSet.add(w);
+  if (!isValidGuess(g, len)) return false;
+  let set = knownSets[len];
+  if (!set) {
+    set = new Set<string>();
+    for (const p of LISTS[len].answers) set.add(p[0]);
+    for (const w of LISTS[len].extra) set.add(w);
+    knownSets[len] = set;
   }
-  return knownSet.has(g);
+  return set.has(g);
 }
 
 // ── 채점 ──────────────────────────────────────────────────────────
@@ -183,7 +226,9 @@ function readStore(): StoreShape {
     if (!raw) return { days: {} };
     const p = JSON.parse(raw) as Partial<StoreShape>;
     const days = p && p.days && typeof p.days === "object" ? p.days : {};
-    return { days: days as Record<string, DayRecord> };
+    const out: StoreShape = { days: days as Record<string, DayRecord> };
+    if (p && p.level && typeof p.level === "object") out.level = p.level as LevelState;
+    return out;
   } catch (e) {
     return { days: {} };
   }
@@ -208,13 +253,16 @@ const EMPTY_DAY: DayRecord = { guesses: [], done: false, won: false, hint: false
 export function getDayRecord(key: string): DayRecord {
   const r = readStore().days[key];
   if (!r || !Array.isArray(r.guesses)) return { ...EMPTY_DAY, guesses: [] };
-  return {
+  const out: DayRecord = {
     guesses: r.guesses.filter((g) => typeof g === "string").slice(0, MAX_TRIES),
     done: !!r.done,
     won: !!r.won,
     hint: !!r.hint,
     recorded: !!r.recorded,
   };
+  if (isKataLen(r.len)) out.len = r.len;
+  if (r.counted) out.counted = true;
+  return out;
 }
 
 export function saveDayRecord(key: string, rec: DayRecord): void {
@@ -249,4 +297,105 @@ export function streakFrom(days: Record<string, DayRecord>, todayNumber: number)
 
 export function currentStreak(nowMs: number = Date.now()): number {
   return streakFrom(readStore().days, kstDayNumber(nowMs));
+}
+
+// ── 단계(4·5·6글자, 2026-11-25) ──────────────────────────────────
+// - 처음 5글자, 최소 4·최대 6. 기회는 늘 여섯 번.
+// - 내려감: 푼 날 기준 이틀 연속 못 맞히면 한 단계 아래. 올라감: 세 번 연속 세 줄 안에(3번째 시도 이내) 맞히면 한 단계 위.
+//   뜻 힌트를 본 날도 똑같이 셉니다. 안 푼 날(끝내지 않은 날)은 세지 않고 연속도 끊지 않습니다.
+//   맞혔지만 네 줄 이상이면 두 연속이 모두 0 으로(못 맞힘 연속도, 빨리 맞힘 연속도 끊김).
+// - 단계가 바뀌면(바뀌지 못하는 끝 단계여도) 두 연속을 0 으로 되돌립니다.
+// - 그날 문제는 처음 연 순간의 단계로 고정합니다(DayRecord.len). 바뀐 단계는 다음 날 문제부터.
+
+export const LEVEL_DEFAULT: LevelState = { cur: LEVEL_START, fails: 0, fasts: 0 };
+
+/** 한 날의 결과를 단계 기록에 더합니다(순수 함수). changed = 새 단계(바뀌지 않았으면 null) */
+export function nextLevel(
+  state: LevelState,
+  result: { won: boolean; tries: number },
+  dayKey: string
+): { state: LevelState; changed: KataLen | null } {
+  const cur: KataLen = isKataLen(state.cur) ? state.cur : LEVEL_START;
+  let fails = Math.max(0, state.fails | 0);
+  let fasts = Math.max(0, state.fasts | 0);
+  if (!result.won) {
+    fails += 1;
+    fasts = 0;
+  } else if (result.tries <= LEVEL_FAST_TRIES) {
+    fasts += 1;
+    fails = 0;
+  } else {
+    fails = 0;
+    fasts = 0;
+  }
+  let next: KataLen = cur;
+  if (fails >= LEVEL_DOWN_FAILS) {
+    next = Math.max(LEVEL_MIN, cur - 1) as KataLen;
+    fails = 0;
+    fasts = 0;
+  } else if (fasts >= LEVEL_UP_FASTS) {
+    next = Math.min(LEVEL_MAX, cur + 1) as KataLen;
+    fails = 0;
+    fasts = 0;
+  }
+  const changed = next !== cur ? next : null;
+  const out: LevelState = { cur: next, fails, fasts };
+  if (changed) {
+    out.changedOn = dayKey;
+    out.changedTo = changed;
+  } else if (state.changedOn) {
+    out.changedOn = state.changedOn;
+    if (state.changedTo) out.changedTo = state.changedTo;
+  }
+  return { state: out, changed };
+}
+
+/** 지금 단계 기록 */
+export function getLevelState(): LevelState {
+  const l = readStore().level;
+  if (!l || !isKataLen(l.cur)) return { ...LEVEL_DEFAULT };
+  return { cur: l.cur, fails: l.fails | 0, fasts: l.fasts | 0, changedOn: l.changedOn, changedTo: isKataLen(l.changedTo) ? l.changedTo : undefined };
+}
+
+/**
+ * 그날 문제의 글자 수 — 처음 연 순간의 단계로 고정해 저장합니다.
+ * 단계 도입 전에 이미 풀기 시작한 날(글자 수 기록 없이 입력이 있음)은 5글자.
+ */
+export function fixDayLength(key: string): KataLen {
+  const r = getDayRecord(key);
+  if (r.len) return r.len;
+  const len: KataLen = r.guesses.length > 0 ? WORD_LEN : getLevelState().cur;
+  saveDayRecord(key, { ...r, len });
+  return len;
+}
+
+/**
+ * 끝난 날의 결과를 단계에 한 번만 셉니다(이미 셌거나 아직 안 끝났으면 아무것도 안 함).
+ * 반환: 이번에 바뀐 새 단계(바뀌지 않았으면 null)
+ */
+export function applyDayResult(key: string): KataLen | null {
+  const s = readStore();
+  const r = s.days[key];
+  if (!r || !r.done || r.counted) return null;
+  const { state, changed } = nextLevel(getLevelState(), { won: !!r.won, tries: Array.isArray(r.guesses) ? r.guesses.length : MAX_TRIES }, key);
+  s.days[key] = { ...r, counted: true };
+  s.level = state;
+  writeStore(s);
+  return changed;
+}
+
+/** 단계가 바뀐 날 짧게 띄우는 알림 */
+export function levelChangeText(to: KataLen): string {
+  return "내일부터 " + to + "글자로 풀어요";
+}
+
+/**
+ * 미리보기 빌드 시험용(미리보기 설정 창에서만 부름) — 단계를 바로 바꾸고 오늘 기록을 지워,
+ * 퍼즐을 다시 열면 그 글자 수로 오늘 문제가 열리게 합니다. 정식 앱 화면에서는 부르는 곳이 없습니다.
+ */
+export function setLevelForTest(len: KataLen, nowMs: number = Date.now()): void {
+  const s = readStore();
+  s.level = { cur: len, fails: 0, fasts: 0 };
+  delete s.days[todayKey(nowMs)];
+  writeStore(s);
 }
