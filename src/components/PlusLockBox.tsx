@@ -9,6 +9,7 @@
 // (2026-11-17 Arga 요청). 그래서 제목은 버튼 왼쪽 칸에 들어가고, 칸보다 길면 줄임표 대신 두 줄로 넘어갑니다.
 
 import { LOCK_BUTTON_SUB } from "@/lib/plusCopy";
+import LockTitle from "@/components/LockTitle";
 
 interface Props {
   /** 제목 위 작은 줄(선택, 2026-11-25 게임방 "오늘의 단어 퍼즐 외") — Pretendard 11.5px 500 검정, 제목과 사이 1px */
@@ -39,7 +40,7 @@ const PlusLockBox = ({ eyebrow, title, lines, onClick, wholeBox = false }: Props
         </p>
       ) : null}
       <p className="m-0 text-[0.875rem] font-semibold leading-[1.4] text-[#1D1F1E] break-keep">
-        {title}
+        <LockTitle text={title} />
       </p>
       <p data-lock-lines className="m-0 mt-1.5 font-gothic text-[0.6875rem] leading-[1.55] text-[#6E5612] break-keep">
         {lines[0]}
