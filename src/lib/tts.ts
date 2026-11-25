@@ -172,6 +172,35 @@ export async function clearTtsCache(): Promise<void> {
   } catch {}
 }
 
+/**
+ * 추가 전용(2026-11-25): 공용 TTS 캐시에서 키가 prefix 로 시작하는 음성만 지웁니다. 지운 개수를 돌려줍니다.
+ * 이야기 한 편을 지울 때 그 이야기의 읽기 음성("story-v2-<id>::…")만 함께 지우려고 씁니다.
+ * 캐시 키 모양은 urlsFor 의 ckey = key + "::v=" + 음성 + "::" + 조각 — prefix 는 끝에 "::" 까지 넣어 다른 키와 겹치지 않게 부릅니다.
+ */
+export async function deleteTtsCacheByPrefix(prefix: string): Promise<number> {
+  if (!prefix) return 0;
+  try {
+    const db = await openDB();
+    return await new Promise((resolve) => {
+      let n = 0;
+      const tx = db.transaction(STORE, "readwrite");
+      const req = tx.objectStore(STORE).openCursor();
+      req.onsuccess = () => {
+        const cur = req.result;
+        if (!cur) return;
+        if (String(cur.key || "").indexOf(prefix) === 0) {
+          cur.delete();
+          n++;
+        }
+        cur.continue();
+      };
+      tx.oncomplete = () => resolve(n);
+      tx.onerror = () => resolve(n);
+      tx.onabort = () => resolve(n);
+    });
+  } catch { return 0; }
+}
+
 // ── 설교문 전용 오디오 저장소 (개수 제한 없음) ─────────────────
 // 기존 캐시와 DB 를 나눠 두어 서로 밀어내지 않습니다.
 let sermonDbPromise: Promise<IDBDatabase> | null = null;
