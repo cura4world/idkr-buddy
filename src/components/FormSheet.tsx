@@ -74,6 +74,8 @@ interface FormSheetProps {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** 제목 자리에 글자 대신 그릴 것(선택, 2026-11-25 잠금 제목 줄바꿈). 화면 읽기 이름은 title */
+  titleNode?: ReactNode;
   /** 제목 아래 한 줄 설명 */
   desc?: string;
   /** 머리 칸 안의 아이콘(lucide, size 20 strokeWidth 1.8) */
@@ -94,13 +96,14 @@ interface FormSheetProps {
 }
 
 export default function FormSheet({
-  open, onClose, title, desc, icon, tone = "teal", children, footer, onSubmit, closeLocked, dirty, zIndex = 50,
+  open, onClose, title, titleNode, desc, icon, tone = "teal", children, footer, onSubmit, closeLocked, dirty, zIndex = 50,
 }: FormSheetProps) {
   return (
     <AppSheet
       open={open}
       onClose={onClose}
       title={title}
+      titleNode={titleNode}
       desc={desc}
       icon={icon}
       tone={tone}
