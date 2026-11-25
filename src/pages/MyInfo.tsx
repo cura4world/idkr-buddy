@@ -907,12 +907,13 @@ const MyInfo = () => {
                   </svg>
                   이번 주 불꽃
                 </span>
-                <span className="block tabular-nums" style={{ marginTop: 2, fontSize: rem(21), fontWeight: 700, lineHeight: 1.3, color: INK }}>
+                {/* 2026-11-25: 제목 → 설명 → 숫자. 제목과 설명 묶음 사이 9px, 설명과 숫자 사이 1px(한 묶음으로 보이게) */}
+                <span data-medal-desc className="block" style={{ marginTop: 9, fontSize: rem(11), lineHeight: 1.45, color: "#8A6A5A", wordBreak: "keep-all" }}>
+                  이번 주 열정 점수
+                </span>
+                <span data-medal-num className="block tabular-nums" style={{ marginTop: 1, fontSize: rem(21), fontWeight: 700, lineHeight: 1.3, color: INK }}>
                   {medal.week}
                   <span style={{ fontSize: rem(11.5), fontWeight: 500, color: MUTED }}> 점</span>
-                </span>
-                <span className="block" style={{ marginTop: 1, fontSize: rem(11), lineHeight: 1.45, color: "#8A6A5A", wordBreak: "keep-all" }}>
-                  이번 주 열정 점수
                 </span>
               </button>
               <span className="absolute" style={{ top: 4, right: 4 }}>
@@ -939,12 +940,12 @@ const MyInfo = () => {
                   </svg>
                   모은 별
                 </span>
-                <span className="block tabular-nums" style={{ marginTop: 2, fontSize: rem(21), fontWeight: 700, lineHeight: 1.3, color: INK }}>
+                <span data-medal-desc className="block" style={{ marginTop: 9, fontSize: rem(11), lineHeight: 1.45, color: "#8A7A55", wordBreak: "keep-all" }}>
+                  지금까지 외운 단어
+                </span>
+                <span data-medal-num className="block tabular-nums" style={{ marginTop: 1, fontSize: rem(21), fontWeight: 700, lineHeight: 1.3, color: INK }}>
                   {medal.stars}
                   <span style={{ fontSize: rem(11.5), fontWeight: 500, color: MUTED }}> 단어</span>
-                </span>
-                <span className="block" style={{ marginTop: 1, fontSize: rem(11), lineHeight: 1.45, color: "#8A7A55", wordBreak: "keep-all" }}>
-                  지금까지 외운 단어
                 </span>
               </button>
               <span className="absolute" style={{ top: 4, right: 4 }}>
