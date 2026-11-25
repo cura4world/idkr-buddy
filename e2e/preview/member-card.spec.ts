@@ -93,6 +93,29 @@ test("Plus 해지됨 — '연간 / 정기 결제 취소됨 · …까지 이용',
   expect(await card.locator("[data-plus-suffix]").evaluate((e) => Math.round(e.getBoundingClientRect().height / (parseFloat(getComputedStyle(e).fontSize) * 1.5)))).toBe(1);
 });
 
+// 2026-11-25: 오른쪽 여백 12 → 20px(알약이 카드 끝에서 조금 더 안쪽). 세 카드가 PlusCard 한 곳의 값을 씀
+test("세 카드(홈·내 정보 무료·Plus) 안쪽 여백 왼쪽 14px · 오른쪽 20px, 알약 오른쪽 끝이 카드 끝에서 21px(테두리 1 + 여백 20)", async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 915 });
+  const check = async (sel: string, pill: string) => {
+    const card = page.locator(sel);
+    await expect(card).toHaveCSS("padding-left", "14px");
+    await expect(card).toHaveCSS("padding-right", "20px");
+    const cb = (await card.boundingBox())!;
+    const pb = (await card.locator(pill).boundingBox())!;
+    expect(Math.round(cb.x + cb.width - (pb.x + pb.width))).toBe(21);
+  };
+  await setupPreview(page, { tier: "free", fontStep: FONT_STEP_100 });
+  await openApp(page, "");
+  await check('[data-fit-anchor="plus"]', "[data-plus-more]");
+  await openApp(page, "me");
+  await check('[data-testid="plus-free-card"]', "[data-plus-more]");
+  await setupPreview(page, { tier: "plus", fontStep: FONT_STEP_100 });
+  await openApp(page, "");
+  await seedSession(page, { tier: "plus", until: UNTIL, autoRenew: true, basePlanId: "yearly" });
+  await openApp(page, "me");
+  await check('[data-testid="plus-member-card"]', "[data-plus-manage]");
+});
+
 test("홈 Plus 카드와 내 정보 무료 칸의 겉모양이 같음", async ({ page }) => {
   await page.setViewportSize({ width: 412, height: 915 });
   await setupPreview(page, { tier: "free", fontStep: FONT_STEP_100 });
