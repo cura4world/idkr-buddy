@@ -21,7 +21,9 @@ function usage(today: number, yMin: number, tMin: number, withOct = true): Recor
 }
 
 async function openMe(page: Page, o: { day: number; w?: number; h?: number; step?: number; data: Record<string, number> }) {
-  await page.clock.setFixedTime(new Date(2026, 10, o.day, 15, 0, 0));
+  // 한국 시각 정오로 고정 — 브라우저는 Asia/Seoul(playwright.config), 시험을 돌리는 컴퓨터는 UTC(Actions)일 수 있어
+  // new Date(2026, 10, day, 15) 처럼 돌리는 쪽 시간대로 만들면 Actions 에서 하루가 밀림(2026-11-25 E2E #67)
+  await page.clock.setFixedTime(new Date(Date.UTC(2026, 10, o.day, 3, 0, 0)));
   await page.setViewportSize({ width: o.w || 412, height: o.h || 915 });
   await setupPreview(page, { tier: "free", fontStep: o.step === undefined ? FONT_STEP_100 : o.step });
   await openApp(page, "");
