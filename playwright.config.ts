@@ -14,8 +14,10 @@
 
 import { defineConfig, devices } from "@playwright/test";
 
-const PREVIEW_PORT = 4317;
-const WEB_PORT = 4318;
+// 윈도우에서 다른 프로그램의 바깥 연결이 4317·4318 을 잠깐 쥐고 있으면 서버가 뜨지 못해(EACCES, 2026-11-25 RaiDrive)
+// 그때만 E2E_PREVIEW_PORT·E2E_WEB_PORT 로 바꿔 돌립니다. 기본값·Actions 는 그대로
+const PREVIEW_PORT = Number(process.env.E2E_PREVIEW_PORT) || 4317;
+const WEB_PORT = Number(process.env.E2E_WEB_PORT) || 4318;
 const BASE = "/idkr-buddy/";
 const skipBuild = process.env.E2E_SKIP_BUILD === "1";
 
