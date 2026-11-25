@@ -19,6 +19,7 @@
 // 잠긴 항목을 누르면 같은 안내 창이 뜹니다(openPlusLock → components/PlusLockSheet.tsx).
 
 import { sharedWordbookNumber } from "@/lib/wordbookAccess";
+import { PLUS_GAME_COUNT, PLUS_SCENE_COUNT, PLUS_WORDBOOK_COUNT } from "@/lib/plusCopy";
 
 /** 무료로 여는 기본 단어장 번호 */
 export const TASTE_WORDBOOK_NUMBER = 1;
@@ -82,3 +83,24 @@ export const LOCK_TITLE_MAP = "인도네시아 지도는 Plus 회원 기능입�
 export const LOCK_TITLE_GAME = "이 게임은 Plus 회원 기능입니다";
 export const LOCK_TITLE_STORY_NEW = "새 이야기 불러오기는 Plus 회원 기능입니다";
 export const LOCK_TITLE_STORY_LISTEN = "듣기는 Plus 회원 기능입니다";
+
+// ── 잠금 안내 창 본문 (2026-11-25 Arga 승인 ①) ─────────────────
+// 첫 줄은 누른 것에 맞춘 문장(본문 색), 둘째 줄은 공통 한 줄(흐린 색, 작게). 수는 구독 화면과 같은 값(plusCopy).
+// 아래 표에 없는 제목(지도·새 이야기 불러오기 등)은 첫 줄 없이 공통 한 줄만 씁니다.
+export const LOCK_BODY_COMMON = "Plus를 시작하면 모든 기능이 열립니다.";
+
+const LOCK_BODY_BY_TITLE: Record<string, string> = {
+  [LOCK_TITLE_SCENE_LISTEN]: "이야기와 회화를 AI 음성으로 들으며 공부할 수 있습니다.", // 이야기 듣기도 같은 제목
+  [LOCK_TITLE_WORDBOOK]: "기본 단어장 " + PLUS_WORDBOOK_COUNT + "권을 모두 카드와 퀴즈로 외울 수 있습니다.",
+  [LOCK_TITLE_SCENE]: "회화집 대화 " + PLUS_SCENE_COUNT + "개를 모두 읽고 들을 수 있습니다.",
+  [LOCK_TITLE_GAME]: "단어 게임 " + PLUS_GAME_COUNT + "가지를 모두 할 수 있습니다.",
+  [LOCK_TITLE_INSIGHT]: "인도네시아 지도와 읽을거리가 모두 열립니다.",
+  [LOCK_TITLE_CARD]: "카드 전체 글과 지난 카드를 볼 수 있습니다.",
+  [LOCK_TITLE_WORDBOOK_MAKE]: "주제별로 내 단어장을 만들어 나눠 담을 수 있습니다.",
+  [LOCK_TITLE_PERCAKAPAN_MAKE]: "상황을 적으면 두 사람의 대화를 만들어 줍니다.",
+};
+
+/** 잠금 안내 창 첫 줄. 표에 없는 제목이면 "" (공통 한 줄만) */
+export function lockBodyFor(title: string): string {
+  return LOCK_BODY_BY_TITLE[title] || "";
+}
