@@ -194,9 +194,11 @@ const Permainan = () => {
 
       <div className="px-4 pt-4 flex flex-col gap-2.5">
         {!plus ? (
+          // 2026-11-25: 제목 위 "오늘의 단어 퍼즐 외"(무료로 열린 퍼즐 말고 나머지가 Plus), 설명은 한 줄
           <PlusLockBox
+            eyebrow="오늘의 단어 퍼즐 외"
             title="게임은 Plus 회원 기능입니다"
-            lines={["Plus로 모든 게임을 열고,", "맞힌 단어는 별이 됩니다"]}
+            lines={["게임에서 맞힌 단어는 별이 됩니다"]}
             onClick={() => navigate(PAYWALL_PATH)}
           />
         ) : null}
