@@ -2007,6 +2007,65 @@ test("오늘의 카드: CARD_BACKFILL_FROM 이 있으면 오늘·내일 다음�
   resetWorld();
 });
 
+test("오늘의 카드: 최근 1년만 보이고, Cron 이 1년 지난 카드를 지우며, 분야(cat)와 지난 1년 제목을 프롬프트에(2026-11-25)", async () => {
+  resetWorld();
+  const env = makeEnv({ CARD_AUTOGEN: "1" });
+  const seen = cardWorld();
+  const mid = kstToday(-10), edge = kstToday(-364), old1 = kstToday(-365), old2 = kstToday(-400);
+  const put = (d, chip, title, cat) => {
+    env.PUBLIC_KV.m.set("card:v1:" + d, JSON.stringify({ v: 1, d, chip, title, summary: "s", body: ["b"], phrase: { id: "x", ko: "y" }, words: [], img: true }));
+    env.PUBLIC_KV.m.set("cardimg:v1:" + d, IMG_B64);
+    return Object.assign({ d, chip, title, img: true }, cat ? { cat } : {});
+  };
+  env.PUBLIC_KV.m.set("card:index", JSON.stringify([
+    put(mid, "길거리 간식", "한 입에 쏙 클레폰"),
+    put(edge, "전통 놀이", "조개껍데기 콩클락", "놀이"),
+    put(old1, "영웅의 날", "일년하루 지난 카드"),
+    put(old2, "속담 한 조각", "아주 오래된 카드"),
+  ]));
+  // 목록 — 1년 안의 것만, 분야는 cat(없으면 꼬리표로 짐작)
+  const list = await call(env, "GET", "/card/list?limit=400");
+  assert.deepEqual(list.data.items.map((e) => e.d), [mid, edge]);
+  assert.deepEqual(list.data.items.map((e) => e.cat), ["음식", "놀이"]);
+  assert.equal(list.data.oldest, edge);
+  assert.equal((await call(env, "GET", "/card/list?limit=1")).data.more, true);
+  // 1년 지난 날은 글·그림 모두 404, 경계 날은 보임
+  assert.equal((await call(env, "GET", "/card/day/" + old1)).status, 404);
+  assert.equal((await call(env, "GET", "/card/img/" + old1)).status, 404);
+  assert.equal((await call(env, "GET", "/card/day/" + edge)).status, 200);
+  // Cron — 오늘 카드를 만들 때 1년 안 제목만 넘기고, 1년 지난 카드는 KV 에서 지움
+  await worker.scheduled({}, env, undefined);
+  assert.ok(seen.prompts[0].indexOf("한 입에 쏙 클레폰") >= 0);
+  assert.ok(seen.prompts[0].indexOf("조개껍데기 콩클락") >= 0);
+  assert.equal(seen.prompts[0].indexOf("일년하루 지난 카드"), -1);
+  for (const d of [old1, old2]) {
+    assert.equal(env.PUBLIC_KV.m.has("card:v1:" + d), false);
+    assert.equal(env.PUBLIC_KV.m.has("cardimg:v1:" + d), false);
+  }
+  assert.ok(env.PUBLIC_KV.m.has("cardimg:v1:" + edge));
+  const index = JSON.parse(env.PUBLIC_KV.m.get("card:index"));
+  assert.deepEqual(index.map((e) => e.d), [kstToday(), mid, edge]);
+  const t = __cardTopicForTest(kstToday(), 0);
+  assert.equal(index[0].cat, t.kind === "topic" ? t.chip : "기념일·시기");
+  resetWorld();
+});
+
+test("오늘의 카드: 예전 카드(cat 없음)의 분야는 꼬리표로 짐작 — 지금 서버의 30장 꼬리표", async () => {
+  resetWorld();
+  const env = makeEnv();
+  const chips = {
+    "교사의 날": "기념일·시기", "인도네시아 속담": "속담", "우기의 풍경": "기념일·시기", "커피와 차": "커피와 차", "시장": "시장",
+    "전통 공예": "전통", "자연": "자연", "지역": "지역", "말과 표현": "말과 표현", "생활 예절": "생활 예절", "길거리 간식": "음식",
+    "집과 가족": "집과 가족", "교통 문화": "교통", "아버지의 날": "기념일·시기", "전통 놀이": "놀이", "영웅의 날": "기념일·시기",
+    "수상 시장": "시장", "전통 악기": "전통", "음식": "음식", "교통": "교통", "속담 한 조각": "속담", "청년 맹세의 날": "기념일·시기",
+  };
+  const names = Object.keys(chips);
+  env.PUBLIC_KV.m.set("card:index", JSON.stringify(names.map((chip, i) => ({ d: kstToday(-i), chip, title: "t" + i, img: false }))));
+  const items = (await call(env, "GET", "/card/list?limit=400")).data.items;
+  assert.deepEqual(items.map((e) => e.cat), names.map((c) => chips[c]));
+  resetWorld();
+});
+
 // ── 횟수 제한(Durable Object 로 셈, 2026-11-20) ──────────────────
 
 test("횟수 제한: /admin/* 는 IP 마다 1분 10번, 넘으면 429 RATE_LIMITED(CORS·Retry-After), 1분 뒤 풀림, 다른 경로는 세지 않음", async () => {
