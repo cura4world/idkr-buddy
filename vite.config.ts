@@ -38,8 +38,25 @@ function woff2Only(): Plugin {
   };
 }
 
+/**
+ * 화면 쪽 빌드 번호(2026-11-25 Arga 승인 ⑥) — 앱 정보의 "Kata kata 1.0.11 · 11.25-877" 뒷부분.
+ * 앞의 1.0.11 은 앱 껍데기 번호라 main 배포로 화면을 고쳐도 바뀌지 않으므로, 오류 신고 때 어느 화면 판인지 가리려고 붙입니다.
+ *   "월.일(한국 시간, 빌드한 날)-GitHub Actions 실행 번호". 미리보기 빌드(VITE_PREVIEW=1)는 그 워크플로의 번호라 끝에 "p".
+ *   Actions 밖(이 PC 의 개발·빌드)은 "dev". GITHUB_RUN_NUMBER 는 Actions 가 모든 단계에 넣어 주는 값이라 워크플로를 고치지 않습니다.
+ */
+function webBuildLabel(): string {
+  const run = String(process.env.GITHUB_RUN_NUMBER || "").trim();
+  if (!run) return "dev";
+  const kst = new Date(Date.now() + 9 * 3600 * 1000);
+  const md = kst.getUTCMonth() + 1 + "." + String(kst.getUTCDate()).padStart(2, "0");
+  return md + "-" + run + (process.env.VITE_PREVIEW === "1" ? "p" : "");
+}
+
 export default defineConfig(({ mode }) => ({
   base: '/idkr-buddy/',
+  define: {
+    __WEB_BUILD__: JSON.stringify(webBuildLabel()),
+  },
   server: {
     // 개발 서버는 이 PC 에서만 열립니다. 예전 값 "::" 는 같은 와이파이의 다른 기기에서도 접속됐고,
     // vite 개발 서버의 알려진 취약점(파일 읽기 등)이 그대로 드러났습니다(2026-11-14 보안 재검토).
