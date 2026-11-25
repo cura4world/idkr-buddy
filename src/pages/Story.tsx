@@ -10,7 +10,8 @@ import { useWideMode } from "@/lib/wideMode";
 import { toast } from "sonner";
 import { generateStory, quickLookupWord, StoryDifficulty, StoryTopicKey, isStoryTopicKey } from "@/lib/story";
 import { normalizeHeadword } from "@/lib/dictionary";
-import { saveStory, listStories, StoryRecord } from "@/lib/storyStore";
+import { saveStory, listStories, deleteStory, StoryRecord } from "@/lib/storyStore";
+import { ConfirmSheet } from "@/components/sheet/AppSheet";
 import { STORY_SAMPLES, isSampleStory } from "@/data/storySamples";
 import { getLookupWord, saveLookupWord } from "@/lib/wordStore";
 import { addWordIfAbsent, hasWordInCategory, isFailedMeaning, lookupFailText } from "@/lib/store";
@@ -22,7 +23,10 @@ import StoryTopicGrid from "@/components/StoryTopicGrid";
 import PlusLockBox from "@/components/PlusLockBox";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
-import { ttsPlayer } from "@/lib/tts";
+import { ttsPlayer, deleteTtsCacheByPrefix } from "@/lib/tts";
+
+/** 길게 누르기 시간 — 앱의 다른 길게 누르기(회화집 장면 메뉴)와 같음 */
+const LONG_PRESS_MS = 600;
 import { ReadingTracker } from "@/lib/readingTimer";
 import { writeReturnTicket, takeReturnTicket, currentScrollY, restoreScrollTo } from "@/lib/readReturn";
 import PointFloat from "@/components/PointFloat";
@@ -184,6 +188,70 @@ const Story = () => {
   const [quotaNote, setQuotaNote] = useState<string>(() => {
     try { return localStorage.getItem(QUOTA_NOTE_KEY) || ""; } catch (e) { return ""; }
   });
+
+  // ---------- 지난 이야기 길게 눌러 삭제 (2026-11-25) ----------
+  // 앱의 다른 길게 누르기(회화집 장면 메뉴)와 같은 0.6초. 맛보기 이야기는 지울 수 없어 아무 창도 뜨지 않습니다.
+  // 무료 등급에서도 지울 수 있습니다(만든 것은 읽기 전용 원칙 — 내 데이터 정리는 막지 않음).
+  // 지우는 것: IndexedDB kata-stories 의 그 이야기 + 공용 TTS 캐시의 그 이야기 읽기 음성("story-v2-<id>::…"). 사전·단어 기록은 그대로.
+  const lpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lpFiredRef = useRef(false);
+  const lpStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [pressingId, setPressingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<StoryRecord | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  // 창이 닫히며 내려가는 동안에도 제목을 그대로 보여 주려고 마지막 대상을 기억
+  const lastDeleteRef = useRef<StoryRecord | null>(null);
+  if (deleteTarget) lastDeleteRef.current = deleteTarget;
+
+  const cancelLongPress = () => {
+    if (lpTimerRef.current) {
+      clearTimeout(lpTimerRef.current);
+      lpTimerRef.current = null;
+    }
+    lpStartRef.current = null;
+    setPressingId(null);
+  };
+  const startLongPress = (s: StoryRecord, x: number, y: number) => {
+    lpFiredRef.current = false;
+    if (isSampleStory(s.id)) return;
+    cancelLongPress();
+    lpStartRef.current = { x, y };
+    setPressingId(s.id);
+    lpTimerRef.current = setTimeout(() => {
+      lpTimerRef.current = null;
+      lpFiredRef.current = true;
+      setPressingId(null);
+      setDeleteTarget(s);
+    }, LONG_PRESS_MS);
+  };
+  // 손가락이 8px 넘게 움직이면(스크롤) 길게 누르기를 취소
+  const moveLongPress = (x: number, y: number) => {
+    const st = lpStartRef.current;
+    if (!st || !lpTimerRef.current) return;
+    if (Math.abs(x - st.x) > 8 || Math.abs(y - st.y) > 8) cancelLongPress();
+  };
+  useEffect(() => () => { if (lpTimerRef.current) clearTimeout(lpTimerRef.current); }, []);
+
+  const onPastClick = (s: StoryRecord) => {
+    // 길게 눌러 창이 뜬 뒤 손을 뗄 때 오는 click 은 무시(이야기를 열지 않음)
+    if (lpFiredRef.current) {
+      lpFiredRef.current = false;
+      return;
+    }
+    openCard(s);
+  };
+
+  const confirmDeleteStory = async () => {
+    const target = deleteTarget;
+    if (!target || deleting) return;
+    setDeleting(true);
+    await deleteStory(target.id);
+    await deleteTtsCacheByPrefix("story-v2-" + target.id + "::");
+    setStories((prev) => prev.filter((x) => x.id !== target.id));
+    setDeleting(false);
+    setDeleteTarget(null);
+    toast("이야기를 지웠습니다");
+  };
 
   // ---------- 읽기 점수 (보이지 않는 타이머) ----------
   // 화면에는 아무 표시도 없고, 한국어 면을 처음 여는 순간에만 "+N"이 한 번 뜹니다.
@@ -967,12 +1035,26 @@ const Story = () => {
             <p className="mt-3.5 mx-1 font-gothic text-[0.8125rem] font-bold tracking-[0.02em]" style={{ color: "#3B4245" }}>
               지난 이야기
             </p>
+            {/* 길게(0.6초) 누르면 삭제 확인 창(2026-11-25). 짧게 누르면 지금처럼 열림, 손가락이 움직이면(스크롤) 취소 */}
             {stories.map((s) => (
               <button
                 key={s.id}
-                onClick={() => openCard(s)}
-                className="w-full text-left min-w-0 active:opacity-80"
-                style={{ ...CARD_STYLE, padding: "14px 16px" }}
+                data-past-story={s.id}
+                onClick={() => onPastClick(s)}
+                onPointerDown={(e) => startLongPress(s, e.clientX, e.clientY)}
+                onPointerMove={(e) => moveLongPress(e.clientX, e.clientY)}
+                onPointerUp={cancelLongPress}
+                onPointerCancel={cancelLongPress}
+                onPointerLeave={cancelLongPress}
+                onContextMenu={(e) => e.preventDefault()}
+                className="w-full text-left min-w-0 active:opacity-80 select-none"
+                style={{
+                  ...CARD_STYLE,
+                  padding: "14px 16px",
+                  WebkitTouchCallout: "none",
+                  transition: "transform 160ms ease",
+                  transform: pressingId === s.id ? "scale(0.98)" : undefined,
+                }}
               >
                 <p className="font-word text-[0.96875rem] font-semibold break-words" style={{ color: C.deep }}>{s.title}</p>
                 <p className="mt-[3px] font-gothic text-[0.75rem] break-words" style={{ color: C.sub }}>{s.titleKo}</p>
@@ -986,6 +1068,26 @@ const Story = () => {
           </>
         ) : null}
       </div>
+
+      {/* 지난 이야기 삭제 확인 — 공용 ConfirmSheet(아래에서 올라옴, X·뒤로가기·바깥 누르기로 닫힘) */}
+      <ConfirmSheet
+        open={!!deleteTarget}
+        onCancel={() => { if (!deleting) setDeleteTarget(null); }}
+        onConfirm={confirmDeleteStory}
+        title="이야기 삭제"
+        message={
+          <>
+            <p data-delete-story-title className="m-0 truncate font-word font-semibold" style={{ color: C.deep }}>
+              {(deleteTarget || lastDeleteRef.current || { title: "" }).title}
+            </p>
+            <p className="m-0 mt-1">지운 이야기는 되돌릴 수 없습니다.</p>
+          </>
+        }
+        confirmLabel="삭제"
+        danger
+        busy={deleting}
+        backClose
+      />
     </div>
   );
 };
