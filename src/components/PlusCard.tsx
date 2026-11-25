@@ -9,7 +9,11 @@
 import type { ReactNode } from "react";
 import PlusMoreButton, { PlusManageButton } from "@/components/PlusMoreButton";
 
-const FLOWER_PETAL = "M0 0 C8 -6 12 -18 5 -24 C-1 -22 -4 -10 0 0 Z";
+/** 카드 안쪽 좌우 여백(px) */
+export const PAD_LEFT = 14;
+export const PAD_RIGHT = 20;
+
+const FLOWER_PETAL ="M0 0 C8 -6 12 -18 5 -24 C-1 -22 -4 -10 0 0 Z";
 
 export const PlusFlower = () => (
   <span className="shrink-0 flex items-center justify-center bg-white" style={{ width: 32, height: 32, borderRadius: 9 }}>
@@ -56,7 +60,8 @@ interface Props {
 const PlusCard = ({ as, onClick, titleSuffix, sub, right, padY = "11px", fitAnchor, testId }: Props) => {
   const style: React.CSSProperties = {
     gap: 12,
-    padding: padY + " 12px " + padY + " 14px",
+    // 오른쪽 20px(2026-11-25, 예전 12px) — 알약이 카드 끝에서 조금 더 안쪽에. 왼쪽 14px 은 그대로. 세 카드(홈·무료·Plus)가 이 한 곳을 씀
+    padding: padY + " " + PAD_RIGHT + "px " + padY + " " + PAD_LEFT + "px",
     background: "#FFF6DC",
     border: "1px solid #F1E0AE",
     borderRadius: 16,
