@@ -24,6 +24,7 @@ import MedaliSheet from "@/components/MedaliSheet";
 import MedaliPopover from "@/components/MedaliPopover";
 import MedaliPill from "@/components/game/MedaliPill";
 import PlusLockBox from "@/components/PlusLockBox";
+import { paywallState } from "@/components/BottomTabs";
 import {
   G,
   CARD_SHADOW,
@@ -189,7 +190,8 @@ const Permainan = () => {
         <h1 className="flex-1 min-w-0 truncate font-gothic text-base font-semibold uppercase tracking-[0.08em]">
           PERMAINAN
         </h1>
-        {plus ? <MedaliPill onClick={onMedaliPill} buttonRef={medaliBadgeRef} expanded={store ? medaliPop : undefined} /> : null}
+        {/* 명찰은 무료·Plus 모두(2026-11-25 Arga 승인 ② — 무료도 퍼즐·단어 찾기로 점수를 얻음, 홈과 같게) */}
+        <MedaliPill onClick={onMedaliPill} buttonRef={medaliBadgeRef} expanded={store ? medaliPop : undefined} />
       </header>
 
       <div className="px-4 pt-4 flex flex-col gap-2.5">
@@ -199,7 +201,7 @@ const Permainan = () => {
             eyebrow="오늘의 단어 퍼즐 외"
             title="게임은 Plus 회원 기능입니다"
             lines={["게임에서 맞힌 단어는 별이 됩니다"]}
-            onClick={() => navigate(PAYWALL_PATH)}
+            onClick={() => navigate(PAYWALL_PATH, { state: paywallState(location.pathname) })}
           />
         ) : null}
 
