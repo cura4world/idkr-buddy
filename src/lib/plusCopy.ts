@@ -27,15 +27,23 @@ export function wordCountNote(n: number): string {
   return "(" + n.toLocaleString("ko-KR") + "단어)";
 }
 
+/**
+ * Plus 로 열리는 것의 수 — 구독 화면 혜택과 잠금 안내 창 첫 줄(tasteAccess.lockBodyFor)이 같이 씁니다(2026-11-25).
+ * 값이 바뀌면 여기 한 곳만 고칩니다.
+ */
+export const PLUS_WORDBOOK_COUNT = 34; // 기본 단어장(성경과 신앙 묶음 제외)
+export const PLUS_GAME_COUNT = 6; // 오늘의 단어 퍼즐 말고 Plus 로 열리는 단어 게임
+export const PLUS_SCENE_COUNT = 86; // 회화집 기본 대화
+
 export const PLUS_PERKS: PlusPerk[] = [
   // 덧말의 단어 수는 구독 화면이 실제 수를 세어 바꿔 넣습니다(Plus.tsx). 여기 값은 세지 못했을 때만 보입니다.
   // 2026-11-25: 새 단어장 만들기가 Plus 기능이 되어(tasteAccess.canCreateWordbook) 설명 끝에 덧붙였습니다
-  { icon: "book", title: "기본 단어장 34권", note: wordCountNote(3005), sub: "주제별 단어를 카드와 퀴즈로 외우기 · 나만의 단어장 만들기" },
-  { icon: "game", title: "단어 게임 6가지", sub: "게임으로 단어 실력 쌓기" },
+  { icon: "book", title: "기본 단어장 " + PLUS_WORDBOOK_COUNT + "권", note: wordCountNote(3005), sub: "주제별 단어를 카드와 퀴즈로 외우기 · 나만의 단어장 만들기" },
+  { icon: "game", title: "단어 게임 " + PLUS_GAME_COUNT + "가지", sub: "게임으로 단어 실력 쌓기" },
   // 한 달 상한(60편)도 함께 적습니다 — "하루 5편"만 보고 매일 5편을 받으면 12일째에 막힙니다(B-10).
   // 2026-11-16: 새 이야기 불러오기가 Plus 전용이 되어(무료는 맛보기 3편) 제목에 "읽기"도 담았습니다.
   { icon: "speaker", title: "매일 새 이야기 읽고 듣기", sub: "새 이야기 하루 5편 · 한 달 60편까지" },
-  { icon: "chat", title: "회화집 공부와 대화 만들기", sub: "대화 86개와 새 대화 만들기" },
+  { icon: "chat", title: "회화집 공부와 대화 만들기", sub: "대화 " + PLUS_SCENE_COUNT + "개와 새 대화 만들기" },
   { icon: "map", title: "인도네시아 이해 · 지도", sub: "섬과 도시마다 읽을거리와 단어 공부" },
 ];
 
