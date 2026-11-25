@@ -123,3 +123,25 @@ test("무료 회원 칸 — 단추는 'Plus 자세히 보기' 하나, 홈 Plus �
   await btn.click();
   await expect.poll(() => appPath(page)).toBe("/plus");
 });
+
+// 2026-11-25 지시서 C: 훈장 칸은 제목 → 설명 → 숫자, 제목과 설명 사이 9px · 설명과 숫자 사이 1px
+test("훈장 칸 — 제목 → 설명 → 숫자 순서와 간격(불꽃·별 모두)", async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 840 });
+  await setupPreview(page, { tier: "free", fontStep: FONT_STEP_100 });
+  await openApp(page, "me");
+  for (const [title, desc, unit] of [["이번 주 불꽃", "이번 주 열정 점수", "점"], ["모은 별", "지금까지 외운 단어", "단어"]]) {
+    const cell = page.getByRole("button", { name: new RegExp(title) });
+    const t = (await cell.getByText(title, { exact: true }).boundingBox())!;
+    const d = cell.locator("[data-medal-desc]");
+    const n = cell.locator("[data-medal-num]");
+    await expect(d).toHaveText(desc);
+    await expect(n).toContainText(unit);
+    const db = (await d.boundingBox())!;
+    const nb = (await n.boundingBox())!;
+    expect(t.y).toBeLessThan(db.y);
+    expect(db.y).toBeLessThan(nb.y);
+    expect(await d.evaluate((e) => getComputedStyle(e).marginTop)).toBe("9px");
+    expect(await n.evaluate((e) => getComputedStyle(e).marginTop)).toBe("1px");
+    expect(Math.round(nb.y - (db.y + db.height))).toBe(1);
+  }
+});
