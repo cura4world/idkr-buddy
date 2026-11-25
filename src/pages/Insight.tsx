@@ -15,6 +15,7 @@ import LockMark from "@/components/LockMark";
 import { openPlusLock } from "@/lib/plusLock";
 import { LOCK_TITLE_CARD, LOCK_TITLE_INSIGHT, LOCK_TITLE_MAP } from "@/lib/tasteAccess";
 import PlusLockBox from "@/components/PlusLockBox";
+import { paywallState } from "@/components/BottomTabs";
 import TodayCard from "@/components/TodayCard";
 import { INDONESIA_PATH, NEIGHBOR_SHAPES } from "@/lib/mapData";
 import { ArrowLeft, Globe, Landmark, Users, Cross, Hourglass, CalendarDays, ChevronRight } from "lucide-react";
@@ -175,7 +176,7 @@ const Insight = () => {
       </header>
 
       <div className="px-4 pt-4 flex flex-col gap-2.5">
-        {locked ? <PlusBox onClick={() => navigate(PAYWALL_PATH)} /> : null}
+        {locked ? <PlusBox onClick={() => navigate(PAYWALL_PATH, { state: paywallState(location.pathname) })} /> : null}
 
         {/* 오늘의 인도네시아 — 서버가 하루 한 장 만드는 카드(2026-11-17). 받지 못하면 이 구역은 그리지 않습니다 */}
         <TodayCard
