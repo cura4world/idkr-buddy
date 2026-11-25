@@ -29,6 +29,7 @@ import { loadVoiceLang, saveVoiceLang, voiceLangLabel } from "@/lib/voiceSearchL
 import VoiceSearchPill from "@/components/VoiceSearchPill";
 import AppSheet, { ChoiceGroup, ChoiceRow, SheetButton } from "@/components/sheet/AppSheet";
 import { usePlan, PAYWALL_PATH } from "@/lib/plan";
+import { paywallState } from "@/components/BottomTabs";
 import PlusMoreButton from "@/components/PlusMoreButton";
 import PlusCard from "@/components/PlusCard";
 import { isWordbookVisible } from "@/lib/wordbookAccess";
@@ -1310,7 +1311,7 @@ const Index = () => {
             // 겉모양은 내 정보 회원 칸과 같은 공용 카드(components/PlusCard, 2026-11-25). 카드 전체가 단추라 알약은 겉모양만
             <PlusCard
               as="button"
-              onClick={() => navigate(PAYWALL_PATH)}
+              onClick={() => navigate(PAYWALL_PATH, { state: paywallState("/") })}
               fitAnchor="plus"
               padY={fitPx(11, 7)}
               sub={["회화집·게임·듣기 모두 열기"]}
