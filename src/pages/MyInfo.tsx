@@ -269,10 +269,11 @@ function koDate(t: number): string {
 // 2026-11-25 지시서 A: 칸·그래프 높이는 그대로(32px). 막대 색 세 단계(오늘 #2C6D63 · 어제 #467D73 · 그 전 #9CC5BB),
 // 어제·오늘 숫자(흰 테두리 글자, 자리는 lib/studyChartLabels.ts 의 순수 함수가 실제 글자 폭으로 계산),
 // 지난달 하루 평균 점선 #9AA1A6 을 막대 위에, 설명 줄 끝에 평균 값. "지난달" 보기는 점선 색·평균 값만(숫자·색 단계 없음).
-// 그래프(막대) 영역 높이 — 2026-11-25 32 → 43px(4/3 = 42.67 을 반올림). 막대 비율·평균선·어제·오늘 숫자 자리는 이 값에 맞춰 그대로 비례
-const CHART_H = 43;
-// "지난달 같은 기간보다" 줄과 그래프 사이 — 2026-11-25 8 → 14px
-const CHART_GAP_TOP = 14;
+// 그래프(막대) 영역 높이 — 2026-11-25 32 → 43px(4/3 = 42.67 을 반올림) → 같은 날 +16 = 59px.
+// 막대 비율·평균선·어제·오늘 숫자 자리는 이 값에 맞춰 그대로 비례
+const CHART_H = 59;
+// "지난달 같은 기간보다" 줄과 그래프 사이 — 2026-11-25 8 → 14 → 20px
+const CHART_GAP_TOP = 20;
 const BAR_GAP = 3;
 const BAR_TODAY = TEAL;
 const BAR_YESTERDAY = "#467D73";
@@ -410,7 +411,7 @@ const StudyBars = ({ view, dayLabels, prevName }: { view: MonthView; dayLabels: 
     zIndex: 2,
     whiteSpace: "nowrap",
     fontSize: rem(11),
-    fontWeight: 700,
+    fontWeight: 400, // 2026-11-25 굵게(700) → 보통(400)
     lineHeight: 1.15,
     color,
     textShadow: WHITE_OUTLINE,
