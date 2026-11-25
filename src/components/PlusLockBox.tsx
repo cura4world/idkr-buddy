@@ -11,17 +11,19 @@
 import { LOCK_BUTTON_SUB } from "@/lib/plusCopy";
 
 interface Props {
+  /** 제목 위 작은 줄(선택, 2026-11-25 게임방 "오늘의 단어 퍼즐 외") — Pretendard 11.5px 500 검정, 제목과 사이 1px */
+  eyebrow?: string;
   /** 첫 줄 (15px 굵게). 버튼 왼쪽 칸보다 길면 두 줄 */
   title: string;
-  /** 설명 두 줄 */
-  lines: [string, string];
+  /** 설명 두 줄(예전 그대로) 또는 한 줄(2026-11-25 — 넘치면 글자를 줄이지 않고 자연 줄바꿈) */
+  lines: [string, string] | [string];
   /** 버튼(또는 상자 전체)을 눌렀을 때 — 보통 구독 화면(PAYWALL_PATH)으로 */
   onClick: () => void;
   /** true 면 상자 전체가 눌림 (내 정보 회원 구역) */
   wholeBox?: boolean;
 }
 
-const PlusLockBox = ({ title, lines, onClick, wholeBox = false }: Props) => {
+const PlusLockBox = ({ eyebrow, title, lines, onClick, wholeBox = false }: Props) => {
   return (
   <div
     role={wholeBox ? "button" : undefined}
@@ -31,13 +33,22 @@ const PlusLockBox = ({ title, lines, onClick, wholeBox = false }: Props) => {
     className={"flex items-stretch gap-3 rounded-[18px] border border-[#F1E0AE] bg-[#FFF6DC] py-3.5 pr-3.5 pl-[22px]" + (wholeBox ? " active:opacity-90" : "")}
   >
     <div className="flex-1 min-w-0">
+      {eyebrow ? (
+        <p data-lock-eyebrow className="m-0 mb-px font-gothic text-[0.71875rem] font-medium leading-[1.4] text-[#1D1F1E] break-keep">
+          {eyebrow}
+        </p>
+      ) : null}
       <p className="m-0 text-[0.875rem] font-semibold leading-[1.4] text-[#1D1F1E] break-keep">
         {title}
       </p>
-      <p className="m-0 mt-1.5 font-gothic text-[0.6875rem] leading-[1.55] text-[#6E5612] break-keep">
+      <p data-lock-lines className="m-0 mt-1.5 font-gothic text-[0.6875rem] leading-[1.55] text-[#6E5612] break-keep">
         {lines[0]}
-        <br />
-        {lines[1]}
+        {lines.length > 1 ? (
+          <>
+            <br />
+            {lines[1]}
+          </>
+        ) : null}
       </p>
     </div>
     <button
