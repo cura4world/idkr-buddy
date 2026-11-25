@@ -12,6 +12,8 @@ import { Check, Loader2 } from "lucide-react";
 import { Tier, TIER_LABEL, setPreviewTier, usePlan } from "@/lib/plan";
 import { clearPreviewData, previewBuildLabel, resetPreviewAsNewFreeUser } from "@/lib/preview";
 import { getGeminiApiKey, setGeminiApiKey, cleanGeminiKeyInput, geminiKeyInputProblem } from "@/lib/gemini";
+import { getLevelState, setLevelForTest } from "@/lib/kataHariIni";
+import type { KataLen } from "@/lib/kataHariIni";
 
 const TIERS: Tier[] = ["free", "plus", "special", "admin"];
 
@@ -32,6 +34,7 @@ export default function PreviewPanel() {
   const [confirmWipe, setConfirmWipe] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [confirmFresh, setConfirmFresh] = useState(false);
+  const [kataLevel, setKataLevel] = useState<KataLen>(() => getLevelState().cur);
   const openRef = useRef(false);
   const pushedRef = useRef(false);
 
@@ -220,6 +223,32 @@ export default function PreviewPanel() {
                       {TIER_LABEL[t]}
                     </span>
                     <span className="w-4 shrink-0 text-primary">{t === tier ? <Check size={15} /> : null}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* 오늘의 단어 퍼즐 단계 — 시험용(2026-11-25). 단계를 바로 바꾸고 오늘 퍼즐 기록을 지워, 퍼즐을 다시 열면 그 글자 수로 열림 */}
+            <section className="border-t border-border px-4 pt-3.5 pb-2" data-preview-kata-level>
+              <h3 className="text-[13px] font-semibold text-foreground">오늘의 단어 퍼즐 단계</h3>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
+                고르면 오늘 퍼즐 기록을 지우고 그 글자 수로 다시 엽니다. 퍼즐 화면에 다시 들어가세요.
+              </p>
+              <div className="mt-2 flex gap-2">
+                {([4, 5, 6] as KataLen[]).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => {
+                      setLevelForTest(n);
+                      setKataLevel(n);
+                    }}
+                    className={
+                      "h-9 flex-1 rounded-[10px] border text-[13px] active:bg-muted/60 " +
+                      (kataLevel === n ? "border-primary font-semibold text-foreground" : "border-border text-foreground")
+                    }
+                  >
+                    {n}글자
                   </button>
                 ))}
               </div>
