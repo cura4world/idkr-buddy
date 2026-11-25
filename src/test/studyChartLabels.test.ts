@@ -1,6 +1,6 @@
 // 내 정보 공부 시간 그래프의 어제·오늘 숫자 배치(2026-11-25, lib/studyChartLabels.ts)
 import { describe, expect, it } from "vitest";
-import { barSpan, labelsOverlap, placeChartLabels, shortHM, type ChartLabelInput, type PlacedLabel } from "@/lib/studyChartLabels";
+import { barOverlapArea, barSpan, labelsOverlap, placeChartLabels, shortHM, type ChartLabelInput, type PlacedLabel } from "@/lib/studyChartLabels";
 
 // 412px·100% 실측에 가까운 값: 그래프 폭 352 · 높이 32 · 막대 사이 3, "어제 1h 30m" 62×14, "오늘 20m" 46×14
 const Y = { w: 62, h: 14 };
@@ -64,17 +64,50 @@ describe("어제·오늘 숫자 배치", () => {
     inside(r.yesterday, i);
   });
 
-  it("30일(30일 달)·31일(31일 달) — 오른쪽 위에 두 줄, 윗줄 어제·아랫줄 오늘, 오른쪽 끝 맞춤", () => {
+  it("30일(30일 달)·31일(31일 달) — 위쪽 두 줄, 윗줄 어제·아랫줄 오늘, 끝 맞춤, 어제·오늘 막대와 안 겹침", () => {
     for (const [days, idx] of [[30, 29], [31, 30]]) {
       const i = base({ days, todayIdx: idx });
       const r = placeChartLabels(i);
       expect(r.mode).toBe("stack-right");
       expect(r.yesterday!.y).toBe(0);
       expect(r.today!.y).toBe(Y.h);
-      expect(r.yesterday!.x + r.yesterday!.w).toBe(352);
-      expect(r.today!.x + r.today!.w).toBe(352);
+      expect(r.yesterday!.x + r.yesterday!.w).toBeCloseTo(r.today!.x + r.today!.w, 5);
+      expect(barOverlapArea(i, r)).toBe(0);
       expect(labelsOverlap(r.yesterday, r.today)).toBe(false);
       inside(r.yesterday, i); inside(r.today, i);
+    }
+  });
+
+  // 2026-11-25 S21 실제 기록: 어제 15h 16m 로 그달 최고(막대가 꼭대기까지), 오늘 1h 32m, 오늘 25일 — 두 줄 묶음이 어제 막대 위에 얹혔음
+  it("어제가 그달 최고(꼭대기까지)인 25일·30일 — 두 줄 묶음이 어제·오늘 막대와 겹치지 않음", () => {
+    const sizes = [
+      { chartW: 300, y: { w: 85, h: 15.8 }, t: { w: 75, h: 15.8 } }, // 360px·125%
+      { chartW: 352, y: { w: 70, h: 12.7 }, t: { w: 62, h: 12.7 } }, // 412px·100%
+      { chartW: 300, y: { w: 70, h: 12.7 }, t: { w: 62, h: 12.7 } }, // 360px·100%
+    ];
+    for (const s of sizes) {
+      for (const idx of [24, 29]) {
+        const i = base({ chartW: s.chartW, days: 30, todayIdx: idx, yesterdayBarH: 32, todayBarH: 3.2, yesterday: s.y, today: s.t });
+        const r = placeChartLabels(i);
+        expect(barOverlapArea(i, r), JSON.stringify({ w: s.chartW, idx, mode: r.mode })).toBe(0);
+        expect(labelsOverlap(r.yesterday, r.today)).toBe(false);
+        inside(r.yesterday, i); inside(r.today, i);
+      }
+    }
+  });
+
+  it("두 줄로 쌓일 때는 후보 중 어제·오늘 막대와 겹치는 넓이가 가장 작은 자리", () => {
+    // 그래프 오른쪽 끝에 맞춘 자리(예전 자리)와 비교 — 고른 자리가 더 크게 겹치지 않음
+    for (const idx of [24, 27, 29]) {
+      const i = base({ chartW: 300, days: 30, todayIdx: idx, yesterdayBarH: 32, todayBarH: 20, yesterday: { w: 85, h: 15.8 }, today: { w: 75, h: 15.8 } });
+      const r = placeChartLabels(i);
+      if (r.mode === "free") continue;
+      const old = {
+        mode: "stack-right" as const,
+        yesterday: { x: 300 - 85, y: 0, w: 85, h: 15.8, how: "stack" as const },
+        today: { x: 300 - 75, y: 15.8, w: 75, h: 15.8, how: "stack" as const },
+      };
+      expect(barOverlapArea(i, r)).toBeLessThanOrEqual(barOverlapArea(i, old));
     }
   });
 
@@ -91,13 +124,15 @@ describe("어제·오늘 숫자 배치", () => {
     expect(r.today).not.toBeNull();
   });
 
-  it("월초(어제 숫자가 왼쪽에 안 들어감) — 왼쪽 위에 두 줄", () => {
-    const i = base({ todayIdx: 1 });
-    const r = placeChartLabels(i);
-    expect(r.mode).toBe("stack-left");
-    expect(r.yesterday!.x).toBe(0);
-    expect(r.today!.x).toBe(0);
-    inside(r.yesterday, i); inside(r.today, i);
+  it("월초(어제 숫자가 왼쪽에 안 들어감) — 위쪽 두 줄(왼쪽 끝 맞춤), 어제·오늘 막대와 안 겹침", () => {
+    for (const [yh, th] of [[10, 6], [32, 3], [3, 32]]) {
+      const i = base({ todayIdx: 1, yesterdayBarH: yh, todayBarH: th });
+      const r = placeChartLabels(i);
+      expect(r.mode).toBe("stack-left");
+      expect(r.yesterday!.x).toBeCloseTo(r.today!.x, 5);
+      expect(barOverlapArea(i, r)).toBe(0);
+      inside(r.yesterday, i); inside(r.today, i);
+    }
   });
 
   it("어느 날·어느 막대 높이·125% 글자에서도 두 숫자가 겹치지 않고 그래프 밖으로 나가지 않음", () => {
