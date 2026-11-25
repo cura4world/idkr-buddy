@@ -52,14 +52,15 @@ test("보통 날 — 어제·오늘 숫자와 색, 그래프 안, 겹침 없음,
   expect(Math.round(chart.height)).toBe(59); // 2026-11-25 32 → 43px(4/3) → 59px(+16)
   const y = page.locator('[data-day-label="yesterday"]');
   const t = page.locator('[data-day-label="today"]');
-  // 어제·오늘 숫자는 보통 굵기(2026-11-25 700 → 400)
+  // 어제 숫자는 보통(400), 오늘 숫자만 굵게(700)(2026-11-25)
   await expect(y).toHaveCSS("font-weight", "400");
-  await expect(t).toHaveCSS("font-weight", "400");
+  await expect(t).toHaveCSS("font-weight", "700");
   await expect(y).toHaveText("어제 1h 30m");
   await expect(t).toHaveText("오늘 20m");
   await expect(y).toHaveCSS("color", "rgb(70, 125, 115)");
   await expect(t).toHaveCSS("color", "rgb(44, 109, 99)");
-  await expect(page.locator('[data-bar="yesterday"]')).toHaveCSS("background-color", "rgb(70, 125, 115)");
+  // 어제 막대는 오늘·지난 날들의 중간색 #64998F(2026-11-25), 어제 숫자 색은 #467D73 그대로
+  await expect(page.locator('[data-bar="yesterday"]')).toHaveCSS("background-color", "rgb(100, 153, 143)");
   await expect(page.locator('[data-bar="today"]')).toHaveCSS("background-color", "rgb(44, 109, 99)");
   const yb = (await y.boundingBox())!;
   const tb = (await t.boundingBox())!;
