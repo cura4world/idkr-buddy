@@ -737,4 +737,64 @@ pinjam, proses, puncak, rempah, sayang, seakan, sebaik, sebuah, segala, sehari, 
 sektor, selera, semata, sempat, seolah, serupa, simbol, simpan, solusi, suntuk, tabung, tambah,
 tampak, tarian, tasnya, tayang, teknik, teknis, tembok, tenaga, terasa, terbit, terigu, tertib,
 timnya, tombol, tropis, tuanya, uangmu, ucapan, undang, urusan, urutan, utusan
+## 2단계 확정 (2026-11-25)
+
+검토(Claude) 반영 뒤 동결본으로 옮긴 내용입니다 — `src/data/kataHariIniWords4.ts`·`kataHariIniWords6.ts`·`kataHariIniGuesses4.ts`·`kataHariIniGuesses6.ts`.
+
+| 단계 | 정답(최종) | 한 바퀴 | 기준일(0번) | 넣을 수 있는 말(정답 밖) | 입력으로 받는 말 합계 |
+|---|---|---|---|---|---|
+| 4글자 | 183 | 183일 | 2026-11-26 | 534 | 717 |
+| 6글자 | 313 | 313일 | 2026-11-26 | 319 | 632 |
+
+- 정답에서 더 뺌(넣을 수 있는 말에는 남김): 4글자 babi, bemo, mama, papa / 6글자 anjing, campak, kanker
+- 그 밖의 "판단 갈릴 만한 단어"(숫자·서수, 수분류사, bank·film 등 외래어, selalu·sering·jarang, dicuri)는 정답에 남김
+- 뜻의 "/" 는 5글자 목록처럼 "·" 로 바꿈
+- 출제 순서: 알파벳순 → 씨앗(4글자 202611264, 6글자 202611266)으로 한 번 섞어 고정
+
+### 뜻 고침 (힌트로 보이는 칸)
+
+| 단어 | 예전 뜻 | 고친 뜻 |
+|---|---|---|
+| biji | 알 (작은 것 수분류사) | 씨앗·알 (작은 것 세는 말) |
+| buah | 개 (사물 수분류사) | 과일·열매 (사물 세는 말) |
+| ekor | 마리 (동물 수분류사) | 꼬리 (동물 세는 말) |
+| hati | 간 (장기) | 마음·간 |
+| batang | 자루/그루 (긴 물건 수분류사) | 줄기·막대 (긴 것 세는 말) |
+| kaleng | 캔 (수분류사) | 캔·깡통 |
+| lembar | 장 (종이 수분류사) | 장·낱장 (종이 세는 말) |
+| pasang | 쌍/켤레 (짝 수분류사) | 쌍·켤레 (짝 세는 말) |
+| piring | 그릇 (음식 수분류사) | 접시 |
+| potong | 조각 (자른 것 수분류사) | 조각 (자른 것 세는 말) |
+
+### 4글자 넣을 수 있는 말 — 손으로 더한 단어 (324개)
+
+흔한 표준 4글자 단어(단어장에 없어도 됨). 고유명사·요일 이름·욕설·성인 단어는 넣지 않음. 예문에서 자동으로 들어온 jawa(고유명사)는 뺌.
+
+abai, abdi, abon, acak, acar, acuh, adab, agen, ajak, ajal, ajar, akad,
+aksi, akur, alas, alga, alih, alim, alir, alot, alpa, alur, amal, amis,
+amuk, anda, anti, anut, apak, apel, apik, apit, arak, aral, arca, arif,
+asah, asas, aset, asuh, atom, atur, awak, awet, ayak, ayun, azan, baja,
+baki, baku, bapa, bata, bayu, beku, besi, biar, bias, bila, bina, biro,
+bisu, blok, bodi, boga, boks, bolu, bros, bual, bubu, budi, buih, busa,
+calo, cela, ceri, ciri, cium, ciut, cuil, cuka, curi, dadu, dahi, daki,
+dana, dara, debu, demo, depa, dera, deru, dewa, dewi, diet, duel, duga,
+duit, duku, dupa, duri, duta, ecer, edar, edit, efek, ejek, elak, elit,
+elok, elus, enau, epik, eram, esai, etis, etos, fana, fase, gada, gaib,
+gali, gaul, gaya, gema, giat, gila, gips, giro, goda, gong, guci, guna,
+gusi, haru, hawa, hela, hina, hulu, huma, huni, idam, idap, ijuk, ikal,
+ikon, imun, inci, info, iris, isak, isap, itik, jago, jala, jasa, jati,
+jaya, jeda, jemu, jera, jitu, joki, jual, judo, juri, kaca, kail, kaji,
+kala, keju, kias, kiat, kisi, kiwi, klik, koma, kuah, kuas, kubu, kuil,
+kuli, kurs, kutu, labu, laga, laik, laju, laku, lesu, liat, lidi, liku,
+lobi, logo, loyo, luap, lugu, maut, mega, mini, mode, mosi, muak, mumi,
+mutu, nada, nadi, naga, naif, nila, nira, noda, nona, obor, oles, olok,
+onar, opsi, oven, pacu, padu, pagu, pala, pare, pari, pena, peri, peti,
+picu, pilu, pion, pipa, pita, piza, pola, poni, pori, pose, pria, puja,
+raba, ragi, ramu, ratu, raut, rayu, regu, reka, rela, riak, rona, ruas,
+rupa, rute, sagu, saji, sapa, sari, sauh, saus, sawi, sawo, sayu, sedu,
+segi, sela, semi, sesi, sewa, sisi, sita, siul, stok, suam, suar, sudi,
+tabu, taji, tani, tapa, tega, teri, tipe, tipu, tiru, tiup, toga, tong,
+tren, tuah, tuai, tuas, tugu, tuli, ubah, uban, ubin, ucap, udik, ufuk,
+ujar, ukir, ukur, ulah, ulam, ulas, ulat, ulet, ulur, umbi, undi, unit,
+unta, urai, urut, usai, usap, usik, usir, utus, veto, visi, wira, zona
 
