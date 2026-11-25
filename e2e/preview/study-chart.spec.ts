@@ -49,7 +49,7 @@ async function cardHeight(page: Page) {
 test("보통 날 — 어제·오늘 숫자와 색, 그래프 안, 겹침 없음, 칸 높이는 숫자가 없을 때와 같음", async ({ page }) => {
   await openMe(page, { day: 18, data: usage(18, 90, 20) });
   const chart = (await page.locator("[data-study-chart]").boundingBox())!;
-  expect(Math.round(chart.height)).toBe(32);
+  expect(Math.round(chart.height)).toBe(43); // 2026-11-25 32 → 43px(4/3)
   const y = page.locator('[data-day-label="yesterday"]');
   const t = page.locator('[data-day-label="today"]');
   await expect(y).toHaveText("어제 1h 30m");
