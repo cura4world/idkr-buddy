@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v python >/dev/null 2>&1; then P=python; else P=python3; fi; \"$P\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_command.py\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v python >/dev/null 2>&1; then P=python; else P=python3; fi; \"$P\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/check_crlf.py\""
+          }
+        ]
+      }
+    ]
+  }
+}
