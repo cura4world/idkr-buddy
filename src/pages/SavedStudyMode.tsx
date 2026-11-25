@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
 import { getSavedWords, removeSavedWord, Word } from "@/lib/store";
 import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Play, Square, RefreshCw, Lock, Unlock, Trash2 } from "lucide-react";
+import AutoPlayMark from "@/components/AutoPlayMark";
 import { toast } from "sonner";
 
 export default function SavedStudyMode() {
@@ -256,42 +257,51 @@ export default function SavedStudyMode() {
       </div>
       <div className="flex justify-center gap-3 py-2">
         <button onClick={handleDelete} disabled={isAutoPlaying}
+          aria-label="다시 외울 단어에서 빼기" title="다시 외울 단어에서 빼기"
           className="w-12 h-12 flex items-center justify-center rounded-full transition-colors border bg-card text-destructive border-border/50 hover:border-destructive/50 disabled:opacity-30">
           <Trash2 size={20} />
         </button>
         <button onClick={() => { setIsRandom((r) => !r); setCurrentIndex(0); setIsFlipped(false); }} disabled={isAutoPlaying}
+          aria-label="카드 순서 섞기" title="카드 순서 섞기" aria-pressed={isRandom}
           className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isRandom ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"} disabled:opacity-30`}>
           <Shuffle size={20} />
         </button>
         <button onClick={() => { if (!currentWord) return; const { text, lang } = getSpeakTarget(currentWord, isFlipped); speak(text, lang); }}
           disabled={!currentWord || isAutoPlaying}
+          aria-label="듣기" title="듣기"
           className="w-12 h-12 flex items-center justify-center rounded-full transition-colors border bg-card text-gray-900 border-border/50 hover:border-primary/50 disabled:opacity-30">
           <Volume2 size={20} />
         </button>
         <button onClick={() => { if (isAutoPlaying) return; setFrontLang((l) => (l === "id" ? "ko" : "id")); setIsFlipped(false); setCurrentIndex(0); }}
           disabled={isAutoPlaying}
+          aria-label="앞면 언어 바꾸기" title="앞면 언어 바꾸기"
           className={`w-12 h-12 flex items-center justify-center rounded-full text-sm font-bold font-body transition-colors border disabled:opacity-30 bg-card text-gray-900 border-border/50 hover:border-primary/50 ${frontLang === "ko" ? "border-primary" : ""}`}>
           {frontLang === "id" ? "IN" : "KO"}
         </button>
       </div>
       <div className="flex items-center justify-center gap-3 py-4">
         <button onClick={goPrev} disabled={currentIndex === 0 || isAutoPlaying}
+          aria-label="이전 카드" title="이전 카드"
           className="w-12 h-12 flex items-center justify-center rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity">
           <ChevronLeft size={20} />
         </button>
         <button onClick={() => startAutoPlay(false)}
+          aria-label="자동 재생" title="자동 재생"
           className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isAutoPlaying && !isAutoRandom ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"}`}>
           {isAutoPlaying && !isAutoRandom ? <Square size={20} /> : <Play size={20} />}
         </button>
         <button onClick={toggleLoop}
+          aria-label="반복 재생" title="반복 재생" aria-pressed={isLooping}
           className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isLooping ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"}`}>
           <RefreshCw size={20} />
         </button>
         <button onClick={() => startAutoPlay(true)}
-          className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isAutoPlaying && isAutoRandom ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"}`}>
-          {isAutoPlaying && isAutoRandom ? <Square size={20} /> : <Shuffle size={20} />}
+          aria-label="무작위 자동 재생" title="무작위 자동 재생"
+          className={`relative w-12 h-12 flex items-center justify-center rounded-full transition-colors border ${isAutoPlaying && isAutoRandom ? "bg-primary text-primary-foreground border-primary" : "bg-card text-gray-900 border-border/50 hover:border-primary/50"}`}>
+          {isAutoPlaying && isAutoRandom ? <Square size={20} /> : <><Shuffle size={20} /><AutoPlayMark /></>}
         </button>
         <button onClick={goNext} disabled={currentIndex === displayWords.length - 1 || isAutoPlaying}
+          aria-label="다음 카드" title="다음 카드"
           className="w-12 h-12 flex items-center justify-center rounded-full bg-card border border-border/50 text-gray-900 disabled:opacity-30 transition-opacity">
           <ChevronRight size={20} />
         </button>
