@@ -62,7 +62,8 @@ export interface GameMeta {
 export const GAME_META: Record<GameId, GameMeta> = {
   kata: {
     title: "KATA HARI INI", ko: "오늘의 단어 퍼즐", name: "Kata Hari Ini",
-    desc: "다섯 글자 단어를 여섯 번 안에 맞혀 보세요", bg: "#FFF6DC", fg: "#8A6A12", path: "/permainan/kata",
+    // 2026-11-25: 4·5·6글자 단계가 생겨 글자 수를 빼고 씀
+    desc: "오늘의 단어를 여섯 번 안에 맞혀 보세요", bg: "#FFF6DC", fg: "#8A6A12", path: "/permainan/kata",
   },
   jodoh: {
     title: "JODOHKAN", ko: "빠른 짝 맞추기", name: "Jodohkan",
