@@ -970,3 +970,6 @@ Arga 가 2026-11-14 밤에 콘솔에서 끝낸 것을 사실 그대로 적는다
 - **④ 구독 화면 하단 탭은 들어온 곳의 탭**: `navigate(PAYWALL_PATH, { state: paywallState(경로) })`(BottomTabs). state 가 없으면 예전처럼 내 정보.
   AI 한도 안내가 여는 구독 화면(`aiProxy` 의 pushState)은 state 가 없어 내 정보.
 - **⑤ 잠금 제목의 "Plus 회원 기능입니다"는 한 덩어리**(`components/LockTitle`, 안내 창·안내 상자 공용). 글자는 그대로.
+- **⑥ 앱 정보에 화면 쪽 빌드 번호**: "Kata kata 1.0.11 · 11.25-877". 1.0.11 은 앱 껍데기 번호라 main 배포로 바뀌지 않아, 오류 신고 때 화면 판을 가리려고 붙였다.
+  `vite.config.ts` 의 define `__WEB_BUILD__` = 빌드한 날(한국 시간 월.일)-`GITHUB_RUN_NUMBER`, 미리보기(VITE_PREVIEW=1)는 끝에 "p", Actions 밖은 "dev". 읽기는 `platform.webBuildLabel()`.
+  E2E 워크플로의 미리보기 빌드도 자기 실행 번호에 "p" 가 붙는다(화면 테스트용이라 상관없음). AI 신고(`/report`)에는 앱 버전이 실리지 않아 손대지 않았다.
