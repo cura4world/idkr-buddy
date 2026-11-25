@@ -229,7 +229,8 @@ src/
   (2026-11 공개판에서 더한 것) lib/plan.ts 등급 판단(모든 잠금은 여기로만. 서버의 심사용 등급 review 는 Plus 로 다룸 — isReviewAccount) · lib/preview.ts 미리보기 빌드 ·
   lib/account.ts·billing.ts·aiProxy.ts·aiErrors.ts 공개판 계정·결제·AI 경로·오류 문구 · lib/platform.ts isStoreApp ·
   lib/wordbookGroups.ts·wordbookAccess.ts 단어장 묶음·성경과 신앙 숨김 · lib/sharedIdMigration.ts 단어장 ID 이전 ·
-  lib/illust.ts·illustFit.ts + data/illust/ 색연필 그림(README 가 정본) · lib/kataHariIni.ts + data/kataHariIniWords.ts(+ lib/kataHariIniHelp.ts "게임 방법" 창 문구 한 곳)
+  lib/illust.ts·illustFit.ts + data/illust/ 색연필 그림(README 가 정본) · lib/kataHariIni.ts + data/kataHariIniWords.ts(+ lib/kataHariIniHelp.ts "게임 방법" 창 문구 한 곳,
+  4·6글자 단계 동결본 data/kataHariIniWords4·6.ts·Guesses4·6.ts — 5글자와 같은 "맨 끝에만 붙임" 규칙, DECISIONS 30장)
   퍼즐 정답 동결본(맨 끝에만 붙임) · lib/mapPhotos.ts 지도 사진 고정 목록(scripts/build-map-photos.mjs, Actions 에서 생성) ·
   hooks/useBackClose.ts 창·시트 뒤로가기 닫기 · hooks/useOutsideTapClose.ts 떠 있는 상자 바깥 누르기 닫기(그 누르기는 먹음, ⓘ 말풍선·명찰 요약 상자) · components/BottomTabs·PlusLockBox·PreviewPanel·WordIllust·LevelCircles·WordMiniSheet ·
   components/PlusMoreButton.tsx 홈 Plus 카드·내 정보 회원 칸이 같이 쓰는 "Plus / 자세히 보기" 금색 알약(화면 읽기 이름 "Plus 자세히 보기") + "구독 / 관리" 알약 ·
