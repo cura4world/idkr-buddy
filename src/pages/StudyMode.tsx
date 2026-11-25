@@ -6,6 +6,7 @@ import { canOpenWordbook } from "@/lib/tasteAccess";
 import { groupOf } from "@/lib/wordbookGroups";
 import { goBackOr, wordbookFallback } from "@/lib/nav";
 import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Volume2, Play, Square, Bookmark, RefreshCw, Lock, Unlock } from "lucide-react";
+import AutoPlayMark from "@/components/AutoPlayMark";
 import { toast } from "sonner";
 import { displayMeaning } from "@/lib/wordbookGroups";
 import { isStoreApp } from "@/lib/platform";
@@ -506,41 +507,50 @@ export default function StudyMode() {
       <div className="shrink-0 pt-3.5 flex justify-center gap-3">
         <button onClick={() => { if (isAutoPlaying) return; cancelSwipe(); setFrontLang((l) => (l === "id" ? "ko" : "id")); setIsFlipped(false); setCurrentIndex(0); }}
           disabled={isAutoPlaying}
+          aria-label="앞면 언어 바꾸기" title="앞면 언어 바꾸기"
           className={`${BTN} ${frontLang === "ko" ? BTN_ON : BTN_OFF}`}>
           <span className="font-word text-sm font-semibold">{frontLang === "id" ? "IN" : "KO"}</span>
         </button>
         <button onClick={() => { cancelSwipe(); setIsRandom((r) => !r); setCurrentIndex(0); setIsFlipped(false); }} disabled={isAutoPlaying}
+          aria-label="카드 순서 섞기" title="카드 순서 섞기" aria-pressed={isRandom}
           className={`${BTN} ${isRandom ? BTN_ON : BTN_OFF}`}>
           <Shuffle size={20} />
         </button>
         <button onClick={() => { if (!currentWord) return; usedSpeakerRef.current = true; const { text, lang } = getSpeakTarget(currentWord, isFlipped); speak(text, lang); }}
           disabled={!currentWord || isAutoPlaying}
+          aria-label="듣기" title="듣기"
           className={`${BTN} ${BTN_OFF}`}>
           <Volume2 size={20} />
         </button>
         <button onClick={handleToggleFilter} disabled={isAutoPlaying}
+          aria-label="다시 외울 단어만 보기" title="다시 외울 단어만 보기" aria-pressed={reviewFilter}
           className={`${BTN} ${reviewFilter ? BTN_ON : BTN_OFF}`}>
           <Bookmark size={20} fill={reviewFilter ? "currentColor" : "none"} />
         </button>
       </div>
       <div className="shrink-0 pt-3.5 pb-[30px] flex items-center justify-center gap-3">
         <button onClick={() => goPrev()} disabled={currentIndex === 0 || isAutoPlaying}
+          aria-label="이전 카드" title="이전 카드"
           className={`${BTN} ${BTN_OFF}`}>
           <ChevronLeft size={20} />
         </button>
         <button onClick={() => startAutoPlay(false)}
+          aria-label="자동 재생" title="자동 재생"
           className={`${BTN} ${isAutoPlaying && !isAutoRandom ? BTN_ON : BTN_OFF}`}>
           {isAutoPlaying && !isAutoRandom ? <Square size={18} /> : <Play size={20} fill="currentColor" strokeWidth={0} />}
         </button>
         <button onClick={toggleLoop}
+          aria-label="반복 재생" title="반복 재생" aria-pressed={isLooping}
           className={`${BTN} ${isLooping ? BTN_ON : BTN_OFF}`}>
           <RefreshCw size={20} />
         </button>
         <button onClick={() => startAutoPlay(true)}
-          className={`${BTN} ${isAutoPlaying && isAutoRandom ? BTN_ON : BTN_OFF}`}>
-          {isAutoPlaying && isAutoRandom ? <Square size={18} /> : <Shuffle size={20} />}
+          aria-label="무작위 자동 재생" title="무작위 자동 재생"
+          className={`${BTN} relative ${isAutoPlaying && isAutoRandom ? BTN_ON : BTN_OFF}`}>
+          {isAutoPlaying && isAutoRandom ? <Square size={18} /> : <><Shuffle size={20} /><AutoPlayMark /></>}
         </button>
         <button onClick={() => goNext()} disabled={currentIndex === displayWords.length - 1 || isAutoPlaying}
+          aria-label="다음 카드" title="다음 카드"
           className={`${BTN} ${BTN_OFF}`}>
           <ChevronRight size={20} />
         </button>
