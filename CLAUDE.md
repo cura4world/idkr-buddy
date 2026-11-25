@@ -39,6 +39,7 @@
 1. 편집 **직전에** 대상 파일의 최신 내용을 다시 읽는다 (로컬 사본이 오래됐을 수 있음).
 2. 치환 앵커는 **파일 내 정확히 1회 등장**하는지 확인한다. Python 스크립트 + `assert s.count(anchor) == 1` 방식이 가장 안전하다.
 3. **편집은 Edit / Write 도구로만 한다. Bash heredoc(`<<'EOF'`)·sed 로 코드를 쓰지 않는다.** 스크립트가 꼭 필요하면 그 스크립트도 Write 도구로 만들어 실행하고, 확인 뒤 저장소에 남기지 않는다. — heredoc이 백슬래시를 한 겹 먹어 `new RegExp("\\s+")`가 `\s+`로 기록된 사고가 있었다. esbuild·tsc를 모두 통과한 뒤 실행 시점에만 발각됐다. 백슬래시가 들어가는 코드는 무조건 Edit/Write 도구로 쓸 것.
+   **훅이 막는다(2026-11-25)** — `.claude/hooks/guard_command.py`(PreToolUse: heredoc·`sed -i`·`perl -pi`·`git add -A/./-f`·`git commit -a`·강제 push·PowerShell here-string 파일 쓰기)와 `.claude/hooks/check_crlf.py`(PostToolUse: 고친 파일에 CR 이 있으면 알림), 설정은 `.claude/settings.json`. 훅 설정은 세션을 시작할 때 읽히므로 새 세션부터 듣는다.
 4. 검증 명령을 모두 통과시킨다.
 5. 파일별로 개별 커밋한다.
 6. 실패하면 커밋하지 말고 원인을 보고한다.
