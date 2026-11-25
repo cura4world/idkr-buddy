@@ -1744,7 +1744,11 @@ const CARD_VER = "v1";
 const CARD_INDEX_KEY = "card:index";
 const CARD_LOCK_KEY = "card:lock";
 const CARD_INDEX_MAX = 1000;
-const CARD_MAX_RUNS = 4;          // 한 날짜에 Cron 이 시도하는 최대 횟수
+// 보이는 기간 — 오늘을 넣어 최근 365일(2026-11-25 Arga 결정). 그보다 오래된 카드는 목록·조회에서 빠지고
+// Cron 이 KV 에서 지웁니다(카드 글·그림·목록 줄). 그림이 한 장 약 0.4~0.6MB 라 KV 무료 1GB 안에 늘 머물게 하려는 것.
+const CARD_KEEP_DAYS = 365;
+const CARD_PRUNE_PER_RUN = 20;    // 한 번에 지우는 최대 장수(KV 하루 지우기 한도 안에서)
+const CARD_MAX_RUNS = 4;         // 한 날짜에 Cron 이 시도하는 최대 횟수
 const CARD_LOCK_SEC = 600;        // 겹쳐 돌지 않게 — 한 번 도는 데 길어야 몇 분
 const CARD_DATE_RE = new RegExp("^[0-9]{4}-[0-9]{2}-[0-9]{2}$");
 // 문장 끝의 "~요."·"~죠?" (문장부호가 붙었거나 글 끝). "필요 없이"처럼 낱말 속 "요" 는 잡지 않습니다.
@@ -1780,6 +1784,44 @@ const CARD_TOPICS = [
   { chip: "교통", hint: "앙꼿·오젝·기차 같은 교통수단이나 이동 문화 하나" },
   { chip: "집과 가족", hint: "집·가족·이웃 사이의 생활 문화 하나" },
 ];
+
+// 분야 — 지난 카드 화면의 분야 단추(2026-11-25). 카드 꼬리표(chip)는 AI 가 그날마다 다르게 쓰므로("속담 한 조각"·"길거리 간식")
+// 단추로 쓰지 않고, 만들 때 정한 분야(cat)를 따로 둡니다: 일반 주제는 CARD_TOPICS 의 이름, 명절·시기 주제는 "기념일·시기".
+const CARD_CAT_EVENT = "기념일·시기";
+// cat 이 없는 예전 카드(2026-11-25 이전)는 꼬리표 글자로 분야를 짐작합니다. 앞의 줄이 먼저 — "전통 놀이"는 놀이.
+const CARD_CAT_GUESS = [
+  [CARD_CAT_EVENT, ["의 날", "명절", "우기", "건기", "라마단", "르바란", "독립", "새해", "기념"]],
+  ["놀이", ["놀이", "스포츠", "운동"]],
+  ["속담", ["속담"]],
+  ["커피와 차", ["커피", "차 문화", "커피와 차"]],
+  ["음식", ["음식", "간식", "먹거리", "요리", "과일", "디저트", "국수", "밥"]],
+  ["생활 예절", ["예절", "인사", "매너"]],
+  ["말과 표현", ["말", "표현", "어휘", "단어"]],
+  ["지역", ["지역", "도시", "섬"]],
+  ["자연", ["자연", "동물", "식물", "꽃", "화산", "바다"]],
+  ["시장", ["시장", "가게", "흥정", "쇼핑"]],
+  ["교통", ["교통", "앙꼿", "오젝", "기차", "버스"]],
+  ["집과 가족", ["집", "가족", "이웃"]],
+  ["전통", ["전통", "공예", "의상", "악기", "춤", "바틱"]],
+];
+
+function cardCatOf(e) {
+  if (e && typeof e.cat === "string" && e.cat) return e.cat;
+  const chip = String((e && e.chip) || "");
+  for (const [cat, words] of CARD_CAT_GUESS) {
+    if (words.some((w) => chip.indexOf(w) >= 0)) return cat;
+  }
+  return "";
+}
+
+function cardCatForTopic(topic) {
+  return topic.kind === "topic" ? topic.chip : CARD_CAT_EVENT;
+}
+
+/** 보이는 가장 오래된 날짜 — 오늘을 넣어 CARD_KEEP_DAYS 일 */
+function cardOldestDay(today) {
+  return addDays(today, -(CARD_KEEP_DAYS - 1));
+}
 
 // 명절·기념일 — 그날 카드의 주제가 됩니다. 이슬람력 명절은 해마다 날짜가 바뀌므로 정부 발표(SKB 3 Menteri)를 보고 해마다 넣습니다.
 // 2027년은 SKB 1205·3·2 Tahun 2026(2026-09 발표) 기준.
@@ -2090,7 +2132,8 @@ function cardGenPrompt(d, topic, recentTitles) {
     "- 종교 기념일은 국가 공휴일이라는 사실과 사람들이 그날을 어떻게 보내는지만 중립적으로 소개합니다. 교리 설명·신앙 권유·종교 비교나 평가는 하지 않습니다.\n" +
     "- 정치·분쟁·재난·사건 사고·민족이나 종교 갈등은 다루지 않습니다.\n" +
     "- 너무 뻔한 상식보다 '오, 그렇구나' 싶은 구체적인 이야기를 고릅니다.\n" +
-    "- 최근 카드와 겹치지 않게 합니다. 최근 제목: " + (recentTitles.length ? recentTitles.join(", ") : "없음") + "\n"
+    "- 아래 지난 카드와 같은 소재(같은 음식·물건·장소·표현·속담·행사)는 쓰지 않습니다. 명절·시기 주제가 지난해와 같으면 지난 카드와 다른 면을 고릅니다.\n" +
+    "  지난 카드 제목: " + (recentTitles.length ? recentTitles.join(" / ") : "없음") + "\n"
   );
 }
 
@@ -2256,7 +2299,11 @@ async function cardWriteIndexEntry(env, entry) {
  */
 async function generateCard(env, d, ctx) {
   const index = await cardReadIndex(env);
-  const recentTitles = index.filter((e) => e.d !== d).slice(0, 40).map((e) => e.title);
+  // 겹침 피하기 — 예전에는 최근 40장(약 6주)만 보여 줘 2년이면 같은 소재가 돌아올 수 있었습니다.
+  // 이제 보이는 기간(그 날짜 앞뒤 1년) 안의 제목을 모두 보여 줍니다(2026-11-25). 1년이 지나 목록에서 빠진 소재는 다시 쓸 수 있습니다.
+  const from = addDays(d, -(CARD_KEEP_DAYS - 1));
+  const to = addDays(d, CARD_KEEP_DAYS - 1);
+  const recentTitles = index.filter((e) => e && e.d !== d && e.d >= from && e.d <= to).map((e) => e.title);
   let made = null;
   for (let attempt = 0; attempt < 2 && !made; attempt++) {
     const topic = cardTopicFor(d, attempt);
@@ -2287,6 +2334,7 @@ async function generateCard(env, d, ctx) {
       event: topic.kind === "event" ? topic.hint : null,
       // 주제 종류(event·season·topic)와 시기 이름 — 앱은 쓰지 않고(꼬리표 글자만 씀) 관리자 확인용입니다(2026-11-20).
       kind: topic.kind, season: topic.kind === "season" ? topic.name : null,
+      cat: cardCatForTopic(topic), // 지난 카드 화면의 분야 단추(2026-11-25)
       gen: gen.model, review: { by: reviewer, fixed, problems }, at: Date.now(),
     };
   }
@@ -2305,8 +2353,27 @@ async function generateCard(env, d, ctx) {
     made.imgModel = img.model;
   }
   await kvPutJson(env, cardKey(d), made);
-  await cardWriteIndexEntry(env, { d, chip: made.chip, title: made.title, img: made.img });
+  await cardWriteIndexEntry(env, { d, chip: made.chip, cat: made.cat, title: made.title, img: made.img });
   return made;
+}
+
+/**
+ * 보이는 기간(최근 CARD_KEEP_DAYS 일)보다 오래된 카드를 KV 에서 지웁니다 — 카드 글·그림·목록 줄(2026-11-25).
+ * Cron 이 매번 부르고, 한 번에 CARD_PRUNE_PER_RUN 장까지만(밀린 것은 다음 번에). 지울 것이 없으면 목록만 읽고 끝납니다.
+ */
+async function pruneOldCards(env) {
+  const oldest = cardOldestDay(kstDay(Date.now()));
+  const index = await cardReadIndex(env);
+  const old = index.filter((e) => e && e.d && e.d < oldest).slice(0, CARD_PRUNE_PER_RUN);
+  if (!old.length) return { pruned: 0 };
+  for (const e of old) {
+    await env.PUBLIC_KV.delete(cardKey(e.d));
+    await env.PUBLIC_KV.delete(cardImgKey(e.d));
+  }
+  const gone = {};
+  old.forEach((e) => { gone[e.d] = true; });
+  await kvPutJson(env, CARD_INDEX_KEY, (await cardReadIndex(env)).filter((e) => e && !gone[e.d]));
+  return { pruned: old.length };
 }
 
 /**
@@ -2326,7 +2393,8 @@ async function runCardJob(env, ctx) {
     const have = {};
     (await cardReadIndex(env)).forEach((e) => { if (e && e.d) have[e.d] = true; });
     // 하루에 너무 많이 돌지 않게 60일까지만
-    for (let d = addDays(today, -1), n = 0; d >= from && n < 60; d = addDays(d, -1), n++) {
+    const oldest = cardOldestDay(today); // 보이는 기간보다 앞은 채우지 않음(지운 날을 다시 만들지 않게)
+    for (let d = addDays(today, -1), n = 0; d >= from && d >= oldest && n < 60; d = addDays(d, -1), n++) {
       if (!have[d]) targets.push(d);
     }
   }
@@ -2388,27 +2456,39 @@ async function handleCardToday(request, env) {
   return cardJson(request, { today, card: cardPublic(c) }, 200, 300);
 }
 
-/** GET /card/day/<날짜> → 그날 카드(오늘까지만) */
+/** 보이는 날짜인가 — 오늘까지, 최근 CARD_KEEP_DAYS 일 안 */
+function cardVisibleDay(d) {
+  if (!CARD_DATE_RE.test(d)) return false;
+  const today = kstDay(Date.now());
+  return d <= today && d >= cardOldestDay(today);
+}
+
+/** GET /card/day/<날짜> → 그날 카드(오늘까지, 최근 1년) */
 async function handleCardDay(request, env, d) {
-  if (!CARD_DATE_RE.test(d) || d > kstDay(Date.now())) return cardJson(request, { error: "NOT_FOUND" }, 404, 0);
+  if (!cardVisibleDay(d)) return cardJson(request, { error: "NOT_FOUND" }, 404, 0);
   const c = await kvGetJson(env, cardKey(d));
   if (!c) return cardJson(request, { error: "NOT_FOUND" }, 404, 0);
   return cardJson(request, { card: cardPublic(c) }, 200, 3600);
 }
 
-/** GET /card/list?before=<날짜>&limit=30 → 지난 카드 목록(최신 먼저, 오늘까지만) */
+/**
+ * GET /card/list?before=<날짜>&limit=30 → 지난 카드 목록(최신 먼저, 오늘까지, 최근 1년).
+ * limit 은 400 까지 — 새 앱은 1년 치(최대 365줄, 줄마다 100바이트 안팎)를 한 번에 받아 월 구분·분야 단추를 그립니다(2026-11-25).
+ * 예전 앱의 30장씩 받기(before)도 그대로 됩니다. cat 은 분야(cat 이 없는 예전 카드는 꼬리표로 짐작).
+ */
 async function handleCardList(request, env, url) {
   const today = kstDay(Date.now());
+  const oldest = cardOldestDay(today);
   const before = String(url.searchParams.get("before") || "");
-  const limit = Math.max(1, Math.min(60, Number(url.searchParams.get("limit")) || 30));
-  const all = (await cardReadIndex(env)).filter((e) => e && e.d <= today && (!CARD_DATE_RE.test(before) || e.d < before));
-  const items = all.slice(0, limit).map((e) => ({ d: e.d, chip: e.chip, title: e.title, img: !!e.img }));
-  return cardJson(request, { today, items, more: all.length > limit }, 200, 300);
+  const limit = Math.max(1, Math.min(400, Number(url.searchParams.get("limit")) || 30));
+  const all = (await cardReadIndex(env)).filter((e) => e && e.d <= today && e.d >= oldest && (!CARD_DATE_RE.test(before) || e.d < before));
+  const items = all.slice(0, limit).map((e) => ({ d: e.d, chip: e.chip, cat: cardCatOf(e), title: e.title, img: !!e.img }));
+  return cardJson(request, { today, oldest, items, more: all.length > limit }, 200, 300);
 }
 
 /** GET /card/img/<날짜> → 그림(base64 글자). 앱이 그림으로 바꿉니다. */
 async function handleCardImg(request, env, d) {
-  if (!CARD_DATE_RE.test(d) || d > kstDay(Date.now())) return cardJson(request, { error: "NOT_FOUND" }, 404, 0);
+  if (!cardVisibleDay(d)) return cardJson(request, { error: "NOT_FOUND" }, 404, 0);
   const b64 = await env.PUBLIC_KV.get(cardImgKey(d));
   if (!b64) return cardJson(request, { error: "NOT_FOUND" }, 404, 0);
   const headers = corsHeaders(request);
@@ -2559,6 +2639,8 @@ export default {
     await defer(ctx, flushReportNotice(env));
     // 카드 만들기는 몇 분 걸리므로 waitUntil(끝난 뒤 30초까지만 기다려 줌)에 맡기지 않고 여기서 끝까지 기다립니다.
     try { await runCardJob(env, ctx); } catch (e) {}
+    // 1년 지난 카드 지우기 — 만들기가 꺼져 있어도 돕니다(보이지 않는 것을 남겨 두지 않게, 2026-11-25)
+    try { await pruneOldCards(env); } catch (e) {}
   },
 };
 
