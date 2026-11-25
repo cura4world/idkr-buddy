@@ -21,6 +21,7 @@ import WordMiniSheet from "@/components/WordMiniSheet";
 import LevelCircles from "@/components/LevelCircles";
 import StoryTopicGrid from "@/components/StoryTopicGrid";
 import PlusLockBox from "@/components/PlusLockBox";
+import { paywallState } from "@/components/BottomTabs";
 import { hasGeminiApiKey } from "@/lib/gemini";
 import { useSwipeFlip } from "@/lib/useSwipeFlip";
 import { ttsPlayer, deleteTtsCacheByPrefix } from "@/lib/tts";
@@ -597,7 +598,7 @@ const Story = () => {
   const goPaywall = () => {
     // 카드를 보던 중이면 돌아올 자리를 적어 둡니다 (setState 없이 이동만)
     if (current) writeReturnTicket("story", current.id, currentScrollY(), flipped);
-    navigate(PAYWALL_PATH);
+    navigate(PAYWALL_PATH, { state: paywallState(location.pathname) });
   };
 
   // 무료: 잠긴 "듣기" — 공용 안내 창(2026-11-23. 예전에는 말풍선 → 한 번 더 누르면 구독 화면)
