@@ -76,7 +76,8 @@ test("보통 날 — 어제·오늘 숫자와 색, 그래프 안, 겹침 없음,
 });
 
 for (const v of [{ n: "412px·100%", w: 412, h: 915, step: FONT_STEP_100 }, { n: "360px·125%", w: 360, h: 740, step: FONT_STEP_125 }]) {
-  test("월말(30일) " + v.n + " — 오른쪽 위 두 줄(윗줄 어제·아랫줄 오늘, 오른쪽 끝 맞춤), 그래프 안", async ({ page }) => {
+  // 2026-11-25: 두 줄 묶음 자리는 후보 중 어제·오늘 막대와 덜 겹치는 곳(그래프 오른쪽 끝 / 어제 막대 바로 왼쪽)
+  test("월말(30일) " + v.n + " — 위쪽 두 줄(윗줄 어제·아랫줄 오늘, 끝 맞춤), 그래프 안, 어제·오늘 막대와 안 겹침", async ({ page }) => {
     await openMe(page, { day: 30, w: v.w, h: v.h, step: v.step, data: usage(30, 90, 20) });
     const chart = (await page.locator("[data-study-chart]").boundingBox())!;
     const yb = (await page.locator('[data-day-label="yesterday"]').boundingBox())!;
@@ -85,8 +86,52 @@ for (const v of [{ n: "412px·100%", w: 412, h: 915, step: FONT_STEP_100 }, { n:
     expect(within(tb, chart)).toBe(true);
     expect(overlap(yb, tb)).toBe(false);
     expect(yb.y).toBeLessThan(tb.y);
-    expect(Math.abs(yb.x + yb.width - (chart.x + chart.width))).toBeLessThanOrEqual(1);
-    expect(Math.abs(tb.x + tb.width - (chart.x + chart.width))).toBeLessThanOrEqual(1);
+    expect(Math.abs(yb.x + yb.width - (tb.x + tb.width))).toBeLessThanOrEqual(1);
+    for (const bar of ["yesterday", "today"]) {
+      const bb = (await page.locator('[data-bar="' + bar + '"]').boundingBox())!;
+      expect(overlap(yb, bb), "어제 숫자 × " + bar + " 막대").toBe(false);
+      expect(overlap(tb, bb), "오늘 숫자 × " + bar + " 막대").toBe(false);
+    }
+  });
+}
+
+// 2026-11-25 칸 높이 고정 — 같은 폭·같은 글자 크기면 기록 상태와 상관없이 공부 시간 칸 높이가 같음.
+// 상태마다 새 브라우저 문맥을 열어(저장소가 남지 않게) 칸 높이를 재고 숫자로 비교합니다.
+for (const v of [{ n: "412px·100%", w: 412, h: 915, step: FONT_STEP_100 }, { n: "360px·125%", w: 360, h: 800, step: FONT_STEP_125 }]) {
+  test("칸 높이 고정 " + v.n + " — 기록 없음·작은 막대·어제 최고·두 줄(25·30일)·1일·지난달 보기·평균 있음/없음", async ({ browser }) => {
+    test.setTimeout(120000);
+    const s21 = (today: number) => {
+      const r = usage(today, 15 * 60 + 16, 92);
+      return r;
+    };
+    const small: Record<string, number> = { [dayKey(2026, 11, 3)]: 5, [dayKey(2026, 11, 8)]: 3 };
+    const prevOnly = (() => { const r = usage(18, 90, 20); for (let d = 1; d <= 30; d++) r[dayKey(2026, 9, d)] = 30; return r; })();
+    const states: Array<{ name: string; day: number; data: Record<string, number>; prev?: boolean }> = [
+      { name: "기록 없음", day: 18, data: {} },
+      { name: "작은 막대만", day: 9, data: small },
+      { name: "어제가 그달 최고(25일, 두 줄)", day: 25, data: s21(25) },
+      { name: "두 줄(30일)", day: 30, data: s21(30) },
+      { name: "1일", day: 1, data: usage(1, 0, 25) },
+      { name: "지난달 평균 값 없음", day: 18, data: usage(18, 90, 20, false) },
+      { name: "지난달 보기(전달 평균 있음)", day: 18, data: prevOnly, prev: true },
+      { name: "지난달 보기(전달 평균 없음)", day: 18, data: usage(18, 90, 20), prev: true },
+    ];
+    const heights: Record<string, number> = {};
+    for (const st of states) {
+      const ctx = await browser.newContext(test.info().project.use as Parameters<typeof browser.newContext>[0]);
+      const page = await ctx.newPage();
+      await openMe(page, { day: st.day, w: v.w, h: v.h, step: v.step, data: st.data });
+      if (st.prev) {
+        await page.getByRole("button", { name: "지난달", exact: true }).click();
+        await expect(page.getByRole("button", { name: "지난달", exact: true })).toHaveAttribute("aria-pressed", "true");
+      }
+      await page.waitForTimeout(200);
+      heights[st.name] = Math.round((await cardHeight(page)) * 100) / 100;
+      await ctx.close();
+    }
+    console.log("공부 시간 칸 높이 " + v.n + " " + JSON.stringify(heights));
+    const vals = Object.values(heights);
+    for (const [k, h] of Object.entries(heights)) expect(h, k).toBeCloseTo(vals[0], 1);
   });
 }
 
