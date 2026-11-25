@@ -3,13 +3,14 @@
 // 화면(MyInfo.tsx)이 실제 글자 폭·높이와 막대 높이를 재서 넘기면, 그래프 영역 안의 위치를 돌려줍니다.
 // 순수 함수라 단위 테스트로 배치 규칙을 확인합니다(src/test/studyChartLabels.test.ts).
 //
-// 규칙 (지시서 A-2)
-//   ① 기본은 막대 바로 위(pad 4px). 어제는 오른쪽 끝을 어제 막대 오른쪽에 맞춰 왼쪽으로, 오늘은 왼쪽 끝을 오늘 막대 왼쪽에 맞춰 오른쪽으로
-//   ② 막대가 높아 위에 자리가 없으면 막대 꼭대기 높이에서 옆으로(어제는 왼쪽 옆, 오늘은 오른쪽 옆)
-//   ③ 오늘 숫자가 오른쪽에 들어갈 자리가 없으면 두 숫자를 위쪽에 두 줄로(윗줄 어제, 아랫줄 오늘, 끝 맞춤) —
-//      2026-11-25 자리는 후보 중 어제·오늘 막대와 겹치는 넓이가 가장 작은 곳: 그래프 오른쪽 끝 / 어제 막대 바로 왼쪽 / (월초) 왼쪽 끝 / 오늘 막대 바로 오른쪽
-//   ④ 두 숫자는 절대 겹치지 않음
-//   그 밖(지시서에 없는 경우, 판단): 어제 숫자가 왼쪽에 들어갈 자리가 없으면(월초 2일 등) 그래프 왼쪽 위에 두 줄(왼쪽 끝 맞춤)
+// 규칙 (2026-11-25 "숫자를 자기 막대에 붙이기" — 예전 "막대 위 → 옆 → 두 줄 쌓기"를 바꿈)
+//   ① 어제 숫자: 항상 어제 막대 바로 왼쪽(pad 4px), 높이는 어제 막대 꼭대기에 맞춤(그래프 영역 안으로 자름)
+//   ② 오늘 숫자: 오늘 막대 바로 오른쪽(pad 4px)에 한 줄 "오늘 2h 30m", 높이는 오늘 막대 꼭대기에 맞춤
+//   ③ 한 줄이 오른쪽에 안 들어가면 같은 자리에 두 줄 "오늘" / "2h 30m"("오늘" 글자는 빼지 않음)
+//   ④ 두 줄로도 오른쪽에 안 들어가는 월말에만, 두 숫자를 어제 막대 바로 왼쪽에 위아래로 모음(위 어제, 아래 오늘) —
+//      자리는 후보(어제 막대 바로 왼쪽 / 그래프 오른쪽 끝 / 왼쪽 끝 / 오늘 막대 바로 오른쪽) 중 어제·오늘 막대와 겹치는 넓이가 가장 작은 곳(같으면 앞 후보)
+//   ⑤ 월초 등 어제 숫자가 왼쪽에 안 들어가면 예전 규칙 그대로 — 위쪽 두 줄(왼쪽 후보 먼저, 막대와 덜 겹치는 곳)
+//   ⑥ 두 숫자는 서로 겹치지 않고, 어제·오늘 막대를 가리지 않음. 다른 날 막대와 겹치는 것은 괜찮음(흰 테두리)
 
 export interface LabelSize {
   w: number;
@@ -31,12 +32,15 @@ export interface ChartLabelInput {
   todayBarH: number;
   /** 숫자 글자 크기(px). 숨길 숫자는 null */
   yesterday: LabelSize | null;
+  /** 오늘 숫자 한 줄("오늘 2h 30m") */
   today: LabelSize | null;
+  /** 오늘 숫자 두 줄("오늘" / "2h 30m") — 없으면 두 줄을 쓰지 않음 */
+  todayTwoLine?: LabelSize | null;
   /** 막대와 숫자 사이(px), 기본 4 */
   pad?: number;
 }
 
-export type LabelHow = "above" | "side" | "stack";
+export type LabelHow = "side" | "stack";
 
 export interface PlacedLabel {
   x: number;
@@ -47,9 +51,12 @@ export interface PlacedLabel {
 }
 
 export interface ChartLabelLayout {
-  mode: "free" | "stack-right" | "stack-left";
+  /** side = ①②, side-2 = ①③(오늘 두 줄), gather = ④ 어제 막대 왼쪽에 모음, stack-left = ⑤ 월초 */
+  mode: "side" | "side-2" | "gather" | "stack-left";
   yesterday: PlacedLabel | null;
   today: PlacedLabel | null;
+  /** 오늘 숫자를 두 줄로 그리는가 */
+  todayLines: 1 | 2;
 }
 
 /** "20m" · "1h" · "1h 30m". 1분 미만은 빈 문자열(숫자를 숨김) */
@@ -70,10 +77,10 @@ export function barSpan(chartW: number, days: number, gap: number, i: number): {
   return { left, right: left + w };
 }
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), Math.max(lo, hi));
 
 function fitsX(l: PlacedLabel, chartW: number): boolean {
-  return l.x >= 0 && l.x + l.w <= chartW + 0.01;
+  return l.x >= -0.01 && l.x + l.w <= chartW + 0.01;
 }
 
 /** 두 상자가 겹치는가(맞닿는 것은 겹침이 아님) */
@@ -89,28 +96,53 @@ function overlapArea(a: { x: number; y: number; w: number; h: number }, b: { x: 
   return w > 0 && h > 0 ? w * h : 0;
 }
 
+function barBoxes(input: ChartLabelInput) {
+  const { chartW, chartH, days, gap, todayIdx, yesterdayBarH, todayBarH } = input;
+  const t = barSpan(chartW, days, gap, todayIdx);
+  const boxes = [{ x: t.left, y: chartH - todayBarH, w: t.right - t.left, h: todayBarH }];
+  if (todayIdx >= 1) {
+    const y = barSpan(chartW, days, gap, todayIdx - 1);
+    boxes.push({ x: y.left, y: chartH - yesterdayBarH, w: y.right - y.left, h: yesterdayBarH });
+  }
+  return boxes;
+}
+
+/** 어제·오늘 막대와 숫자가 겹치는 넓이(px²) — 시험·점검용 */
+export function barOverlapArea(input: ChartLabelInput, layout: ChartLabelLayout): number {
+  const bars = barBoxes(input);
+  let a = 0;
+  for (const l of [layout.yesterday, layout.today]) if (l) for (const b of bars) a += overlapArea(l, b);
+  return a;
+}
+
 /**
- * 두 줄 쌓기(윗줄 어제·아랫줄 오늘, 위쪽 정렬). 2026-11-25: 자리 후보를 여럿 두고 어제·오늘 막대와 겹치는 넓이가 가장 작은 곳을 고릅니다
- * (S21 실제 기록 — 어제가 그달 최고라 꼭대기까지 닿은 막대 위에 "어제" 글자가 얹혔음). 다른 날 막대와 겹치는 것은 괜찮음(흰 테두리).
- *   오른쪽 끝 맞춤: (가) 그래프 오른쪽 끝 (나) 어제 막대 바로 왼쪽(어제가 없으면 오늘 막대 바로 왼쪽)
- *   왼쪽 끝 맞춤:   (가') 그래프 왼쪽 끝 (나') 오늘 막대 바로 오른쪽
- * 겹침이 같으면 처음 정한 쪽(side)의 (가) → (나) 순서를 따릅니다.
+ * 두 숫자를 위아래로 모음(위 어제, 아래 오늘 한 줄). 후보 중 어제·오늘 막대와 겹치는 넓이가 가장 작은 자리(같으면 앞 후보).
+ *   gather(④): 어제 막대 바로 왼쪽(오른쪽 끝 맞춤) → 그래프 오른쪽 끝 → 왼쪽 끝 → 오늘 막대 바로 오른쪽. 묶음 위끝은 어제 막대 꼭대기 높이(영역 안으로)
+ *   stack-left(⑤): 왼쪽 끝 → 오늘 막대 바로 오른쪽 → 어제(없으면 오늘) 막대 바로 왼쪽 → 오른쪽 끝. 묶음 위끝은 0(예전 그대로)
  */
-function stack(input: ChartLabelInput, side: "right" | "left", pad: number): ChartLabelLayout {
-  const { chartW, chartH, days, gap, todayIdx, yesterdayBarH, todayBarH, yesterday, today } = input;
+function gather(input: ChartLabelInput, kind: "gather" | "stack-left", pad: number): ChartLabelLayout {
+  const { chartW, chartH, days, gap, todayIdx, yesterdayBarH, todayBarH, today } = input;
+  const yesterday = todayIdx >= 1 ? input.yesterday : null;
   const blockW = Math.max(yesterday ? yesterday.w : 0, today ? today.w : 0);
+  const blockH = (yesterday ? yesterday.h : 0) + (today ? today.h : 0);
   const tBar = barSpan(chartW, days, gap, todayIdx);
-  const yBar = yesterday ? barSpan(chartW, days, gap, todayIdx - 1) : null;
-  const bars = [{ x: tBar.left, y: chartH - todayBarH, w: tBar.right - tBar.left, h: todayBarH }];
-  if (yBar) bars.push({ x: yBar.left, y: chartH - yesterdayBarH, w: yBar.right - yBar.left, h: yesterdayBarH });
+  const yBar = todayIdx >= 1 ? barSpan(chartW, days, gap, todayIdx - 1) : null;
+  const bars = barBoxes(input);
 
   type Cand = { align: "right" | "left"; edge: number };
-  const rightSide: Cand[] = [{ align: "right", edge: chartW }, { align: "right", edge: (yBar ? yBar.left : tBar.left) - pad }];
-  const leftSide: Cand[] = [{ align: "left", edge: 0 }, { align: "left", edge: tBar.right + pad }];
-  const cands = side === "right" ? rightSide.concat(leftSide) : leftSide.concat(rightSide);
+  const leftOfYesterday: Cand = { align: "right", edge: (yesterday && yBar ? yBar.left : tBar.left) - pad };
+  const rightEnd: Cand = { align: "right", edge: chartW };
+  const leftEnd: Cand = { align: "left", edge: 0 };
+  const rightOfToday: Cand = { align: "left", edge: tBar.right + pad };
+  const cands = kind === "gather"
+    ? [leftOfYesterday, rightEnd, leftEnd, rightOfToday]
+    : [leftEnd, rightOfToday, leftOfYesterday, rightEnd];
+  const top = kind === "gather"
+    ? clamp(chartH - (yesterday ? yesterdayBarH : todayBarH), 0, chartH - blockH)
+    : 0;
 
   const build = (c: Cand) => {
-    let y = 0;
+    let y = top;
     const place = (s: LabelSize | null): PlacedLabel | null => {
       if (!s) return null;
       const p: PlacedLabel = { x: c.align === "right" ? c.edge - s.w : c.edge, y, w: s.w, h: s.h, how: "stack" };
@@ -120,36 +152,21 @@ function stack(input: ChartLabelInput, side: "right" | "left", pad: number): Cha
     return { yl: place(yesterday), tl: place(today) };
   };
 
-  let best: { c: Cand; yl: PlacedLabel | null; tl: PlacedLabel | null; cost: number } | null = null;
+  let best: { yl: PlacedLabel | null; tl: PlacedLabel | null; cost: number } | null = null;
   for (const c of cands) {
     const left = c.align === "right" ? c.edge - blockW : c.edge;
     if (left < -0.01 || left + blockW > chartW + 0.01) continue; // 그래프 영역 밖이면 후보에서 뺌
     const { yl, tl } = build(c);
     let cost = 0;
     for (const l of [yl, tl]) if (l) for (const b of bars) cost += overlapArea(l, b);
-    if (!best || cost < best.cost - 0.01) best = { c, yl, tl, cost };
+    if (!best || cost < best.cost - 0.01) best = { yl, tl, cost };
   }
   if (!best) {
-    // 어느 후보도 들어가지 않는 좁은 그래프 — 예전처럼 처음 정한 쪽 끝에 맞춤
-    const { yl, tl } = build(side === "right" ? rightSide[0] : leftSide[0]);
-    return { mode: side === "right" ? "stack-right" : "stack-left", yesterday: yl, today: tl };
+    // 어느 후보도 들어가지 않는 좁은 그래프 — 첫 후보에 맞춤
+    const { yl, tl } = build(cands[0]);
+    return { mode: kind, yesterday: yl, today: tl, todayLines: 1 };
   }
-  return { mode: best.c.align === "right" ? "stack-right" : "stack-left", yesterday: best.yl, today: best.tl };
-}
-
-/** 어제·오늘 막대와 숫자가 겹치는 넓이(px²) — 시험·점검용 */
-export function barOverlapArea(input: ChartLabelInput, layout: ChartLabelLayout): number {
-  const { chartW, chartH, days, gap, todayIdx, yesterdayBarH, todayBarH } = input;
-  const bars = [{ ...barSpanBox(chartW, days, gap, todayIdx), y: chartH - todayBarH, h: todayBarH }];
-  if (todayIdx >= 1) bars.push({ ...barSpanBox(chartW, days, gap, todayIdx - 1), y: chartH - yesterdayBarH, h: yesterdayBarH });
-  let a = 0;
-  for (const l of [layout.yesterday, layout.today]) if (l) for (const b of bars) a += overlapArea(l, b);
-  return a;
-}
-
-function barSpanBox(chartW: number, days: number, gap: number, i: number): { x: number; w: number } {
-  const s = barSpan(chartW, days, gap, i);
-  return { x: s.left, w: s.right - s.left };
+  return { mode: kind, yesterday: best.yl, today: best.tl, todayLines: 1 };
 }
 
 export function placeChartLabels(input: ChartLabelInput): ChartLabelLayout {
@@ -158,31 +175,31 @@ export function placeChartLabels(input: ChartLabelInput): ChartLabelLayout {
   // 1일에는 어제 막대가 이 달에 없음
   const yesterday = todayIdx >= 1 ? input.yesterday : null;
   const today = input.today;
-  if (!yesterday && !today) return { mode: "free", yesterday: null, today: null };
+  if (!yesterday && !today) return { mode: "side", yesterday: null, today: null, todayLines: 1 };
 
+  // ① 어제: 어제 막대 바로 왼쪽, 꼭대기 높이
   let yl: PlacedLabel | null = null;
   if (yesterday) {
     const bar = barSpan(chartW, days, gap, todayIdx - 1);
-    const aboveY = chartH - yesterdayBarH - pad - yesterday.h;
-    yl = aboveY >= 0
-      ? { x: bar.right - yesterday.w, y: aboveY, w: yesterday.w, h: yesterday.h, how: "above" }
-      : { x: bar.left - pad - yesterday.w, y: clamp(chartH - yesterdayBarH, 0, chartH - yesterday.h), w: yesterday.w, h: yesterday.h, how: "side" };
-  }
-  let tl: PlacedLabel | null = null;
-  if (today) {
-    const bar = barSpan(chartW, days, gap, todayIdx);
-    const aboveY = chartH - todayBarH - pad - today.h;
-    tl = aboveY >= 0
-      ? { x: bar.left, y: aboveY, w: today.w, h: today.h, how: "above" }
-      : { x: bar.right + pad, y: clamp(chartH - todayBarH, 0, chartH - today.h), w: today.w, h: today.h, how: "side" };
+    yl = { x: bar.left - pad - yesterday.w, y: clamp(chartH - yesterdayBarH, 0, chartH - yesterday.h), w: yesterday.w, h: yesterday.h, how: "side" };
+    // ⑤ 월초 등 왼쪽에 안 들어감 → 예전 규칙(위쪽 두 줄, 왼쪽 후보 먼저)
+    if (!fitsX(yl, chartW)) return gather({ ...input, yesterday }, "stack-left", pad);
   }
 
-  const sizes = { ...input, yesterday, today };
-  // ③ 오늘 숫자가 오른쪽에 들어가지 않음 → 두 줄(자리는 어제·오늘 막대와 덜 겹치는 후보)
-  if (tl && !fitsX(tl, chartW)) return stack(sizes, "right", pad);
-  // (판단) 어제 숫자가 왼쪽에 들어가지 않음 → 두 줄(왼쪽 후보 먼저)
-  if (yl && !fitsX(yl, chartW)) return stack(sizes, "left", pad);
-  // ④ 겹치면 두 줄로(오늘이 달의 뒤쪽이면 오른쪽 후보 먼저, 앞쪽이면 왼쪽 후보 먼저)
-  if (labelsOverlap(yl, tl)) return stack(sizes, todayIdx >= days / 2 ? "right" : "left", pad);
-  return { mode: "free", yesterday: yl, today: tl };
+  if (!today) return { mode: "side", yesterday: yl, today: null, todayLines: 1 };
+
+  // ② 오늘 한 줄: 오늘 막대 바로 오른쪽, 꼭대기 높이
+  const tBar = barSpan(chartW, days, gap, todayIdx);
+  const one: PlacedLabel = { x: tBar.right + pad, y: clamp(chartH - todayBarH, 0, chartH - today.h), w: today.w, h: today.h, how: "side" };
+  if (fitsX(one, chartW)) return { mode: "side", yesterday: yl, today: one, todayLines: 1 };
+
+  // ③ 오늘 두 줄: 같은 자리
+  const two2 = input.todayTwoLine;
+  if (two2) {
+    const two: PlacedLabel = { x: tBar.right + pad, y: clamp(chartH - todayBarH, 0, chartH - two2.h), w: two2.w, h: two2.h, how: "side" };
+    if (fitsX(two, chartW)) return { mode: "side-2", yesterday: yl, today: two, todayLines: 2 };
+  }
+
+  // ④ 월말: 어제 막대 바로 왼쪽에 위아래로 모음
+  return gather({ ...input, yesterday }, "gather", pad);
 }
