@@ -39,6 +39,9 @@ import {
 } from "@/components/game/GameKit";
 import { useNavigate, useLocation } from "react-router-dom";
 import { goBackOr } from "@/lib/nav";
+import { CircleHelp } from "lucide-react";
+import AppSheet, { SHEET } from "@/components/sheet/AppSheet";
+import { KATA_HELP } from "@/lib/kataHariIniHelp";
 
 const MARK_BG: Record<TileMark, string> = {
   hit: "#5E9C6E",
@@ -46,7 +49,80 @@ const MARK_BG: Record<TileMark, string> = {
   miss: "#AEB6BB",
 };
 
+// ── 칸(2026-11-25) ──
+// 칸 하나의 크기는 "6글자 한 줄이 화면 폭에 알맞게 들어가는 크기"로 고정합니다(4·5·6글자가 같은 크기를 쓰게 — 다음 단계 준비).
+// 화면 폭(앱 최대 폭 512px) − 좌우 여백 32px − 칸 사이 5개 → ÷ 6, 그러나 52px 를 넘지 않음.
+//   412px → 52px(넉넉함), 360px → (360 − 32 − 30) ÷ 6 = 49.67px. 칸·글자는 px 라 앱 글자 크기(125%)와 상관없음
+const CELL_GAP = 6;
+const MAX_COLS = 6;
+const CELL_SIZE = "min(52px, calc((min(100vw, 512px) - 32px - " + CELL_GAP * (MAX_COLS - 1) + "px) / " + MAX_COLS + "))";
+// 지금 쓸 줄만 진한 테두리(빈 칸 #9AA1A6 · 글자 든 칸 #646C72), 아직 안 쓴 줄은 옅은 테두리·옅은 바탕
+const CELL_BORDER_CURRENT = G.mute;
+const CELL_BORDER_TYPED = G.sub;
+const CELL_BORDER_LATER = G.tile;
+const CELL_BG_LATER = "#F6F8F9";
+
 const ORDINAL = ["첫", "두", "세", "네", "다섯", "여섯"];
+
+/** "게임 방법" 창 — 공용 AppSheet(제목 + X, 뒤로가기·머리 끌어 닫기). 문구는 lib/kataHariIniHelp.ts 한 곳 */
+const KataHelpSheet = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+  const ex = KATA_HELP.example;
+  return (
+    <AppSheet
+      open={open}
+      onClose={onClose}
+      title={KATA_HELP.title}
+      icon={<CircleHelp size={20} strokeWidth={1.8} />}
+      tone="neutral"
+      backClose
+    >
+      <div data-kata-help className="font-gothic" style={{ color: SHEET.txt }}>
+        <p className="m-0 text-[0.875rem] leading-[1.65] break-keep">{KATA_HELP.lead}</p>
+        <p className="m-0 mt-4 text-[0.8125rem] font-semibold" style={{ color: SHEET.sub }}>{ex.caption}</p>
+        <div className="mt-2 flex flex-col gap-1.5">
+          {ex.rows.map((w) => {
+            // 예시 색은 실제 채점 함수로 칠합니다(게임 칸과 같은 판정·같은 색)
+            const m = scoreGuess(w, ex.answer);
+            return (
+              <div key={w} data-kata-help-row className="flex items-center gap-1.5">
+                {w.split("").map((ch, i) => (
+                  <span
+                    key={i}
+                    data-mark={m[i]}
+                    className="rounded-[7px] flex items-center justify-center font-word text-[16px] font-semibold uppercase text-white"
+                    style={{ width: 34, height: 34, background: MARK_BG[m[i]] }}
+                  >
+                    {ch}
+                  </span>
+                ))}
+                {w === ex.answer ? (
+                  <span className="ml-1.5 text-[0.8125rem] font-bold" style={{ color: "#3E7A4F" }}>{ex.solvedNote}</span>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+        <ul className="m-0 mt-4 p-0 list-none flex flex-col gap-1.5">
+          {KATA_HELP.colors.map((c) => (
+            <li key={c.mark} data-kata-help-color className="flex items-center gap-2 text-[0.8125rem] leading-[1.5]">
+              <span className="shrink-0 rounded-[4px]" style={{ width: 14, height: 14, background: MARK_BG[c.mark] }} aria-hidden="true" />
+              <span className="break-keep"><b className="font-bold">{c.name}</b> {c.text}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="my-4 h-px" style={{ background: SHEET.line }} />
+        <ul className="m-0 p-0 list-none flex flex-col gap-1">
+          {KATA_HELP.tips.map((t) => (
+            <li key={t} data-kata-help-tip className="flex gap-1.5 text-[0.8125rem] leading-[1.55] break-keep" style={{ color: SHEET.sub }}>
+              <span aria-hidden="true">·</span>
+              <span>{t}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </AppSheet>
+  );
+};
 
 const KEY_ROWS: string[][] = [
   ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
@@ -74,6 +150,8 @@ const GameKata = () => {
   const [streak, setStreak] = useState(() => currentStreak());
   const [gained, setGained] = useState(0);
   const [floatOn, setFloatOn] = useState(false);
+  // "게임 방법" 창 — 처음 들어올 때 자동으로 띄우지 않음, 단추를 눌러야 열림(2026-11-25)
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const recRef = useRef(rec);
   recRef.current = rec;
@@ -202,13 +280,14 @@ const GameKata = () => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (helpOpen) return; // 게임 방법 창이 떠 있는 동안은 칸에 쓰지 않음
       if (e.key === "Enter") press("ENTER");
       else if (e.key === "Backspace") press("BACK");
       else if (e.key.length === 1) press(e.key);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [press]);
+  }, [press, helpOpen]);
 
   const showHint = () => {
     if (rec.hint) return;
@@ -239,24 +318,38 @@ const GameKata = () => {
 
   return (
     <GameScreen id="kata">
-      <div className="h-10 shrink-0 flex items-center justify-between gap-3">
-        <span className="font-gothic text-[11px] truncate" style={{ color: G.sub }}>
+      {/* 날짜 줄 — 날짜·시도 글 + 오른쪽에 "게임 방법"·"뜻 힌트" 알약(2026-11-25). 한 줄이 기본이고,
+          좁으면 단추 둘만 통째로 다음 줄로(글은 줄이지 않음 — flex-wrap) */}
+      <div data-kata-status-row className="min-h-10 shrink-0 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-1">
+        <span data-kata-status className="font-gothic text-[11px] whitespace-nowrap" style={{ color: G.sub }}>
           {statusText}
         </span>
-        {!rec.done || rec.hint ? (
+        <span data-kata-pills className="ml-auto flex items-center gap-2 shrink-0 max-w-full">
           <button
             type="button"
-            onClick={showHint}
-            className="h-[30px] max-w-[60%] px-3 rounded-[15px] font-gothic text-[11px] font-bold truncate shrink-0"
-            style={{ background: G.goldBg, color: G.goldText }}
+            onClick={() => setHelpOpen(true)}
+            className="h-[30px] px-3 rounded-[15px] font-gothic text-[11px] font-bold shrink-0 bg-white"
+            style={{ border: "1px solid " + G.line, color: G.sub }}
           >
-            {rec.hint ? "뜻 · " + answer.meaning : "뜻 힌트"}
+            {KATA_HELP.title}
           </button>
-        ) : null}
+          {!rec.done || rec.hint ? (
+            <button
+              type="button"
+              onClick={showHint}
+              className="h-[30px] px-3 rounded-[15px] font-gothic text-[11px] font-bold truncate min-w-0"
+              style={{ background: G.goldBg, color: G.goldText, maxWidth: "min(60vw, 240px)" }}
+            >
+              {rec.hint ? "뜻 · " + answer.meaning : "뜻 힌트"}
+            </button>
+          ) : null}
+        </span>
       </div>
 
-      {/* 6 × 5 칸 — 알림은 격자 바로 아래에 겹쳐 띄워 자판 위치가 움직이지 않게 합니다 */}
-      <div className="relative mt-2.5 flex flex-col gap-1.5 items-center">
+      {/* 6 × 5 칸 — 날짜 줄과 자판 사이 세로 가운데(2026-11-25, 칸 아래 설명은 "게임 방법" 창으로 옮김).
+          알림은 격자 바로 아래에 겹쳐 띄워 자판 위치가 움직이지 않게 합니다 */}
+      <div className="flex-1 min-h-0 flex flex-col justify-center py-2.5">
+      <div data-kata-grid className="relative flex flex-col items-center" style={{ gap: CELL_GAP }}>
         {rows.map((r) => {
           const submitted = r < rec.guesses.length;
           const isCurrent = !rec.done && r === rec.guesses.length;
@@ -265,32 +358,33 @@ const GameKata = () => {
           return (
             <div
               key={r}
-              className="flex gap-1.5 justify-center"
+              data-kata-row={submitted ? "done" : isCurrent ? "current" : "later"}
+              className="flex justify-center"
               style={
                 isCurrent && shake
-                  ? { animation: "kata-shake " + SHAKE_MS + "ms ease" }
-                  : undefined
+                  ? { gap: CELL_GAP, animation: "kata-shake " + SHAKE_MS + "ms ease" }
+                  : { gap: CELL_GAP }
               }
             >
               {cols.map((c) => {
                 const ch = word[c] || "";
                 const fresh = submitted && r === freshRow;
+                // 지금 쓸 줄만 진한 테두리, 아직 안 쓴 줄은 옅은 테두리·옅은 바탕(2026-11-25). 이미 쓴 줄은 색칠
                 const style: React.CSSProperties = m
                   ? {
                       background: MARK_BG[m[c]],
                       color: "#FFFFFF",
                       transition: fresh ? "background-color 260ms ease " + c * 130 + "ms" : undefined,
                     }
-                  : {
-                      background: "#FFFFFF",
-                      border: "2px solid " + (ch ? G.mute : G.line),
-                      color: G.text,
-                    };
+                  : isCurrent
+                    ? { background: "#FFFFFF", border: "2px solid " + (ch ? CELL_BORDER_TYPED : CELL_BORDER_CURRENT), color: G.text }
+                    : { background: CELL_BG_LATER, border: "2px solid " + CELL_BORDER_LATER, color: G.text };
                 return (
                   <span
                     key={c}
-                    className="w-[52px] h-[52px] rounded-[10px] box-border flex items-center justify-center font-word text-[22px] font-semibold uppercase"
-                    style={style}
+                    data-kata-cell
+                    className="rounded-[10px] box-border flex items-center justify-center font-word text-[22px] font-semibold uppercase"
+                    style={{ ...style, width: CELL_SIZE, height: CELL_SIZE }}
                   >
                     {ch}
                   </span>
@@ -314,36 +408,11 @@ const GameKata = () => {
           ) : null}
         </div>
       </div>
-
-      {/* 하는 법 — 격자 아래 빈 곳에, 게임방의 "다섯 글자 단어를…" 설명과 같은 글자로(2026-11-23 Arga 4 · G-3).
-          색과 횟수는 실제 판정값(MARK_BG·MAX_TRIES)을 그대로 씁니다. 위 알림(맞지 않는 단어 등)이 겹치지 않게 조금 띄웁니다. */}
-      {!rec.done ? (
-        <div className="mt-12 px-2 font-gothic text-[11.5px] leading-[1.6] break-keep text-center" style={{ color: G.sub }}>
-          <p className="m-0">다섯 글자 인도네시아어 단어를 넣고 ‘확인’을 누르세요.</p>
-          {/* 칸 색은 색마다 한 줄(2026-11-24 Arga). 묶음은 가운데, 줄은 왼쪽 맞춤이라 색 칸이 세로로 나란히 섭니다 */}
-          <p className="m-0 mt-1 flex justify-center">
-            <span className="inline-flex flex-col items-start gap-y-0.5 text-left">
-            <span className="inline-flex items-center gap-1">
-              <span className="inline-block w-2.5 h-2.5 rounded-[3px]" style={{ background: MARK_BG.hit }} aria-hidden="true" />
-              초록: 글자와 자리가 맞음
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="inline-block w-2.5 h-2.5 rounded-[3px]" style={{ background: MARK_BG.near }} aria-hidden="true" />
-              노랑: 단어에 있지만 자리가 다름
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="inline-block w-2.5 h-2.5 rounded-[3px]" style={{ background: MARK_BG.miss }} aria-hidden="true" />
-              회색: 단어에 없는 글자
-            </span>
-            </span>
-          </p>
-          <p className="m-0 mt-1">{MAX_TRIES}번 안에 맞혀 보세요.</p>
-        </div>
-      ) : null}
+      </div>
 
       {rec.done ? (
         <div
-          className="mt-auto pt-4"
+          className="pt-4"
         >
           <div className="rounded-[20px] bg-white px-5 pt-5 pb-4 text-center" style={{ boxShadow: CARD_SHADOW }}>
             <p className="font-gothic text-[11px] font-semibold" style={{ color: G.mute }}>
@@ -384,7 +453,7 @@ const GameKata = () => {
           </div>
         </div>
       ) : (
-        <div className="mt-auto pt-4 flex flex-col gap-[7px]">
+        <div className="pt-4 flex flex-col gap-[7px]">
           {KEY_ROWS.map((row, ri) => (
             <div key={ri} className="flex gap-[5px] justify-center">
               {row.map((k) => {
@@ -415,6 +484,7 @@ const GameKata = () => {
         </div>
       )}
 
+      <KataHelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
       <style>{"@keyframes kata-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}"}</style>
     </GameScreen>
   );
