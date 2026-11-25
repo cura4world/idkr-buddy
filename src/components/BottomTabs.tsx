@@ -71,6 +71,16 @@ function sectionOf(p: string): string {
   return TAB_HOME;
 }
 
+/**
+ * 구독 화면(/plus)으로 갈 때 넘길 state — 들어온 화면이 속한 탭(2026-11-25 Arga 승인 ④).
+ * 홈의 Plus 카드로 열면 홈, 게임방이면 게임 … 에 불이 켜집니다. state 가 없으면(첫 진입 등) 예전처럼 내 정보.
+ *   navigate(PAYWALL_PATH, { state: paywallState(location.pathname) })
+ */
+export function paywallState(fromPathname: string): { plusTab: string } {
+  const p = trimSlash(fromPathname || "/");
+  return { plusTab: p === "/plus" ? TAB_ME : sectionOf(p) };
+}
+
 /** 닉네임(6자 이내, 저장 키 "medali-my-id" — 이름만 옛것). 없으면 Google 이름의 첫 낱말. */
 export function profileName(s: PublicSession | null): string {
   const id = getMyMedaliId();
@@ -241,8 +251,10 @@ const BottomTabs = () => {
 
   const path = trimSlash(location.pathname);
   const isRoot = TAB_ROOTS.indexOf(path) >= 0;
-  const section = sectionOf(path);
-  const st = (location.state || null) as { tabFromHome?: boolean } | null;
+  const st = (location.state || null) as { tabFromHome?: boolean; plusTab?: string } | null;
+  // 구독 화면은 들어온 곳의 탭에 불을 켭니다(paywallState). 모르면 sectionOf 가 내 정보로.
+  const section =
+    path === "/plus" && st && typeof st.plusTab === "string" && TAB_ROOTS.indexOf(st.plusTab) >= 0 ? st.plusTab : sectionOf(path);
   const fromHomeFlag = !!(st && st.tabFromHome);
 
   const go = (to: string) => {
