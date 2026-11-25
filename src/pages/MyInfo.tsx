@@ -34,7 +34,7 @@ import MedaliSheet from "@/components/MedaliSheet";
 import type { MedaliSheetTab } from "@/components/MedaliSheet";
 import { MedaliWeekCompareText, useMedaliWeekCompare } from "@/components/MedaliWeekCompare";
 import { MedaliHelpBubble, MedaliHelpButton, MedaliHelpKind } from "@/components/MedaliHelpBubble";
-import { ProfileAvatar, profileName } from "@/components/BottomTabs";
+import { ProfileAvatar, paywallState, profileName } from "@/components/BottomTabs";
 import { usePlan, PAYWALL_PATH, Tier, TIER_LABEL, isPreviewBuild, isReviewAccount } from "@/lib/plan";
 import { getSession, onSessionChange, signOut, deleteAccount, PublicSession } from "@/lib/account";
 import { askLocalWipe } from "@/lib/localWipe";
@@ -852,7 +852,7 @@ const MyInfo = () => {
           <>
             {/* 2026-11-25: 홈 맨 아래 Plus 카드와 같은 공용 카드(PlusCard). 카드 어디를 눌러도 구독 화면.
                 단추는 안쪽 알약 하나("Plus 자세히 보기") — 카드 전체를 단추로 두면 화면 읽기가 카드 글 전체를 단추 이름으로 읽음 */}
-            <PlusFreeCard sub={plusChunks} onOpen={() => navigate(PAYWALL_PATH)} />
+            <PlusFreeCard sub={plusChunks} onOpen={() => navigate(PAYWALL_PATH, { state: paywallState("/me") })} />
             {/* 공개판 회원키 입력은 서버가 생기면 다시 넣습니다(QA Q01 — 그 전에는 링크를 보이지 않음) */}
           </>
         ) : tier === "plus" ? (
@@ -865,7 +865,7 @@ const MyInfo = () => {
             nextText={until > Date.now()
               ? (session && session.plan.autoRenew === false ? canceledUntilText(koDate(until)) : "다음 결제 " + koDate(until))
               : ""}
-            onOpen={() => navigate(PAYWALL_PATH)}
+            onOpen={() => navigate(PAYWALL_PATH, { state: paywallState("/me") })}
             onManage={openManage}
           />
         ) : null}
